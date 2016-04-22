@@ -96,6 +96,7 @@ sys.cpu.user\1447879348291 | rack=r001    | host=r001n01,instance=0 | 2.0
 The NUM\_SERVER\_THREADS variable in the timely-server.sh script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the variable to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the conf directory expects the following properties:
 
 Property | Description 
+---------|------------
 timely.ip | The ip address where the Timely server is running
 timely.port.put | The port that will be used for processing put requests
 timely.port.query | The port that will be used for processing query requests
