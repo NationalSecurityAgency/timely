@@ -153,7 +153,7 @@ public class Downsample implements Iterable<Sample>, Serializable {
     }
 
     private static Downsample convertCountToRate(Downsample ds, long resetValue, long counterMax) {
-        Downsample result = new Downsample(ds.start + ds.period, ds.start + ds.counts.length * (ds.period - 1),
+        Downsample result = new Downsample(ds.start + ds.period, ds.start + ds.counts.length * ds.period,
                 ds.period, ds.aggregator);
         int lastPos = 0;
         for (int i = 1; i < ds.counts.length; i++) {
@@ -186,8 +186,8 @@ public class Downsample implements Iterable<Sample>, Serializable {
                         result.counts[i - 1] = 1;
                     }
                 }
+                lastPos = i;
             }
-            lastPos = i;
         }
         return result;
     }
