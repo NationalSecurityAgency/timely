@@ -107,8 +107,6 @@ public class DataStoreImpl implements DataStore {
 
     Configuration conf;
     private final Connector connector;
-    private BatchWriter batchWriter;
-    private BatchWriter metaWriter;
     private MetaCache metaCache = null;
     private final AtomicLong lastCountTime = new AtomicLong(System.currentTimeMillis());
     private final AtomicReference<SortedMap<MetricTagK, Integer>> metaCounts = new AtomicReference<>(new TreeMap<>());
@@ -118,8 +116,11 @@ public class DataStoreImpl implements DataStore {
     private final Timer internalMetricsTimer = new Timer(true);
     private final int scannerThreads;
     private final BatchWriterConfig bwConfig;
+    private final List<BatchWriter> writers = new ArrayList<>();
+    private final ThreadLocal<BatchWriter> metaWriter = new ThreadLocal<>();
+    private final ThreadLocal<BatchWriter> batchWriter = new ThreadLocal<>();
 
-    public DataStoreImpl(Configuration conf) throws TimelyException {
+    public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
 
         try {
             final BaseConfiguration apacheConf = new BaseConfiguration();
@@ -131,7 +132,7 @@ public class DataStoreImpl implements DataStore {
             connector = instance.getConnector(conf.get(Configuration.USERNAME), new PasswordToken(passwd));
             bwConfig = new BatchWriterConfig();
             bwConfig.setMaxLatency(getTimeInMillis(conf.get(Configuration.MAX_LATENCY)), TimeUnit.MILLISECONDS);
-            bwConfig.setMaxMemory(getMemoryInBytes(conf.get(Configuration.WRITE_BUFFER_SIZE)));
+            bwConfig.setMaxMemory(getMemoryInBytes(conf.get(Configuration.WRITE_BUFFER_SIZE)) / numWriteThreads);
             bwConfig.setMaxWriteThreads(Integer.parseInt(conf.get(Configuration.WRITE_THREADS)));
             scannerThreads = Integer.parseInt(conf.get(Configuration.SCANNER_THREADS));
 
@@ -190,8 +191,6 @@ public class DataStoreImpl implements DataStore {
                     }
                 }
             }
-            batchWriter = connector.createBatchWriter(metricsTable, bwConfig);
-            metaWriter = connector.createBatchWriter(metaTable, bwConfig);
             internalMetricsTimer.schedule(new TimerTask() {
 
                 @Override
@@ -209,6 +208,27 @@ public class DataStoreImpl implements DataStore {
 
     @Override
     public void store(Metric metric) {
+        if (null == metaWriter.get()) {
+            try {
+                BatchWriter w = connector.createBatchWriter(metaTable, bwConfig);
+                metaWriter.set(w);
+                writers.add(w);
+            } catch (TableNotFoundException e) {
+                LOG.error("Error creating meta batch writer", e);
+                return;
+            }
+        }
+        if (null == batchWriter.get()) {
+            try {
+                BatchWriter w = connector.createBatchWriter(metricsTable, bwConfig);
+                batchWriter.set(w);
+                writers.add(w);
+            } catch (TableNotFoundException e) {
+                LOG.error("Error creating metric batch writer", e);
+                return;
+            }
+        }
+
         internalMetrics.incrementMetricsReceived(1);
         List<Meta> toCache = new ArrayList<>(metric.getTags().size());
         for (final Tag tag : metric.getTags()) {
@@ -238,16 +258,21 @@ public class DataStoreImpl implements DataStore {
             internalMetrics.incrementMetaKeysInserted(mks.size());
             muts.addAll(mks.toMutations());
             try {
-                metaWriter.addMutations(muts);
+                metaWriter.get().addMutations(muts);
             } catch (MutationsRejectedException e) {
                 LOG.error("Unable to write to meta table", e);
                 try {
                     try {
-                        metaWriter.close();
+                        final BatchWriter w = metaWriter.get();
+                        metaWriter.remove();
+                        writers.remove(w);
+                        w.close();
                     } catch (MutationsRejectedException e1) {
                         LOG.error("Error closing meta writer", e1);
                     }
-                    metaWriter = connector.createBatchWriter(metaTable, bwConfig);
+                    final BatchWriter w = connector.createBatchWriter(metaTable, bwConfig);
+                    metaWriter.set(w);
+                    writers.add(w);
                 } catch (TableNotFoundException e1) {
                     LOG.error("Unexpected error recreating meta batch writer, shutting down Timely server", e1);
                     System.exit(-1);
@@ -256,17 +281,22 @@ public class DataStoreImpl implements DataStore {
             metaCache.addAll(toCache);
         }
         try {
-            batchWriter.addMutation(metric.toMutation());
+            batchWriter.get().addMutation(metric.toMutation());
             internalMetrics.incrementMetricKeysInserted(metric.getTags().size());
         } catch (MutationsRejectedException e) {
             LOG.error("Unable to write to metrics table", e);
             try {
                 try {
-                    batchWriter.close();
+                    final BatchWriter w = batchWriter.get();
+                    batchWriter.remove();
+                    writers.remove(w);
+                    w.close();
                 } catch (MutationsRejectedException e1) {
                     LOG.error("Error closing metric writer", e1);
                 }
-                batchWriter = connector.createBatchWriter(metricsTable, bwConfig);
+                final BatchWriter w = connector.createBatchWriter(metricsTable, bwConfig);
+                batchWriter.set(w);
+                writers.add(w);
             } catch (TableNotFoundException e1) {
                 LOG.error("Unexpected error recreating metrics batch writer, shutting down Timely server", e1);
                 System.exit(-1);
@@ -332,16 +362,14 @@ public class DataStoreImpl implements DataStore {
     @Override
     public void flush() {
         internalMetricsTimer.cancel();
-        try {
-            batchWriter.close();
-        } catch (final Exception ex) {
-            LOG.warn("Error shutting down batchwriter", ex);
-        }
-        try {
-            metaWriter.close();
-        } catch (final Exception ex) {
-            LOG.warn("Error shutting down batchwriter", ex);
-        }
+        writers.forEach(w -> {
+            try {
+                w.close();
+            } catch (final Exception ex) {
+                LOG.warn("Error shutting down batchwriter", ex);
+            }
+
+        });
     }
 
     @Override

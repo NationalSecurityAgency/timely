@@ -181,7 +181,9 @@ public class Server {
     public Server(File conf) throws Exception {
 
         config = new Configuration(conf);
-        dataStore = DataStoreFactory.create(config);
+        int nettyThreads = Math.max(1,
+                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
+        dataStore = DataStoreFactory.create(config, nettyThreads);
         // Initialize the MetaCache
         MetaCacheFactory.getCache(config);
         final boolean useEpoll = useEpoll();

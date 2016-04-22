@@ -5,8 +5,8 @@ import timely.api.query.response.TimelyException;
 
 public class DataStoreFactory {
 
-    public static DataStore create(Configuration conf) throws TimelyException {
+    public static DataStore create(Configuration conf, int numWriteThreads) throws TimelyException {
 
-        return new DataStoreImpl(conf);
+        return new DataStoreImpl(conf, numWriteThreads);
     }
 }
