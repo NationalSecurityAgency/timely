@@ -16,7 +16,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <version.accumulo>1.6.4</version.accumulo>
+        <version.accumulo>1.7.0</version.accumulo>
         <version.caffeine>2.2.0</version.caffeine>
         <version.commons-configuration>1.10</version.commons-configuration>
         <version.commons-lang3>3.1</version.commons-lang3>
@@ -24,8 +24,8 @@
         <version.jackson>2.6.1</version.jackson>
         <version.javassist>3.20.0-GA</version.javassist>
         <version.junit>4.11</version.junit>
-        <version.log4j>2.4.1</version.log4j>
-        <version.netty>4.0.33.Final</version.netty>
+        <version.log4j>2.5</version.log4j>
+        <version.netty>4.0.34.Final</version.netty>
         <version.slf4j>1.7.12</version.slf4j>
     </properties>
     <dependencyManagement>

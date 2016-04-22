@@ -36,7 +36,7 @@ If you just want to kick the tires without having to install and setup Apache Ha
 
 ## API
 
-The current Timely API is derived from a subset of the OpenTSDB API. We currently support a TCP put API and we have partially implemented the following HTTP operations that the Grafana OpenTSDB datasource uses:
+The current Timely API is compatible with a subset of the OpenTSDB API. We currently support a TCP put API and we have partially implemented the following HTTP operations that the Grafana OpenTSDB datasource uses:
 
     * /api/aggregators
     * /api/query
@@ -140,3 +140,9 @@ then you will have 8 BatchWriters each using 2 threads with a 30s latency and a 
 ```
 config -t timely.metrics -s table.formatter=timely.util.TimelyMetricsFormatter
 ```
+
+2. You can create split points for your metrics table based on the 'm' column family in the meta table.
+
+3. You can lower the ```table.scan.max.memory``` property on your metrics table in an attempt to get data back faster from the tablet servers.
+
+4. If you don't mind losing some metric data in the event of an Accumulo tablet server death, you can set the ```table.walog.enabled``` property to false on your metrics table. This should speed up ingest a little.
