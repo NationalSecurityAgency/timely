@@ -626,7 +626,7 @@ public class DataStoreImpl implements DataStore {
                 pattern.append(Pattern.quote(value));
                 pattern.append("(,|$)");
             }
-            IteratorSetting setting = new IteratorSetting(priority++, RegExFilter.class);
+            IteratorSetting setting = new IteratorSetting(priority++, tag.getKey() + " tag filter", RegExFilter.class);
             LOG.trace("Using {} additional filter on tags", pattern);
             RegExFilter.setRegexs(setting, null, null, pattern.toString(), null, false, true);
             scanner.addScanIterator(setting);
