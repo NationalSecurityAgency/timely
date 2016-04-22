@@ -153,8 +153,8 @@ public class Downsample implements Iterable<Sample>, Serializable {
     }
 
     private static Downsample convertCountToRate(Downsample ds, long resetValue, long counterMax) {
-        Downsample result = new Downsample(ds.start + ds.period, ds.start + ds.counts.length * ds.period,
-                ds.period, ds.aggregator);
+        Downsample result = new Downsample(ds.start + ds.period, ds.start + ds.counts.length * ds.period, ds.period,
+                ds.aggregator);
         int lastPos = 0;
         for (int i = 1; i < ds.counts.length; i++) {
             if (ds.counts[i] != 0) {

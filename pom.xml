@@ -126,12 +126,12 @@
                         <artifactId>slf4j-log4j12</artifactId>
                     </exclusion>
                     <exclusion>
-                    	<groupId>org.mortbay.jetty</groupId>
-                    	<artifactId>jetty</artifactId>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty</artifactId>
                     </exclusion>
                     <exclusion>
-                    	<groupId>org.mortbay.jetty</groupId>
-                    	<artifactId>jetty-util</artifactId>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty-util</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -149,8 +149,8 @@
                         <artifactId>slf4j-log4j12</artifactId>
                     </exclusion>
                     <exclusion>
-                    	<groupId>org.mortbay.jetty</groupId>
-                    	<artifactId>jetty-util</artifactId>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty-util</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -168,12 +168,12 @@
                         <artifactId>slf4j-log4j12</artifactId>
                     </exclusion>
                     <exclusion>
-                    	<groupId>org.mortbay.jetty</groupId>
-                    	<artifactId>jetty</artifactId>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty</artifactId>
                     </exclusion>
                     <exclusion>
-                    	<groupId>org.mortbay.jetty</groupId>
-                    	<artifactId>jetty-util</artifactId>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty-util</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>

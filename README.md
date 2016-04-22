@@ -1,15 +1,15 @@
 # Timely
 ---
 
-Timely is a time series database application written in Java and designed to work with Apache Accumulo.
+Timely is a time series database application written in Java and designed to work with [Apache Accumulo] (http://accumulo.apache.org/) and [Grafana] (http://www.grafana.org).
 
 # Design
 ---
 
-Being users of Apache Hadoop, Apache Accumulo and other open source technologies, when we required a time series database application we looked to reuse existing software. Specifically we started with [OpenTSDB] (http://www.opentsdb.net) and Eric Newton's [Accumulo-OpenTSDB] (https://github.com/ericnewton/accumulo-opentsdb) project to bridge them together and [Grafana] (http://www.grafana.org) for visualization. We ultimately ran into some issues that we could not work around. After much discussion we decided to replace OpenTSDB with something like it in the hopes that we could get around the issues and provide something more native to how Apache Accumulo works. The implementation of Timely started with the following constraints and assumptions:
+When we required a time series database application, being users of Apache Accumulo, we looked to use compatible software. Specifically we started with [OpenTSDB] (http://www.opentsdb.net) and Eric Newton's [Accumulo-OpenTSDB] (https://github.com/ericnewton/accumulo-opentsdb) project to bridge them together, and Grafana for visualization. We ultimately ran into some issues that we could not work around. After much discussion we decided to replace OpenTSDB with something more native to Apache Accumulo. The implementation of Timely started with the following constraints and assumptions:
 
 1. We need to show progress quickly
-2. We started with Grafana, so we won't need our own UI
+2. We started with Grafana, so we didn't need our own user interface
 3. We already had experience with OpenTSDB, so we started with its API
 4. Space is cheap, ingest and query speed are more important
 5. Metrics will be kept short term
@@ -28,9 +28,11 @@ mvn package | Compiles and formats source, runs unit tests, and creates a distri
 mvn verify | Compiles and formats source, runs unit tests, creates a distribution, runs integration tests, and runs jacoco for code coverage
 mvn verify site | Compiles and formats source, runs unit tests, creates a distribution, runs integration tests, and runs jacoco for code coverage, and creates the site
  
+The [CollectD] (http://collectd.org/) plugins require that CollectD is installed locally as the /usr/share/collectd/java/collectd-api.jar file is a dependency.
+
 ## Deployment
 
-Timely requires a Java 8 runtime. Timely utilizes iterators for Apache Accumulo, so your Accumulo instance will need to be run with Java 8 also. 
+The Timely server requires a Java 8 runtime. Timely utilizes iterators for Apache Accumulo, so your Accumulo instance will need to be run with Java 8 also.
 
 Create a distribution and untar it somewhere. Modify the conf/timely.properties file appropriately. Then, copy the timely-server and commons-lang3 jar files to your Accumulo tservers. Next, launch Timely by running the bin/timely-server.sh script.
 
@@ -38,14 +40,14 @@ If you just want to kick the tires without having to install and setup Apache Ha
 
 ## API
 
-The current Timely API is compatible with a subset of the OpenTSDB API. We currently support a TCP put API and we have partially implemented the following HTTP operations that the Grafana OpenTSDB datasource uses:
+The current Timely API is compatible with a subset of the OpenTSDB API. We currently support the OpenTSDB TCP put API and we have partially implemented the following HTTP operations that the Grafana OpenTSDB datasource uses:
 
     * /api/aggregators
     * /api/query
     * /apu/search/lookup
     * /api/suggest
 
-There is also an endpoint at /api/metrics that reports the metric names and tags that have been pushed to Timely. Eviction of this information is configurable, so it may reflect metrics that were reported but are no longer being reported. This could be useful in creating graphs (so you won't have to go digging in the meta table in Accumulo).
+There is also an endpoint at /api/metrics that reports the metric names and tags that have been pushed to Timely. Eviction of this information is configurable, so it may reflect metrics that were reported but are no longer being reported. This could be useful in creating graphs in Grafana (so you won't have to go digging in the meta table in Accumulo). A native Timely API with security has been discussed and may be addressed in the future.
 
 ## Storage Format
 
