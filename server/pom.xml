@@ -141,6 +141,7 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>2.19</version>
                     <configuration>
+                        <argLine>${failsafeArgLine}</argLine>
                         <includes>
                             <include>**/*.java</include>
                         </includes>
@@ -153,7 +154,6 @@
                                 <goal>integration-test</goal>
                                 <goal>verify</goal>
                             </goals>
-                            <phase>prepare-package</phase>
                         </execution>
                     </executions>
                 </plugin>
@@ -179,9 +179,39 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>2.19</version>
                     <configuration>
+                        <argLine>${sureFireArgLine}</argLine>
                         <excludedGroups>timely.test.IntegrationTest</excludedGroups>
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.7.6.201602180812</version>
+                    <executions>
+                        <execution>
+                            <id>jacoco-prepare-ut</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                            <phase>process-test-classes</phase>
+                            <configuration>
+                                <destFile>${project.build.directory}/coverage/jacoco-ut.exec</destFile>
+                                <propertyName>sureFireArgLine</propertyName>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>jacoco-prepare-it</id>
+                            <goals>
+                                <goal>prepare-agent-integration</goal>
+                            </goals>
+                            <phase>pre-integration-test</phase>
+                            <configuration>
+                                <destFile>${project.build.directory}/coverage/jacoco-it.exec</destFile>
+                                <propertyName>failsafeArgLine</propertyName>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>net.revelc.code</groupId>
@@ -356,6 +386,31 @@
                 <configuration>
                     <targetJdk>1.8</targetJdk>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.6.201602180812</version>
+                <reportSets>
+                    <reportSet>
+                        <id>JaCoCo Unit Test Coverage</id>
+                       <configuration>
+                            <dataFile>${project.build.directory}/coverage/jacoco-ut.exec</dataFile>
+                       </configuration>
+                        <reports>
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                    <reportSet>
+                        <id>JaCoCo Integration Test Coverage</id>
+                       <configuration>
+                            <dataFile>${project.build.directory}/coverage/jacoco-it.exec</dataFile>
+                       </configuration>
+                        <reports>
+                            <report>report-integration</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
             </plugin>
     	</plugins>
     </reporting>

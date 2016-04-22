@@ -24,7 +24,9 @@ Command | Description
 --------|------------
 mvn compile | Compiles and formats the source
 mvn test | Compiles and formats source and runs unit tests
-mvn package | Compiles and formats source, runs unit tests, findbugs, integration tests, and creates an assembly
+mvn package | Compiles and formats source, runs unit tests, and creates a distribution
+mvn verify | Compiles and formats source, runs unit tests, creates a distribution, runs integration tests, and runs jacoco for code coverage
+mvn verify site | Compiles and formats source, runs unit tests, creates a distribution, runs integration tests, and runs jacoco for code coverage, and creates the site
  
 ## Deployment
 
