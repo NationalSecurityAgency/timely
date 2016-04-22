@@ -2,7 +2,6 @@ package timely.netty.tcp;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -29,7 +28,7 @@ public class TcpPutDecoder extends ByteToMessageDecoder {
         if (buf == Unpooled.EMPTY_BUFFER) {
             return;
         }
-        String input = new String(buf.array(), StandardCharsets.UTF_8);
+        String input = new String(buf.array(), UTF_8);
         LOG.trace("Received input {}", input);
         try {
             String[] parts = input.split(" ");

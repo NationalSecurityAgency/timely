@@ -206,6 +206,9 @@ public abstract class CollectDPluginParent {
             case 3:
                 result = ABSOLUTE;
                 break;
+            default:
+                result = GAUGE;
+                break;
         }
         return result;
     }

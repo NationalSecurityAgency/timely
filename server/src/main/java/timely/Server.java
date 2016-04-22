@@ -105,6 +105,11 @@ public class Server {
         return "Server <configFile>";
     }
 
+    public static void fatal(String msg, Throwable t) {
+        LOG.error(msg, t);
+        LATCH.countDown();
+    }
+
     public static void main(String[] args) throws Exception {
 
         if (args.length != 1) {
@@ -114,11 +119,13 @@ public class Server {
         if (!conf.canRead()) {
             throw new RuntimeException("Configuration file does not exist or cannot be read");
         }
-        new Server(conf);
+        Server s = new Server(conf);
         try {
             LATCH.await();
         } catch (final InterruptedException e) {
             LOG.info("Server shutting down.");
+        } finally {
+            s.shutdown();
         }
     }
 

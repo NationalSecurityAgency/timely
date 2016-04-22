@@ -3,7 +3,9 @@ package timely.store;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getMemoryInBytes;
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,7 +43,6 @@ import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.PartialKey;
@@ -57,8 +58,8 @@ import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import timely.Configuration;
+import timely.Server;
 import timely.api.model.Meta;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
@@ -274,8 +275,7 @@ public class DataStoreImpl implements DataStore {
                     metaWriter.set(w);
                     writers.add(w);
                 } catch (TableNotFoundException e1) {
-                    LOG.error("Unexpected error recreating meta batch writer, shutting down Timely server", e1);
-                    System.exit(-1);
+                    Server.fatal("Unexpected error recreating meta batch writer, shutting down Timely server", e1);
                 }
             }
             metaCache.addAll(toCache);
@@ -298,8 +298,7 @@ public class DataStoreImpl implements DataStore {
                 batchWriter.set(w);
                 writers.add(w);
             } catch (TableNotFoundException e1) {
-                LOG.error("Unexpected error recreating metrics batch writer, shutting down Timely server", e1);
-                System.exit(-1);
+                Server.fatal("Unexpected error recreating metrics batch writer, shutting down Timely server", e1);
             }
         }
     }
@@ -420,10 +419,8 @@ public class DataStoreImpl implements DataStore {
         for (Entry<String, String> entry : tags.entrySet()) {
             String k = entry.getKey();
             String v = entry.getValue();
-            if ("*".equals(k) || tagk.equals(k)) {
-                if ("*".equals(v) || tagv.equals(v)) {
-                    return true;
-                }
+            if (("*".equals(k) || tagk.equals(k)) && ("*".equals(v) || tagv.equals(v))) {
+                return true;
             }
         }
         return false;
@@ -479,7 +476,7 @@ public class DataStoreImpl implements DataStore {
             }
             LOG.debug("Query time: {}", (System.currentTimeMillis() - now));
             return result;
-        } catch (Exception ex) {
+        } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
             LOG.error("Error during query", ex);
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query",
                     ex.getMessage(), ex);
@@ -686,7 +683,7 @@ public class DataStoreImpl implements DataStore {
             return 1000;
         }
         String parts[] = query.getDownsample().get().split("-");
-        return AccumuloConfiguration.getTimeInMillis(parts[0]);
+        return getTimeInMillis(parts[0]);
     }
 
 }

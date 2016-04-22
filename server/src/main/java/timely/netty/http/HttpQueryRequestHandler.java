@@ -35,7 +35,7 @@ public class HttpQueryRequestHandler extends SimpleChannelInboundHandler<QueryRe
             buf = JsonUtil.getObjectMapper().writeValueAsBytes(dataStore.query(msg));
         } catch (TimelyException e) {
             if (e.getMessage().contains("No matching tags")) {
-                LOG.trace(e.getMessage(), e);
+                LOG.trace(e.getMessage());
             } else {
                 LOG.error(e.getMessage(), e);
             }

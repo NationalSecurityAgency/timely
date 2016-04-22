@@ -20,7 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 public interface TimelyHttpHandler {
 
-    static final Logger LOG = LoggerFactory.getLogger(TimelyHttpHandler.class);
+    Logger LOG = LoggerFactory.getLogger(TimelyHttpHandler.class);
 
     default void sendHttpError(ChannelHandlerContext ctx, TimelyException e) throws JsonProcessingException {
         byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(e);

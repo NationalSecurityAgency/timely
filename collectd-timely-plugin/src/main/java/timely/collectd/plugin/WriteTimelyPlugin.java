@@ -69,17 +69,17 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
     }
 
     @Override
-    public void write(String metric) {
+    public synchronized void write(String metric) {
         out.write(metric);
     }
 
-    public void flush() {
+    public synchronized void flush() {
         if (null != out) {
             out.flush();
         }
     }
 
-    public int shutdown() {
+    public synchronized int shutdown() {
         Collectd.logInfo("Shutting down connection to Timely at " + host + ":" + port);
         if (null != sock) {
             try {
@@ -96,7 +96,7 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
         return 0;
     }
 
-    public int config(OConfigItem config) {
+    public synchronized int config(OConfigItem config) {
         super.config(config);
         for (OConfigItem child : config.getChildren()) {
             switch (child.getKey()) {

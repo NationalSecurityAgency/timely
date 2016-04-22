@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -49,7 +50,7 @@ public class Configuration {
     public static final String META_CACHE_MAX_CAPACITY = "timely.meta.cache.max.capacity";
     public static final Integer META_CACHE_MAX_CAPACITY_DEFAULT = 10000;
 
-    public static final List<String> REQUIRED_PROPERTIES = new ArrayList<>();
+    private static final List<String> REQUIRED_PROPERTIES = new ArrayList<>();
     static {
         REQUIRED_PROPERTIES.add(IP);
         REQUIRED_PROPERTIES.add(PUT_PORT);
@@ -95,7 +96,7 @@ public class Configuration {
         props.setProperty(CORS_ALLOWED_HEADERS, "content-type");
         props.setProperty(CORS_ALLOW_CREDENTIALS, "true");
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(configStream))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(configStream, StandardCharsets.UTF_8))) {
             props.load(reader);
             validate();
         }

@@ -81,7 +81,7 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
     }
 
     @Override
-    public void write(String metric) {
+    public synchronized void write(String metric) {
         try {
             out.writeBytes(metric);
         } catch (IOException e) {
@@ -96,7 +96,7 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
     public void flush() {
     }
 
-    public int shutdown() {
+    public synchronized int shutdown() {
         Collectd.logInfo("Shutting down connection to NSQ at " + host + ":" + port);
         try {
             client.close();
@@ -106,7 +106,7 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
         return 0;
     }
 
-    public int config(OConfigItem config) {
+    public synchronized int config(OConfigItem config) {
         super.config(config);
         for (OConfigItem child : config.getChildren()) {
             switch (child.getKey()) {

@@ -158,7 +158,7 @@ public class Downsample implements Iterable<Sample>, Serializable {
         int lastPos = 0;
         for (int i = 1; i < ds.counts.length; i++) {
             if (ds.counts[i] != 0) {
-                if (((Long) counterMax).equals(ds.values[i])) {
+                if (((Long) counterMax).equals(((Double) ds.values[i]).longValue())) {
                     result.values[i - 1] = resetValue;
                     result.counts[i - 1] = 1;
                 } else {

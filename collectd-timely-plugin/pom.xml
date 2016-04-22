@@ -54,6 +54,24 @@
   			</configuration>
   		</plugin>
         <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>findbugs-maven-plugin</artifactId>
+            <configuration>
+                <effort>Max</effort>
+                <threshold>Medium</threshold>
+                <xmlOutput>true</xmlOutput>
+                <excludeFilterFile>src/main/resources/findbugs-excludes.xml</excludeFilterFile>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>check</goal>
+                    </goals>
+                    <phase>prepare-package</phase>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
             <version>2.4.2</version>

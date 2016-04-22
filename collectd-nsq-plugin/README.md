@@ -1,4 +1,4 @@
-# Write Timely plugin for CollectD
+# Write NSQ plugin for CollectD
 
 To build, run ```mvn clean package```. Place the resulting jar file somewhere on the local filesystem and add the following to the
 collectd configuration file
