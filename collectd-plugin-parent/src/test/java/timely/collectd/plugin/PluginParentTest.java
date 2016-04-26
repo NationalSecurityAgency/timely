@@ -207,4 +207,48 @@ public class PluginParentTest {
                 result);
     }
 
+    @Test
+    public void testEthStatNoQueue() {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("ethstat");
+        vl.setPluginInstance("eth0");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("tx_comp_queue_full");
+        vl.setValues(Collections.singletonList((Number) 6.0D));
+        DataSet ds = new DataSet("DERIVE");
+        ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+        test.process(vl);
+        assertEquals(
+                "put sys.ethstat.tx_comp_queue_full 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo instance=eth0 sample=value sampleType=GAUGE\n",
+                result);
+
+    }
+
+    @Test
+    public void testEthStatWithQueue() {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("ethstat");
+        vl.setPluginInstance("eth0");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("rx_queue_1_bytes");
+        vl.setValues(Collections.singletonList((Number) 6.0D));
+        DataSet ds = new DataSet("DERIVE");
+        ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+        test.process(vl);
+        assertEquals(
+                "put sys.ethstat.rx_bytes 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo queue=1 instance=eth0 sample=value sampleType=GAUGE\n",
+                result);
+
+    }
+
 }

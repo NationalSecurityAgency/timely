@@ -28,6 +28,7 @@ public abstract class CollectDPluginParent {
     private static final Pattern NSQ_PATTERN2 = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final Pattern NSQ_PATTERN3 = Pattern
             .compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_#]+)\\.([\\w-_]+)");
+    private static final Pattern ETHSTAT_PATTERN = Pattern.compile("([\\w-_]+)_queue_([\\w-_]+)_([\\w-_]+)");
     private static final String STATSD_PREFIX = "statsd";
     private static final String NSQ_PREFIX = STATSD_PREFIX + ".nsq.";
     private static final Pattern HAPROXY_PATTERN = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
@@ -104,6 +105,20 @@ public abstract class CollectDPluginParent {
             }
             timestamp = vl.getTime();
             tags.append(INSTANCE).append(instance);
+        } else if (vl.getPlugin().equals("ethstat")) {
+            metric.append("sys.ethstat.");
+            if (vl.getTypeInstance().contains("queue")) {
+                Matcher m = ETHSTAT_PATTERN.matcher(vl.getTypeInstance());
+                if (m.matches()) {
+                    metric.append(m.group(1)).append("_").append(m.group(3));
+                    tags.append(" queue=").append(m.group(2));
+                } else {
+                    metric.append(vl.getTypeInstance());
+                }
+            } else {
+                metric.append(vl.getTypeInstance());
+            }
+            tags.append(INSTANCE).append(vl.getPluginInstance());
         } else if (vl.getPlugin().equals("hddtemp")) {
             metric.append("sys.hddtemp.").append(vl.getType());
             tags.append(INSTANCE).append(vl.getTypeInstance());
