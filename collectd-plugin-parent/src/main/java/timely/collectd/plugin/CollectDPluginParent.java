@@ -14,7 +14,8 @@ import org.collectd.api.ValueList;
 public abstract class CollectDPluginParent {
 
     private static final String PUT = "put {0} {1} {2}{3}\n";
-    private static final Pattern STATSD_PATTERN = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
+    private static final Pattern HADOOP_STATSD_PATTERN = Pattern
+            .compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final String INSTANCE = " instance=";
     private static final String SAMPLE = " sample=";
     private static final String CODE = " code=";
@@ -72,23 +73,19 @@ public abstract class CollectDPluginParent {
         for (String tag : addlTags) {
             tags.append(tag);
         }
-        // incoming metric will be of the form:
-        // host.statsd.type-typeInstance value timestamp
-        // the information we want is actually in the type instance, for
-        // example:
-        // DataNode_dfs_datanode_BlocksCached.
-        //
-        // We will want to emit the following to Timely for this metric:
-        //
-        // put statsd.dfs.BlocksCached <value> <timestamp> fqdn=host host=host
-        // component=DataNode
         if (vl.getPlugin().equals(STATSD_PREFIX)) {
-            Matcher m = STATSD_PATTERN.matcher(vl.getTypeInstance());
+            Matcher m = HADOOP_STATSD_PATTERN.matcher(vl.getTypeInstance());
             Matcher n1 = NSQ_PATTERN1.matcher(vl.getTypeInstance());
             Matcher n2 = NSQ_PATTERN2.matcher(vl.getTypeInstance());
             Matcher n3 = NSQ_PATTERN3.matcher(vl.getTypeInstance());
-            String instance = "unknown";
+            String instance = null;
             if (m.matches() && !vl.getTypeInstance().startsWith("nsq")) {
+                // Here we are processing the statsd metrics coming from the
+                // Hadoop Metrics2 StatsDSink without the host name.
+                // The format of metric is:
+                // serviceName.contextName.recordName.metricName. The recordName
+                // is typically duplicative and is dropped here. The serviceName
+                // is used as the instance.
                 metric.append(STATSD_PREFIX).append(PERIOD).append(m.group(2)).append(PERIOD).append(m.group(4));
                 instance = m.group(1);
             } else if (n1.matches() && vl.getTypeInstance().startsWith("nsq")) {
@@ -100,11 +97,21 @@ public abstract class CollectDPluginParent {
                 metric.append(NSQ_PREFIX).append(n3.group(4)).append(PERIOD).append(n3.group(6));
                 instance = n3.group(5);
             } else {
-                Collectd.logWarning("Unhandled statsd metric: " + vl.toString());
-                return;
+                // Handle StatsD metrics of unknown formats. If there is a
+                // period in the metric name, use everything up to that as
+                // the instance.
+                int period = vl.getTypeInstance().indexOf('.');
+                if (-1 == period) {
+                    metric.append(STATSD_PREFIX).append(PERIOD).append(vl.getTypeInstance());
+                } else {
+                    instance = vl.getTypeInstance().substring(0, period);
+                    metric.append(STATSD_PREFIX).append(PERIOD).append(vl.getTypeInstance().substring(period + 1));
+                }
             }
             timestamp = vl.getTime();
-            tags.append(INSTANCE).append(instance);
+            if (null != instance) {
+                tags.append(INSTANCE).append(instance);
+            }
         } else if (vl.getPlugin().equals("ethstat")) {
             metric.append("sys.ethstat.");
             if (vl.getTypeInstance().contains("queue")) {

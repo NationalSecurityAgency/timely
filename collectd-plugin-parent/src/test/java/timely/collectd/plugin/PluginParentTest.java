@@ -45,7 +45,7 @@ public class PluginParentTest {
     }
 
     @Test
-    public void testStatsD() throws Exception {
+    public void testStatsDHadoopFormat() throws Exception {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("statsd");
@@ -61,6 +61,45 @@ public class PluginParentTest {
         test.process(vl);
         assertEquals(
                 "put statsd.dfs.BlocksRead 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo instance=DataNode sample=value sampleType=GAUGE\n",
+                result);
+    }
+
+    @Test
+    public void testStatsDUnknownFormat() throws Exception {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("statsd");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("baz");
+        vl.setValues(Collections.singletonList((Number) 1.0D));
+        DataSet ds = new DataSet("GAUGE");
+        ds.addDataSource(new DataSource("value", 1, 0.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+        test.process(vl);
+        assertEquals("put statsd.baz 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo sample=value sampleType=GAUGE\n",
+                result);
+    }
+
+    @Test
+    public void testStatsDUnknownFormat2() throws Exception {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("statsd");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("bar.baz");
+        vl.setValues(Collections.singletonList((Number) 1.0D));
+        DataSet ds = new DataSet("GAUGE");
+        ds.addDataSource(new DataSource("value", 1, 0.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+        test.process(vl);
+        assertEquals(
+                "put statsd.baz 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo instance=bar sample=value sampleType=GAUGE\n",
                 result);
     }
 
