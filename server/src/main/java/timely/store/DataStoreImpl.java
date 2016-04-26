@@ -85,6 +85,7 @@ public class DataStoreImpl implements DataStore {
 
     private static final Authorizations NOAUTHS = Authorizations.EMPTY;
     private static final long METRICS_PERIOD = 30000;
+    private static final long DEFAULT_DOWNSAMPLE_MS = 60000;
 
     /*
      * Pair doesn't implement Comparable
@@ -680,7 +681,7 @@ public class DataStoreImpl implements DataStore {
 
     private long getDownsamplePeriod(SubQuery query) {
         if (!query.getDownsample().isPresent()) {
-            return 1000;
+            return DEFAULT_DOWNSAMPLE_MS;
         }
         String parts[] = query.getDownsample().get().split("-");
         return getTimeInMillis(parts[0]);

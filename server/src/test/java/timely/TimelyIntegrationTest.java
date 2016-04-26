@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.client.Connector;
@@ -333,6 +334,7 @@ public class TimelyIntegrationTest {
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("tag3", "value3"));
+            subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
             assertEquals(1, response.size());
@@ -370,6 +372,7 @@ public class TimelyIntegrationTest {
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("tag3", "value3"));
+            subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
             assertEquals(1, response.size());
@@ -404,6 +407,7 @@ public class TimelyIntegrationTest {
             request.setEnd(TEST_TIME + 6000);
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
+            subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
             assertEquals(1, response.size());
@@ -460,6 +464,7 @@ public class TimelyIntegrationTest {
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("rack", "r*"));
+            subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
@@ -506,6 +511,7 @@ public class TimelyIntegrationTest {
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("rack", "*"));
+            subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
