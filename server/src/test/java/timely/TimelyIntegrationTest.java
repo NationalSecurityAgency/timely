@@ -180,8 +180,9 @@ public class TimelyIntegrationTest {
         try (Socket sock = new Socket("127.0.0.1", 54321);
                 PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));) {
-            writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n");
+            writer.write("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n");
             writer.flush();
+            sleepUninterruptibly(1, TimeUnit.SECONDS);
             Assert.assertEquals(0, m.getPutRequests().getCount());
         } finally {
             m.shutdown();
