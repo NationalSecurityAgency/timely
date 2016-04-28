@@ -55,4 +55,30 @@ public class MetricTest {
         Assert.assertEquals(valueCoder.decode(value), valueCoder.decode(up3.getValue()));
     }
 
+    @Test
+    public void testToMutationWithViz() throws Exception {
+        long ts = System.currentTimeMillis();
+        List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("tag1", "value1"));
+        tags.add(new Tag("viz", "(a&b)|(c&d)"));
+        Metric m = new Metric();
+        m.setMetric("sys.cpu.user");
+        m.setTimestamp(ts);
+        m.setValue(2.0D);
+        m.setTags(tags);
+        Mutation mut = m.toMutation();
+
+        PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
+        DoubleLexicoder valueCoder = new DoubleLexicoder();
+        byte[] row = rowCoder.encode(new ComparablePair<String, Long>("sys.cpu.user", ts));
+        byte[] value = valueCoder.encode(2.0D);
+        Assert.assertEquals(rowCoder.decode(row), rowCoder.decode(mut.getRow()));
+        Assert.assertEquals(1, mut.getUpdates().size());
+        ColumnUpdate up = mut.getUpdates().get(0);
+        Assert.assertEquals("tag1=value1", new String(up.getColumnFamily()));
+        Assert.assertEquals("", new String(up.getColumnQualifier()));
+        Assert.assertEquals(ts, up.getTimestamp());
+        Assert.assertEquals("(a&b)|(c&d)", new String(up.getColumnVisibility()));
+        Assert.assertEquals(valueCoder.decode(value), valueCoder.decode(up.getValue()));
+    }
 }

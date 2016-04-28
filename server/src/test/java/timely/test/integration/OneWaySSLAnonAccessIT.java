@@ -144,6 +144,50 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
     }
 
     @Test
+    public void testPersistenceWithVisibility() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
+                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b)", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
+            sleepUninterruptibly(5, TimeUnit.SECONDS);
+        } finally {
+            m.shutdown();
+        }
+        final ZooKeeperInstance inst = new ZooKeeperInstance(mac.getClientConfig());
+        final Connector connector = inst.getConnector("root", new PasswordToken("secret".getBytes(UTF_8)));
+        connector.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
+
+        int count = 0;
+        final DoubleLexicoder valueDecoder = new DoubleLexicoder();
+        for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", Authorizations.EMPTY)) {
+            LOG.info("Entry: " + entry);
+            final double value = valueDecoder.decode(entry.getValue().get());
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(2, count);
+        count = 0;
+        Authorizations auth1 = new Authorizations("a");
+        for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth1)) {
+            LOG.info("Entry: " + entry);
+            final double value = valueDecoder.decode(entry.getValue().get());
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(4, count);
+        count = 0;
+        Authorizations auth2 = new Authorizations("b", "c");
+        for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth2)) {
+            LOG.info("Entry: " + entry);
+            final double value = valueDecoder.decode(entry.getValue().get());
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(6, count);
+    }
+
+    @Test
     public void testSuggest() throws Exception {
         final Server m = new Server(conf);
         try {
@@ -179,12 +223,15 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
+                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)", "zzzz 1234567892 1.0 host=localhost");
             sleepUninterruptibly(10, TimeUnit.SECONDS);
 
             String metrics = "https://localhost:54322/api/metrics";
             // Test prefix matching
             String result = query(metrics);
+
+            System.err.println(result);
+
             assertTrue(result.contains("<td>sys.cpu.user</td>"));
             assertTrue(result.contains("<td>tag1=value1 tag2=value2 </td>"));
             assertTrue(result.contains("<td>sys.cpu.idle</td>"));

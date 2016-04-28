@@ -237,8 +237,13 @@ public class DataStoreImpl implements DataStore {
         }
 
         internalMetrics.incrementMetricsReceived(1);
+
         List<Meta> toCache = new ArrayList<>(metric.getTags().size());
         for (final Tag tag : metric.getTags()) {
+            if (Metric.VISIBILITY_TAG.equals(tag.getKey())) {
+                continue;
+            }
+
             Meta key = new Meta(metric.getMetric(), tag.getKey(), tag.getValue());
             if (!metaCache.contains(key)) {
                 toCache.add(key);

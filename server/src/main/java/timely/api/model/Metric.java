@@ -11,6 +11,7 @@ import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -23,6 +24,8 @@ public class Metric implements Request {
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());
     private static final DoubleLexicoder valueCoder = new DoubleLexicoder();
+
+    public static final String VISIBILITY_TAG = "viz";
 
     private String metric;
     private long timestamp;
@@ -83,18 +86,30 @@ public class Metric implements Request {
         final byte[] row = rowCoder.encode(new ComparablePair<String, Long>(this.metric, this.timestamp));
         final Value value = new Value(valueCoder.encode(this.value));
         final Mutation m = new Mutation(row);
+
+        String visibility = "";
         Collections.sort(tags);
+
         for (final Tag entry : tags) {
+            if (VISIBILITY_TAG.equals(entry.getKey())) {
+                visibility = entry.getValue();
+                continue;
+            }
             final String cf = entry.getKey() + "=" + entry.getValue();
             final StringBuffer otherTags = new StringBuffer();
             String sep = "";
             for (final Tag inner : this.tags) {
+                if (VISIBILITY_TAG.equals(inner.getKey())) {
+                    visibility = inner.getValue();
+                    continue;
+                }
+
                 if (inner != entry) {
                     otherTags.append(sep).append(inner.getKey()).append("=").append(inner.getValue());
                     sep = ",";
                 }
             }
-            m.put(cf, otherTags, this.timestamp, value);
+            m.put(cf, otherTags, new ColumnVisibility(visibility), this.timestamp, value);
         }
         return m;
     }
