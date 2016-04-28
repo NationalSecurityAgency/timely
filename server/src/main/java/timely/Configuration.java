@@ -60,6 +60,13 @@ public class Configuration {
     public static final String META_CACHE_MAX_CAPACITY = "timely.meta.cache.max.capacity";
     public static final Integer META_CACHE_MAX_CAPACITY_DEFAULT = 10000;
 
+    public static final String VISIBILITY_CACHE_EXPIRATION = "timely.visibility.cache.expiration.minutes";
+    public static final Long VISIBILITY_EXPIRATION_DEFAULT = 60L;
+    public static final String VISIBILITY_CACHE_INITIAL_CAPACITY = "timely.visibility.cache.initial.capacity";
+    public static final Integer VISIBILITY_CACHE_INITIAL_CAPACITY_DEFAULT = 2000;
+    public static final String VISIBILITY_CACHE_MAX_CAPACITY = "timely.visibility.cache.max.capacity";
+    public static final Integer VISIBILITY_CACHE_MAX_CAPACITY_DEFAULT = 10000;
+
     /** Security properties */
     public static final String SSL_CERTIFICATE_FILE = "timely.ssl.certificate.file";
     public static final String SSL_PRIVATE_KEY_FILE = "timely.ssl.key.file";
@@ -136,6 +143,10 @@ public class Configuration {
         props.setProperty(SSL_USE_CIPHERS, SSL_USE_CIPHERS_DEFAULT);
         props.setProperty(ALLOW_ANONYMOUS_ACCESS, ALLOW_ANONYMOUS_ACCESS_DEFAULT);
         props.setProperty(SESSION_MAX_AGE, SESSION_MAX_AGE_DEFAULT + "");
+
+        props.setProperty(VISIBILITY_CACHE_EXPIRATION, VISIBILITY_EXPIRATION_DEFAULT + "");
+        props.setProperty(VISIBILITY_CACHE_INITIAL_CAPACITY, VISIBILITY_CACHE_INITIAL_CAPACITY_DEFAULT + "");
+        props.setProperty(VISIBILITY_CACHE_MAX_CAPACITY, VISIBILITY_CACHE_MAX_CAPACITY_DEFAULT + "");
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(configStream, StandardCharsets.UTF_8))) {
             props.load(reader);

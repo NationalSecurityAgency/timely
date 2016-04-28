@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 
 import timely.api.query.response.TimelyException;
 import timely.auth.AuthCache;
+import timely.auth.VisibilityCache;
 import timely.netty.http.HttpAggregatorsRequestHandler;
 import timely.netty.http.HttpMetricsRequestHandler;
 import timely.netty.http.HttpQueryDecoder;
@@ -207,6 +208,8 @@ public class Server {
         MetaCacheFactory.getCache(config);
         // initialize the auth cache
         AuthCache.setSessionMaxAge(config);
+        // Initialize the VisibilityCache
+        VisibilityCache.init(config);
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass = null;
         if (useEpoll) {

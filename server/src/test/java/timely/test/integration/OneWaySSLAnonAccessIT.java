@@ -12,9 +12,6 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.io.File;
-import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.Socket;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Iterator;
@@ -179,7 +176,7 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
+                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)", "zzzz 1234567892 1.0 host=localhost");
             sleepUninterruptibly(10, TimeUnit.SECONDS);
 
             String metrics = "https://localhost:54322/api/metrics";
@@ -464,18 +461,29 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         }
     }
 
-    private void put(String... lines) throws Exception {
-        StringBuffer format = new StringBuffer();
-        for (String line : lines) {
-            format.append("put ");
-            format.append(line);
-            format.append("\n");
-        }
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write(format.toString());
-            writer.flush();
+    @Test
+    public void testQueryWithVisibility() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
+                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
+                    + " 2.0 tag1=value1 tag3=value3 viz=secret");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 6000);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.user");
+            subQuery.setDownsample(Optional.of("1s-max"));
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(1, response.size());
+            Map<String, String> tags = response.get(0).getTags();
+            assertEquals(0, tags.size());
+            Map<String, Object> dps = response.get(0).getDps();
+            assertEquals(2, dps.size());
+        } finally {
+            m.shutdown();
         }
     }
-
 }

@@ -13,10 +13,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
+import timely.auth.VisibilityCache;
 
 public class TcpPutDecoder extends ByteToMessageDecoder {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpPutDecoder.class);
+
+    private static final String VISIBILITY_TAG = "viz=";
+    private static final int VISIBILITY_TAG_LENGTH = VISIBILITY_TAG.length();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -46,8 +50,12 @@ public class TcpPutDecoder extends ByteToMessageDecoder {
             }
             put.setTimestamp(ts);
             put.setValue(Double.valueOf(parts[3]));
+            String part;
             for (int i = 4; i < parts.length; i++) {
-                if (!parts[i].isEmpty()) {
+                part = parts[i];
+                if (part.startsWith(VISIBILITY_TAG) && part.length() > VISIBILITY_TAG_LENGTH) {
+                    put.setVisibility(VisibilityCache.getColumnVisibility(part.substring(VISIBILITY_TAG_LENGTH)));
+                } else if (!part.isEmpty()) {
                     put.addTag(new Tag(parts[i]));
                 }
             }
