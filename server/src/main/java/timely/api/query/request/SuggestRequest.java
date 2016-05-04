@@ -6,11 +6,11 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import timely.api.Request;
+import timely.api.AuthenticatedRequest;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SuggestRequest implements Request {
+public class SuggestRequest extends AuthenticatedRequest {
 
     private static List<String> validTypes = new ArrayList<>();
     static {
@@ -49,6 +49,7 @@ public class SuggestRequest implements Request {
     }
 
     public void validate() {
+        super.validate();
         if (!validTypes.contains(this.type)) {
             throw new IllegalArgumentException("Type is not valid");
         }

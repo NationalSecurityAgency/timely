@@ -43,6 +43,13 @@
             <artifactId>netty-all</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative</artifactId>
+            <version>1.1.33.Fork15</version>
+            <classifier>${os.detected.classifier}</classifier>
+            <!-- Eclipse doesn't like this, but it works on the cmd line -->
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
@@ -98,11 +105,27 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
     <build>
+        <extensions>
+            <!-- Use os-maven-plugin to initialize the "os.detected" properties -->
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.5.0.Final</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -140,6 +163,27 @@
                             <outputDirectory>${project.build.directory}/lib</outputDirectory>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>unpack-native</id>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <phase>process-test-classes</phase>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.netty</groupId>
+                                    <artifactId>netty-tcnative</artifactId>
+                                    <version>1.1.33.Fork15</version>
+                                    <classifier>${os.detected.classifier}</classifier>
+                                    <type>jar</type>
+                                    <overWrite>false</overWrite>
+                                    <outputDirectory>${project.build.directory}/native</outputDirectory>
+                                    <includes>**/*.so</includes>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -147,7 +191,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.19</version>
                 <configuration>
-                    <argLine>${failsafeArgLine}</argLine>
+                    <argLine>${failsafeArgLine} -Djava.library.path=${project.build.dir}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
                     <includes>
                         <include>**/*.java</include>
                     </includes>
@@ -185,7 +229,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.19</version>
                 <configuration>
-                    <argLine>${sureFireArgLine}</argLine>
+                    <argLine>${sureFireArgLine} -Djava.library.path=${project.build.dir}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
                     <excludedGroups>timely.test.IntegrationTest</excludedGroups>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                 </configuration>
@@ -280,6 +324,7 @@
                                             <goal>
 												copy-dependencies
 											</goal>
+                                            <goal>unpack</goal>
                                         </goals>
                                     </pluginExecutionFilter>
                                     <action>
@@ -361,7 +406,7 @@
                                                     <location>${project.basedir}/target/lib</location>
                                                 </source>
                                                 <source>
-                                                    <location>${project.basedir}/target/${artifactId}-${project.version}.jar</location>
+                                                    <location>${project.basedir}/target/${project.artifactId}-${project.version}.jar</location>
                                                 </source>
                                             </sources>
                                         </mapping>

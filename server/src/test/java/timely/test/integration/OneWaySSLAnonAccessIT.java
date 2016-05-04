@@ -1,23 +1,22 @@
-package timely;
+package timely.test.integration;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.JdkSslClientContext;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -25,17 +24,16 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+
 import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.lexicoder.DoubleLexicoder;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
-import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
-import org.apache.commons.io.IOUtils;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,23 +42,19 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TemporaryFolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.JavaType;
-
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.Configuration;
+import timely.Server;
 import timely.api.query.request.QueryRequest;
 import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.response.QueryResponse;
+import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
-import timely.util.JsonUtil;
+import timely.test.TestConfiguration;
 
 @Category(IntegrationTest.class)
-public class TimelyIntegrationTest {
+public class OneWaySSLAnonAccessIT extends BaseQueryIT {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimelyIntegrationTest.class);
     private static final Long TEST_TIME = System.currentTimeMillis();
 
     @ClassRule
@@ -68,6 +62,49 @@ public class TimelyIntegrationTest {
 
     private static MiniAccumuloCluster mac = null;
     private static File conf = null;
+    private static File clientTrustStoreFile = null;
+
+    protected SSLSocketFactory getSSLSocketFactory() throws Exception {
+        SslContextBuilder builder = SslContextBuilder.forClient();
+        builder.applicationProtocolConfig(ApplicationProtocolConfig.DISABLED);
+        builder.sslProvider(SslProvider.JDK);
+        builder.trustManager(clientTrustStoreFile); // Trust the server cert
+        SslContext ctx = builder.build();
+        Assert.assertEquals(JdkSslClientContext.class, ctx.getClass());
+        JdkSslContext jdk = (JdkSslContext) ctx;
+        SSLContext jdkSslContext = jdk.context();
+        return jdkSslContext.getSocketFactory();
+    }
+
+    protected static void setupSSL(TestConfiguration config) throws Exception {
+        SelfSignedCertificate serverCert = new SelfSignedCertificate();
+        config.put(Configuration.SSL_CERTIFICATE_FILE, serverCert.certificate().getAbsolutePath());
+        clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
+        config.put(Configuration.SSL_PRIVATE_KEY_FILE, serverCert.privateKey().getAbsolutePath());
+        config.put(Configuration.SSL_REQUIRE_CLIENT_AUTHENTICATION, "false");
+        config.put(Configuration.SSL_USE_OPENSSL, "false");
+        config.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "false");
+        config.put(Configuration.ALLOW_ANONYMOUS_ACCESS, "true");
+    }
+
+    @Override
+    protected HttpsURLConnection getUrlConnection(String username, String password, URL url) throws Exception {
+        // No username/password needed for anonymous access
+        return getUrlConnection(url);
+    }
+
+    protected HttpsURLConnection getUrlConnection(URL url) throws Exception {
+        HttpsURLConnection.setDefaultSSLSocketFactory(getSSLSocketFactory());
+        HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+        con.setHostnameVerifier(new HostnameVerifier() {
+
+            @Override
+            public boolean verify(String arg0, SSLSession arg1) {
+                return true;
+            }
+        });
+        return con;
+    }
 
     @BeforeClass
     public static void beforeClass() throws Exception {
@@ -76,15 +113,11 @@ public class TimelyIntegrationTest {
         mac = new MiniAccumuloCluster(macConfig);
         mac.start();
         conf = temp.newFile("config.properties");
-        try (FileWriter writer = new FileWriter(conf)) {
-            writer.write(Configuration.IP + "=127.0.0.1\n");
-            writer.write(Configuration.PUT_PORT + "=54321\n");
-            writer.write(Configuration.QUERY_PORT + "=54322\n");
-            writer.write(Configuration.ZOOKEEPERS + "=" + mac.getZooKeepers() + "\n");
-            writer.write(Configuration.INSTANCE_NAME + "=" + mac.getInstanceName() + "\n");
-            writer.write(Configuration.USERNAME + "=root\n");
-            writer.write(Configuration.PASSWORD + "=secret\n");
-        }
+        TestConfiguration config = TestConfiguration.createMinimalConfigurationForTest();
+        config.put(Configuration.INSTANCE_NAME, mac.getInstanceName());
+        config.put(Configuration.ZOOKEEPERS, mac.getZooKeepers());
+        setupSSL(config);
+        config.toConfiguration(conf);
     }
 
     @AfterClass
@@ -105,106 +138,26 @@ public class TimelyIntegrationTest {
         });
     }
 
-    @Test
-    public void testPut() throws Exception {
-        final TestServer m = new TestServer(conf);
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n");
-            writer.flush();
-            while (1 != m.getPutRequests().getCount()) {
-                Thread.sleep(5);
-            }
-            Assert.assertEquals(1, m.getPutRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getPutRequests().getResponses().get(0).getClass());
-            final Metric actual = (Metric) m.getPutRequests().getResponses().get(0);
-            final Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            final List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
-            Assert.assertEquals(expected, actual);
-        } finally {
-            m.shutdown();
-        }
+    @After
+    public void tearDown() throws Exception {
+        AuthCache.resetSessionMaxAge();
     }
 
     @Test
-    public void testPutMultiple() throws Exception {
-
-        final TestServer m = new TestServer(conf);
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle "
-                    + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n");
-            writer.flush();
-            while (2 != m.getPutRequests().getCount()) {
-                Thread.sleep(5);
-            }
-            Assert.assertEquals(2, m.getPutRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getPutRequests().getResponses().get(0).getClass());
-            Metric actual = (Metric) m.getPutRequests().getResponses().get(0);
-            Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
-            Assert.assertEquals(expected, actual);
-
-            Assert.assertEquals(Metric.class, m.getPutRequests().getResponses().get(1).getClass());
-            actual = (Metric) m.getPutRequests().getResponses().get(1);
-            expected = new Metric();
-            expected.setMetric("sys.cpu.idle");
-            expected.setTimestamp(TEST_TIME + 1);
-            expected.setValue(1.0);
-            tags = new ArrayList<>();
-            tags.add(new Tag("tag3", "value3"));
-            tags.add(new Tag("tag4", "value4"));
-            expected.setTags(tags);
-            Assert.assertEquals(expected, actual);
-
-        } finally {
-            m.shutdown();
-        }
-    }
-
-    @Test
-    public void testPutInvalidTimestamp() throws Exception {
-        final TestServer m = new TestServer(conf);
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));) {
-            writer.write("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n");
-            writer.flush();
-            sleepUninterruptibly(1, TimeUnit.SECONDS);
-            Assert.assertEquals(0, m.getPutRequests().getCount());
-        } finally {
-            m.shutdown();
-        }
-    }
-
-    @Test
-    public void testPersistence() throws Exception {
+    public void testPersistenceWithVisibility() throws Exception {
         final Server m = new Server(conf);
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4");
+                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b)", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
             sleepUninterruptibly(5, TimeUnit.SECONDS);
         } finally {
             m.shutdown();
         }
         final ZooKeeperInstance inst = new ZooKeeperInstance(mac.getClientConfig());
         final Connector connector = inst.getConnector("root", new PasswordToken("secret".getBytes(UTF_8)));
-        assertTrue(connector.namespaceOperations().exists("timely"));
-        assertTrue(connector.tableOperations().exists("timely.metrics"));
-        assertTrue(connector.tableOperations().exists("timely.meta"));
+        connector.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
+
         int count = 0;
         final DoubleLexicoder valueDecoder = new DoubleLexicoder();
         for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", Authorizations.EMPTY)) {
@@ -213,24 +166,25 @@ public class TimelyIntegrationTest {
             assertEquals(1.0, value, 1e-9);
             count++;
         }
+        assertEquals(2, count);
+        count = 0;
+        Authorizations auth1 = new Authorizations("a");
+        for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth1)) {
+            LOG.info("Entry: " + entry);
+            final double value = valueDecoder.decode(entry.getValue().get());
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(4, count);
+        count = 0;
+        Authorizations auth2 = new Authorizations("b", "c");
+        for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth2)) {
+            LOG.info("Entry: " + entry);
+            final double value = valueDecoder.decode(entry.getValue().get());
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
         assertEquals(6, count);
-        count = 0;
-        for (final Entry<Key, Value> entry : connector.createScanner("timely.meta", Authorizations.EMPTY)) {
-            LOG.info("Meta entry: " + entry);
-            count++;
-        }
-        assertEquals(10, count);
-        // count w/out versioning iterator to make sure that the optimization
-        // for writing is working
-        connector.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
-        // wait for zookeeper propagation
-        sleepUninterruptibly(3, TimeUnit.SECONDS);
-        count = 0;
-        for (final Entry<Key, Value> entry : connector.createScanner("timely.meta", Authorizations.EMPTY)) {
-            LOG.info("Meta no vers iter: " + entry);
-            count++;
-        }
-        assertEquals(10, count);
     }
 
     @Test
@@ -242,7 +196,7 @@ public class TimelyIntegrationTest {
                     + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
             sleepUninterruptibly(10, TimeUnit.SECONDS);
 
-            String suggest = "http://localhost:54322/api/suggest?";
+            String suggest = "https://localhost:54322/api/suggest?";
             // Test prefix matching
             String result = query(suggest + "type=metrics&q=sys&max=10");
             assertEquals("[\"sys.cpu.idle\",\"sys.cpu.user\"]", result);
@@ -269,12 +223,15 @@ public class TimelyIntegrationTest {
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
+                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)", "zzzz 1234567892 1.0 host=localhost");
             sleepUninterruptibly(10, TimeUnit.SECONDS);
 
-            String metrics = "http://localhost:54322/api/metrics";
+            String metrics = "https://localhost:54322/api/metrics";
             // Test prefix matching
             String result = query(metrics);
+
+            System.err.println(result);
+
             assertTrue(result.contains("<td>sys.cpu.user</td>"));
             assertTrue(result.contains("<td>tag1=value1 tag2=value2 </td>"));
             assertTrue(result.contains("<td>sys.cpu.idle</td>"));
@@ -296,7 +253,7 @@ public class TimelyIntegrationTest {
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             sleepUninterruptibly(8, TimeUnit.SECONDS);
 
-            String suggest = "http://localhost:54322/api/search/lookup?";
+            String suggest = "https://localhost:54322/api/search/lookup?";
 
             // Test a known query
             String result = query(suggest + "m=sys.cpu.idle%7Btag3%3D*%7D");
@@ -337,7 +294,7 @@ public class TimelyIntegrationTest {
             subQuery.setTags(Collections.singletonMap("tag3", "value3"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
-            List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(1, response.size());
             Map<String, String> tags = response.get(0).getTags();
             assertEquals(1, tags.size());
@@ -375,7 +332,7 @@ public class TimelyIntegrationTest {
             subQuery.setTags(Collections.singletonMap("tag3", "value3"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
-            List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(1, response.size());
             Map<String, String> tags = response.get(0).getTags();
             assertEquals(1, tags.size());
@@ -410,7 +367,7 @@ public class TimelyIntegrationTest {
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
-            List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(1, response.size());
             Map<String, String> tags = response.get(0).getTags();
             assertEquals(0, tags.size());
@@ -444,7 +401,7 @@ public class TimelyIntegrationTest {
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("rack", "r3"));
             request.addQuery(subQuery);
-            query("http://127.0.0.1:54322/api/query", request);
+            query("https://127.0.0.1:54322/api/query", request);
         } finally {
             m.shutdown();
         }
@@ -467,7 +424,7 @@ public class TimelyIntegrationTest {
             subQuery.setTags(Collections.singletonMap("rack", "r*"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
-            List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
             QueryResponse response1 = response.get(0);
             Map<String, String> tags = response1.getTags();
@@ -514,7 +471,7 @@ public class TimelyIntegrationTest {
             subQuery.setTags(Collections.singletonMap("rack", "*"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
-            List<QueryResponse> response = query("http://127.0.0.1:54322/api/query", request);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
             QueryResponse response1 = response.get(0);
             Map<String, String> tags = response1.getTags();
@@ -556,35 +513,6 @@ public class TimelyIntegrationTest {
             writer.write(format.toString());
             writer.flush();
         }
-    }
-
-    private String query(String getRequest) throws Exception {
-        URL url = new URL(getRequest);
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        int responseCode = con.getResponseCode();
-        assertEquals(200, responseCode);
-        String result = IOUtils.toString(con.getInputStream(), UTF_8);
-        LOG.info("Result is {}", result);
-        return result;
-    }
-
-    private List<QueryResponse> query(String location, QueryRequest request) throws Exception {
-        URL url = new URL(location);
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod("POST");
-        con.setDoOutput(true);
-        con.setRequestProperty("Content-Type", "application/json");
-        String requestJSON = JsonUtil.getObjectMapper().writeValueAsString(request);
-        con.setRequestProperty("Content-Length", String.valueOf(requestJSON.length()));
-        OutputStream wr = con.getOutputStream();
-        wr.write(requestJSON.getBytes(UTF_8));
-        int responseCode = con.getResponseCode();
-        String result = IOUtils.toString(con.getInputStream(), UTF_8);
-        LOG.info("Result is {}", result);
-        assertEquals(200, responseCode);
-        JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
-                .constructCollectionType(List.class, QueryResponse.class);
-        return JsonUtil.getObjectMapper().readValue(result, type);
     }
 
 }

@@ -1,8 +1,8 @@
 package timely.api.query.request;
 
-import timely.api.Request;
+import timely.api.AuthenticatedRequest;
 
-public class AggregatorsRequest implements Request {
+public class AggregatorsRequest extends AuthenticatedRequest {
 
     @Override
     public String toString() {
