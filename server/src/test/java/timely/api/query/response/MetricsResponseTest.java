@@ -1,7 +1,6 @@
 package timely.api.query.response;
 
 import java.io.File;
-import java.io.FileWriter;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,6 +12,7 @@ import timely.Configuration;
 import timely.api.model.Meta;
 import timely.store.MetaCache;
 import timely.store.MetaCacheFactory;
+import timely.test.TestConfiguration;
 
 public class MetricsResponseTest {
 
@@ -29,16 +29,9 @@ public class MetricsResponseTest {
     @Test
     public void testGenerateHtml() throws Exception {
         conf = temp.newFile("config.properties");
-        try (FileWriter writer = new FileWriter(conf)) {
-            writer.write(Configuration.IP + "=127.0.0.1\n");
-            writer.write(Configuration.PUT_PORT + "=54321\n");
-            writer.write(Configuration.QUERY_PORT + "=54322\n");
-            writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
-            writer.write(Configuration.INSTANCE_NAME + "=TEST\n");
-            writer.write(Configuration.USERNAME + "=root\n");
-            writer.write(Configuration.PASSWORD + "=secret\n");
-        }
         try {
+            TestConfiguration cfg = TestConfiguration.createMinimalConfigurationForTest();
+            cfg.toConfiguration(conf);
             Configuration config = new Configuration(conf);
             MetaCache cache = MetaCacheFactory.getCache(config);
             cache.add(new Meta("sys.cpu.user", "host", "localhost"));
@@ -59,17 +52,10 @@ public class MetricsResponseTest {
     @Test
     public void testGenerateHtmlWithIgnoredTags() throws Exception {
         conf = temp.newFile("config.properties");
-        try (FileWriter writer = new FileWriter(conf)) {
-            writer.write(Configuration.IP + "=127.0.0.1\n");
-            writer.write(Configuration.PUT_PORT + "=54321\n");
-            writer.write(Configuration.QUERY_PORT + "=54322\n");
-            writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
-            writer.write(Configuration.INSTANCE_NAME + "=TEST\n");
-            writer.write(Configuration.USERNAME + "=root\n");
-            writer.write(Configuration.PASSWORD + "=secret\n");
-            writer.write(Configuration.METRICS_IGNORED_TAGS + "=instance\n");
-        }
         try {
+            TestConfiguration cfg = TestConfiguration.createMinimalConfigurationForTest();
+            cfg.put(Configuration.METRICS_IGNORED_TAGS, "instance");
+            cfg.toConfiguration(conf);
             Configuration config = new Configuration(conf);
             MetaCache cache = MetaCacheFactory.getCache(config);
             cache.add(new Meta("sys.cpu.user", "host", "localhost"));

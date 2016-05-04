@@ -54,12 +54,15 @@ import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.commons.configuration.BaseConfiguration;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.GrantedAuthority;
 
 import timely.Configuration;
 import timely.Server;
+import timely.api.AuthenticatedRequest;
 import timely.api.model.Meta;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
@@ -73,6 +76,7 @@ import timely.api.query.response.SearchLookupResponse;
 import timely.api.query.response.SearchLookupResponse.Result;
 import timely.api.query.response.SuggestResponse;
 import timely.api.query.response.TimelyException;
+import timely.auth.AuthCache;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
@@ -83,7 +87,6 @@ public class DataStoreImpl implements DataStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreImpl.class);
 
-    private static final Authorizations NOAUTHS = Authorizations.EMPTY;
     private static final long METRICS_PERIOD = 30000;
     private static final long DEFAULT_DOWNSAMPLE_MS = 60000;
 
@@ -121,6 +124,7 @@ public class DataStoreImpl implements DataStore {
     private final List<BatchWriter> writers = new ArrayList<>();
     private final ThreadLocal<BatchWriter> metaWriter = new ThreadLocal<>();
     private final ThreadLocal<BatchWriter> batchWriter = new ThreadLocal<>();
+    private boolean anonAccessAllowed = false;
 
     public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
 
@@ -137,6 +141,7 @@ public class DataStoreImpl implements DataStore {
             bwConfig.setMaxMemory(getMemoryInBytes(conf.get(Configuration.WRITE_BUFFER_SIZE)) / numWriteThreads);
             bwConfig.setMaxWriteThreads(Integer.parseInt(conf.get(Configuration.WRITE_THREADS)));
             scannerThreads = Integer.parseInt(conf.get(Configuration.SCANNER_THREADS));
+            anonAccessAllowed = conf.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
 
             String ageoff = Long.toString(Integer.parseInt(conf.get(Configuration.METRICS_AGEOFF_DAYS)) * 86400000L);
             Map<String, String> ageOffOptions = new HashMap<>();
@@ -340,7 +345,7 @@ public class DataStoreImpl implements DataStore {
                     end.append(lastBytes, 0, lastBytes.length);
                     range = new Range(start, end);
                 }
-                Scanner scanner = connector.createScanner(metaTable, NOAUTHS);
+                Scanner scanner = connector.createScanner(metaTable, getSessionAuthorizations(request));
                 scanner.setRange(range);
                 List<String> metrics = new ArrayList<>();
                 for (Entry<Key, Value> metric : scanner) {
@@ -386,7 +391,7 @@ public class DataStoreImpl implements DataStore {
         result.setLimit(msg.getLimit());
         try {
             List<Result> resultField = new ArrayList<>();
-            Scanner scanner = connector.createScanner(metaTable, NOAUTHS);
+            Scanner scanner = connector.createScanner(metaTable, getSessionAuthorizations(msg));
             Key start = new Key(Meta.VALUE_PREFIX + msg.getQuery());
             Key end = start.followingKey(PartialKey.ROW);
             Range range = new Range(start, end);
@@ -437,7 +442,8 @@ public class DataStoreImpl implements DataStore {
             for (SubQuery query : msg.getQueries()) {
                 Map<Set<Tag>, List<Downsample>> allSeries = new HashMap<>();
                 String metric = query.getMetric();
-                BatchScanner scanner = connector.createBatchScanner(metricsTable, NOAUTHS, scannerThreads);
+                BatchScanner scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
+                        scannerThreads);
                 try {
                     setQueryRange(scanner, metric, startTs, endTs);
                     setQueryColumns(scanner, metric, query.getTags());
@@ -551,7 +557,7 @@ public class DataStoreImpl implements DataStore {
     private void setQueryColumns(BatchScanner scanner, String metric, Map<String, String> tags)
             throws TableNotFoundException, TimelyException {
         LOG.trace("Looking for requested tags: {}", tags);
-        Scanner meta = connector.createScanner(metaTable, NOAUTHS);
+        Scanner meta = connector.createScanner(metaTable, scanner.getAuthorizations());
         Text start = new Text(Meta.VALUE_PREFIX + metric);
         Text end = new Text(Meta.VALUE_PREFIX + metric + "\\x0000");
         end.append(new byte[] { (byte) 0xff }, 0, 1);
@@ -685,6 +691,19 @@ public class DataStoreImpl implements DataStore {
         }
         String parts[] = query.getDownsample().get().split("-");
         return getTimeInMillis(parts[0]);
+    }
+
+    private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
+        String sessionId = request.getSessionId();
+        if (!StringUtils.isEmpty(sessionId)) {
+            Collection<? extends GrantedAuthority> authorities = AuthCache.getAuthorizations(sessionId);
+            return new Authorizations(authorities.toArray(new String[authorities.size()]));
+        } else if (!anonAccessAllowed) {
+            throw new RuntimeException("Anonymous user attempting to query");
+        } else {
+            return Authorizations.EMPTY;
+        }
+
     }
 
 }

@@ -10,11 +10,11 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import timely.api.Request;
+import timely.api.AuthenticatedRequest;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class QueryRequest implements Request {
+public class QueryRequest extends AuthenticatedRequest {
 
     public static class RateOption {
 
@@ -394,6 +394,7 @@ public class QueryRequest implements Request {
 
     @Override
     public void validate() {
+        super.validate();
         if (queries.size() == 0) {
             throw new IllegalArgumentException("No query specified.");
         }

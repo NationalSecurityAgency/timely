@@ -26,20 +26,30 @@ public class Configuration {
     public static final String USERNAME = "timely.username";
     public static final String PASSWORD = "timely.password";
     public static final String METRICS_TABLE = "timely.table";
+    private static final String METRICS_TABLE_DEFAULT = "timely.metrics";
     public static final String META_TABLE = "timely.meta";
+    private static final String META_TABLE_DEFAULT = "timely.meta";
     public static final String METRICS_AGEOFF_DAYS = "timely.metric.age.off.days";
+    private static final String METRICS_AGEOFF_DAYS_DEFAULT = "7";
 
     public static final String MAX_LATENCY = "timely.write.latency";
+    private static final String MAX_LATENCY_DEFAULT = "5s";
     public static final String WRITE_THREADS = "timely.write.threads";
     public static final String WRITE_BUFFER_SIZE = "timely.write.buffer.size";
     public static final String SCANNER_THREADS = "timely.scanner.threads";
 
     public static final String CORS_ALLOW_ANY_ORIGIN = "timely.cors.allow.any.origin";
+    private static final String CORS_ALLOW_ANY_ORIGIN_DEFAULT = "false";
     public static final String CORS_ALLOW_NULL_ORIGIN = "timely.cors.allow.null.origin";
+    private static final String CORS_ALLOW_NULL_ORIGIN_DEFAULT = "false";
     public static final String CORS_ALLOWED_ORIGINS = "timely.cors.allowed.origins";
+    private static final String CORS_ALLOWED_ORIGINS_DEFAULT = "";
     public static final String CORS_ALLOWED_METHODS = "timely.cors.allowed.methods";
+    private static final String CORS_ALLOWED_METHODS_DEFAULT = "DELETE,GET,HEAD,OPTIONS,PUT,POST";
     public static final String CORS_ALLOWED_HEADERS = "timely.cors.allowed.headers";
+    private static final String CORS_ALLOWED_HEADERS_DEFAULT = "content-type";
     public static final String CORS_ALLOW_CREDENTIALS = "timely.cors.allow.credentials";
+    private static final String CORS_ALLOW_CREDENTIALS_DEFAULT = "true";
 
     public static final String METRICS_IGNORED_TAGS = "timely.metrics.report.tags.ignored";
 
@@ -50,6 +60,29 @@ public class Configuration {
     public static final String META_CACHE_MAX_CAPACITY = "timely.meta.cache.max.capacity";
     public static final Integer META_CACHE_MAX_CAPACITY_DEFAULT = 10000;
 
+    /** Security properties */
+    public static final String SSL_CERTIFICATE_FILE = "timely.ssl.certificate.file";
+    public static final String SSL_PRIVATE_KEY_FILE = "timely.ssl.key.file";
+    public static final String SSL_PRIVATE_KEY_PASS = "timely.ssl.key.pass";
+    public static final String SSL_USE_GENERATED_KEYPAIR = "timely.ssl.use.generated.keypair";
+    private static final String SSL_USE_GENERATED_KEYPAIR_DEFAULT = "false";
+    public static final String SSL_REQUIRE_CLIENT_AUTHENTICATION = "timely.ssl.require.client.authentication";
+    private static final String SSL_REQUIRE_CLIENT_AUTHENTICATION_DEFAULT = "true";
+    public static final String SSL_TRUST_STORE_FILE = "timely.ssl.trust.store.file";
+    public static final String SSL_USE_OPENSSL = "timely.ssl.use.openssl";
+    private static final String SSL_USE_OPENSSL_DEFAULT = "true";
+    public static final String SSL_USE_CIPHERS = "timely.ssl.use.ciphers";
+    private static final String SSL_USE_CIPHERS_DEFAULT = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:"
+            + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:TLS_RSA_WITH_AES_128_GCM_SHA256:"
+            + "TLS_RSA_WITH_AES_128_CBC_SHA:SSL_RSA_WITH_3DES_EDE_CBC_SHA";
+
+    public static final String SESSION_MAX_AGE = "timely.session.max.age";
+    public static final long SESSION_MAX_AGE_DEFAULT = 86400;
+    public static final String TIMELY_HTTP_ADDRESS = "timely.http.address";
+    public static final String GRAFANA_HTTP_ADDRESS = "grafana.http.address";
+    public static final String ALLOW_ANONYMOUS_ACCESS = "timely.allow.anonymous.access";
+    private static final String ALLOW_ANONYMOUS_ACCESS_DEFAULT = "false";
+
     private static final List<String> REQUIRED_PROPERTIES = new ArrayList<>();
     static {
         REQUIRED_PROPERTIES.add(IP);
@@ -59,6 +92,8 @@ public class Configuration {
         REQUIRED_PROPERTIES.add(INSTANCE_NAME);
         REQUIRED_PROPERTIES.add(USERNAME);
         REQUIRED_PROPERTIES.add(PASSWORD);
+        REQUIRED_PROPERTIES.add(TIMELY_HTTP_ADDRESS);
+        REQUIRED_PROPERTIES.add(GRAFANA_HTTP_ADDRESS);
     };
 
     private final Properties props = new Properties();
@@ -81,20 +116,26 @@ public class Configuration {
 
     private void init(InputStream configStream) throws IOException {
         // Add defaults
-        props.setProperty(METRICS_TABLE, "timely.metrics");
-        props.setProperty(META_TABLE, "timely.meta");
-        props.setProperty(MAX_LATENCY, "5s");
-        props.setProperty(METRICS_AGEOFF_DAYS, "7");
+        props.setProperty(METRICS_TABLE, METRICS_TABLE_DEFAULT);
+        props.setProperty(META_TABLE, META_TABLE_DEFAULT);
+        props.setProperty(MAX_LATENCY, MAX_LATENCY_DEFAULT);
+        props.setProperty(METRICS_AGEOFF_DAYS, METRICS_AGEOFF_DAYS_DEFAULT);
         final BatchWriterConfig defaults = new BatchWriterConfig();
         props.setProperty(WRITE_BUFFER_SIZE, "" + defaults.getMaxMemory());
         props.setProperty(WRITE_THREADS, "" + defaults.getMaxWriteThreads());
         props.setProperty(SCANNER_THREADS, "" + 4);
-        props.setProperty(CORS_ALLOW_ANY_ORIGIN, "true");
-        props.setProperty(CORS_ALLOW_NULL_ORIGIN, "false");
-        props.setProperty(CORS_ALLOWED_ORIGINS, "");
-        props.setProperty(CORS_ALLOWED_METHODS, "DELETE,GET,HEAD,OPTIONS,PUT,POST");
-        props.setProperty(CORS_ALLOWED_HEADERS, "content-type");
-        props.setProperty(CORS_ALLOW_CREDENTIALS, "true");
+        props.setProperty(CORS_ALLOW_ANY_ORIGIN, CORS_ALLOW_ANY_ORIGIN_DEFAULT);
+        props.setProperty(CORS_ALLOW_NULL_ORIGIN, CORS_ALLOW_NULL_ORIGIN_DEFAULT);
+        props.setProperty(CORS_ALLOWED_ORIGINS, CORS_ALLOWED_ORIGINS_DEFAULT);
+        props.setProperty(CORS_ALLOWED_METHODS, CORS_ALLOWED_METHODS_DEFAULT);
+        props.setProperty(CORS_ALLOWED_HEADERS, CORS_ALLOWED_HEADERS_DEFAULT);
+        props.setProperty(CORS_ALLOW_CREDENTIALS, CORS_ALLOW_CREDENTIALS_DEFAULT);
+        props.setProperty(SSL_USE_GENERATED_KEYPAIR, SSL_USE_GENERATED_KEYPAIR_DEFAULT);
+        props.setProperty(SSL_REQUIRE_CLIENT_AUTHENTICATION, SSL_REQUIRE_CLIENT_AUTHENTICATION_DEFAULT);
+        props.setProperty(SSL_USE_OPENSSL, SSL_USE_OPENSSL_DEFAULT);
+        props.setProperty(SSL_USE_CIPHERS, SSL_USE_CIPHERS_DEFAULT);
+        props.setProperty(ALLOW_ANONYMOUS_ACCESS, ALLOW_ANONYMOUS_ACCESS_DEFAULT);
+        props.setProperty(SESSION_MAX_AGE, SESSION_MAX_AGE_DEFAULT + "");
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(configStream, StandardCharsets.UTF_8))) {
             props.load(reader);
@@ -105,12 +146,24 @@ public class Configuration {
     protected void validate() {
         REQUIRED_PROPERTIES.forEach(p -> {
             if (!props.containsKey(p) || StringUtils.isEmpty(props.getProperty(p))) {
-                throw new RuntimeException("Required property " + p + " must be specified.");
+                throw new IllegalArgumentException("Required property " + p + " must be specified.");
             }
         });
+        if (!getBoolean(Configuration.SSL_USE_GENERATED_KEYPAIR)) {
+            if (StringUtils.isEmpty(get(Configuration.SSL_CERTIFICATE_FILE))) {
+                throw new IllegalArgumentException(Configuration.SSL_CERTIFICATE_FILE + "must be specified.");
+            }
+            if (StringUtils.isEmpty(get(Configuration.SSL_PRIVATE_KEY_FILE))) {
+                throw new IllegalArgumentException(Configuration.SSL_PRIVATE_KEY_FILE + "must be specified.");
+            }
+        }
     }
 
     public String get(String property) {
         return props.getProperty(property);
+    }
+
+    public boolean getBoolean(String property) {
+        return Boolean.parseBoolean(get(property));
     }
 }
