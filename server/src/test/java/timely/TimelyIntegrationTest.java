@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -47,8 +46,6 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.JavaType;
-
 import timely.api.model.Metric;
 import timely.api.model.Tag;
 import timely.api.query.request.QueryRequest;
@@ -57,8 +54,15 @@ import timely.api.query.response.QueryResponse;
 import timely.test.IntegrationTest;
 import timely.util.JsonUtil;
 
+import com.fasterxml.jackson.databind.JavaType;
+
 @Category(IntegrationTest.class)
 public class TimelyIntegrationTest {
+
+    private static class NotSuccessfulException extends Exception {
+
+        private static final long serialVersionUID = 1L;
+    }
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyIntegrationTest.class);
     private static final Long TEST_TIME = System.currentTimeMillis();
@@ -428,7 +432,7 @@ public class TimelyIntegrationTest {
         }
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = NotSuccessfulException.class)
     public void testQueryWithNoMatchingTags() throws Exception {
         final Server m = new Server(conf);
         try {
@@ -444,7 +448,7 @@ public class TimelyIntegrationTest {
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("rack", "r3"));
             request.addQuery(subQuery);
-            query("http://127.0.0.1:54322/api/query", request);
+            query("http://127.0.0.1:54322/api/query", request, 400);
         } finally {
             m.shutdown();
         }
@@ -544,6 +548,19 @@ public class TimelyIntegrationTest {
         }
     }
 
+    @Test
+    public void testUnhandledRequest() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            URL url = new URL("http://127.0.0.1:54322/favicon.ico");
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            int responseCode = con.getResponseCode();
+            assertEquals(404, responseCode);
+        } finally {
+            m.shutdown();
+        }
+    }
+
     private void put(String... lines) throws Exception {
         StringBuffer format = new StringBuffer();
         for (String line : lines) {
@@ -569,6 +586,10 @@ public class TimelyIntegrationTest {
     }
 
     private List<QueryResponse> query(String location, QueryRequest request) throws Exception {
+        return query(location, request, 200);
+    }
+
+    private List<QueryResponse> query(String location, QueryRequest request, int expectedResponseCode) throws Exception {
         URL url = new URL(location);
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod("POST");
@@ -579,12 +600,16 @@ public class TimelyIntegrationTest {
         OutputStream wr = con.getOutputStream();
         wr.write(requestJSON.getBytes(UTF_8));
         int responseCode = con.getResponseCode();
-        String result = IOUtils.toString(con.getInputStream(), UTF_8);
-        LOG.info("Result is {}", result);
-        assertEquals(200, responseCode);
-        JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
-                .constructCollectionType(List.class, QueryResponse.class);
-        return JsonUtil.getObjectMapper().readValue(result, type);
+        Assert.assertEquals(expectedResponseCode, responseCode);
+        if (200 == responseCode) {
+            String result = IOUtils.toString(con.getInputStream(), UTF_8);
+            LOG.info("Result is {}", result);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
+                    .constructCollectionType(List.class, QueryResponse.class);
+            return JsonUtil.getObjectMapper().readValue(result, type);
+        } else {
+            throw new NotSuccessfulException();
+        }
     }
 
 }

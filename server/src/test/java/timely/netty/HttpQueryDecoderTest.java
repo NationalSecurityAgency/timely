@@ -12,11 +12,12 @@ import timely.api.Request;
 import timely.api.model.Tag;
 import timely.api.query.request.AggregatorsRequest;
 import timely.api.query.request.QueryRequest;
-import timely.api.query.request.SearchLookupRequest;
-import timely.api.query.request.SuggestRequest;
 import timely.api.query.request.QueryRequest.Filter;
 import timely.api.query.request.QueryRequest.RateOption;
 import timely.api.query.request.QueryRequest.SubQuery;
+import timely.api.query.request.SearchLookupRequest;
+import timely.api.query.request.SuggestRequest;
+import timely.api.query.response.TimelyException;
 import timely.netty.http.HttpQueryDecoder;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -30,13 +31,13 @@ public class HttpQueryDecoderTest {
         decoder = new HttpQueryDecoder();
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testUnknownURI() {
+    @Test(expected = TimelyException.class)
+    public void testUnknownURI() throws Exception {
         decoder.parseURI("/api/uknown");
     }
 
     @Test
-    public void testAggregatorsURI() {
+    public void testAggregatorsURI() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/aggregators");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(AggregatorsRequest.class, requests.iterator().next().getClass());
@@ -50,7 +51,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testLookupURIWithNoArgs() {
+    public void testLookupURIWithNoArgs() throws Exception {
         decoder.parseURI("/api/search/lookup");
     }
 
@@ -60,7 +61,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testLookupURIWithNoLimit() {
+    public void testLookupURIWithNoLimit() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/search/lookup?m=sys.cpu.user");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SearchLookupRequest.class, requests.iterator().next().getClass());
@@ -88,7 +89,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testLookupURIWithLimit() {
+    public void testLookupURIWithLimit() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/search/lookup?m=sys.cpu.user&limit=3000");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SearchLookupRequest.class, requests.iterator().next().getClass());
@@ -117,7 +118,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testLookupURIWithLimitAndTags() {
+    public void testLookupURIWithLimitAndTags() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/search/lookup?m=sys.cpu.user{host=*}&limit=3000");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SearchLookupRequest.class, requests.iterator().next().getClass());
@@ -158,7 +159,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testSuggestURIWithInvalidType() {
+    public void testSuggestURIWithInvalidType() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/suggest?type=foo");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SuggestRequest.class, requests.iterator().next().getClass());
@@ -169,7 +170,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testSuggestURIValidateWithInvalidTypeFails() {
+    public void testSuggestURIValidateWithInvalidTypeFails() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/suggest?type=foo");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SuggestRequest.class, requests.iterator().next().getClass());
@@ -181,7 +182,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testSuggestURIWithValidType() {
+    public void testSuggestURIWithValidType() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/suggest?type=metrics");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SuggestRequest.class, requests.iterator().next().getClass());
@@ -211,7 +212,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testSuggestWithValidTypeAndQuery() {
+    public void testSuggestWithValidTypeAndQuery() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/suggest?type=metrics&q=sys.cpu.user");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SuggestRequest.class, requests.iterator().next().getClass());
@@ -242,7 +243,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testSuggestWithValidTypeAndQueryAndMax() {
+    public void testSuggestWithValidTypeAndQueryAndMax() throws Exception {
         Collection<Request> requests = decoder.parseURI("/api/suggest?type=metrics&q=sys.cpu.user&max=30");
         Assert.assertEquals(1, requests.size());
         Assert.assertEquals(SuggestRequest.class, requests.iterator().next().getClass());
@@ -274,7 +275,7 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
-    public void testQueryURIAll() {
+    public void testQueryURIAll() throws Exception {
         Collection<Request> requests = decoder
                 .parseURI("/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         Assert.assertEquals(1, requests.size());
