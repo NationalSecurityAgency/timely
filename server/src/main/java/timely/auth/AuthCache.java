@@ -2,7 +2,10 @@ package timely.auth;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.accumulo.core.security.Authorizations;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
@@ -41,8 +44,18 @@ public class AuthCache {
         return CACHE;
     }
 
-    public static Collection<? extends GrantedAuthority> getAuthorizations(String sessionId) {
-        return CACHE.asMap().get(sessionId).getAuthorities();
+    public static Authorizations getAuthorizations(String sessionId) {
+        if (!StringUtils.isEmpty(sessionId)) {
+            Collection<? extends GrantedAuthority> authorities = CACHE.asMap().get(sessionId).getAuthorities();
+            String[] auths = new String[authorities.size()];
+            final AtomicInteger i = new AtomicInteger(0);
+            authorities.forEach(a -> {
+                auths[i.getAndIncrement()] = a.getAuthority();
+            });
+            return new Authorizations(auths);
+        } else {
+            throw new IllegalArgumentException("session id cannot be null");
+        }
     }
 
 }

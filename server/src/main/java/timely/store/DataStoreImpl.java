@@ -25,6 +25,7 @@ import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -696,8 +697,7 @@ public class DataStoreImpl implements DataStore {
     private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
         String sessionId = request.getSessionId();
         if (!StringUtils.isEmpty(sessionId)) {
-            Collection<? extends GrantedAuthority> authorities = AuthCache.getAuthorizations(sessionId);
-            return new Authorizations(authorities.toArray(new String[authorities.size()]));
+            return AuthCache.getAuthorizations(sessionId);
         } else if (!anonAccessAllowed) {
             throw new RuntimeException("Anonymous user attempting to query");
         } else {
