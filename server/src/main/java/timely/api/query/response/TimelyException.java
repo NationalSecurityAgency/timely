@@ -1,10 +1,14 @@
 package timely.api.query.response;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class TimelyException extends Exception {
 
     private static final long serialVersionUID = 1L;
     private int code = 500;
     private String details = null;
+    private Map<String, String> responseHeaders = new HashMap<>();
 
     public TimelyException(int code, String message, String details) {
         this(code, message, details, null);
@@ -30,5 +34,13 @@ public class TimelyException extends Exception {
 
     public void setDetails(String details) {
         this.details = details;
+    }
+
+    public void addResponseHeader(String name, String value) {
+        this.responseHeaders.put(name, value);
+    }
+
+    public Map<String, String> getResponseHeaders() {
+        return this.responseHeaders;
     }
 }

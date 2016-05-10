@@ -10,6 +10,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.commons.io.IOUtils;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +21,11 @@ import timely.util.JsonUtil;
 import com.fasterxml.jackson.databind.JavaType;
 
 public abstract class BaseQueryIT {
+
+    public static class NotSuccessfulException extends Exception {
+
+        private static final long serialVersionUID = 1L;
+    }
 
     public static class UnauthorizedUserException extends Exception {
 
@@ -42,17 +48,30 @@ public abstract class BaseQueryIT {
     }
 
     protected String query(String getRequest) throws Exception {
+        return query(getRequest, 200);
+    }
+
+    protected String query(String getRequest, int expectedResponseCode) throws Exception {
         URL url = new URL(getRequest);
         HttpsURLConnection con = getUrlConnection(url);
         int responseCode = con.getResponseCode();
-        assertEquals(200, responseCode);
-        String result = IOUtils.toString(con.getInputStream(), UTF_8);
-        LOG.info("Result is {}", result);
-        return result;
+        assertEquals(expectedResponseCode, responseCode);
+        if (200 == responseCode) {
+            String result = IOUtils.toString(con.getInputStream(), UTF_8);
+            LOG.info("Result is {}", result);
+            return result;
+        } else {
+            throw new NotSuccessfulException();
+        }
     }
 
     protected List<QueryResponse> query(String username, String password, String location, QueryRequest request)
             throws Exception {
+        return query(username, password, location, request, 200);
+    }
+
+    protected List<QueryResponse> query(String username, String password, String location, QueryRequest request,
+            int expectedResponseCode) throws Exception {
         URL url = new URL(location);
         HttpsURLConnection con = getUrlConnection(username, password, url);
         con.setRequestMethod("POST");
@@ -63,15 +82,24 @@ public abstract class BaseQueryIT {
         OutputStream wr = con.getOutputStream();
         wr.write(requestJSON.getBytes(UTF_8));
         int responseCode = con.getResponseCode();
-        String result = IOUtils.toString(con.getInputStream(), UTF_8);
-        LOG.info("Result is {}", result);
-        assertEquals(200, responseCode);
-        JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
-                .constructCollectionType(List.class, QueryResponse.class);
-        return JsonUtil.getObjectMapper().readValue(result, type);
+        Assert.assertEquals(expectedResponseCode, responseCode);
+        if (200 == responseCode) {
+            String result = IOUtils.toString(con.getInputStream(), UTF_8);
+            LOG.info("Result is {}", result);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
+                    .constructCollectionType(List.class, QueryResponse.class);
+            return JsonUtil.getObjectMapper().readValue(result, type);
+        } else {
+            throw new NotSuccessfulException();
+        }
     }
 
     protected List<QueryResponse> query(String location, QueryRequest request) throws Exception {
+        return query(location, request, 200);
+    }
+
+    protected List<QueryResponse> query(String location, QueryRequest request, int expectedResponseCode)
+            throws Exception {
         URL url = new URL(location);
         HttpsURLConnection con = getUrlConnection(url);
         con.setRequestMethod("POST");
@@ -82,12 +110,16 @@ public abstract class BaseQueryIT {
         OutputStream wr = con.getOutputStream();
         wr.write(requestJSON.getBytes(UTF_8));
         int responseCode = con.getResponseCode();
-        String result = IOUtils.toString(con.getInputStream(), UTF_8);
-        LOG.info("Result is {}", result);
-        assertEquals(200, responseCode);
-        JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
-                .constructCollectionType(List.class, QueryResponse.class);
-        return JsonUtil.getObjectMapper().readValue(result, type);
+        Assert.assertEquals(expectedResponseCode, responseCode);
+        if (200 == responseCode) {
+            String result = IOUtils.toString(con.getInputStream(), UTF_8);
+            LOG.info("Result is {}", result);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
+                    .constructCollectionType(List.class, QueryResponse.class);
+            return JsonUtil.getObjectMapper().readValue(result, type);
+        } else {
+            throw new NotSuccessfulException();
+        }
     }
 
     protected abstract HttpsURLConnection getUrlConnection(URL url) throws Exception;

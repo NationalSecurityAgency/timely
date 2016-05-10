@@ -35,6 +35,7 @@ import timely.api.query.request.QueryRequest.RateOption;
 import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.request.SearchLookupRequest;
 import timely.api.query.request.SuggestRequest;
+import timely.api.query.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.netty.http.HttpQueryDecoder;
 import timely.test.TestConfiguration;
@@ -97,7 +98,7 @@ public class HttpQueryDecoderTest {
         request.headers().set(Names.COOKIE, ClientCookieEncoder.STRICT.encode(Constants.COOKIE_NAME, cookie));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = TimelyException.class)
     public void testUnknownURI() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,

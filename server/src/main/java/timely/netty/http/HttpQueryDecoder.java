@@ -5,6 +5,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 
@@ -33,6 +34,7 @@ import timely.api.query.request.SearchLookupRequest;
 import timely.api.query.request.SuggestRequest;
 import timely.api.query.request.X509LoginRequest;
 import timely.netty.Constants;
+import timely.api.query.response.TimelyException;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -103,12 +105,16 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
                 out.add(req);
             });
         } else {
-            LOG.warn("Unhandled HTTP request method {}", msg.getMethod());
+            TimelyException e = new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
+                    "unhandled method type", "");
+            e.addResponseHeader(Names.ALLOW, HttpMethod.GET.name() + "," + HttpMethod.POST.name());
+            LOG.warn("Unhandled HTTP request type {}", msg.getMethod());
+            throw e;
         }
     }
 
     public Collection<Request> parsePOST(String uri, String content) throws JsonParseException, JsonMappingException,
-            IOException {
+            IOException, TimelyException {
         LOG.trace("Recevied POST content: {}", content);
         final List<Request> requests = new ArrayList<>();
         final QueryStringDecoder decoder = new QueryStringDecoder(uri);
@@ -124,13 +130,13 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
         } else if (decoder.path().equals(API_LOGIN)) {
             requests.add(JsonUtil.getObjectMapper().readValue(content, BasicAuthLoginRequest.class));
         } else {
-            throw new IllegalArgumentException("Unhandled query type: " + decoder.path());
+            throw new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Unhandled query uri: " + decoder.path(), "");
         }
         LOG.trace("Parsed POST request {}", requests);
         return requests;
     }
 
-    public Collection<Request> parseURI(String uri) {
+    public Collection<Request> parseURI(String uri) throws TimelyException {
         final List<Request> requests = new ArrayList<>();
         final QueryStringDecoder decoder = new QueryStringDecoder(uri);
         if (decoder.path().equals(API_AGG)) {
@@ -286,7 +292,7 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
         } else if (decoder.path().equals(API_LOGIN)) {
             requests.add(new X509LoginRequest());
         } else {
-            throw new IllegalArgumentException("Unhandled query type: " + decoder.path());
+            throw new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Unhandled query uri: " + decoder.path(), "");
         }
         LOG.trace("Parsed GET request {}", requests);
         return requests;

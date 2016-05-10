@@ -12,8 +12,8 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
 import java.util.Collections;
@@ -338,7 +338,7 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         }
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = NotSuccessfulException.class)
     public void testQueryWithNoMatchingTags() throws Exception {
         final Server m = new Server(conf);
         try {
@@ -354,7 +354,7 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("rack", "r3"));
             request.addQuery(subQuery);
-            query("https://127.0.0.1:54322/api/query", request);
+            query("https://127.0.0.1:54322/api/query", request, 400);
         } finally {
             m.shutdown();
         }
@@ -449,6 +449,16 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
             Entry<String, Object> entry2 = entries2.next();
             assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
             assertEquals(1.0, entry2.getValue());
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test(expected = NotSuccessfulException.class)
+    public void testUnhandledRequest() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            query("https://127.0.0.1:54322/favicon.ico", 404);
         } finally {
             m.shutdown();
         }

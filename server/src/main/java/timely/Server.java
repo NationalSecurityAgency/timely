@@ -51,6 +51,7 @@ import timely.netty.http.HttpSearchLookupRequestHandler;
 import timely.netty.http.HttpSuggestRequestHandler;
 import timely.netty.http.login.BasicAuthLoginRequestHandler;
 import timely.netty.http.login.X509LoginRequestHandler;
+import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.tcp.TcpPutDecoder;
 import timely.netty.tcp.TcpPutHandler;
 import timely.store.DataStore;
@@ -343,6 +344,7 @@ public class Server {
                 ch.pipeline().addLast("query", new HttpQueryRequestHandler(dataStore));
                 ch.pipeline().addLast("search", new HttpSearchLookupRequestHandler(dataStore));
                 ch.pipeline().addLast("suggest", new HttpSuggestRequestHandler(dataStore));
+                ch.pipeline().addLast("error", new TimelyExceptionHandler());
             }
         };
     }

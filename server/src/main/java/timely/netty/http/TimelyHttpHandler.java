@@ -28,6 +28,7 @@ public interface TimelyHttpHandler {
                 .getCode()), Unpooled.copiedBuffer(buf));
         response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
         response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
+        e.getResponseHeaders().entrySet().forEach(entry -> response.headers().set(entry.getKey(), entry.getValue()));
         // Send the error response
         sendResponse(ctx, response);
     }
