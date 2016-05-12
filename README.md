@@ -147,6 +147,9 @@ timely.session.max.age | Setting for max age of session cookie (in seconds) | 86
 timely.http.address | Address for the Timely server, used for the session cookie domain |
 grafana.http.address | Address for the Grafana server |
 timely.allow.anonymous.access | Allow anonymous access | false
+timely.visibility.cache.expiration.minutes | Column Visibility Cache Expiration | 60
+timely.visibility.cache.initial.capacity | Column Visibility Cache Initial Capacity | 2000
+timely.visibility.cache.max.capacity | Column Visibility Cache Max Capacity | 10000
 
 ## Tuning
 

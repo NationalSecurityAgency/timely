@@ -14,6 +14,9 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import java.io.File;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -22,6 +25,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
 import org.junit.After;
@@ -36,13 +40,20 @@ import org.junit.rules.TemporaryFolder;
 
 import timely.Configuration;
 import timely.Server;
+import timely.api.query.request.QueryRequest;
+import timely.api.query.response.QueryResponse;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static org.junit.Assert.assertEquals;
+
 @Category(IntegrationTest.class)
 public class TwoWaySSLOpenSSLIT extends BaseQueryIT {
+
+    private static final Long TEST_TIME = System.currentTimeMillis();
 
     @ClassRule
     public static final TemporaryFolder temp = new TemporaryFolder();
@@ -150,6 +161,7 @@ public class TwoWaySSLOpenSSLIT extends BaseQueryIT {
     @Before
     public void setup() throws Exception {
         Connector con = mac.getConnector("root", "secret");
+        con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
         con.tableOperations().list().forEach(t -> {
             if (t.startsWith("timely")) {
                 try {
@@ -176,4 +188,32 @@ public class TwoWaySSLOpenSSLIT extends BaseQueryIT {
         }
     }
 
+    @Test
+    public void testQueryWithVisibility() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
+                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
+                    + " 2.0 tag1=value1 tag3=value3 viz=A", "sys.cpu.user " + (TEST_TIME + 3000)
+                    + " 2.0 tag1=value1 tag3=value3 viz=D", "sys.cpu.user " + (TEST_TIME + 3000)
+                    + " 2.0 tag1=value1 tag3=value3 viz=G");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 6000);
+            QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
+            subQuery.setMetric("sys.cpu.user");
+            subQuery.setDownsample(Optional.of("1s-max"));
+            request.addQuery(subQuery);
+            String metrics = "https://127.0.0.1:54322/api/query";
+            List<QueryResponse> response = query(metrics, request);
+            assertEquals(1, response.size());
+            Map<String, String> tags = response.get(0).getTags();
+            assertEquals(0, tags.size());
+            Map<String, Object> dps = response.get(0).getDps();
+            assertEquals(3, dps.size());
+        } finally {
+            m.shutdown();
+        }
+    }
 }
