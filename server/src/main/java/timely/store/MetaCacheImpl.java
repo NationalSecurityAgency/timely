@@ -4,8 +4,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang3.StringUtils;
-
 import timely.Configuration;
 import timely.api.model.Meta;
 
@@ -20,21 +18,9 @@ public class MetaCacheImpl implements MetaCache {
 
     @Override
     public void init(Configuration config) {
-        String expireMinutes = config.get(Configuration.META_CACHE_EXPIRATION);
-        long defaultExpiration = Configuration.META_CACHE_EXPIRATION_DEFAULT;
-        if (!StringUtils.isEmpty(expireMinutes)) {
-            defaultExpiration = Long.parseLong(expireMinutes);
-        }
-        String cap = config.get(Configuration.META_CACHE_INITIAL_CAPACITY);
-        int initialCapacity = Configuration.META_CACHE_INITIAL_CAPACITY_DEFAULT;
-        if (!StringUtils.isEmpty(cap)) {
-            initialCapacity = Integer.parseInt(cap);
-        }
-        String max = config.get(Configuration.META_CACHE_MAX_CAPACITY);
-        long maxCapacity = Configuration.META_CACHE_MAX_CAPACITY_DEFAULT;
-        if (!StringUtils.isEmpty(max)) {
-            maxCapacity = Long.parseLong(max);
-        }
+        long defaultExpiration = Long.parseLong(config.get(Configuration.META_CACHE_EXPIRATION));
+        int initialCapacity = Integer.parseInt(config.get(Configuration.META_CACHE_INITIAL_CAPACITY));
+        long maxCapacity = Long.parseLong(config.get(Configuration.META_CACHE_MAX_CAPACITY));
         cache = Caffeine.newBuilder().expireAfterAccess(defaultExpiration, TimeUnit.MINUTES)
                 .initialCapacity(initialCapacity).maximumSize(maxCapacity).build();
     }

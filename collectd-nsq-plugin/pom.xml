@@ -13,7 +13,7 @@
             <artifactId>collectd-api</artifactId>
             <version>5.5.1</version>
             <scope>system</scope>
-            <systemPath>/usr/share/collectd/java/collectd-api.jar</systemPath>
+            <systemPath>${collectd-api-jar}</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
