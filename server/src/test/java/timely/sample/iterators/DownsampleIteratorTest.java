@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import timely.api.model.Metric;
 import timely.api.model.Tag;
+import timely.auth.VisibilityCache;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.aggregators.Avg;
@@ -33,6 +34,11 @@ public class DownsampleIteratorTest {
 
     final private SortedMap<Key, Value> testData1 = new TreeMap<>();
     final private SortedMap<Key, Value> testData2 = new TreeMap<>();
+
+    @Before
+    public void before() {
+        VisibilityCache.init();
+    }
 
     @Before
     public void createTestData() {

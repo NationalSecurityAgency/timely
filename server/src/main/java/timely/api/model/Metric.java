@@ -11,6 +11,7 @@ import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -24,10 +25,14 @@ public class Metric implements Request {
             new LongLexicoder());
     private static final DoubleLexicoder valueCoder = new DoubleLexicoder();
 
+    public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
+
     private String metric;
     private long timestamp;
     private double value;
     private List<Tag> tags;
+
+    private ColumnVisibility visibility = EMPTY_VISIBILITY;
 
     public Metric() {
     }
@@ -79,6 +84,14 @@ public class Metric implements Request {
         this.tags.add(tag);
     }
 
+    public ColumnVisibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(ColumnVisibility visibility) {
+        this.visibility = visibility;
+    }
+
     public Mutation toMutation() {
         final byte[] row = rowCoder.encode(new ComparablePair<String, Long>(this.metric, this.timestamp));
         final Value value = new Value(valueCoder.encode(this.value));
@@ -94,7 +107,7 @@ public class Metric implements Request {
                     sep = ",";
                 }
             }
-            m.put(cf, otherTags, this.timestamp, value);
+            m.put(cf, otherTags, visibility, this.timestamp, value);
         }
         return m;
     }

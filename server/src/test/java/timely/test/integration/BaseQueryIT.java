@@ -4,6 +4,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.net.URL;
 import java.util.List;
 
@@ -36,6 +38,20 @@ public abstract class BaseQueryIT {
     }
 
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
+
+    protected void put(String... lines) throws Exception {
+        StringBuffer format = new StringBuffer();
+        for (String line : lines) {
+            format.append("put ");
+            format.append(line);
+            format.append("\n");
+        }
+        try (Socket sock = new Socket("127.0.0.1", 54321);
+                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
+            writer.write(format.toString());
+            writer.flush();
+        }
+    }
 
     protected String query(String username, String password, String getRequest) throws Exception {
         URL url = new URL(getRequest);
