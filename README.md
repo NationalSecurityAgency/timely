@@ -29,10 +29,10 @@ Timely uses Maven for compiling source, running tests, and packaging distributio
 Command | Description
 --------|------------
 mvn compile | Compiles and formats the source
-mvn test | Compiles and formats source and runs unit tests
-mvn package | Compiles and formats source, runs unit tests, and creates a distribution
-mvn verify | Compiles and formats source, runs unit tests, creates a distribution, runs integration tests, and runs jacoco for code coverage
-mvn verify site | Compiles and formats source, runs unit tests, creates a distribution, runs integration tests, and runs jacoco for code coverage, and creates the site
+mvn test | Runs unit tests
+mvn package | Runs findbugs and creates a distribution
+mvn verify | Runs integration tests
+mvn verify site | Creates the site
  
 The [CollectD] (http://collectd.org/) plugins require that CollectD is installed locally as the /usr/share/collectd/java/collectd-api.jar file is a dependency.
 
@@ -68,7 +68,7 @@ This endpoint reports the metric names and tags that have been pushed to Timely.
 Metrics sent to Timely are stored in two Accumulo tables, meta and metrics. The meta table stores information about the metric names and tags. It's format is:
 
 Row | ColumnFamily | ColumnQualifier | Value
-----|-------------:|----------------:|-----:
+----|:-------------|:----------------|:-----
 m:metric | | |
 t:metric | tagKey| | 
 v:metric | tagKey | tagValue |
@@ -76,7 +76,7 @@ v:metric | tagKey | tagValue |
 The metrics table stores the datapoints using the following format:
 
 Row | ColumnFamily | ColumnQualifier | Value
-----|-------------:|----------------:|-----:
+----|:-------------|:----------------|:-----
 metric\timestamp | | tagKey=tagValue | metricValue
 
 As an example, if you sent the following metric to the put api
@@ -88,7 +88,7 @@ put sys.cpu.user 1447879348291 2.0 rack=r001 host=r001n01 instance=0
 it would get stored in the following manner in the meta table:
 
 Row | ColumnFamily | ColumnQualifier | Value
-----|-------------:|----------------:|-----:
+----|:-------------|:----------------|:-----
 m:sys.cpu.user | | |
 t:sys.cpu.user | host | | 
 t:sys.cpu.user | instance | | 
@@ -100,7 +100,7 @@ v:sys.cpu.user | rack | r001 |
 and in the following manner in the metrics table
 
 Row | ColumnFamily | ColumnQualifier | Value
-----|-------------:|----------------:|-----:
+----|:-------------|:----------------|:-----
 sys.cpu.user\1447879348291 | host=r001n01 | instance=0,rack=r001    | 2.0
 sys.cpu.user\1447879348291 | instance=0   | host=r001n01,rack=r001  | 2.0
 sys.cpu.user\1447879348291 | rack=r001    | host=r001n01,instance=0 | 2.0
@@ -110,7 +110,7 @@ sys.cpu.user\1447879348291 | rack=r001    | host=r001n01,instance=0 | 2.0
 The NUM\_SERVER\_THREADS variable in the timely-server.sh script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the variable to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the conf directory expects the following properties:
 
 Property | Description | Default Value
----------|------------:|--------------
+:--------|:------------|:-------------
 timely.ip | The ip address where the Timely server is running |
 timely.port.put | The port that will be used for processing put requests |
 timely.port.query | The port that will be used for processing query requests |
@@ -127,7 +127,7 @@ timely.metric.age.off.days | The number of days to keep metrics | 7
 timely.cors.allow.any.origin | Allow any origin in cross origin requests (true/false) | false
 timely.cors.allow.null.origin | Allow null origins in cross origin requests (true/false) | false
 timely.cors.allowed.origins | List of allowed origins in cross origin requests (can be null or comma separated list)
-timely.cors.allowed.methods | List of allowed methods for cross origin requests (DELETE,GET,HEAD,OPTIONS,PUT,POST) | DELETE,GET,HEAD,OPTIONS,PUT,POST
+timely.cors.allowed.methods | List of allowed methods for cross origin requests | DELETE,GET,HEAD,OPTIONS,PUT,POST
 timely.cors.allowed.headers | Comma separated list of allowed HTTP headers for cross origin requests | content-type
 timely.cors.allow.credentials | Allow credentials to be passed in cross origin requests (true/false) | true
 timely.scanner.threads | Number of BatchScanner threads to be used in a query | 4
