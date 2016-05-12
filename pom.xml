@@ -14,6 +14,7 @@
     <properties>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <collectd-api-jar>/usr/share/collectd/java/collectd-api.jar</collectd-api-jar>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <version.accumulo>1.7.0</version.accumulo>

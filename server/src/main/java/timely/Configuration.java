@@ -95,6 +95,9 @@ public class Configuration {
         props.setProperty(CORS_ALLOWED_METHODS, "DELETE,GET,HEAD,OPTIONS,PUT,POST");
         props.setProperty(CORS_ALLOWED_HEADERS, "content-type");
         props.setProperty(CORS_ALLOW_CREDENTIALS, "true");
+        props.setProperty(META_CACHE_EXPIRATION, "" + META_CACHE_EXPIRATION_DEFAULT);
+        props.setProperty(META_CACHE_INITIAL_CAPACITY, "" + META_CACHE_INITIAL_CAPACITY_DEFAULT);
+        props.setProperty(META_CACHE_MAX_CAPACITY, "" + META_CACHE_MAX_CAPACITY_DEFAULT);
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(configStream, StandardCharsets.UTF_8))) {
             props.load(reader);

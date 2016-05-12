@@ -361,7 +361,7 @@
                                                     <location>${project.basedir}/target/lib</location>
                                                 </source>
                                                 <source>
-                                                    <location>${project.basedir}/target/${artifactId}-${project.version}.jar</location>
+                                                    <location>${project.basedir}/target/${project.artifactId}-${project.version}.jar</location>
                                                 </source>
                                             </sources>
                                         </mapping>
