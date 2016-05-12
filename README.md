@@ -70,14 +70,14 @@ Metrics sent to Timely are stored in two Accumulo tables, meta and metrics. The 
 Row | ColumnFamily | ColumnQualifier | Value
 ----|:-------------|:----------------|:-----
 m:metric | | |
-t:metric | tagKey| | 
+t:metric | tagKey | |
 v:metric | tagKey | tagValue |
 
 The metrics table stores the datapoints using the following format:
 
 Row | ColumnFamily | ColumnQualifier | Value
 ----|:-------------|:----------------|:-----
-metric\timestamp | | tagKey=tagValue | metricValue
+metric\timestamp | tagKey=tagValue | tagKey=tagValue,tagKey=tagValue,... | metricValue
 
 As an example, if you sent the following metric to the put api
 
