@@ -1,40 +1,49 @@
-<?xml version="1.0"?>
 <beans:beans xmlns="http://www.springframework.org/schema/security"
              xmlns:beans="http://www.springframework.org/schema/beans"
              xmlns:util="http://www.springframework.org/schema/util"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
-                                 http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd
-                                 http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
-    <beans:bean id="x509PrincipalExtractor" class="org.springframework.security.web.authentication.preauth.x509.SubjectDnX509PrincipalExtractor">
-        <beans:property name="subjectDnRegex" value="CN=(.*?)(?:,|$)"/>
-    </beans:bean>
+             xsi:schemaLocation="http://www.springframework.org/schema/beans
+								 http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+								 http://www.springframework.org/schema/security
+								 http://www.springframework.org/schema/security/spring-security.xsd
+								 http://www.springframework.org/schema/util
+								 http://www.springframework.org/schema/util/spring-util.xsd">
+		          
+	<beans:bean id="x509PrincipalExtractor" class="org.springframework.security.web.authentication.preauth.x509.SubjectDnX509PrincipalExtractor">
+		<beans:property name="subjectDnRegex" value="CN=(.*?)(?:,|$)"/>
+	</beans:bean>	
+
     <beans:bean id="timelyUserDetailsService" class="timely.auth.UserDetailsService">
-        <beans:property name="users">
-            <util:map key-type="java.lang.String">
-                <beans:entry key="CN=test, OU=timely">
-                    <util:list>
-                        <beans:value>D</beans:value>
-                        <beans:value>E</beans:value>
-                        <beans:value>F</beans:value>
-                    </util:list>
-                </beans:entry>
-            </util:map>
-        </beans:property>
+    	<beans:property name="users">
+    		<util:map key-type="java.lang.String">
+    			<beans:entry key="example.com">
+   					<util:list>
+   						<beans:value>D</beans:value>
+   						<beans:value>E</beans:value>
+   						<beans:value>F</beans:value>
+   					</util:list>
+    			</beans:entry>
+    		</util:map>
+    	</beans:property>
     </beans:bean>
+    
     <beans:bean id="x509AuthorizationProvider" class="org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider">
-        <beans:property name="preAuthenticatedUserDetailsService" ref="timelyUserDetailsService"/>
+    	<beans:property name="preAuthenticatedUserDetailsService" ref="timelyUserDetailsService" />
     </beans:bean>
+    
     <user-service id="usernamePasswordService">
-        <user name="test" password="test1" authorities="A,B,C"/>
+    	<user name="test" password="test1" authorities="A,B,C" />
     </user-service>
+    
     <beans:bean id="UserNamePasswordAuthenticationProvider" class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">
-        <beans:property name="userDetailsService" ref="usernamePasswordService"/>
-    </beans:bean>
-    <authentication-manager alias="authenticationManager">
-        <!-- X509 PreAuthenticated authorization provider -->
-        <authentication-provider ref="x509AuthorizationProvider"/>
-        <!-- Basic authorization provider, validates provided username and password -->
-        <authentication-provider ref="UserNamePasswordAuthenticationProvider"/>
-    </authentication-manager>
+		<beans:property name="userDetailsService" ref="usernamePasswordService"/>
+	</beans:bean>
+	    
+	<authentication-manager alias="authenticationManager">
+		<!-- X509 PreAuthenticated authorization provider -->
+		<authentication-provider ref="x509AuthorizationProvider"/>
+		<!-- Basic authorization provider, validates provided username and password -->
+		<authentication-provider ref="UserNamePasswordAuthenticationProvider" />
+	</authentication-manager>
+	
 </beans:beans>

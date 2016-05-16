@@ -21,8 +21,7 @@ public class X509LoginRequestHandler extends TimelyLoginRequestHandler<X509Login
     @Override
     protected Authentication authenticate(ChannelHandlerContext ctx, X509LoginRequest loginRequest) throws Exception {
         // If we are operating in 2 way SSL, then get the subjectDN from the
-        // client certificate
-        // and perform the login process.
+        // client certificate and perform the login process.
         SslHandler sslHandler = (SslHandler) ctx.channel().pipeline().get("ssl");
         if (null != sslHandler) {
             X509Certificate clientCert = (X509Certificate) sslHandler.engine().getSession().getPeerCertificates()[0];

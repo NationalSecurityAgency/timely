@@ -31,4 +31,9 @@ public class BasicAuthLoginRequest implements Request {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Username: " + username;
+    }
+
 }

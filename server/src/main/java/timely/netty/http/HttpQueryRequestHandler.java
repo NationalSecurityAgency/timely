@@ -1,10 +1,5 @@
 package timely.netty.http;
 
-import java.nio.charset.StandardCharsets;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -13,6 +8,10 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import timely.api.query.request.QueryRequest;
 import timely.api.query.response.TimelyException;
 import timely.netty.Constants;
@@ -47,7 +46,6 @@ public class HttpQueryRequestHandler extends SimpleChannelInboundHandler<QueryRe
         response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
         response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
         sendResponse(ctx, response);
-        LOG.trace(Constants.LOG_RETURNING_RESPONSE, new String(buf, StandardCharsets.UTF_8));
     }
 
 }

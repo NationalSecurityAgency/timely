@@ -6,7 +6,7 @@ Timely is a time series database application that provides secure access to time
 # Design
 ---
 
-When we required a time series database application, being users of Apache Accumulo, we looked to use compatible software. Specifically we started with [OpenTSDB] (http://www.opentsdb.net) and Eric Newton's [Accumulo-OpenTSDB] (https://github.com/ericnewton/accumulo-opentsdb) project to bridge them together, and Grafana for visualization. We ultimately ran into some issues that we could not work around. After much discussion we decided to replace OpenTSDB with something more native to Apache Accumulo. The implementation of Timely started with the following constraints and assumptions:
+Being big users of Apache Accumulo, when we required a time series database application we looked to use software that was compatible with it. Specifically we started with [OpenTSDB] (http://www.opentsdb.net) and Eric Newton's [Accumulo-OpenTSDB] (https://github.com/ericnewton/accumulo-opentsdb) project to bridge them together, and Grafana for visualization. We ultimately ran into some issues that we could not work around. After much discussion we decided to replace OpenTSDB with something more native to Apache Accumulo. The implementation of Timely started with the following constraints and assumptions:
 
 1. We need to show progress quickly
 2. We started with Grafana, so we didn't need our own user interface
@@ -20,7 +20,7 @@ When we required a time series database application, being users of Apache Accum
 
 Timely allows users to optionally label their data using Accumulo column visibility expressions. To enable this feature, users should put the expressions in a tag named ```viz```. Timely will take this expression as-is and store it in the column visibility in the metrics table for the data point. Note that column visibilities are not stored in the meta table, so anyone can see metric names, tag names, and tag values.
 
-Timely provides HTTPS access to the query endpoints. Anonymous access to these endpoints can be enabled which will allow anyone to see unlabeled data. Timely uses Spring Security to configure user authentication and user role information. Users will need to call the login endpoint for authentication and Timely will respond by setting a HTTP cookie with a session id. The response to a successful login will be a temporary redirect (HTTP 307) to the configured address for the Grafana server.
+Timely provides HTTPS access to the query endpoints. Anonymous access to these endpoints can be enabled which will allow anyone to see unlabeled data. Timely uses Spring Security to configure user authentication and user role information. Users will need to call the login endpoint for authentication and Timely will respond by setting a HTTP cookie with a session id. The response to a successful login will be a temporary redirect (HTTP 307) to the configured address for the Grafana server. Note that you will need to set up Grafana to use https.
 
 ## Building
 

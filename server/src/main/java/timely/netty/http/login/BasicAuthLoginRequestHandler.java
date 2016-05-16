@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandlerContext;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 
 import timely.Configuration;
 import timely.api.query.request.BasicAuthLoginRequest;
@@ -16,7 +17,8 @@ public class BasicAuthLoginRequestHandler extends TimelyLoginRequestHandler<Basi
     }
 
     @Override
-    protected Authentication authenticate(ChannelHandlerContext ctx, BasicAuthLoginRequest msg) throws Exception {
+    protected Authentication authenticate(ChannelHandlerContext ctx, BasicAuthLoginRequest msg)
+            throws AuthenticationException {
         // Perform the login process using username/password
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(msg.getUsername(),
                 msg.getPassword());

@@ -33,7 +33,6 @@ public class HttpMetricsRequestHandler extends SimpleChannelInboundHandler<Metri
         response.headers().set(Names.CONTENT_TYPE, Constants.HTML_TYPE);
         response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
         sendResponse(ctx, response);
-        LOG.trace(Constants.LOG_RETURNING_RESPONSE, new String(buf, StandardCharsets.UTF_8));
     }
 
 }

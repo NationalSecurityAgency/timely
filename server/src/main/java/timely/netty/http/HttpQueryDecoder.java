@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,7 @@ import timely.api.query.request.SuggestRequest;
 import timely.api.query.request.X509LoginRequest;
 import timely.netty.Constants;
 import timely.api.query.response.TimelyException;
+import timely.auth.AuthCache;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -110,6 +112,28 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
             e.addResponseHeader(Names.ALLOW, HttpMethod.GET.name() + "," + HttpMethod.POST.name());
             LOG.warn("Unhandled HTTP request type {}", msg.getMethod());
             throw e;
+        }
+        for (Object r : out) {
+            try {
+                enforceAccess((Request) r);
+            } catch (Exception e) {
+                out.clear();
+                throw e;
+            }
+        }
+    }
+
+    private void enforceAccess(Request r) throws Exception {
+        if (!this.anonymousAccessAllowed && (r instanceof AuthenticatedRequest)) {
+            AuthenticatedRequest ar = (AuthenticatedRequest) r;
+            if (StringUtils.isEmpty(ar.getSessionId())) {
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
+                        "Anonymous access is disabled, log in first");
+            }
+            if (!AuthCache.getCache().asMap().containsKey(ar.getSessionId())) {
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
+                        "Unknown session id was submitted, log in again");
+            }
         }
     }
 

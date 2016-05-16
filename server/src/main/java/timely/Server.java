@@ -25,6 +25,8 @@ import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.OpenSslServerContext;
+import io.netty.handler.ssl.OpenSslServerSessionContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -33,6 +35,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
@@ -50,9 +53,9 @@ import timely.netty.http.HttpQueryDecoder;
 import timely.netty.http.HttpQueryRequestHandler;
 import timely.netty.http.HttpSearchLookupRequestHandler;
 import timely.netty.http.HttpSuggestRequestHandler;
+import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.http.login.BasicAuthLoginRequestHandler;
 import timely.netty.http.login.X509LoginRequestHandler;
-import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.tcp.TcpPutDecoder;
 import timely.netty.tcp.TcpPutHandler;
 import timely.store.DataStore;
@@ -239,7 +242,17 @@ public class Server {
         putChannelHandle = putServer.bind(putPort).sync().channel();
         final String putAddress = ((InetSocketAddress) putChannelHandle.localAddress()).getAddress().getHostAddress();
 
+        final int queryPort = Integer.parseInt(config.get(Configuration.QUERY_PORT));
         SslContext sslCtx = createSSLContext(config);
+        if (sslCtx instanceof OpenSslServerContext) {
+            OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
+            String application = "Timely_" + queryPort;
+            OpenSslServerSessionContext opensslCtx = openssl.sessionContext();
+            opensslCtx.setSessionCacheEnabled(true);
+            opensslCtx.setSessionCacheSize(128);
+            opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
+            opensslCtx.setSessionTimeout(Integer.parseInt(config.get(Configuration.SESSION_MAX_AGE)));
+        }
         final ServerBootstrap queryServer = new ServerBootstrap();
         queryServer.group(httpBossGroup, httpWorkerGroup);
         queryServer.channel(channelClass);
@@ -248,7 +261,6 @@ public class Server {
         queryServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         queryServer.option(ChannelOption.SO_BACKLOG, 128);
         queryServer.option(ChannelOption.SO_KEEPALIVE, true);
-        final int queryPort = Integer.parseInt(config.get(Configuration.QUERY_PORT));
         queryChannelHandle = queryServer.bind(queryPort).sync().channel();
         final String queryAddress = ((InetSocketAddress) queryChannelHandle.localAddress()).getAddress()
                 .getHostAddress();

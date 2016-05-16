@@ -344,7 +344,7 @@ public class DataStoreImpl implements DataStore {
                     end.append(lastBytes, 0, lastBytes.length);
                     range = new Range(start, end);
                 }
-                Scanner scanner = connector.createScanner(metaTable, getSessionAuthorizations(request));
+                Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
                 scanner.setRange(range);
                 List<String> metrics = new ArrayList<>();
                 for (Entry<Key, Value> metric : scanner) {
@@ -356,9 +356,9 @@ public class DataStoreImpl implements DataStore {
                 result.setSuggestions(metrics);
             }
         } catch (Exception ex) {
-            LOG.error("Error during suggest", ex);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during suggest",
-                    ex.getMessage(), ex);
+            LOG.error("Error during suggest: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during suggest: "
+                    + ex.getMessage(), ex.getMessage(), ex);
         }
         return result;
     }
@@ -390,7 +390,7 @@ public class DataStoreImpl implements DataStore {
         result.setLimit(msg.getLimit());
         try {
             List<Result> resultField = new ArrayList<>();
-            Scanner scanner = connector.createScanner(metaTable, getSessionAuthorizations(msg));
+            Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
             Key start = new Key(Meta.VALUE_PREFIX + msg.getQuery());
             Key end = start.followingKey(PartialKey.ROW);
             Range range = new Range(start, end);
@@ -412,9 +412,9 @@ public class DataStoreImpl implements DataStore {
             result.setTotalResults(total);
             result.setTime((int) (System.currentTimeMillis() - startMillis));
         } catch (Exception ex) {
-            LOG.error("Error during lookup", ex);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during lookup",
-                    ex.getMessage(), ex);
+            LOG.error("Error during lookup: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during lookup: "
+                    + ex.getMessage(), ex.getMessage(), ex);
         }
         return result;
     }
@@ -483,9 +483,9 @@ public class DataStoreImpl implements DataStore {
             LOG.debug("Query time: {}", (System.currentTimeMillis() - now));
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
-            LOG.error("Error during query", ex);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query",
-                    ex.getMessage(), ex);
+            LOG.error("Error during query: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: "
+                    + ex.getMessage(), ex.getMessage(), ex);
         }
     }
 
@@ -556,7 +556,7 @@ public class DataStoreImpl implements DataStore {
     private void setQueryColumns(BatchScanner scanner, String metric, Map<String, String> tags)
             throws TableNotFoundException, TimelyException {
         LOG.trace("Looking for requested tags: {}", tags);
-        Scanner meta = connector.createScanner(metaTable, scanner.getAuthorizations());
+        Scanner meta = connector.createScanner(metaTable, Authorizations.EMPTY);
         Text start = new Text(Meta.VALUE_PREFIX + metric);
         Text end = new Text(Meta.VALUE_PREFIX + metric + "\\x0000");
         end.append(new byte[] { (byte) 0xff }, 0, 1);

@@ -14,6 +14,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 
 import timely.Configuration;
@@ -22,6 +24,8 @@ import timely.netty.Constants;
 import timely.netty.http.TimelyHttpHandler;
 
 public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundHandler<T> implements TimelyHttpHandler {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TimelyLoginRequestHandler.class);
 
     private long maxAge = Configuration.SESSION_MAX_AGE_DEFAULT;
     private String domain = null;
@@ -39,7 +43,9 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, T loginRequest) throws Exception {
         try {
+            LOG.trace("Authenticating {}", loginRequest);
             Authentication auth = authenticate(ctx, loginRequest);
+            LOG.trace("Authenticated {}", auth);
             String sessionId = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
             AuthCache.getCache().put(sessionId, auth);
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
