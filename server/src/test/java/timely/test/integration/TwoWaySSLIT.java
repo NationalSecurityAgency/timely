@@ -92,7 +92,6 @@ public class TwoWaySSLIT extends BaseQueryIT {
         config.put(Configuration.SSL_PRIVATE_KEY_FILE, serverCert.privateKey().getAbsolutePath());
         // Needed for 2way SSL
         config.put(Configuration.SSL_TRUST_STORE_FILE, serverCert.certificate().getAbsolutePath());
-        config.put(Configuration.SSL_REQUIRE_CLIENT_AUTHENTICATION, "true");
         config.put(Configuration.SSL_USE_OPENSSL, "false");
         config.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "false");
         config.put(Configuration.ALLOW_ANONYMOUS_ACCESS, "false");

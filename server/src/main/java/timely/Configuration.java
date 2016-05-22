@@ -73,8 +73,6 @@ public class Configuration {
     public static final String SSL_PRIVATE_KEY_PASS = "timely.ssl.key.pass";
     public static final String SSL_USE_GENERATED_KEYPAIR = "timely.ssl.use.generated.keypair";
     private static final String SSL_USE_GENERATED_KEYPAIR_DEFAULT = "false";
-    public static final String SSL_REQUIRE_CLIENT_AUTHENTICATION = "timely.ssl.require.client.authentication";
-    private static final String SSL_REQUIRE_CLIENT_AUTHENTICATION_DEFAULT = "true";
     public static final String SSL_TRUST_STORE_FILE = "timely.ssl.trust.store.file";
     public static final String SSL_USE_OPENSSL = "timely.ssl.use.openssl";
     private static final String SSL_USE_OPENSSL_DEFAULT = "true";
@@ -141,7 +139,6 @@ public class Configuration {
         props.setProperty(META_CACHE_INITIAL_CAPACITY, "" + META_CACHE_INITIAL_CAPACITY_DEFAULT);
         props.setProperty(META_CACHE_MAX_CAPACITY, "" + META_CACHE_MAX_CAPACITY_DEFAULT);
         props.setProperty(SSL_USE_GENERATED_KEYPAIR, SSL_USE_GENERATED_KEYPAIR_DEFAULT);
-        props.setProperty(SSL_REQUIRE_CLIENT_AUTHENTICATION, SSL_REQUIRE_CLIENT_AUTHENTICATION_DEFAULT);
         props.setProperty(SSL_USE_OPENSSL, SSL_USE_OPENSSL_DEFAULT);
         props.setProperty(SSL_USE_CIPHERS, SSL_USE_CIPHERS_DEFAULT);
         props.setProperty(ALLOW_ANONYMOUS_ACCESS, ALLOW_ANONYMOUS_ACCESS_DEFAULT);

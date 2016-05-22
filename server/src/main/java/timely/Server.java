@@ -293,12 +293,9 @@ public class Server {
         String ciphers = config.get(Configuration.SSL_USE_CIPHERS);
         ssl.ciphers(Arrays.asList(ciphers.split(":")));
 
-        Boolean requireClientAuth = config.getBoolean(Configuration.SSL_REQUIRE_CLIENT_AUTHENTICATION);
-        if (requireClientAuth) {
-            ssl.clientAuth(ClientAuth.REQUIRE);
-        } else {
-            ssl.clientAuth(ClientAuth.OPTIONAL);
-        }
+        // Can't set to REQUIRE because the CORS pre-flight requests will fail.
+        ssl.clientAuth(ClientAuth.OPTIONAL);
+
         Boolean useOpenSSL = config.getBoolean(Configuration.SSL_USE_OPENSSL);
         if (useOpenSSL) {
             ssl.sslProvider(SslProvider.OPENSSL);

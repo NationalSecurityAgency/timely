@@ -31,6 +31,7 @@ export CLASSPATH="${CONF_DIR}:${LIB_DIR}/*"
 JVM_ARGS="-Xmx256m -Xms256m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS} -Dlog4j.configurationFile=${THIS_DIR}/log4j2.xml"
 JVM_ARGS="${JVM_ARGS} -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
 JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}/libnetty-tcnative.so"
+#JVM_ARGS="${JVM_ARGS} -agentlib:jdwp=transport=dt_socket,address=54323,server=y,suspend=y"
 
 echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${CONF_FILE}" "${TMP_DIR}""
 $JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${CONF_FILE}" "${TMP_DIR}"

@@ -78,7 +78,6 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         config.put(Configuration.SSL_CERTIFICATE_FILE, serverCert.certificate().getAbsolutePath());
         clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
         config.put(Configuration.SSL_PRIVATE_KEY_FILE, serverCert.privateKey().getAbsolutePath());
-        config.put(Configuration.SSL_REQUIRE_CLIENT_AUTHENTICATION, "false");
         config.put(Configuration.SSL_USE_OPENSSL, "false");
         config.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "false");
         config.put(Configuration.ALLOW_ANONYMOUS_ACCESS, "true");
