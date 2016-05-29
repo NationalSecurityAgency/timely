@@ -356,6 +356,22 @@ public class QueryRequest extends AuthenticatedRequest {
     private boolean showQuery = false;
     private boolean delete = false;
 
+    public boolean isGlobalAnnotations() {
+        return globalAnnotations;
+    }
+
+    public void setGlobalAnnotations(boolean globalAnnotations) {
+        this.globalAnnotations = globalAnnotations;
+    }
+
+    public boolean isShowQuery() {
+        return showQuery;
+    }
+
+    public void setShowQuery(boolean showQuery) {
+        this.showQuery = showQuery;
+    }
+
     public boolean isMsResolution() {
         return msResolution;
     }
