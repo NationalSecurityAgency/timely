@@ -3,6 +3,11 @@ package timely;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
+import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.admin.SecurityOperations;
+import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.minicluster.MemoryUnit;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
@@ -59,8 +64,18 @@ public class StandaloneServer extends Server {
             mac = new MiniAccumuloCluster(macConfig);
             mac.start();
             mac.getInstanceName();
+
         } catch (IOException | InterruptedException e) {
             System.err.println("Error starting MiniAccumuloCluster: " + e.getMessage());
+            System.exit(1);
+        }
+        try {
+            Connector conn = mac.getConnector("root", "secret");
+            SecurityOperations sops = conn.securityOperations();
+            Authorizations rootAuths = new Authorizations("A", "B", "C", "D", "E", "F", "G", "H", "I");
+            sops.changeUserAuthorizations("root", rootAuths);
+        } catch (AccumuloException | AccumuloSecurityException e) {
+            System.err.println("Error configuring root user");
             System.exit(1);
         }
         try {
