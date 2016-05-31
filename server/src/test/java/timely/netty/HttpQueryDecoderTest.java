@@ -726,6 +726,46 @@ public class HttpQueryDecoderTest {
     }
 
     @Test
+    public void testQueryPostGlobalAnnotations() throws Exception {
+        // @formatter:off
+        String content = "" +
+        "{"
+        + "\"start\":1447767369171,"
+        + "\"queries\":"
+        +  "["
+        +   "{"
+        +      "\"metric\":\"sys.cpu.user\","
+        +      "\"aggregator\":\"sum\","
+        +      "\"downsample\":\"30s-avg\""
+        +   "}"
+        +  "],"
+        + "\"msResolution\":false,"
+        + "\"globalAnnotations\":true,"
+        + "\"showQuery\":true"
+        + "}";
+        // @formatter:on
+        decoder = new TestHttpQueryDecoder(config);
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
+        request.content().writeBytes(content.getBytes());
+        addCookie(request);
+        decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(QueryRequest.class, results.iterator().next().getClass());
+        QueryRequest query = (QueryRequest) results.iterator().next();
+        Assert.assertEquals(1447767369171L, query.getStart());
+        Assert.assertEquals(false, query.isMsResolution());
+        Assert.assertEquals(true, query.isGlobalAnnotations());
+        Assert.assertEquals(true, query.isShowQuery());
+        Assert.assertEquals(1, query.getQueries().size());
+        Iterator<SubQuery> iter = query.getQueries().iterator();
+        SubQuery first = iter.next();
+        Assert.assertEquals(true, first.isMetricQuery());
+        Assert.assertEquals(false, first.isTsuidQuery());
+        Assert.assertEquals("sum", first.getAggregator());
+        Assert.assertEquals("sys.cpu.user", first.getMetric());
+    }
+
+    @Test
     public void testQueryPostRateOption() throws Exception {
         // @formatter:off
         String content = 

@@ -139,7 +139,6 @@ timely.ssl.certificate.file | Public certificate to use for the Timely server |
 timely.ssl.key.file | Private key to use for the Timely server |
 timely.ssl.key.pass | Password to the private key |
 timely.ssl.use.generated.keypair | Use a generated certificate/key pair - useful for testing | false
-timely.ssl.require.client.authentication | Enable 2-way SSL | true
 timely.ssl.trust.store.file | Certificate trust store |
 timely.ssl.use.openssl | Use OpenSSL (vs JDK SSL) | true
 timely.ssl.use.ciphers | List of allowed SSL ciphers | see Configuration.java
