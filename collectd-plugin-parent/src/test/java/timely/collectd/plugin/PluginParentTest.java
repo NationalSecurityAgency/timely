@@ -290,4 +290,25 @@ public class PluginParentTest {
 
     }
 
+    @Test
+    public void testIpmi() {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("ipmi");
+        vl.setTime(TIME);
+        vl.setType("temperature");
+        vl.setTypeInstance("LAN NIC Temp system_board (3.2)");
+        vl.setValues(Collections.singletonList((Number) 6.0D));
+        DataSet ds = new DataSet("GAUGE");
+        ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+        test.process(vl);
+        assertEquals(
+                "put sys.ipmi.temperature.LAN_NIC_Temp_system_board_(3.2) 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo sample=value sampleType=GAUGE\n",
+                result);
+
+    }
+
 }

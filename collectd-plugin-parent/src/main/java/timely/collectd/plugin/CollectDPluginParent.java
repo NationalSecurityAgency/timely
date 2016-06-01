@@ -181,6 +181,7 @@ public abstract class CollectDPluginParent {
             Collectd.logWarning("Unhandled metric: " + vl.toString());
             return;
         }
+        final String metricName = metric.toString().replaceAll(" ", "_");
         for (int i = 0; i < vl.getValues().size(); i++) {
             StringBuilder tagsWithSample = new StringBuilder(tags.toString());
             String sampleName = vl.getDataSet().getDataSources().get(i).getName();
@@ -193,7 +194,7 @@ public abstract class CollectDPluginParent {
                 tagsWithSample.append(SAMPLE_TYPE).append(sampleType);
             }
             Double value = vl.getValues().get(i).doubleValue();
-            String datapoint = MessageFormat.format(PUT, metric.toString(), timestamp.toString(), value.toString(),
+            String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(),
                     tagsWithSample.toString());
             Collectd.logDebug("Writing: " + datapoint);
             write(datapoint);
