@@ -306,7 +306,7 @@ public class PluginParentTest {
         TestPlugin test = new TestPlugin();
         test.process(vl);
         assertEquals(
-                "put sys.ipmi.temperature.LAN_NIC_Temp_system_board_(3.2) 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo sample=value sampleType=GAUGE\n",
+                "put sys.ipmi.temperature 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo instance=LAN_NIC_Temp_system_board_(3.2) sample=value sampleType=GAUGE\n",
                 result);
 
     }
