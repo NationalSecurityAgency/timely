@@ -5,8 +5,8 @@
 2. Modify grafana configuration:
   1. protocol = https
   2. http_addr = localhost
-  3. cert_file= <path to PEM encoded certificate file>
-  4. key_file= <path to PEM encoded un-encrypted private key file>
+  3. cert_file= ```<path to PEM encoded certificate file>```
+  4. key_file= ```<path to PEM encoded un-encrypted private key file>```
 3. Start Grafana
 4. Build Timely
   1. set JAVA_HOME to JDK 8
@@ -15,7 +15,9 @@
 6. Modify timely-standalone.properties:
   1. Set server side SSL certification information
     1. timely.ssl.use.generated.keypair=true
-    OR
+
+_OR_
+
     2. timely.ssl.use.generated.keypair=false
     3. timely.ssl.certificate.file=```<path to PEM encoded certificate file>```
     4. timely.ssl.key.file=```<path to PKCS8 PEM encoded private key file>```
