@@ -13,22 +13,20 @@
   2. mvn clean package
 5. Untar Timely server distribution
 6. Modify timely-standalone.properties:
-  1. Set server side SSL certification information
+  1. Use generated server side SSL certificates
     1. timely.ssl.use.generated.keypair=true
-
-_OR_
-
-    2. timely.ssl.use.generated.keypair=false
-    3. timely.ssl.certificate.file=```<path to PEM encoded certificate file>```
-    4. timely.ssl.key.file=```<path to PKCS8 PEM encoded private key file>```
-    5. timely.ssl.key.pass=```<private key password>```
-    6. timely.ssl.use.openssl=true if openssl installed locally, else false
-    7. timely.ssl.use.ciphers=```<list of ciphers to use if you don not want to use the default>```
-  2. Set Timely domain information, this is used for the HTTP Cookie
+  2. or, use your own SSL certificates
+    1. timely.ssl.use.generated.keypair=false
+    2. timely.ssl.certificate.file=```<path to PEM encoded certificate file>```
+    3. timely.ssl.key.file=```<path to PKCS8 PEM encoded private key file>```
+    4. timely.ssl.key.pass=```<private key password>```
+    5. timely.ssl.use.openssl=true if openssl installed locally, else false
+    6. timely.ssl.use.ciphers=```<list of ciphers to use if you don not want to use the default>```
+  3. Set Timely domain information, this is used for the HTTP Cookie
     1. timely.http.address=localhost
-  3. Set Grafana login address, used for HTTP redirect after login
+  4. Set Grafana login address, used for HTTP redirect after login
     1. grafana.http.address=https://localhost:3000/login
-  4. Set Anonymous access for Timely
+  5. Set Anonymous access for Timely
     1. timely.allow.anonymous.access=```<true or false>```
 7. Start the Timely standalone server
   1. cd bin; ./timely-standalone.sh
