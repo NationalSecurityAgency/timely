@@ -43,7 +43,7 @@
     5. With Credentials: checked
     6. Version: 2.1
     7. Resolution: millisecond
-    8. Click ```Save & Test```". Note that you will get an error, but it will save.
+    8. Click ```Save & Test```. Note that you will get an error, but it will save.
 10. Import Standalone Test dashboard
 
 
