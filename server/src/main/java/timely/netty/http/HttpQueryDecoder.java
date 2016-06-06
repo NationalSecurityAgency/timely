@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -15,12 +16,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import timely.Configuration;
+import timely.api.AuthenticatedRequest;
 import timely.api.Request;
 import timely.api.model.Tag;
 import timely.api.query.request.AggregatorsRequest;
+import timely.api.query.request.BasicAuthLoginRequest;
 import timely.api.query.request.MetricsRequest;
 import timely.api.query.request.QueryRequest;
 import timely.api.query.request.QueryRequest.Filter;
@@ -28,7 +33,10 @@ import timely.api.query.request.QueryRequest.RateOption;
 import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.request.SearchLookupRequest;
 import timely.api.query.request.SuggestRequest;
+import timely.api.query.request.X509LoginRequest;
+import timely.netty.Constants;
 import timely.api.query.response.TimelyException;
+import timely.auth.AuthCache;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -44,21 +52,56 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
     private static final String API_SEARCH_LOOKUP = "/api/search/lookup";
     private static final String API_SUGGEST = "/api/suggest";
     private static final String API_METRICS = "/api/metrics";
+    private static final String API_LOGIN = "/login";
+    private static final String NO_AUTHORIZATIONS = "";
+
+    private boolean anonymousAccessAllowed = false;
+
+    public HttpQueryDecoder(Configuration config) {
+        this.anonymousAccessAllowed = config.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, FullHttpRequest msg, List<Object> out) throws Exception {
 
         LOG.trace(LOG_RECEIVED_REQUEST, msg);
+
+        final StringBuilder buf = new StringBuilder();
+        msg.headers().getAll(Names.COOKIE).forEach(h -> {
+            ServerCookieDecoder.STRICT.decode(h).forEach(c -> {
+                if (c.name().equals(Constants.COOKIE_NAME)) {
+                    if (buf.length() == 0) {
+                        buf.append(c.value());
+                    }
+                }
+            });
+        });
+
+        String sId = buf.toString();
+        if (sId.length() == 0 && this.anonymousAccessAllowed) {
+            sId = NO_AUTHORIZATIONS;
+        } else if (sId.length() == 0) {
+            sId = null;
+        }
+        final String sessionId = sId;
+        LOG.trace("SessionID: " + sessionId);
+
         if (msg.getMethod().equals(HttpMethod.GET)) {
             final Collection<Request> r = parseURI(msg.getUri());
             r.forEach(req -> {
-                req.validate();
+                if (req instanceof AuthenticatedRequest && sessionId != null) {
+                    ((AuthenticatedRequest) req).setSessionId(sessionId);
+                }
                 LOG.trace(LOG_PARSED_REQUEST, req);
+                req.validate();
                 out.add(req);
             });
         } else if (msg.getMethod().equals(HttpMethod.POST)) {
             final Collection<Request> r = parsePOST(msg.getUri(), msg.content().toString(StandardCharsets.UTF_8));
             r.forEach(req -> {
+                if (req instanceof AuthenticatedRequest && sessionId != null) {
+                    ((AuthenticatedRequest) req).setSessionId(sessionId);
+                }
                 LOG.trace(LOG_PARSED_REQUEST, req);
                 req.validate();
                 out.add(req);
@@ -69,6 +112,28 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
             e.addResponseHeader(Names.ALLOW, HttpMethod.GET.name() + "," + HttpMethod.POST.name());
             LOG.warn("Unhandled HTTP request type {}", msg.getMethod());
             throw e;
+        }
+        for (Object r : out) {
+            try {
+                enforceAccess((Request) r);
+            } catch (Exception e) {
+                out.clear();
+                throw e;
+            }
+        }
+    }
+
+    private void enforceAccess(Request r) throws Exception {
+        if (!this.anonymousAccessAllowed && (r instanceof AuthenticatedRequest)) {
+            AuthenticatedRequest ar = (AuthenticatedRequest) r;
+            if (StringUtils.isEmpty(ar.getSessionId())) {
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
+                        "Anonymous access is disabled, log in first");
+            }
+            if (!AuthCache.getCache().asMap().containsKey(ar.getSessionId())) {
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
+                        "Unknown session id was submitted, log in again");
+            }
         }
     }
 
@@ -86,6 +151,8 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
             requests.add(JsonUtil.getObjectMapper().readValue(content, SearchLookupRequest.class));
         } else if (decoder.path().equals(API_SUGGEST)) {
             requests.add(JsonUtil.getObjectMapper().readValue(content, SuggestRequest.class));
+        } else if (decoder.path().equals(API_LOGIN)) {
+            requests.add(JsonUtil.getObjectMapper().readValue(content, BasicAuthLoginRequest.class));
         } else {
             throw new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Unhandled query uri: " + decoder.path(), "");
         }
@@ -246,6 +313,8 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
             requests.add(suggest);
         } else if (decoder.path().equals(API_METRICS)) {
             requests.add(new MetricsRequest());
+        } else if (decoder.path().equals(API_LOGIN)) {
+            requests.add(new X509LoginRequest());
         } else {
             throw new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Unhandled query uri: " + decoder.path(), "");
         }

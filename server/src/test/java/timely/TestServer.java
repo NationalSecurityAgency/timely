@@ -8,6 +8,7 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.ssl.SslContext;
 
 import java.io.File;
 
@@ -25,15 +26,16 @@ public class TestServer extends Server {
     }
 
     @Override
-    protected ChannelHandler setupHttpChannel(Configuration config) {
+    protected ChannelHandler setupHttpChannel(Configuration config, SslContext sslCtx) {
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder());
+                ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder(config));
                 ch.pipeline().addLast("capture", httpRequests);
             }
         };

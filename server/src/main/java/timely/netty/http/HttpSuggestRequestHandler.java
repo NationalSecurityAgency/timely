@@ -9,8 +9,6 @@ import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
-import java.nio.charset.StandardCharsets;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +42,6 @@ public class HttpSuggestRequestHandler extends SimpleChannelInboundHandler<Sugge
         response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
         response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
         sendResponse(ctx, response);
-        LOG.trace(Constants.LOG_RETURNING_RESPONSE, new String(buf, StandardCharsets.UTF_8));
     }
 
 }

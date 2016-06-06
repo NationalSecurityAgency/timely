@@ -1,18 +1,19 @@
 package timely;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
+import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.admin.SecurityOperations;
+import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.minicluster.MemoryUnit;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
 import org.apache.accumulo.minicluster.ServerType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.io.Files;
 
 public class StandaloneServer extends Server {
 
@@ -37,51 +38,48 @@ public class StandaloneServer extends Server {
     }
 
     private static String usage() {
-        return "StandaloneServer <directory>";
+        return "StandaloneServer <configFile> <directory>";
     }
 
     public static void main(String[] args) {
-        if (args.length != 1) {
+        if (args.length != 2) {
             System.err.println(usage());
         }
-        File tmp = new File(args[0]);
+        final File conf = new File(args[0]);
+        if (!conf.canRead()) {
+            throw new RuntimeException("Configuration file does not exist or cannot be read");
+        }
+        File tmp = new File(args[1]);
         if (!tmp.canWrite()) {
             System.err.println("Unable to write to directory: " + tmp);
             System.exit(1);
         }
         File accumuloDir = new File(tmp, "accumulo");
         MiniAccumuloConfig macConfig = new MiniAccumuloConfig(accumuloDir, "secret");
+        macConfig.setInstanceName("TimelyStandalone");
+        macConfig.setZooKeeperPort(9804);
         macConfig.setNumTservers(1);
         macConfig.setMemory(ServerType.TABLET_SERVER, 1, MemoryUnit.GIGABYTE);
         try {
             mac = new MiniAccumuloCluster(macConfig);
             mac.start();
+            mac.getInstanceName();
+
         } catch (IOException | InterruptedException e) {
             System.err.println("Error starting MiniAccumuloCluster: " + e.getMessage());
             System.exit(1);
         }
-        File configDir = new File(tmp, "conf");
-        if (!configDir.mkdir()) {
-            System.err.println("Error creating configuration directory: " + configDir);
-            System.exit(1);
-        }
-        File config = new File(configDir, "timely.properties");
         try {
-            try (BufferedWriter writer = Files.newWriter(config, StandardCharsets.UTF_8)) {
-                writer.write(Configuration.IP + "=127.0.0.1\n");
-                writer.write(Configuration.PUT_PORT + "=54321\n");
-                writer.write(Configuration.QUERY_PORT + "=54322\n");
-                writer.write(Configuration.ZOOKEEPERS + "=" + mac.getZooKeepers() + "\n");
-                writer.write(Configuration.INSTANCE_NAME + "=" + mac.getInstanceName() + "\n");
-                writer.write(Configuration.USERNAME + "=root\n");
-                writer.write(Configuration.PASSWORD + "=secret\n");
-            }
-        } catch (IOException e) {
-            System.err.println("Error writing configuration file: " + e.getMessage());
+            Connector conn = mac.getConnector("root", "secret");
+            SecurityOperations sops = conn.securityOperations();
+            Authorizations rootAuths = new Authorizations("A", "B", "C", "D", "E", "F", "G", "H", "I");
+            sops.changeUserAuthorizations("root", rootAuths);
+        } catch (AccumuloException | AccumuloSecurityException e) {
+            System.err.println("Error configuring root user");
             System.exit(1);
         }
         try {
-            new StandaloneServer(config);
+            new StandaloneServer(conf);
         } catch (Exception e) {
             System.err.println("Error starting server");
             e.printStackTrace();

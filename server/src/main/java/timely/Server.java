@@ -24,16 +24,29 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.OpenSslServerContext;
+import io.netty.handler.ssl.OpenSslServerSessionContext;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.api.query.response.TimelyException;
+import timely.auth.AuthCache;
+import timely.auth.VisibilityCache;
 import timely.netty.http.HttpAggregatorsRequestHandler;
 import timely.netty.http.HttpMetricsRequestHandler;
 import timely.netty.http.HttpQueryDecoder;
@@ -41,6 +54,8 @@ import timely.netty.http.HttpQueryRequestHandler;
 import timely.netty.http.HttpSearchLookupRequestHandler;
 import timely.netty.http.HttpSuggestRequestHandler;
 import timely.netty.http.TimelyExceptionHandler;
+import timely.netty.http.login.BasicAuthLoginRequestHandler;
+import timely.netty.http.login.X509LoginRequestHandler;
 import timely.netty.tcp.TcpPutDecoder;
 import timely.netty.tcp.TcpPutHandler;
 import timely.store.DataStore;
@@ -194,6 +209,10 @@ public class Server {
         dataStore = DataStoreFactory.create(config, nettyThreads);
         // Initialize the MetaCache
         MetaCacheFactory.getCache(config);
+        // initialize the auth cache
+        AuthCache.setSessionMaxAge(config);
+        // Initialize the VisibilityCache
+        VisibilityCache.init(config);
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass = null;
         if (useEpoll) {
@@ -223,15 +242,25 @@ public class Server {
         putChannelHandle = putServer.bind(putPort).sync().channel();
         final String putAddress = ((InetSocketAddress) putChannelHandle.localAddress()).getAddress().getHostAddress();
 
+        final int queryPort = Integer.parseInt(config.get(Configuration.QUERY_PORT));
+        SslContext sslCtx = createSSLContext(config);
+        if (sslCtx instanceof OpenSslServerContext) {
+            OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
+            String application = "Timely_" + queryPort;
+            OpenSslServerSessionContext opensslCtx = openssl.sessionContext();
+            opensslCtx.setSessionCacheEnabled(true);
+            opensslCtx.setSessionCacheSize(128);
+            opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
+            opensslCtx.setSessionTimeout(Integer.parseInt(config.get(Configuration.SESSION_MAX_AGE)));
+        }
         final ServerBootstrap queryServer = new ServerBootstrap();
         queryServer.group(httpBossGroup, httpWorkerGroup);
         queryServer.channel(channelClass);
         queryServer.handler(new LoggingHandler());
-        queryServer.childHandler(setupHttpChannel(config));
+        queryServer.childHandler(setupHttpChannel(config, sslCtx));
         queryServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         queryServer.option(ChannelOption.SO_BACKLOG, 128);
         queryServer.option(ChannelOption.SO_KEEPALIVE, true);
-        final int queryPort = Integer.parseInt(config.get(Configuration.QUERY_PORT));
         queryChannelHandle = queryServer.bind(queryPort).sync().channel();
         final String queryAddress = ((InetSocketAddress) queryChannelHandle.localAddress()).getAddress()
                 .getHostAddress();
@@ -241,30 +270,71 @@ public class Server {
                 queryAddress, queryPort);
     }
 
-    protected ChannelHandler setupHttpChannel(Configuration config) {
+    protected SslContext createSSLContext(Configuration config) throws Exception {
+
+        Boolean generate = config.getBoolean(Configuration.SSL_USE_GENERATED_KEYPAIR);
+        SslContextBuilder ssl = null;
+        if (generate) {
+            LOG.warn("Using generated self signed server certificate");
+            Date begin = new Date();
+            Date end = new Date(begin.getTime() + 86400000);
+            SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", begin, end);
+            ssl = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
+        } else {
+            String cert = config.get(Configuration.SSL_CERTIFICATE_FILE);
+            String key = config.get(Configuration.SSL_PRIVATE_KEY_FILE);
+            String keyPass = config.get(Configuration.SSL_PRIVATE_KEY_PASS);
+            if (null == cert || null == key) {
+                throw new IllegalArgumentException("Check your SSL properties, something is wrong.");
+            }
+            ssl = SslContextBuilder.forServer(new File(cert), new File(key), keyPass);
+        }
+
+        String ciphers = config.get(Configuration.SSL_USE_CIPHERS);
+        ssl.ciphers(Arrays.asList(ciphers.split(":")));
+
+        // Can't set to REQUIRE because the CORS pre-flight requests will fail.
+        ssl.clientAuth(ClientAuth.OPTIONAL);
+
+        Boolean useOpenSSL = config.getBoolean(Configuration.SSL_USE_OPENSSL);
+        if (useOpenSSL) {
+            ssl.sslProvider(SslProvider.OPENSSL);
+        } else {
+            ssl.sslProvider(SslProvider.JDK);
+        }
+        String trustStore = config.get(Configuration.SSL_TRUST_STORE_FILE);
+        if (null != trustStore) {
+            ssl.trustManager(new File(trustStore));
+        }
+        return ssl.build();
+    }
+
+    protected ChannelHandler setupHttpChannel(Configuration config, SslContext sslCtx) {
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+
+                ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
                 ch.pipeline().addLast("deflater", new HttpContentCompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 final CorsConfig.Builder ccb;
-                if (Boolean.parseBoolean(config.get(Configuration.CORS_ALLOW_ANY_ORIGIN))) {
+                if (config.getBoolean(Configuration.CORS_ALLOW_ANY_ORIGIN)) {
                     ccb = new CorsConfig.Builder();
                 } else {
                     String origins = config.get(Configuration.CORS_ALLOWED_ORIGINS);
                     ccb = new CorsConfig.Builder(origins.split(","));
                 }
-                if (Boolean.parseBoolean(config.get(Configuration.CORS_ALLOW_NULL_ORIGIN))) {
+                if (config.getBoolean(Configuration.CORS_ALLOW_NULL_ORIGIN)) {
                     ccb.allowNullOrigin();
                 }
-                if (Boolean.parseBoolean(config.get(Configuration.CORS_ALLOW_CREDENTIALS))) {
+                if (config.getBoolean(Configuration.CORS_ALLOW_CREDENTIALS)) {
                     ccb.allowCredentials();
                 }
-                if (null != config.get(Configuration.CORS_ALLOWED_METHODS)) {
+                if (!StringUtils.isEmpty(config.get(Configuration.CORS_ALLOWED_METHODS))) {
                     String[] methods = config.get(Configuration.CORS_ALLOWED_METHODS).split(",");
                     HttpMethod[] m = new HttpMethod[methods.length];
                     for (int i = 0; i < methods.length; i++) {
@@ -272,13 +342,15 @@ public class Server {
                     }
                     ccb.allowedRequestMethods(m);
                 }
-                if (null != config.get(Configuration.CORS_ALLOWED_HEADERS)) {
+                if (!StringUtils.isEmpty(config.get(Configuration.CORS_ALLOWED_HEADERS))) {
                     ccb.allowedRequestHeaders(config.get(Configuration.CORS_ALLOWED_HEADERS).split(","));
                 }
                 CorsConfig cors = ccb.build();
                 LOG.trace("Cors configuration: {}", cors);
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
-                ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder());
+                ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder(config));
+                ch.pipeline().addLast("login", new X509LoginRequestHandler(config));
+                ch.pipeline().addLast("doLogin", new BasicAuthLoginRequestHandler(config));
                 ch.pipeline().addLast("aggregators", new HttpAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new HttpMetricsRequestHandler(config));
                 ch.pipeline().addLast("query", new HttpQueryRequestHandler(dataStore));

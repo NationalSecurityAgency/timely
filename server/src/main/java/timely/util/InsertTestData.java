@@ -5,11 +5,14 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import timely.netty.tcp.TcpPutDecoder;
 
 public class InsertTestData {
 
@@ -47,6 +50,16 @@ public class InsertTestData {
         RACKS.add("r02");
     }
 
+    private static final Map<String, String> VISIBILITIES = new HashMap<>();
+    static {
+        VISIBILITIES.put("sys.eth0.rx-errors", "A");
+        VISIBILITIES.put("sys.eth0.rx-dropped", "B");
+        VISIBILITIES.put("sys.eth0.rx-packets", "C");
+        VISIBILITIES.put("sys.eth0.tx-errors", "D");
+        VISIBILITIES.put("sys.eth0.tx-dropped", "E");
+        VISIBILITIES.put("sys.eth0.tx-packets", "F");
+    }
+
     private static final String FMT = "put {0} {1,number,#} {2,number} host={4}{3} rack={4}";
 
     private static String usage() {
@@ -72,10 +85,13 @@ public class InsertTestData {
             while (true) {
                 long time = System.currentTimeMillis();
                 METRICS.forEach(m -> {
+                    final String viz = VISIBILITIES.get(m);
                     RACKS.forEach(rack -> {
                         HOSTS.forEach(host -> {
                             String put = MessageFormat.format(FMT, m, time,
                                     ThreadLocalRandom.current().nextDouble(0.0D, 100.0D), host, rack);
+                            if (viz != null)
+                                put += " viz=" + viz;
                             writer.println(put);
                             LOG.info(put);
                         });
