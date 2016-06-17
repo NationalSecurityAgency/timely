@@ -115,13 +115,13 @@ timely.password | The password of the Accumulo user |
 timely.table | The name of the metrics table | timely.metrics
 timely.meta | The name of the meta table | timely.meta
 timely.write.latency | The Accumulo BatchWriter latency | 5s
-timely.write.threads | The Accumulo BatchWriter number of threads | BatchWriterConfig.DEFAULT_MAX_WRITE_THREADS
-timely.write.buffer.size | The Accumulo BatchWriter buffer size | BatchWriterConfig.DEFAULT_MAX_MEMORY
+timely.write.threads | The Accumulo BatchWriter number of threads | [default](https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L49)
+timely.write.buffer.size | The Accumulo BatchWriter buffer size | [default](https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L40)
 timely.metric.age.off.days | The number of days to keep metrics | 7
 timely.cors.allow.any.origin | Allow any origin in cross origin requests (true/false) | false
 timely.cors.allow.null.origin | Allow null origins in cross origin requests (true/false) | false
 timely.cors.allowed.origins | List of allowed origins in cross origin requests (can be null or comma separated list)
-timely.cors.allowed.methods | List of allowed methods for cross origin requests | DELETE,GET,HEAD,OPTIONS,PUT,POST
+timely.cors.allowed.methods | List of allowed methods for cross origin requests | <ul><li>DELETE</li><li>GET</li><li>HEAD</li><li>OPTIONS</li><li>PUT</li><li>POST</li></ul>
 timely.cors.allowed.headers | Comma separated list of allowed HTTP headers for cross origin requests | content-type
 timely.cors.allow.credentials | Allow credentials to be passed in cross origin requests (true/false) | true
 timely.scanner.threads | Number of BatchScanner threads to be used in a query | 4
@@ -152,15 +152,13 @@ Timely provides HTTPS access to the query endpoints. It is possible to allow ano
 
 ## Tuning
 
-1. Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the `timely.write.latency` and `timely.write.threads` configuration property, but the buffer size for each BatchWriter is `timely.write.buffer.size` divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings:
+1. Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the `timely.write.latency` and `timely.write.threads` configuration property, but the buffer size for each BatchWriter is `timely.write.buffer.size` divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M:
 
    ```
    timely.write.latency=30s
    timely.write.threads=2
    timely.write.buffer.size=1G
    ``` 
-
-then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M.
 
 2. The `timely.scanner.threads` property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.
 
