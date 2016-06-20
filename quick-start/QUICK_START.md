@@ -11,8 +11,8 @@
   1. Visit `https://localhost:3000` to verify Grafana is working
 4. Build Timely
   1. set `JAVA_HOME` to point to a JDK 8 installation
-  2. run `mvn clean package`
-5. Untar Timely server distribution (found in `./server/target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz`)
+  2. cd into the server directory and run `mvn clean package`
+5. Untar Timely server distribution (found in `target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz`)
 6. Modify `timely-standalone.properties`:
   1. Use generated server side SSL certificates
     1. `timely.ssl.use.generated.keypair=true`
@@ -34,9 +34,10 @@
 8. Insert test data
   1. `cd bin; ./insert-test-data.sh`
 9. Add the Timely datasource to Grafana
-  1. Login to Grafana, go to 'DataSources'
-  2. Click 'Add data source'
-  3. Enter the following information:
+  1. Go to https://localhost:54322/api/metrics in your browser and accept the certificate
+  2. Login to Grafana, go to 'DataSources'
+  3. Click 'Add data source'
+  4. Enter the following information:
     1. Name: Timely Standalone
     2. Type: `OpenTSDB`
     3. Url: `https://localhost:54322`
