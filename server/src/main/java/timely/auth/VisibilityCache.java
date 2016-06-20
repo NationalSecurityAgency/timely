@@ -3,9 +3,6 @@ package timely.auth;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.accumulo.core.security.ColumnVisibility;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.Configuration;
 
 import java.util.concurrent.TimeUnit;
@@ -13,8 +10,6 @@ import java.util.concurrent.TimeUnit;
 public class VisibilityCache {
 
     private static volatile Cache<String, ColumnVisibility> CACHE = null;
-
-    private static boolean warned = false;
 
     /** Used for testing */
     public static synchronized void init() {

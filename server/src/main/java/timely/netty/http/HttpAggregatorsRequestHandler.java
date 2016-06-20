@@ -9,9 +9,6 @@ import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import timely.api.query.request.AggregatorsRequest;
 import timely.api.query.response.AggregatorsResponse;
 import timely.netty.Constants;
@@ -26,7 +23,6 @@ import timely.util.JsonUtil;
 public class HttpAggregatorsRequestHandler extends SimpleChannelInboundHandler<AggregatorsRequest> implements
         TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpAggregatorsRequestHandler.class);
     private static final AggregatorsResponse RESPONSE = new AggregatorsResponse();
 
     static {
