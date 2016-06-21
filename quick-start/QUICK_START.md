@@ -34,16 +34,16 @@
 8. Insert test data
   1. `cd bin; ./insert-test-data.sh`
 9. Add the Timely datasource to Grafana
-  1. Go to https://localhost:54322/api/metrics in your browser and accept the certificate
+  1. Go to `https://localhost:54322/api/metrics` in your browser and accept the certificate
   2. Login to Grafana, go to 'DataSources'
   3. Click 'Add data source'
   4. Enter the following information:
-    1. Name: Timely Standalone
+    1. Name: `Timely Standalone`
     2. Type: `OpenTSDB`
     3. Url: `https://localhost:54322`
     4. Access: `direct`
     5. With Credentials: `checked`
-    6. Version: `2.1`
+    6. Version: `<=2.1`
     7. Resolution: `millisecond`
     8. Click `Save & Test`. Note that you will get an error, but it will save.
 10. Import Standalone Test dashboard into Grafana.
