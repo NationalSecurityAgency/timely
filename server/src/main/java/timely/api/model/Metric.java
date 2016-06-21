@@ -20,7 +20,6 @@ import timely.api.Request;
 
 public class Metric implements Request {
 
-    // TODO: Are these thread safe?
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());
     private static final DoubleLexicoder valueCoder = new DoubleLexicoder();

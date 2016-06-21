@@ -34,19 +34,16 @@ public class CaptureChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public <T> Attribute<T> attr(AttributeKey<T> key) {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public Channel channel() {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public EventExecutor executor() {
-        // TODO Auto-generated method stub
         return null;
     }
 
@@ -57,7 +54,6 @@ public class CaptureChannelHandlerContext implements ChannelHandlerContext {
 
     @Override
     public ChannelHandler handler() {
-        // TODO Auto-generated method stub
         return null;
     }
 
