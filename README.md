@@ -44,7 +44,7 @@ The current Timely API is compatible with a subset of the OpenTSDB API. We curre
 
     * /api/aggregators
     * /api/query
-    * /apu/search/lookup
+    * /api/search/lookup
     * /api/suggest
 
 We also provide the following additional endpoints:
