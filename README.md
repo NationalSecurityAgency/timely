@@ -178,3 +178,5 @@ Timely provides HTTPS access to the query endpoints. It is possible to allow ano
 
 4. If you don't mind losing some metric data in the event of an Accumulo tablet server death, you can set the `table.walog.enabled` property to false and the `table.durability` property to none on your metrics table. This should speed up ingest a little.
 
+5. When creating metric queries in Grafana, specify the tags in most specific to least specific. This should yield better query performance.
+
