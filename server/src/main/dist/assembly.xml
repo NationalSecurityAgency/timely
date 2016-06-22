@@ -43,5 +43,12 @@
         <include>*</include>
       </includes>
      </fileSet>
+	<fileSet>
+	  <directory>${project.basedir}/src/main/resources/webapp</directory>
+	  <outputDirectory>bin/webapp</outputDirectory>
+	  <includes>
+		<include>*</include>
+	  </includes>
+	</fileSet>
   </fileSets>
 </assembly>

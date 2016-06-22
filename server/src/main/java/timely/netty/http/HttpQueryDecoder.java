@@ -86,41 +86,51 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
         final String sessionId = sId;
         LOG.trace("SessionID: " + sessionId);
 
-        if (msg.getMethod().equals(HttpMethod.GET)) {
-            final Collection<Request> r = parseURI(msg.getUri());
-            r.forEach(req -> {
-                if (req instanceof AuthenticatedRequest && sessionId != null) {
-                    ((AuthenticatedRequest) req).setSessionId(sessionId);
-                    ((AuthenticatedRequest) req).addHeaders(msg.headers().entries());
-                }
-                LOG.trace(LOG_PARSED_REQUEST, req);
-                req.validate();
-                out.add(req);
-            });
-        } else if (msg.getMethod().equals(HttpMethod.POST)) {
-            final Collection<Request> r = parsePOST(msg.getUri(), msg.content().toString(StandardCharsets.UTF_8));
-            r.forEach(req -> {
-                if (req instanceof AuthenticatedRequest && sessionId != null) {
-                    ((AuthenticatedRequest) req).setSessionId(sessionId);
-                    ((AuthenticatedRequest) req).addHeaders(msg.headers().entries());
-                }
-                LOG.trace(LOG_PARSED_REQUEST, req);
-                req.validate();
-                out.add(req);
-            });
-        } else {
-            TimelyException e = new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
-                    "unhandled method type", "");
-            e.addResponseHeader(Names.ALLOW, HttpMethod.GET.name() + "," + HttpMethod.POST.name());
-            LOG.warn("Unhandled HTTP request type {}", msg.getMethod());
-            throw e;
-        }
-        for (Object r : out) {
-            try {
-                enforceAccess((Request) r);
-            } catch (Exception e) {
-                out.clear();
+        try {
+            if (msg.getMethod().equals(HttpMethod.GET)) {
+                final Collection<Request> r = parseURI(msg.getUri());
+                r.forEach(req -> {
+                    if (req instanceof AuthenticatedRequest && sessionId != null) {
+                        ((AuthenticatedRequest) req).setSessionId(sessionId);
+                        ((AuthenticatedRequest) req).addHeaders(msg.headers().entries());
+                    }
+                    LOG.trace(LOG_PARSED_REQUEST, req);
+                    req.validate();
+                    out.add(req);
+                });
+            } else if (msg.getMethod().equals(HttpMethod.POST)) {
+                final Collection<Request> r = parsePOST(msg.getUri(), msg.content().toString(StandardCharsets.UTF_8));
+                r.forEach(req -> {
+                    if (req instanceof AuthenticatedRequest && sessionId != null) {
+                        ((AuthenticatedRequest) req).setSessionId(sessionId);
+                        ((AuthenticatedRequest) req).addHeaders(msg.headers().entries());
+                    }
+                    LOG.trace(LOG_PARSED_REQUEST, req);
+                    req.validate();
+                    out.add(req);
+                });
+            } else {
+                TimelyException e = new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
+                        "unhandled method type", "");
+                e.addResponseHeader(Names.ALLOW, HttpMethod.GET.name() + "," + HttpMethod.POST.name());
+                LOG.warn("Unhandled HTTP request type {}", msg.getMethod());
                 throw e;
+            }
+        } catch (UnsupportedOperationException e) {
+            // Return the original http request to route to the static file
+            // server
+            msg.retain();
+            out.add(msg);
+        }
+
+        for (Object r : out) {
+            if (r instanceof Request) {
+                try {
+                    enforceAccess((Request) r);
+                } catch (Exception e) {
+                    out.clear();
+                    throw e;
+                }
             }
         }
     }
@@ -156,7 +166,7 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
         } else if (decoder.path().equals(API_LOGIN)) {
             requests.add(JsonUtil.getObjectMapper().readValue(content, BasicAuthLoginRequest.class));
         } else {
-            throw new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Unhandled query uri: " + decoder.path(), "");
+            throw new UnsupportedOperationException();
         }
         LOG.trace("Parsed POST request {}", requests);
         return requests;
@@ -318,7 +328,7 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
         } else if (decoder.path().equals(API_LOGIN)) {
             requests.add(new X509LoginRequest());
         } else {
-            throw new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Unhandled query uri: " + decoder.path(), "");
+            throw new UnsupportedOperationException();
         }
         LOG.trace("Parsed GET request {}", requests);
         return requests;

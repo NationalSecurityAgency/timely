@@ -31,6 +31,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.File;
@@ -52,6 +53,7 @@ import timely.netty.http.HttpMetricsRequestHandler;
 import timely.netty.http.HttpQueryDecoder;
 import timely.netty.http.HttpQueryRequestHandler;
 import timely.netty.http.HttpSearchLookupRequestHandler;
+import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.HttpSuggestRequestHandler;
 import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.http.login.BasicAuthLoginRequestHandler;
@@ -321,6 +323,7 @@ public class Server {
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
                 ch.pipeline().addLast("deflater", new HttpContentCompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
+                ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 final CorsConfig.Builder ccb;
                 if (config.getBoolean(Configuration.CORS_ALLOW_ANY_ORIGIN)) {
                     ccb = new CorsConfig.Builder();
@@ -349,6 +352,7 @@ public class Server {
                 LOG.trace("Cors configuration: {}", cors);
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
                 ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder(config));
+                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config));
                 ch.pipeline().addLast("doLogin", new BasicAuthLoginRequestHandler(config));
                 ch.pipeline().addLast("aggregators", new HttpAggregatorsRequestHandler());

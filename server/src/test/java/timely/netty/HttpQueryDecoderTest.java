@@ -98,13 +98,14 @@ public class HttpQueryDecoderTest {
         request.headers().set(Names.COOKIE, ClientCookieEncoder.STRICT.encode(Constants.COOKIE_NAME, cookie));
     }
 
-    @Test(expected = TimelyException.class)
+    @Test
     public void testUnknownURI() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "/api/unknown");
         decoder.decode(null, request, results);
-        Assert.assertEquals(0, results.size());
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(request, results.get(0));
     }
 
     @Test(expected = IllegalArgumentException.class)
