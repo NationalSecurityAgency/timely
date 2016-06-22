@@ -91,6 +91,7 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
             r.forEach(req -> {
                 if (req instanceof AuthenticatedRequest && sessionId != null) {
                     ((AuthenticatedRequest) req).setSessionId(sessionId);
+                    ((AuthenticatedRequest) req).addHeaders(msg.headers().entries());
                 }
                 LOG.trace(LOG_PARSED_REQUEST, req);
                 req.validate();
@@ -101,6 +102,7 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
             r.forEach(req -> {
                 if (req instanceof AuthenticatedRequest && sessionId != null) {
                     ((AuthenticatedRequest) req).setSessionId(sessionId);
+                    ((AuthenticatedRequest) req).addHeaders(msg.headers().entries());
                 }
                 LOG.trace(LOG_PARSED_REQUEST, req);
                 req.validate();

@@ -2,6 +2,7 @@ package timely.test.integration;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -15,6 +16,7 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 
 import timely.api.query.request.QueryRequest;
 import timely.api.query.response.QueryResponse;
@@ -64,12 +66,21 @@ public abstract class BaseQueryIT {
     }
 
     protected String query(String getRequest) throws Exception {
-        return query(getRequest, 200);
+        return query(getRequest, 200, null);
     }
 
-    protected String query(String getRequest, int expectedResponseCode) throws Exception {
+    protected String query(String getRequest, String acceptType) throws Exception {
+        return query(getRequest, 200, acceptType);
+    }
+
+    protected String query(String getRequest, int expectedResponseCode, String acceptType) throws Exception {
         URL url = new URL(getRequest);
         HttpsURLConnection con = getUrlConnection(url);
+        if (null != acceptType) {
+            LOG.trace("Setting Accept header to {}", acceptType);
+            con.addRequestProperty(Names.ACCEPT, acceptType);
+        }
+        LOG.trace("Sending HTTP Headers: {}", con.getRequestProperties());
         int responseCode = con.getResponseCode();
         assertEquals(expectedResponseCode, responseCode);
         if (200 == responseCode) {

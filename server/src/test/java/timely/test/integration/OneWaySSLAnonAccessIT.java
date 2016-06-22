@@ -190,7 +190,25 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         } finally {
             m.shutdown();
         }
+    }
 
+    @Test
+    public void testMetricsJson() throws Exception {
+        String expected = "{\"metrics\":[{\"metric\":\"sys.cpu.user\",\"tags\":[{\"key\":\"tag2\",\"value\":\"value2\"},{\"key\":\"tag1\",\"value\":\"value1\"}]},{\"metric\":\"sys.cpu.idle\",\"tags\":[{\"key\":\"tag4\",\"value\":\"value4\"},{\"key\":\"tag3\",\"value\":\"value3\"}]},{\"metric\":\"zzzz\",\"tags\":[{\"key\":\"host\",\"value\":\"localhost\"}]}]}";
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
+                    + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)", "zzzz 1234567892 1.0 host=localhost");
+            sleepUninterruptibly(10, TimeUnit.SECONDS);
+
+            String metrics = "https://localhost:54322/api/metrics";
+            // Test prefix matching
+            String result = query(metrics, "application/json");
+            assertEquals(expected, result);
+        } finally {
+            m.shutdown();
+        }
     }
 
     @Test
@@ -454,7 +472,7 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
     public void testUnhandledRequest() throws Exception {
         final Server m = new Server(conf);
         try {
-            query("https://127.0.0.1:54322/favicon.ico", 404);
+            query("https://127.0.0.1:54322/favicon.ico", 404, "application/json");
         } finally {
             m.shutdown();
         }

@@ -1,7 +1,11 @@
 package timely.api.query.response;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -11,6 +15,12 @@ import timely.Configuration;
 import timely.api.model.Meta;
 import timely.store.MetaCache;
 import timely.store.MetaCacheFactory;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class MetricsResponse {
 
@@ -100,6 +110,45 @@ public class MetricsResponse {
         b.append(BODY_END);
         b.append(HTML_END);
         return b;
+    }
+
+    public String generateJson(final ObjectMapper mapper) throws JsonProcessingException {
+        // map non-ignored metrics to their list of tags
+        final MetaCache cache = MetaCacheFactory.getCache(conf);
+        Map<String, List<JsonNode>> metricTagMap = new HashMap<>();
+        cache.forEach(m -> {
+            if (!metricTagMap.containsKey(m.getMetric())) {
+                metricTagMap.put(m.getMetric(), new ArrayList<>());
+            }
+            if (!this.ignoredTags.contains(m.getTagKey())) {
+                metricTagMap.get(m.getMetric()).add(createTag(m, mapper));
+            }
+        });
+
+        ObjectNode metricsNode = mapper.createObjectNode();
+        ArrayNode metricsArray = mapper.createArrayNode();
+        metricTagMap.forEach((metric, tags) -> {
+            metricsArray.add(createMetric(metric, tags, mapper));
+        });
+        metricsNode.put("metrics", metricsArray);
+
+        return mapper.writeValueAsString(metricsNode);
+    }
+
+    private JsonNode createMetric(String metric, List<JsonNode> tags, ObjectMapper mapper) {
+        ObjectNode metricNode = mapper.createObjectNode();
+        metricNode.put("metric", metric);
+        ArrayNode tagsArray = mapper.createArrayNode();
+        tags.forEach(tagsArray::add);
+        metricNode.put("tags", tagsArray);
+        return metricNode;
+    }
+
+    private JsonNode createTag(Meta meta, ObjectMapper mapper) {
+        ObjectNode tagNode = mapper.createObjectNode();
+        tagNode.put("key", meta.getTagKey());
+        tagNode.put("value", meta.getTagValue());
+        return tagNode;
     }
 
 }
