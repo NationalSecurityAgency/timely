@@ -4,7 +4,7 @@
     <parent>
         <groupId>timely</groupId>
         <artifactId>timely</artifactId>
-        <version>0.0.1</version>
+        <version>0.0.2-SNAPSHOT</version>
     </parent>
     <artifactId>collectd-timely-plugin</artifactId>
     <dependencies>
