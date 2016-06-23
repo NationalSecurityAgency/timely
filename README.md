@@ -36,7 +36,7 @@ mvn verify site | Creates the site
 
 The Timely server requires a Java 8 runtime. Timely utilizes iterators for Apache Accumulo, so your Accumulo instance will need to be run with Java 8 also.
 
-Create a distribution and untar it somewhere. Modify the `conf/timely.properties` file appropriately. Then, copy the `timely-server` and `commons-lang3` jar files to your Accumulo tservers. Next, launch Timely by running the `bin/timely-server.sh` script.
+Create a distribution and untar it somewhere. Modify the `conf/timely.properties` file appropriately. Then, copy the `timely-server` jar file to your Accumulo tservers. Next, launch Timely by running the `bin/timely-server.sh` script.
 
 If you just want to kick the tires without having to install and setup Apache Hadoop and Apache Accumulo, then you can start Timely with the `bin/timely-standalone.sh` script. This will start an Accumulo MiniCluster in the background, but be aware that the standalone instance will not save your metric data across restarts.
 
@@ -179,6 +179,4 @@ Timely provides HTTPS access to the query endpoints. It is possible to allow ano
 3. You can lower the `table.scan.max.memory` property on your metrics table in an attempt to get data back faster from the tablet servers.
 
 4. If you don't mind losing some metric data in the event of an Accumulo tablet server death, you can set the `table.walog.enabled` property to false and the `table.durability` property to none on your metrics table. This should speed up ingest a little.
-
-5. When creating metric queries in Grafana, specify the tags in most specific to least specific. This should yield better query performance.
 

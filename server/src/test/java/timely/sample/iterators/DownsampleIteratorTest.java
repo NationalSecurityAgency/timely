@@ -150,7 +150,7 @@ public class DownsampleIteratorTest {
     private Map<Set<Tag>, Downsample> runQuery(SortedKeyValueIterator<Key, Value> iter, SortedMap<Key, Value> testData,
             long period) throws Exception {
         IteratorSetting is = new IteratorSetting(100, DownsampleIterator.class);
-        DownsampleIterator.setDownsampleOptions(is, 0, 1000, period, Collections.emptyList(), Avg.class.getName());
+        DownsampleIterator.setDownsampleOptions(is, 0, 1000, period, Avg.class.getName());
         SortedKeyValueIterator<Key, Value> source = new SortedMapIterator(testData);
         iter.init(source, is.getOptions(), null);
         iter.seek(new Range(), Collections.emptyList(), true);

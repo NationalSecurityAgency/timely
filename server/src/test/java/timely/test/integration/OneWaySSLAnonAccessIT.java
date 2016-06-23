@@ -531,8 +531,8 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
             Map<String, String> t = new LinkedHashMap<>();
-            t.put("tag3", "value3");
             t.put("rack", "r1|r2");
+            t.put("tag3", "value3");
             subQuery.setTags(t);
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);

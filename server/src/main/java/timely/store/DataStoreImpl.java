@@ -15,6 +15,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -446,14 +447,15 @@ public class DataStoreImpl implements DataStore {
                         scannerThreads);
                 try {
                     setQueryRange(scanner, metric, startTs, endTs);
-                    setQueryColumns(scanner, metric, query.getTags());
+                    List<String> tagOrder = prioritizeTags(query);
+                    Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
+                    setQueryColumns(scanner, metric, orderedTags);
                     long downsample = getDownsamplePeriod(query);
                     LOG.trace("Downsample period {}", downsample);
                     Class<? extends Aggregator> aggClass = getAggregator(query);
                     LOG.trace("Aggregator type {}", aggClass.getSimpleName());
                     IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
-                    DownsampleIterator.setDownsampleOptions(is, startTs, endTs, downsample, prioritizeTags(query),
-                            aggClass.getName());
+                    DownsampleIterator.setDownsampleOptions(is, startTs, endTs, downsample, aggClass.getName());
                     scanner.addScanIterator(is);
                     // tag -> array of results by period starting at start
                     for (Entry<Key, Value> encoded : scanner) {
@@ -490,6 +492,24 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
+    private Map<String, String> orderTags(List<String> tagOrder, Map<String, String> tags) {
+        Map<String, String> order = new LinkedHashMap<>(tags.size());
+        tagOrder.forEach(t -> order.put(t, tags.get(t)));
+        if (tagOrder.size() > tags.size()) {
+            tags.entrySet().forEach(k -> {
+                if (!tagOrder.contains(k.getKey())) {
+                    order.put(k.getKey(), k.getValue());
+                }
+            });
+        }
+        return order;
+    }
+
+    /**
+     *
+     * @param query
+     * @return ordered list of most specific to least specific tags in the query
+     */
     private List<String> prioritizeTags(SubQuery query) {
         // trivial cases
         Map<String, String> tags = query.getTags();
@@ -507,22 +527,21 @@ public class DataStoreImpl implements DataStore {
         for (Entry<String, String> entry : tags.entrySet()) {
             String tagk = entry.getKey();
             String tagv = entry.getValue();
-            int wildcard = tagv.lastIndexOf('*');
-            if (wildcard < 0) {
-                // no wildcard: can only match one tag
-                priority.put(tagk, 1);
-                continue;
-            }
-            String prefix = tagv.substring(0, wildcard);
-            int count = 0;
-            MetricTagK start = new MetricTagK(metric, prefix);
-            for (Entry<MetricTagK, Integer> metricCount : metaCounts.get().tailMap(start).entrySet()) {
-                Pair<String, String> metricTagk = metricCount.getKey();
-                if (!metricTagk.getFirst().equals(metric) || !metricTagk.getSecond().startsWith(prefix)) {
-                    break;
+            if (!isTagValueRegex(tagv)) {
+                MetricTagK start = new MetricTagK(metric, tagk);
+                int count = 0;
+                for (Entry<MetricTagK, Integer> metricCount : metaCounts.get().tailMap(start).entrySet()) {
+                    Pair<String, String> metricTagk = metricCount.getKey();
+                    if (!metricTagk.getFirst().equals(metric) || !metricTagk.getSecond().startsWith(tagk)) {
+                        break;
+                    } else {
+                        count += metricCount.getValue();
+                    }
                 }
+                priority.put(tagk, count);
+            } else {
+                priority.put(tagk, Integer.MAX_VALUE);
             }
-            priority.put(tagk, count);
         }
         List<String> result = new ArrayList<>(tags.keySet());
         Collections.sort(result, new Comparator<String>() {

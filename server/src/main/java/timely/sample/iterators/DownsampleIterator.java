@@ -5,8 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -18,7 +16,6 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
-import org.apache.commons.lang3.StringUtils;
 
 import timely.api.model.Metric;
 import timely.api.model.Tag;
@@ -32,13 +29,11 @@ public class DownsampleIterator extends WrappingIterator {
     private static final String START = "downsample.start";
     private static final String END = "downsample.end";
     private static final String PERIOD = "downsample.period";
-    private static final String QUERYTAGS = "downsample.querytags";
     private static final String AGGCLASS = "downsample.aggclass";
 
     private DownsampleFactory factory;
     private final Map<Set<Tag>, Downsample> value = new HashMap<>();
     private Key last;
-    private final Set<String> queryTags = new HashSet<>();
 
     @SuppressWarnings("unchecked")
     @Override
@@ -49,7 +44,6 @@ public class DownsampleIterator extends WrappingIterator {
         long end = Long.parseLong(options.get(END));
         long period = Long.parseLong(options.get(PERIOD));
         String aggClassname = options.get(AGGCLASS);
-        queryTags.addAll(Arrays.asList(options.get(QUERYTAGS).split(",")));
         Class<?> aggClass;
         try {
             aggClass = this.getClass().getClassLoader().loadClass(aggClassname);
@@ -105,12 +99,10 @@ public class DownsampleIterator extends WrappingIterator {
         last = null;
     }
 
-    public static void setDownsampleOptions(IteratorSetting is, long start, long end, long period,
-            Collection<String> queryTags, String classname) {
+    public static void setDownsampleOptions(IteratorSetting is, long start, long end, long period, String classname) {
         is.addOption(START, "" + start);
         is.addOption(END, "" + end);
         is.addOption(PERIOD, "" + period);
-        is.addOption(QUERYTAGS, StringUtils.join(queryTags, ","));
         is.addOption(AGGCLASS, classname);
     }
 
