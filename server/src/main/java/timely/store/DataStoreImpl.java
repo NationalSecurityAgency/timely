@@ -88,6 +88,7 @@ public class DataStoreImpl implements DataStore {
 
     private static final long METRICS_PERIOD = 30000;
     private static final long DEFAULT_DOWNSAMPLE_MS = 60000;
+    private static final Pattern REGEX_TEST = Pattern.compile("^\\w+$");
 
     /*
      * Pair doesn't implement Comparable
@@ -553,6 +554,10 @@ public class DataStoreImpl implements DataStore {
         return response;
     }
 
+    private boolean isTagValueRegex(String value) {
+        return !REGEX_TEST.matcher(value).matches();
+    }
+
     private void setQueryColumns(BatchScanner scanner, String metric, Map<String, String> tags)
             throws TableNotFoundException, TimelyException {
         LOG.trace("Looking for requested tags: {}", tags);
@@ -564,10 +569,14 @@ public class DataStoreImpl implements DataStore {
         // Only look for the meta entries that match our tags, if any
         boolean onlyFirstRow = false;
         Entry<String, String> first = null;
+        // Set the columns on the meta scanner based on the first tag
+        // in the set of tags passed in the query. If no tags are present
+        // then we are only going to return the first tag present in the
+        // meta table.
         Iterator<Entry<String, String>> tagIter = tags.entrySet().iterator();
         if (tagIter.hasNext()) {
             first = tagIter.next();
-            if (first.getValue().endsWith("*")) {
+            if (isTagValueRegex(first.getValue())) {
                 meta.fetchColumnFamily(new Text(first.getKey()));
             } else {
                 meta.fetchColumn(new Text(first.getKey()), new Text(first.getValue()));
@@ -605,6 +614,9 @@ public class DataStoreImpl implements DataStore {
                         .toString());
             }
         };
+        // Get the list of tags in the meta table for this metric that matches
+        // the pattern of the first tag in the query. The resulting set of tags
+        // will be used to fetch specific columns from the metric table.
         Set<Tag> concrete = expandTagValues(first, knownKeyValues);
         if (concrete.size() == 0) {
             throw new TimelyException(HttpResponseStatus.BAD_REQUEST.code(), "No matching tags", "No tags were found "
@@ -614,26 +626,22 @@ public class DataStoreImpl implements DataStore {
         for (Tag tag : concrete) {
             Text colf = new Text(tag.getKey() + "=" + tag.getValue());
             scanner.fetchColumnFamily(colf);
-            LOG.trace("Fetching column family: {}", colf);
+            LOG.trace("Fetching metric table column family: {}", colf);
         }
         // Add the regular expression to filter the other tags
         int priority = 100;
         while (tagIter.hasNext()) {
             Entry<String, String> tag = tagIter.next();
-            LOG.trace("Additional tag {}", tag);
+            LOG.trace("Adding regex filter for tag {}", tag);
             StringBuffer pattern = new StringBuffer();
-            pattern.append("(^|,)").append(Pattern.quote(tag.getKey())).append("=");
-            String value = tag.getValue();
-            if (tag.getValue().endsWith("*")) {
-                value = value.substring(0, value.length() - 1);
-                pattern.append(Pattern.quote(value));
-                pattern.append("[^,]*");
-            } else {
-                pattern.append(Pattern.quote(value));
-                pattern.append("(,|$)");
-            }
+            pattern.append("(^|.*,)");
+            pattern.append(tag.getKey());
+            pattern.append("=");
+            pattern.append(tag.getValue());
+            pattern.append("(,.*|$)");
+
             IteratorSetting setting = new IteratorSetting(priority++, tag.getKey() + " tag filter", RegExFilter.class);
-            LOG.trace("Using {} additional filter on tags", pattern);
+            LOG.trace("Using {} additional filter on tag: {}", pattern, tag.getKey());
             RegExFilter.setRegexs(setting, null, null, pattern.toString(), null, false, true);
             scanner.addScanIterator(setting);
         }

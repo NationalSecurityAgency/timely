@@ -2,7 +2,7 @@ package timely.api.query.request;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -202,7 +202,7 @@ public class QueryRequest extends AuthenticatedRequest {
         private boolean rate = false;
         private RateOption rateOptions = null;
         private Optional<String> downsample = Optional.empty();
-        private Map<String, String> tags = new HashMap<>();
+        private Map<String, String> tags = new LinkedHashMap<>();
         private Collection<Filter> filters = new ArrayList<>();
         private Collection<String> tsuids = new ArrayList<>();
 

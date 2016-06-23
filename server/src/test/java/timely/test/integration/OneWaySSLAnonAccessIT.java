@@ -15,6 +15,7 @@ import java.io.File;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -468,6 +469,161 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         }
     }
 
+    @Test
+    public void testQueryWithTagOr() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
+                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
+                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 6000);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.idle");
+            subQuery.setTags(Collections.singletonMap("rack", "r1|r2"));
+            subQuery.setDownsample(Optional.of("1s-max"));
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(2, response.size());
+            QueryResponse response1 = response.get(0);
+            Map<String, String> tags = response1.getTags();
+            assertEquals(1, tags.size());
+            assertTrue(tags.containsKey("rack"));
+            assertTrue(tags.get("rack").equals("r2"));
+            Map<String, Object> dps = response1.getDps();
+            assertEquals(1, dps.size());
+            Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
+            Entry<String, Object> entry = entries.next();
+            assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
+            assertEquals(3.0, entry.getValue());
+
+            QueryResponse response2 = response.get(1);
+            Map<String, String> tags2 = response2.getTags();
+            assertEquals(1, tags2.size());
+            assertTrue(tags2.containsKey("rack"));
+            assertTrue(tags2.get("rack").equals("r1"));
+            Map<String, Object> dps2 = response2.getDps();
+            assertEquals(1, dps2.size());
+            Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
+            Entry<String, Object> entry2 = entries2.next();
+            assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
+            assertEquals(1.0, entry2.getValue());
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test
+    public void testQueryWithTagRegex() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
+                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
+                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 6000);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.idle");
+            Map<String, String> t = new LinkedHashMap<>();
+            t.put("tag3", "value3");
+            t.put("rack", "r1|r2");
+            subQuery.setTags(t);
+            subQuery.setDownsample(Optional.of("1s-max"));
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(2, response.size());
+            QueryResponse response1 = response.get(0);
+            Map<String, String> tags = response1.getTags();
+            assertEquals(2, tags.size());
+            assertTrue(tags.containsKey("rack"));
+            assertTrue(tags.get("rack").equals("r2"));
+            assertTrue(tags.containsKey("tag3"));
+            assertTrue(tags.get("tag3").equals("value3"));
+            Map<String, Object> dps = response1.getDps();
+            assertEquals(1, dps.size());
+            Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
+            Entry<String, Object> entry = entries.next();
+            assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
+            assertEquals(3.0, entry.getValue());
+
+            QueryResponse response2 = response.get(1);
+            Map<String, String> tags2 = response2.getTags();
+            assertEquals(2, tags2.size());
+            assertTrue(tags2.containsKey("rack"));
+            assertTrue(tags2.get("rack").equals("r1"));
+            assertTrue(tags.containsKey("tag3"));
+            assertTrue(tags.get("tag3").equals("value3"));
+            Map<String, Object> dps2 = response2.getDps();
+            assertEquals(1, dps2.size());
+            Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
+            Entry<String, Object> entry2 = entries2.next();
+            assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
+            assertEquals(1.0, entry2.getValue());
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test
+    public void testQueryWithTagRegex2() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
+                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
+                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 6000);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.idle");
+            Map<String, String> t = new LinkedHashMap<>();
+            t.put("rack", "r1|r2");
+            t.put("tag3", "val.*");
+            subQuery.setTags(t);
+            subQuery.setDownsample(Optional.of("1s-max"));
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(2, response.size());
+            QueryResponse response1 = response.get(0);
+            Map<String, String> tags = response1.getTags();
+            assertEquals(2, tags.size());
+            assertTrue(tags.containsKey("rack"));
+            assertTrue(tags.get("rack").equals("r2"));
+            assertTrue(tags.containsKey("tag3"));
+            assertTrue(tags.get("tag3").equals("value3"));
+            Map<String, Object> dps = response1.getDps();
+            assertEquals(1, dps.size());
+            Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
+            Entry<String, Object> entry = entries.next();
+            assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
+            assertEquals(3.0, entry.getValue());
+
+            QueryResponse response2 = response.get(1);
+            Map<String, String> tags2 = response2.getTags();
+            assertEquals(2, tags2.size());
+            assertTrue(tags2.containsKey("rack"));
+            assertTrue(tags2.get("rack").equals("r1"));
+            assertTrue(tags.containsKey("tag3"));
+            assertTrue(tags.get("tag3").equals("value3"));
+            Map<String, Object> dps2 = response2.getDps();
+            assertEquals(1, dps2.size());
+            Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
+            Entry<String, Object> entry2 = entries2.next();
+            assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
+            assertEquals(1.0, entry2.getValue());
+        } finally {
+            m.shutdown();
+        }
+    }
+
     @Test(expected = NotSuccessfulException.class)
     public void testUnhandledRequest() throws Exception {
         final Server m = new Server(conf);
@@ -503,4 +659,5 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
             m.shutdown();
         }
     }
+
 }

@@ -28,7 +28,9 @@ mvn package | Runs findbugs and creates a distribution
 mvn verify | Runs integration tests
 mvn verify site | Creates the site
  
-The [CollectD] (http://collectd.org/) plugins require that CollectD is installed locally as the `/usr/share/collectd/java/collectd-api.jar` file is a dependency.
+  :warning: The [CollectD] (http://collectd.org/) plugins require that CollectD is installed locally as the `/usr/share/collectd/java/collectd-api.jar` file is a dependency.
+
+  :warning: If you are having trouble with the server pom in your IDE, take a look [here] (https://github.com/trustin/os-maven-plugin#issues-with-eclipse-m2e-or-other-ides)
 
 ## Deployment
 
