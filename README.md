@@ -32,6 +32,8 @@ mvn verify site | Creates the site
 
   :warning: If you are having trouble with the server pom in your IDE, take a look [here] (https://github.com/trustin/os-maven-plugin#issues-with-eclipse-m2e-or-other-ides)
 
+  :warning: Timely uses the [netty-tcnative] (http://netty.io/wiki/forked-tomcat-native.html) module to provide native access to OpenSSL. The correct version of the artifact is downloaded during the build. If you are building for a different platform, then you can override the classifier by specifying the `os.detected.classifier` property on the Maven command line. See the netty-tcnative wiki for more information.
+
 ## Deployment
 
 The Timely server requires a Java 8 runtime. Timely utilizes iterators for Apache Accumulo, so your Accumulo instance will need to be run with Java 8 also.
