@@ -2,15 +2,15 @@
 
 Build the server for use in the centos7 Docker container
 
-```
+'''
 mvn clean package -Dos.detected.classifier=linux-x86_64-fedora
-```
+'''
 
 Launch the various containers using docker-compose
 
-```
+'''
 docker-compose up
-```
+'''
 
 This starts timely, grafana and a process to insert fake test data. It also configures Grafana with the correct datasource
 and creates an example dashboard.
