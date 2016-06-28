@@ -1,0 +1,27 @@
+version: '2.0'
+services:
+  timely:
+    image: timely
+    build: .
+    ports:
+     - "9804:9804" # standalone zookeeper
+     - "54321:54321" # timely put
+     - "54322:54322" # timely query
+    volumes:
+     - ${PWD}/:/timely-server-src
+    command: /timely-server-src/bin/docker/deploy-startup-standalone.sh
+    environment:
+     - LD_LIBRARY_PATH=/timely/bin/META-INF/native
+  ingest:
+    image: timely
+    entrypoint: /timely-server-src/bin/docker/deploy-wait-and-insert.sh
+    volumes:
+     - ${PWD}/:/timely-server-src
+    depends_on:
+     - timely
+  grafana:
+    image: grafana/grafana
+    ports:
+     - "3000:3000"
+    depends_on:
+     - timely

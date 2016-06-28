@@ -12,7 +12,7 @@ CONF_DIR="${BASE_DIR}/conf"
 CONF_FILE="${CONF_DIR}/timely.properties"
 LIB_DIR="${BASE_DIR}/lib"
 NUM_SERVER_THREADS=4
-HOST="127.0.0.1"
+HOST="timely"
 PORT=54321
 
 CP=""
