@@ -19,6 +19,9 @@ services:
      - ${PWD}/:/timely-server-src
     depends_on:
      - timely
+    environment:
+     - TIMELY_HOST=timely
+     - TIMELY_PORT=54321
   grafana:
     image: grafana/grafana
     ports:
