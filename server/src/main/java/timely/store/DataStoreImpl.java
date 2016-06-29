@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.accumulo.core.client.BatchScanner;
@@ -590,7 +591,7 @@ public class DataStoreImpl implements DataStore {
         Entry<String, String> first = null;
         // Set the columns on the meta scanner based on the first tag
         // in the set of tags passed in the query. If no tags are present
-        // then we are only going to return the first tag present in the
+        // then we are only going to return the first tag name present in the
         // meta table.
         Iterator<Entry<String, String>> tagIter = tags.entrySet().iterator();
         if (tagIter.hasNext()) {
@@ -601,39 +602,44 @@ public class DataStoreImpl implements DataStore {
                 meta.fetchColumn(new Text(first.getKey()), new Text(first.getValue()));
             }
         } else {
-            // only grab the first meta entry for this metric
+            // grab all of the values found for the first tag for the metric
             onlyFirstRow = true;
         }
-        final boolean ONLY_RETURN_FIRST_ROW = onlyFirstRow;
+        final boolean ONLY_RETURN_FIRST_TAG = onlyFirstRow;
         Iterator<Entry<Key, Value>> iter = meta.iterator();
         Iterator<Pair<String, String>> knownKeyValues = new Iterator<Pair<String, String>>() {
 
-            boolean returnedFirstRecord = false;
+            Text firstTag = null;
+            Text tagName = null;
+            Text tagValue = null;
 
             @Override
             public boolean hasNext() {
-                if (ONLY_RETURN_FIRST_ROW) {
-                    if (this.returnedFirstRecord) {
-                        return false;
-                    } else {
-                        return iter.hasNext();
+                if (iter.hasNext()) {
+                    Entry<Key, Value> metaEntry = iter.next();
+                    if (null == firstTag) {
+                        firstTag = metaEntry.getKey().getColumnFamily();
                     }
-                } else {
-                    return iter.hasNext();
+                    tagName = metaEntry.getKey().getColumnFamily();
+                    tagValue = metaEntry.getKey().getColumnQualifier();
+                    LOG.trace("Found tag entry {}={}", tagName, tagValue);
+
+                    if (ONLY_RETURN_FIRST_TAG && !tagName.equals(firstTag)) {
+                        return false;
+                    }
+                    return true;
                 }
+                return false;
             }
 
             @Override
             public Pair<String, String> next() {
-                Entry<Key, Value> entry = iter.next();
-                this.returnedFirstRecord = true;
-                LOG.trace("Returning tag {}={}", entry.getKey().getColumnFamily().toString(), entry.getKey()
-                        .getColumnQualifier().toString());
-                return new Pair<>(entry.getKey().getColumnFamily().toString(), entry.getKey().getColumnQualifier()
-                        .toString());
+                LOG.trace("Returning tag {}={}", tagName, tagValue);
+                return new Pair<>(tagName.toString(), tagValue.toString());
             }
         };
-        // Get the list of tags in the meta table for this metric that matches
+        // Expand the list of tags in the meta table for this metric that
+        // matches
         // the pattern of the first tag in the query. The resulting set of tags
         // will be used to fetch specific columns from the metric table.
         Set<Tag> concrete = expandTagValues(first, knownKeyValues);
@@ -668,6 +674,10 @@ public class DataStoreImpl implements DataStore {
 
     private Set<Tag> expandTagValues(Entry<String, String> firstTag, Iterator<Pair<String, String>> knownKeyValues) {
         Set<Tag> result = new HashSet<>();
+        Matcher matcher = null;
+        if (null != firstTag && isTagValueRegex(firstTag.getValue())) {
+            matcher = Pattern.compile(firstTag.getValue()).matcher("");
+        }
         while (knownKeyValues.hasNext()) {
             Pair<String, String> knownKeyValue = knownKeyValues.next();
             if (firstTag == null) {
@@ -676,9 +686,9 @@ public class DataStoreImpl implements DataStore {
             } else {
                 LOG.trace("Testing requested tag {}={}", firstTag.getKey(), firstTag.getValue());
                 if (firstTag.getKey().equals(knownKeyValue.getFirst())) {
-                    if (firstTag.getValue().endsWith("*")) {
-                        String prefix = firstTag.getValue().substring(0, firstTag.getValue().length() - 1);
-                        if (knownKeyValue.getSecond().startsWith(prefix)) {
+                    if (null != matcher) {
+                        matcher.reset(knownKeyValue.getSecond());
+                        if (matcher.matches()) {
                             LOG.trace("Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
                             result.add(new Tag(knownKeyValue.getFirst(), knownKeyValue.getSecond()));
                         }

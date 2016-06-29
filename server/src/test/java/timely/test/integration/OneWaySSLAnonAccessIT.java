@@ -353,6 +353,45 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
         }
     }
 
+    @Test
+    public void testQueryWithNoTagsMultipleSeries() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + TEST_TIME
+                    + " 2.0 tag1=value1 tag2=value2 host=h2", "sys.cpu.user " + (TEST_TIME + 1000)
+                    + " 4.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + (TEST_TIME + 1000)
+                    + " 3.0 tag1=value1 tag2=value2 host=h2", "sys.cpu.user " + (TEST_TIME + 2000)
+                    + " 5.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + (TEST_TIME + 2000)
+                    + " 6.0 tag1=value1 tag2=value2 host=h1");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 4000);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.user");
+            subQuery.setDownsample(Optional.of("1s-max"));
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(1, response.size());
+            Map<String, String> tags = response.get(0).getTags();
+            assertEquals(0, tags.size());
+            Map<String, Object> dps = response.get(0).getDps();
+            assertEquals(3, dps.size());
+            Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
+            Entry<String, Object> entry = entries.next();
+            assertEquals(Long.toString((TEST_TIME / 1000)), entry.getKey());
+            assertEquals(2.0, entry.getValue());
+            entry = entries.next();
+            assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
+            assertEquals(4.0, entry.getValue());
+            entry = entries.next();
+            assertEquals(Long.toString((TEST_TIME / 1000) + 2), entry.getKey());
+            assertEquals(6.0, entry.getValue());
+        } finally {
+            m.shutdown();
+        }
+    }
+
     @Test(expected = NotSuccessfulException.class)
     public void testQueryWithNoMatchingTags() throws Exception {
         final Server m = new Server(conf);
@@ -389,7 +428,7 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
             request.setEnd(TEST_TIME + 6000);
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
-            subQuery.setTags(Collections.singletonMap("rack", "r*"));
+            subQuery.setTags(Collections.singletonMap("rack", "r.*"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
@@ -436,7 +475,7 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
             request.setEnd(TEST_TIME + 6000);
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
-            subQuery.setTags(Collections.singletonMap("rack", "*"));
+            subQuery.setTags(Collections.singletonMap("rack", ".*"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
