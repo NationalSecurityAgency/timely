@@ -14,8 +14,8 @@ LIB_DIR="${BASE_DIR}/lib"
 NUM_SERVER_THREADS=4
 
 if [ -z ${TIMELY_HOST+x} ]; then
-  echo "TIMELY_HOST is unset, using localhost"
-  TIMELY_HOST="localhost"
+  echo "TIMELY_HOST is unset, using 127.0.0.1"
+  TIMELY_HOST="127.0.0.1"
 else
   echo "TIMELY_HOST is set to '$TIMELY_HOST'"
 fi
