@@ -1,6 +1,6 @@
 {"dashboard":
 {
-  "id": null,
+  "id": 1,
   "title": "StandaloneTest",
   "originalTitle": "StandaloneTest",
   "tags": [],
@@ -61,10 +61,10 @@
               "downsampleFillPolicy": "none",
               "downsampleInterval": "",
               "errors": {},
+              "isCounter": false,
               "metric": "timely.metrics.received",
               "refId": "A",
-              "shouldComputeRate": false,
-              "isCounter": false
+              "shouldComputeRate": false
             },
             {
               "aggregator": "sum",
@@ -176,7 +176,7 @@
               "metric": "sys.cpu0.user",
               "refId": "A",
               "tags": {
-                "host": "*"
+                "host": ".*"
               }
             }
           ],
@@ -262,7 +262,7 @@
               "metric": "sys.cpu0.user",
               "refId": "A",
               "tags": {
-                "rack": "*"
+                "rack": ".*"
               }
             }
           ],
