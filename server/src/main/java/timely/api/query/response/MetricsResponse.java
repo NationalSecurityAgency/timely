@@ -126,11 +126,10 @@ public class MetricsResponse {
         });
 
         ObjectNode metricsNode = mapper.createObjectNode();
-        ArrayNode metricsArray = mapper.createArrayNode();
+        ArrayNode metricsArray = metricsNode.putArray("metrics");
         metricTagMap.forEach((metric, tags) -> {
             metricsArray.add(createMetric(metric, tags, mapper));
         });
-        metricsNode.put("metrics", metricsArray);
 
         return mapper.writeValueAsString(metricsNode);
     }
@@ -138,9 +137,8 @@ public class MetricsResponse {
     private JsonNode createMetric(String metric, List<JsonNode> tags, ObjectMapper mapper) {
         ObjectNode metricNode = mapper.createObjectNode();
         metricNode.put("metric", metric);
-        ArrayNode tagsArray = mapper.createArrayNode();
+        ArrayNode tagsArray = metricNode.putArray("tags");
         tags.forEach(tagsArray::add);
-        metricNode.put("tags", tagsArray);
         return metricNode;
     }
 

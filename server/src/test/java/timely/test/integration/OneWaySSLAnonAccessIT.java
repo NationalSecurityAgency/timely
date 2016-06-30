@@ -664,10 +664,30 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
     }
 
     @Test(expected = NotSuccessfulException.class)
-    public void testUnhandledRequest() throws Exception {
+    public void testGetFavIconRequest() throws Exception {
         final Server m = new Server(conf);
         try {
             query("https://127.0.0.1:54322/favicon.ico", 404, "application/json");
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test(expected = NotSuccessfulException.class)
+    public void testGetBadPath() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            query("https://127.0.0.1:54322/index.html", 403, "application/json");
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test(expected = NotSuccessfulException.class)
+    public void testGetGoodPath() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            query("https://127.0.0.1:54322/webapp/test.html", 404, "application/json");
         } finally {
             m.shutdown();
         }

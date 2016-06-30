@@ -16,7 +16,6 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 
 import timely.api.query.request.QueryRequest;
 import timely.api.query.response.QueryResponse;

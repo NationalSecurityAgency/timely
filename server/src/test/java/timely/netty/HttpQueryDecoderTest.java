@@ -35,7 +35,6 @@ import timely.api.query.request.QueryRequest.RateOption;
 import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.request.SearchLookupRequest;
 import timely.api.query.request.SuggestRequest;
-import timely.api.query.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.netty.http.HttpQueryDecoder;
 import timely.test.TestConfiguration;

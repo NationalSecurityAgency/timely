@@ -136,11 +136,23 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         final String uri = request.getUri();
+        if (uri.startsWith("/favicon.ico")) {
+            sendError(ctx, NOT_FOUND);
+            return;
+        }
+
+        if (!uri.startsWith("/webapp")) {
+            sendError(ctx, FORBIDDEN);
+            return;
+        }
+
         final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);
             return;
         }
+
+        LOG.trace("Looking for requested file at: " + path);
 
         File file = new File(path);
         if (file.isHidden() || !file.exists()) {

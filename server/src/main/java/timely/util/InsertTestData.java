@@ -12,7 +12,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.netty.tcp.TcpPutDecoder;
 
 public class InsertTestData {
 
