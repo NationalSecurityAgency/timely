@@ -1,5 +1,67 @@
+<!DOCTYPE HTML>
 <html>
-<body>
-Hello World!
-</body>
+  <head>
+    <title>Timely Standalone WebSocket Example</title>
+  </head>
+  <body>
+    <script type="text/javascript">
+    function WS()
+    {
+      if (window.WebSocket)
+      {
+        var sock = new WebSocket("wss://127.0.0.1:54323/websocket");
+        sock.onmessage = function(msg)
+        {
+          var metric = msg.data;
+          var metrics = document.getElementById("metrics");
+          var entry = document.createElement("li");
+          entry.appendChild(document.createTextNode(metric));
+          metrics.appendChild(entry);
+        }
+        sock.onopen = function()
+        {
+          console.log("Web socket connection established.");
+          var create = {
+            "operation" : "create",
+            "sessionId" : "12345"
+          }
+          sock.send(JSON.stringify(create));
+
+          var m1 = {
+            "operation" : "add",
+            "sessionId" : "12345",
+            "metric" : "timely.metrics.received"
+          }
+          sock.send(JSON.stringify(m1));
+          
+          var m1 = {
+            "operation" : "add",
+            "sessionId" : "12345",
+            "metric" : "timely.keys.metric.inserted"
+          }
+          sock.send(JSON.stringify(m1));
+        }
+        sock.onclose = function()
+        {
+          console.log("Web socket connection closed.");
+        }
+        window.onbeforeunload = function()
+        {
+          var close = {
+            "operation" : "close",
+            "sessionId" : "12345"
+          }
+          sock.send(JSON.stringify(close));
+          sock.close();
+        }
+      }
+      else
+      {
+        alert("WebSocket not supported in your browser");
+      }
+    }
+    window.onload = WS()
+    </script>
+      <ul id="metrics"/>
+  </body>
 </html>

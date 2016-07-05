@@ -24,6 +24,7 @@ public class TestConfiguration extends Properties {
         cfg.put(Configuration.IP, "127.0.0.1");
         cfg.put(Configuration.PUT_PORT, "54321");
         cfg.put(Configuration.QUERY_PORT, "54322");
+        cfg.put(Configuration.WEBSOCKET_PORT, "54323");
         cfg.put(Configuration.ZOOKEEPERS, "localhost:2181");
         cfg.put(Configuration.INSTANCE_NAME, "test");
         cfg.put(Configuration.USERNAME, "root");
@@ -31,6 +32,8 @@ public class TestConfiguration extends Properties {
         cfg.put(Configuration.TIMELY_HTTP_HOST, "localhost");
         cfg.put(Configuration.GRAFANA_HTTP_ADDRESS, GRAFANA_HTTP_ADDRESS_DEFAULT);
         cfg.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "true");
+        cfg.put(Configuration.MAX_LATENCY, "3s");
+        cfg.put(Configuration.WS_TIMEOUT_SECONDS, "20");
         return cfg;
     }
 

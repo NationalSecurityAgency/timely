@@ -1,5 +1,7 @@
 package timely.auth;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,6 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
 import timely.Configuration;
+import timely.api.AuthenticatedRequest;
+import timely.api.Request;
+import timely.api.query.response.TimelyException;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -55,6 +60,20 @@ public class AuthCache {
             return new Authorizations(auths);
         } else {
             throw new IllegalArgumentException("session id cannot be null");
+        }
+    }
+
+    public static void enforceAccess(Configuration conf, Request r) throws Exception {
+        if (!conf.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS) && (r instanceof AuthenticatedRequest)) {
+            AuthenticatedRequest ar = (AuthenticatedRequest) r;
+            if (StringUtils.isEmpty(ar.getSessionId())) {
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
+                        "Anonymous access is disabled, log in first");
+            }
+            if (!AuthCache.getCache().asMap().containsKey(ar.getSessionId())) {
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
+                        "Unknown session id was submitted, log in again");
+            }
         }
     }
 

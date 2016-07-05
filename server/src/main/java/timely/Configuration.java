@@ -21,6 +21,7 @@ public class Configuration {
     public static final String IP = "timely.ip";
     public static final String PUT_PORT = "timely.port.put";
     public static final String QUERY_PORT = "timely.port.query";
+    public static final String WEBSOCKET_PORT = "timely.port.websocket";
     public static final String ZOOKEEPERS = "timely.zookeepers";
     public static final String INSTANCE_NAME = "timely.instance_name";
     public static final String USERNAME = "timely.username";
@@ -88,6 +89,11 @@ public class Configuration {
     public static final String ALLOW_ANONYMOUS_ACCESS = "timely.allow.anonymous.access";
     private static final String ALLOW_ANONYMOUS_ACCESS_DEFAULT = "false";
 
+    public static final String WS_TIMEOUT_SECONDS = "timely.web.socket.timeout";
+    private static final String WS_TIMEOUT_SECONDS_DEFAULT = "60";
+    public static final String WS_SUBSCRIPTION_LAG = "timely.ws.subscription.lag";
+    private static final String WS_SUBSCRIPTION_LAG_DEFAULT = "120";
+
     public static final String NON_SECURE_REDIRECT_PATH = "timely.http.redirect.path";
     private static final String NON_SECURE_REDIRECT_PATH_DEFAULT = "/secure-me";
     public static final String STRICT_TRANSPORT_MAX_AGE = "timely.hsts.max.age";
@@ -98,6 +104,7 @@ public class Configuration {
         REQUIRED_PROPERTIES.add(IP);
         REQUIRED_PROPERTIES.add(PUT_PORT);
         REQUIRED_PROPERTIES.add(QUERY_PORT);
+        REQUIRED_PROPERTIES.add(WEBSOCKET_PORT);
         REQUIRED_PROPERTIES.add(ZOOKEEPERS);
         REQUIRED_PROPERTIES.add(INSTANCE_NAME);
         REQUIRED_PROPERTIES.add(USERNAME);
@@ -152,6 +159,9 @@ public class Configuration {
         props.setProperty(VISIBILITY_CACHE_EXPIRATION, VISIBILITY_EXPIRATION_DEFAULT + "");
         props.setProperty(VISIBILITY_CACHE_INITIAL_CAPACITY, VISIBILITY_CACHE_INITIAL_CAPACITY_DEFAULT + "");
         props.setProperty(VISIBILITY_CACHE_MAX_CAPACITY, VISIBILITY_CACHE_MAX_CAPACITY_DEFAULT + "");
+
+        props.setProperty(WS_TIMEOUT_SECONDS, WS_TIMEOUT_SECONDS_DEFAULT);
+        props.setProperty(WS_SUBSCRIPTION_LAG, WS_SUBSCRIPTION_LAG_DEFAULT);
 
         props.setProperty(NON_SECURE_REDIRECT_PATH, NON_SECURE_REDIRECT_PATH_DEFAULT);
         props.setProperty(STRICT_TRANSPORT_MAX_AGE, STRICT_TRANSPORT_MAX_AGE_DEFAULT);

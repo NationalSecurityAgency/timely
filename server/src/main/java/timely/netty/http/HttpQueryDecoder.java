@@ -16,7 +16,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,12 +55,14 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
     private static final String API_LOGIN = "/login";
     private static final String NO_AUTHORIZATIONS = "";
 
+    private final Configuration conf;
     private boolean anonymousAccessAllowed = false;
     private final String nonSecureRedirectAddress;
 
     public HttpQueryDecoder(Configuration config) {
-        this.anonymousAccessAllowed = config.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
-        this.nonSecureRedirectAddress = config.get(Configuration.NON_SECURE_REDIRECT_PATH);
+        this.conf = config;
+        this.anonymousAccessAllowed = conf.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
+        this.nonSecureRedirectAddress = conf.get(Configuration.NON_SECURE_REDIRECT_PATH);
     }
 
     @Override
@@ -135,25 +136,11 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
         for (Object r : out) {
             if (r instanceof Request) {
                 try {
-                    enforceAccess((Request) r);
+                    AuthCache.enforceAccess(conf, (Request) r);
                 } catch (Exception e) {
                     out.clear();
                     throw e;
                 }
-            }
-        }
-    }
-
-    private void enforceAccess(Request r) throws Exception {
-        if (!this.anonymousAccessAllowed && (r instanceof AuthenticatedRequest)) {
-            AuthenticatedRequest ar = (AuthenticatedRequest) r;
-            if (StringUtils.isEmpty(ar.getSessionId())) {
-                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
-                        "Anonymous access is disabled, log in first");
-            }
-            if (!AuthCache.getCache().asMap().containsKey(ar.getSessionId())) {
-                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
-                        "Unknown session id was submitted, log in again");
             }
         }
     }

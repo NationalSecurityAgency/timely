@@ -1,6 +1,9 @@
 package timely.store;
 
 import java.util.List;
+import java.util.Map;
+
+import org.apache.accumulo.core.client.Scanner;
 
 import timely.api.model.Metric;
 import timely.api.query.request.QueryRequest;
@@ -22,5 +25,8 @@ public interface DataStore {
     List<QueryResponse> query(QueryRequest msg) throws TimelyException;
 
     void flush() throws TimelyException;
+
+    Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime, int lag)
+            throws TimelyException;
 
 }

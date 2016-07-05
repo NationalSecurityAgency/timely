@@ -21,8 +21,10 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsHandler;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.OpenSslServerContext;
@@ -32,6 +34,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.File;
@@ -62,6 +65,7 @@ import timely.netty.http.login.BasicAuthLoginRequestHandler;
 import timely.netty.http.login.X509LoginRequestHandler;
 import timely.netty.tcp.TcpPutDecoder;
 import timely.netty.tcp.TcpPutHandler;
+import timely.netty.websocket.WSSubscriptionRequestHandler;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
 import timely.store.MetaCacheFactory;
@@ -74,6 +78,7 @@ public class Server {
     private static final int EPOLL_MIN_PATCH_VERSION = 32;
     private static final String OS_NAME = "os.name";
     private static final String OS_VERSION = "os.version";
+    private static final String WS_PATH = "/websocket";
 
     protected static final CountDownLatch LATCH = new CountDownLatch(1);
 
@@ -82,8 +87,11 @@ public class Server {
     private EventLoopGroup tcpBossGroup = null;
     private EventLoopGroup httpWorkerGroup = null;
     private EventLoopGroup httpBossGroup = null;
+    private EventLoopGroup wsWorkerGroup = null;
+    private EventLoopGroup wsBossGroup = null;
     protected Channel putChannelHandle = null;
     protected Channel queryChannelHandle = null;
+    protected Channel wsChannelHandle = null;
     protected DataStore dataStore = null;
     protected volatile boolean shutdown = false;
 
@@ -176,6 +184,11 @@ public class Server {
             LOG.error("Error shutting down http channel", e);
         }
         try {
+            wsChannelHandle.close().sync();
+        } catch (final Exception e) {
+            LOG.error("Error shutting down websocket channel", e);
+        }
+        try {
             tcpBossGroup.shutdownGracefully().sync();
         } catch (final Exception e) {
             LOG.error("Error closing Netty TCP boss thread group", e);
@@ -196,11 +209,22 @@ public class Server {
             LOG.error("Error closing Netty HTTP worker thread group", e);
         }
         try {
+            wsBossGroup.shutdownGracefully().sync();
+        } catch (final Exception e) {
+            LOG.error("Error closing Netty websocket boss thread group", e);
+        }
+        try {
+            wsWorkerGroup.shutdownGracefully().sync();
+        } catch (final Exception e) {
+            LOG.error("Error closing Netty websocket worker thread group", e);
+        }
+        try {
             dataStore.flush();
         } catch (TimelyException e) {
             LOG.error("Error flushing to server during shutdown", e);
         }
         MetaCacheFactory.close();
+        WSSubscriptionRequestHandler.close();
         this.shutdown = true;
         LOG.info("Server shut down.");
     }
@@ -224,12 +248,16 @@ public class Server {
             tcpBossGroup = new EpollEventLoopGroup();
             httpWorkerGroup = new EpollEventLoopGroup();
             httpBossGroup = new EpollEventLoopGroup();
+            wsWorkerGroup = new EpollEventLoopGroup();
+            wsBossGroup = new EpollEventLoopGroup();
             channelClass = EpollServerSocketChannel.class;
         } else {
             tcpWorkerGroup = new NioEventLoopGroup();
             tcpBossGroup = new NioEventLoopGroup();
             httpWorkerGroup = new NioEventLoopGroup();
             httpBossGroup = new NioEventLoopGroup();
+            wsWorkerGroup = new NioEventLoopGroup();
+            wsBossGroup = new NioEventLoopGroup();
             channelClass = NioServerSocketChannel.class;
         }
         LOG.info("Using channel class {}", channelClass.getSimpleName());
@@ -269,9 +297,22 @@ public class Server {
         final String queryAddress = ((InetSocketAddress) queryChannelHandle.localAddress()).getAddress()
                 .getHostAddress();
 
+        final int wsPort = Integer.parseInt(config.get(Configuration.WEBSOCKET_PORT));
+        final ServerBootstrap wsServer = new ServerBootstrap();
+        wsServer.group(wsBossGroup, wsWorkerGroup);
+        wsServer.channel(channelClass);
+        wsServer.handler(new LoggingHandler());
+        wsServer.childHandler(setupWSChannel(sslCtx, config));
+        wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        wsServer.option(ChannelOption.SO_BACKLOG, 128);
+        wsServer.option(ChannelOption.SO_KEEPALIVE, true);
+        wsChannelHandle = wsServer.bind(wsPort).sync().channel();
+        final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
+
         shutdownHook();
-        LOG.info("Server started. Listening on {}:{} for TCP traffic and {}:{} for HTTP traffic", putAddress, putPort,
-                queryAddress, queryPort);
+        LOG.info(
+                "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, and {}:{} for WebSocket traffic",
+                putAddress, putPort, queryAddress, queryPort, wsAddress, wsPort);
     }
 
     protected SslContext createSSLContext(Configuration config) throws Exception {
@@ -380,6 +421,23 @@ public class Server {
                 ch.pipeline().addLast("putHandler", new TcpPutHandler(dataStore));
             }
         };
+    }
+
+    protected ChannelHandler setupWSChannel(SslContext sslCtx, Configuration conf) {
+        return new ChannelInitializer<SocketChannel>() {
+
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
+                ch.pipeline().addLast("httpServer", new HttpServerCodec());
+                ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
+                ch.pipeline().addLast("idle-handler",
+                        new IdleStateHandler(Integer.parseInt(conf.get(Configuration.WS_TIMEOUT_SECONDS)), 0, 0));
+                ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
+                ch.pipeline().addLast("websocket", new WSSubscriptionRequestHandler(config, dataStore));
+            }
+        };
+
     }
 
 }

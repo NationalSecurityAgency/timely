@@ -26,6 +26,7 @@ public class ConfigurationTest {
             writer.write(Configuration.IP + "=127.0.0.1\n");
             writer.write(Configuration.PUT_PORT + "=54321\n");
             writer.write(Configuration.QUERY_PORT + "=54322\n");
+            writer.write(Configuration.WEBSOCKET_PORT + "=54323\n");
             writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
             writer.write(Configuration.INSTANCE_NAME + "=test\n");
             writer.write(Configuration.USERNAME + "=root\n");
@@ -45,6 +46,7 @@ public class ConfigurationTest {
             writer.write(Configuration.IP + "=127.0.0.1\n");
             writer.write(Configuration.PUT_PORT + "=54321\n");
             writer.write(Configuration.QUERY_PORT + "=54322\n");
+            writer.write(Configuration.WEBSOCKET_PORT + "=54323\n");
             writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
             writer.write(Configuration.INSTANCE_NAME + "=test\n");
             writer.write(Configuration.USERNAME + "=root\n");
@@ -63,6 +65,7 @@ public class ConfigurationTest {
             writer.write(Configuration.IP + "=127.0.0.1\n");
             writer.write(Configuration.PUT_PORT + "=54321\n");
             writer.write(Configuration.QUERY_PORT + "=54322\n");
+            writer.write(Configuration.WEBSOCKET_PORT + "=54323\n");
             writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
             writer.write(Configuration.INSTANCE_NAME + "=test\n");
             writer.write(Configuration.USERNAME + "=root\n");

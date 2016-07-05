@@ -18,6 +18,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import timely.api.Request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class Metric implements Request {
 
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
@@ -30,7 +32,7 @@ public class Metric implements Request {
     private long timestamp;
     private double value;
     private List<Tag> tags;
-
+    @JsonIgnore
     private ColumnVisibility visibility = EMPTY_VISIBILITY;
 
     public Metric() {

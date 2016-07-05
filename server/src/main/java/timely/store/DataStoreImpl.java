@@ -41,6 +41,7 @@ import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.client.MutationsRejectedException;
 import org.apache.accumulo.core.client.NamespaceExistsException;
 import org.apache.accumulo.core.client.Scanner;
+import org.apache.accumulo.core.client.ScannerBase;
 import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
@@ -578,7 +579,7 @@ public class DataStoreImpl implements DataStore {
         return !REGEX_TEST.matcher(value).matches();
     }
 
-    private void setQueryColumns(BatchScanner scanner, String metric, Map<String, String> tags)
+    private void setQueryColumns(ScannerBase scanner, String metric, Map<String, String> tags)
             throws TableNotFoundException, TimelyException {
         LOG.trace("Looking for requested tags: {}", tags);
         Scanner meta = connector.createScanner(metaTable, Authorizations.EMPTY);
@@ -730,7 +731,10 @@ public class DataStoreImpl implements DataStore {
     }
 
     private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
-        String sessionId = request.getSessionId();
+        return getSessionAuthorizations(request.getSessionId());
+    }
+
+    private Authorizations getSessionAuthorizations(String sessionId) {
         if (!StringUtils.isEmpty(sessionId)) {
             return AuthCache.getAuthorizations(sessionId);
         } else if (!anonAccessAllowed) {
@@ -738,7 +742,48 @@ public class DataStoreImpl implements DataStore {
         } else {
             return Authorizations.EMPTY;
         }
+    }
 
+    public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
+            int lag) throws TimelyException {
+        try {
+            Authorizations auths = null;
+            try {
+                auths = getSessionAuthorizations(sessionId);
+            } catch (NullPointerException npe) {
+                // Session id being used for metric scanner, but session Id does
+                // not
+                // exist in Auth Cache. Use Empty auths if anonymous access
+                // allowed
+                if (anonAccessAllowed) {
+                    auths = Authorizations.EMPTY;
+                } else {
+                    throw npe;
+                }
+            }
+            Scanner s = connector.createScanner(this.metricsTable, auths);
+            if (null == metric) {
+                throw new IllegalArgumentException("metric name must be specified");
+            }
+            byte[] start = Metric.encodeRowKey(metric, startTime);
+            long endTime = (System.currentTimeMillis() - (lag * 1000));
+            byte[] end = Metric.encodeRowKey(metric, endTime);
+            s.setRange(new Range(new Text(start), true, new Text(end), false));
+            SubQuery query = new SubQuery();
+            query.setMetric(metric);
+            if (null == tags) {
+                tags = Collections.emptyMap();
+            }
+            query.setTags(tags);
+            List<String> tagOrder = prioritizeTags(query);
+            Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
+            setQueryColumns(s, metric, orderedTags);
+            return s;
+        } catch (IllegalArgumentException | TableNotFoundException ex) {
+            LOG.error("Error during lookup: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during lookup: "
+                    + ex.getMessage(), ex.getMessage(), ex);
+        }
     }
 
 }

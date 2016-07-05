@@ -55,7 +55,7 @@ import timely.test.TestConfiguration;
 import timely.util.JsonUtil;
 
 @Category(IntegrationTest.class)
-public class OneWaySSLBasicAuthAccessIT extends BaseQueryIT {
+public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBaseIT {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
@@ -219,6 +219,7 @@ public class OneWaySSLBasicAuthAccessIT extends BaseQueryIT {
             Map<String, String> tags = response.get(0).getTags();
             assertEquals(0, tags.size());
             Map<String, Object> dps = response.get(0).getDps();
+            // test user only has authorities A,B,C. So it does not see D and G.
             assertEquals(3, dps.size());
         } finally {
             m.shutdown();
