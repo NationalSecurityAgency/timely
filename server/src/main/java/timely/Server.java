@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import timely.api.query.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
+import timely.netty.http.StrictTransportHandler;
 import timely.netty.http.HttpAggregatorsRequestHandler;
 import timely.netty.http.HttpMetricsRequestHandler;
 import timely.netty.http.HttpQueryDecoder;
@@ -55,6 +56,7 @@ import timely.netty.http.HttpQueryRequestHandler;
 import timely.netty.http.HttpSearchLookupRequestHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.HttpSuggestRequestHandler;
+import timely.netty.http.NonSecureHttpHandler;
 import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.http.login.BasicAuthLoginRequestHandler;
 import timely.netty.http.login.X509LoginRequestHandler;
@@ -312,16 +314,18 @@ public class Server {
     }
 
     protected ChannelHandler setupHttpChannel(Configuration config, SslContext sslCtx) {
+
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
 
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
-                ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
-                ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
-                ch.pipeline().addLast("deflater", new HttpContentCompressor());
+                ch.pipeline().addLast("decoder", new HttpRequestDecoder());
+                ch.pipeline().addLast("non-secure", new NonSecureHttpHandler(config));
+                ch.pipeline().addLast("compressor", new HttpContentCompressor());
+                ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 final CorsConfig.Builder ccb;
@@ -353,6 +357,7 @@ public class Server {
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
                 ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder(config));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
+                ch.pipeline().addLast("strict", new StrictTransportHandler(config));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config));
                 ch.pipeline().addLast("doLogin", new BasicAuthLoginRequestHandler(config));
                 ch.pipeline().addLast("aggregators", new HttpAggregatorsRequestHandler());

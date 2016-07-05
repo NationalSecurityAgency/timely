@@ -141,12 +141,14 @@ timely.ssl.trust.store.file | Certificate trust store (a concatenated list of tr
 timely.ssl.use.openssl | Use OpenSSL (vs JDK SSL) | true
 timely.ssl.use.ciphers | List of allowed SSL ciphers | see Configuration.java
 timely.session.max.age | Setting for max age of session cookie (in seconds) | 86400
-timely.http.address | Address for the Timely server, used for the session cookie domain |
+timely.http.host | Address for the Timely server, used for the session cookie domain |
 grafana.http.address | Address for the Grafana server |
 timely.allow.anonymous.access | Allow anonymous access | false
 timely.visibility.cache.expiration.minutes | Column Visibility Cache Expiration (minutes) | 60
 timely.visibility.cache.initial.capacity | Column Visibility Cache Initial Capacity | 2000
 timely.visibility.cache.max.capacity | Column Visibility Cache Max Capacity | 10000
+timely.http.redirect.path | Path to use for HTTP to HTTPS redirect | /secure-me
+timely.hsts.max.age | HTTP Strict Transport Security max age (in seconds) | 604800
 
 ## Security
 

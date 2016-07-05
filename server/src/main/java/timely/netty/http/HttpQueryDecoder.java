@@ -34,9 +34,10 @@ import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.request.SearchLookupRequest;
 import timely.api.query.request.SuggestRequest;
 import timely.api.query.request.X509LoginRequest;
-import timely.netty.Constants;
+import timely.api.query.response.StrictTransportResponse;
 import timely.api.query.response.TimelyException;
 import timely.auth.AuthCache;
+import timely.netty.Constants;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -56,15 +57,23 @@ public class HttpQueryDecoder extends MessageToMessageDecoder<FullHttpRequest> i
     private static final String NO_AUTHORIZATIONS = "";
 
     private boolean anonymousAccessAllowed = false;
+    private final String nonSecureRedirectAddress;
 
     public HttpQueryDecoder(Configuration config) {
         this.anonymousAccessAllowed = config.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
+        this.nonSecureRedirectAddress = config.get(Configuration.NON_SECURE_REDIRECT_PATH);
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, FullHttpRequest msg, List<Object> out) throws Exception {
 
         LOG.trace(LOG_RECEIVED_REQUEST, msg);
+
+        final QueryStringDecoder decoder = new QueryStringDecoder(msg.getUri());
+        if (decoder.path().equals(nonSecureRedirectAddress)) {
+            out.add(new StrictTransportResponse());
+            return;
+        }
 
         final StringBuilder buf = new StringBuilder();
         msg.headers().getAll(Names.COOKIE).forEach(h -> {

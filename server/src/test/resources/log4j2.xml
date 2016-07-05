@@ -6,6 +6,7 @@
     </Console>
   </Appenders>
   <Loggers>
+    <Logger name="sun.net.www.protocol.http.HttpURLConnection" level="ALL" additivity="false" />
     <Root level="TRACE">
       <AppenderRef ref="CONSOLE"/>
     </Root>

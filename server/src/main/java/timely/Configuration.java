@@ -83,10 +83,15 @@ public class Configuration {
 
     public static final String SESSION_MAX_AGE = "timely.session.max.age";
     public static final long SESSION_MAX_AGE_DEFAULT = 86400;
-    public static final String TIMELY_HTTP_ADDRESS = "timely.http.address";
+    public static final String TIMELY_HTTP_HOST = "timely.http.host";
     public static final String GRAFANA_HTTP_ADDRESS = "grafana.http.address";
     public static final String ALLOW_ANONYMOUS_ACCESS = "timely.allow.anonymous.access";
     private static final String ALLOW_ANONYMOUS_ACCESS_DEFAULT = "false";
+
+    public static final String NON_SECURE_REDIRECT_PATH = "timely.http.redirect.path";
+    private static final String NON_SECURE_REDIRECT_PATH_DEFAULT = "/secure-me";
+    public static final String STRICT_TRANSPORT_MAX_AGE = "timely.hsts.max.age";
+    private static final String STRICT_TRANSPORT_MAX_AGE_DEFAULT = "604800";
 
     private static final List<String> REQUIRED_PROPERTIES = new ArrayList<>();
     static {
@@ -97,7 +102,7 @@ public class Configuration {
         REQUIRED_PROPERTIES.add(INSTANCE_NAME);
         REQUIRED_PROPERTIES.add(USERNAME);
         REQUIRED_PROPERTIES.add(PASSWORD);
-        REQUIRED_PROPERTIES.add(TIMELY_HTTP_ADDRESS);
+        REQUIRED_PROPERTIES.add(TIMELY_HTTP_HOST);
         REQUIRED_PROPERTIES.add(GRAFANA_HTTP_ADDRESS);
     };
 
@@ -147,6 +152,9 @@ public class Configuration {
         props.setProperty(VISIBILITY_CACHE_EXPIRATION, VISIBILITY_EXPIRATION_DEFAULT + "");
         props.setProperty(VISIBILITY_CACHE_INITIAL_CAPACITY, VISIBILITY_CACHE_INITIAL_CAPACITY_DEFAULT + "");
         props.setProperty(VISIBILITY_CACHE_MAX_CAPACITY, VISIBILITY_CACHE_MAX_CAPACITY_DEFAULT + "");
+
+        props.setProperty(NON_SECURE_REDIRECT_PATH, NON_SECURE_REDIRECT_PATH_DEFAULT);
+        props.setProperty(STRICT_TRANSPORT_MAX_AGE, STRICT_TRANSPORT_MAX_AGE_DEFAULT);
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(configStream, StandardCharsets.UTF_8))) {
             props.load(reader);

@@ -3,6 +3,7 @@ package timely.test.integration;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.JdkSslContext;
@@ -12,6 +13,7 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.io.File;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Iterator;
@@ -47,6 +49,7 @@ import timely.api.query.request.QueryRequest;
 import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.response.QueryResponse;
 import timely.auth.AuthCache;
+import timely.netty.http.StrictTransportHandler;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 
@@ -714,6 +717,38 @@ public class OneWaySSLAnonAccessIT extends BaseQueryIT {
             assertEquals(0, tags.size());
             Map<String, Object> dps = response.get(0).getDps();
             assertEquals(2, dps.size());
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test
+    public void testHttpRequestGet() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            HttpURLConnection.setFollowRedirects(false);
+            URL url = new URL("http://127.0.0.1:54322/api/metrics");
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            int responseCode = con.getResponseCode();
+            Assert.assertEquals(301, responseCode);
+            Assert.assertEquals("https://localhost:54322/secure-me", con.getHeaderField(Names.LOCATION));
+            con.disconnect();
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test
+    public void testHSTSRequestGet() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            String secureMe = "https://127.0.0.1:54322/secure-me";
+            URL url = new URL(secureMe);
+            HttpsURLConnection con = getUrlConnection(url);
+            int responseCode = con.getResponseCode();
+            assertEquals(404, responseCode);
+            assertEquals("max-age=604800", con.getHeaderField(StrictTransportHandler.HSTS_HEADER_NAME));
         } finally {
             m.shutdown();
         }

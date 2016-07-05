@@ -28,7 +28,7 @@ public class TestConfiguration extends Properties {
         cfg.put(Configuration.INSTANCE_NAME, "test");
         cfg.put(Configuration.USERNAME, "root");
         cfg.put(Configuration.PASSWORD, "secret");
-        cfg.put(Configuration.TIMELY_HTTP_ADDRESS, "localhost");
+        cfg.put(Configuration.TIMELY_HTTP_HOST, "localhost");
         cfg.put(Configuration.GRAFANA_HTTP_ADDRESS, GRAFANA_HTTP_ADDRESS_DEFAULT);
         cfg.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "true");
         return cfg;

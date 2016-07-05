@@ -23,7 +23,7 @@ public interface TimelyHttpHandler {
     Logger LOG = LoggerFactory.getLogger(TimelyHttpHandler.class);
 
     default void sendHttpError(ChannelHandlerContext ctx, TimelyException e) throws JsonProcessingException {
-        LOG.error("Error in pipeline, response code: " + e.getCode(), e);
+        LOG.error("Error in pipeline, response code: {}, message: {}", e.getCode(), e.getMessage());
         byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(
                 "ResponseCode: " + e.getCode() + " Message: " + e.getMessage());
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(e

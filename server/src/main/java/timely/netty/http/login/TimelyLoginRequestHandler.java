@@ -36,7 +36,7 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
         if (null != ma) {
             maxAge = Long.parseLong(ma);
         }
-        domain = conf.get(Configuration.TIMELY_HTTP_ADDRESS);
+        domain = conf.get(Configuration.TIMELY_HTTP_HOST);
         redirect = conf.get(Configuration.GRAFANA_HTTP_ADDRESS);
     }
 
