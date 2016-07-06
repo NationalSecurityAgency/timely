@@ -29,8 +29,8 @@
         <version.javassist>3.20.0-GA</version.javassist>
         <version.junit>4.11</version.junit>
         <version.log4j>2.5</version.log4j>
-        <version.netty>4.0.36.Final</version.netty>
-        <version.netty-tcnative>1.1.33.Fork15</version.netty-tcnative>
+        <version.netty>4.0.38.Final</version.netty>
+        <version.netty-tcnative>1.1.33.Fork18</version.netty-tcnative>
         <version.security>4.0.4.RELEASE</version.security>
         <version.slf4j>1.7.12</version.slf4j>
     </properties>

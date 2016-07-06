@@ -32,13 +32,18 @@ public class TcpPutDecoder extends ByteToMessageDecoder {
         if (buf == Unpooled.EMPTY_BUFFER) {
             return;
         }
-        String input = new String(buf.array(), UTF_8);
+        final String input;
+        if (buf.hasArray()) {
+            input = new String(buf.array(), UTF_8);
+        } else {
+            input = buf.toString(UTF_8);
+        }
         LOG.trace("Received input {}", input);
         try {
             String[] parts = input.split(" ");
             if (parts.length == 1 && parts[0].toLowerCase().startsWith("version")) {
                 final ByteBuf response = ctx.alloc().buffer();
-                response.writeBytes("0.0.1\n".getBytes(UTF_8));
+                response.writeBytes("0.0.2\n".getBytes(UTF_8));
                 ctx.writeAndFlush(response);
                 return;
             }
