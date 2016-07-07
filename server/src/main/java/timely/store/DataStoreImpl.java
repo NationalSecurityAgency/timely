@@ -64,7 +64,6 @@ import org.slf4j.LoggerFactory;
 
 import timely.Configuration;
 import timely.Server;
-import timely.api.AuthenticatedRequest;
 import timely.api.model.Meta;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
@@ -78,6 +77,7 @@ import timely.api.query.response.SearchLookupResponse;
 import timely.api.query.response.SearchLookupResponse.Result;
 import timely.api.query.response.SuggestResponse;
 import timely.api.query.response.TimelyException;
+import timely.api.request.AuthenticatedRequest;
 import timely.auth.AuthCache;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;

@@ -1,6 +1,9 @@
-package timely.api.websocket;
+package timely.api.request;
 
-public class RemoveSubscription extends WSRequest {
+import timely.api.annotation.WebSocket;
+
+@WebSocket(operation = "remove")
+public class RemoveSubscription extends WebSocketRequest {
 
     private String metric = null;
 

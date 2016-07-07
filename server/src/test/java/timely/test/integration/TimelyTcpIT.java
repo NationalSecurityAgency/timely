@@ -44,14 +44,15 @@ import timely.Server;
 import timely.TestServer;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
+import timely.api.request.Version;
 import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 
 @Category(IntegrationTest.class)
-public class TimelyPutIT {
+public class TimelyTcpIT {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimelyPutIT.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TimelyTcpIT.class);
     private static final Long TEST_TIME = System.currentTimeMillis();
 
     @ClassRule
@@ -95,6 +96,25 @@ public class TimelyPutIT {
     @After
     public void tearDown() throws Exception {
         AuthCache.resetSessionMaxAge();
+    }
+
+    @Test
+    public void testVersion() throws Exception {
+        final TestServer m = new TestServer(conf);
+        try (Socket sock = new Socket("127.0.0.1", 54321);
+                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
+            writer.write("version\n");
+            writer.flush();
+            while (1 != m.getPutRequests().getCount()) {
+                Thread.sleep(5);
+            }
+            Assert.assertEquals(1, m.getPutRequests().getResponses().size());
+            Assert.assertEquals(Version.class, m.getPutRequests().getResponses().get(0).getClass());
+            Version v = (Version) m.getPutRequests().getResponses().get(0);
+            Assert.assertEquals("0.0.2", v.getVersion());
+        } finally {
+            m.shutdown();
+        }
     }
 
     @Test

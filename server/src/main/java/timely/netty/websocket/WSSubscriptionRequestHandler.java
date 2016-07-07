@@ -19,11 +19,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.Configuration;
-import timely.api.websocket.AddSubscription;
-import timely.api.websocket.CloseSubscription;
-import timely.api.websocket.CreateSubscription;
-import timely.api.websocket.RemoveSubscription;
-import timely.api.websocket.WSRequest;
+import timely.api.request.AddSubscription;
+import timely.api.request.CloseSubscription;
+import timely.api.request.CreateSubscription;
+import timely.api.request.RemoveSubscription;
+import timely.api.request.WebSocketRequest;
 import timely.auth.AuthCache;
 import timely.store.DataStore;
 import timely.subscription.Subscription;
@@ -49,7 +49,7 @@ public class WSSubscriptionRequestHandler extends SimpleChannelInboundHandler<We
         if (msg instanceof TextWebSocketFrame) {
             TextWebSocketFrame frame = (TextWebSocketFrame) msg;
             String content = frame.text();
-            WSRequest request = JsonUtil.getObjectMapper().readValue(content, WSRequest.class);
+            WebSocketRequest request = JsonUtil.getObjectMapper().readValue(content, WebSocketRequest.class);
             LOG.trace("Received WS request {}", content);
             AuthCache.enforceAccess(conf, request);
 

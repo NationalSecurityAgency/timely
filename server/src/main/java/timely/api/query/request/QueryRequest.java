@@ -1,5 +1,7 @@
 package timely.api.query.request;
 
+import io.netty.handler.codec.http.QueryStringDecoder;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -10,11 +12,16 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import timely.api.AuthenticatedRequest;
+import timely.api.annotation.Http;
+import timely.api.request.AuthenticatedRequest;
+import timely.api.request.HttpGetRequest;
+import timely.api.request.HttpPostRequest;
+import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class QueryRequest extends AuthenticatedRequest {
+@Http(path = "/api/query")
+public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest {
 
     public static class RateOption {
 
@@ -470,5 +477,125 @@ public class QueryRequest extends AuthenticatedRequest {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public HttpPostRequest parseBody(String content) throws Exception {
+        return JsonUtil.getObjectMapper().readValue(content, QueryRequest.class);
+    }
+
+    @Override
+    public HttpGetRequest parseQueryParameters(QueryStringDecoder decoder) throws Exception {
+        final QueryRequest query = new QueryRequest();
+        query.setStart(Long.parseLong(decoder.parameters().get("start").get(0)));
+        if (decoder.parameters().containsKey("end")) {
+            query.setEnd(Long.parseLong(decoder.parameters().get("end").get(0)));
+        }
+        if (decoder.parameters().containsKey("m")) {
+            decoder.parameters()
+                    .get("m")
+                    .forEach(m -> {
+                        final SubQuery sub = new SubQuery();
+                        final String[] mParts = m.split(":");
+                        if (mParts.length < 2) {
+                            throw new IllegalArgumentException("Too few parameters for metric query");
+                        }
+                        if (mParts.length > 5) {
+                            throw new IllegalArgumentException("Too many parameters for metric query");
+                        }
+                        // Aggregator is required, it's in the first section
+                            sub.setAggregator(mParts[0]);
+                            // Parse the rates from the 2nd through
+                            // next to last sections
+                            for (int i = 1; i < mParts.length - 1; i++) {
+                                if (mParts[i].startsWith("rate")) {
+                                    sub.setRate(true);
+                                    final RateOption options = new RateOption();
+                                    if (mParts[i].equals("rate")) {
+                                        sub.setRateOptions(options);
+                                    } else {
+                                        final String rate = mParts[i].substring(5, mParts[i].length() - 1);
+                                        final String[] rateOptions = rate.split(",");
+                                        for (int x = 0; x < rateOptions.length; x++) {
+                                            switch (x) {
+                                                case 0:
+                                                    options.setCounter(rateOptions[x].endsWith("counter"));
+                                                    break;
+                                                case 1:
+                                                    options.setCounterMax(Long.parseLong(rateOptions[x]));
+                                                    break;
+                                                case 2:
+                                                    options.setResetValue(Long.parseLong(rateOptions[x]));
+                                                    break;
+                                                default:
+                                            }
+                                        }
+                                        sub.setRateOptions(options);
+                                    }
+                                } else {
+                                    // downsample
+                                    sub.setDownsample(Optional.of(mParts[i]));
+                                }
+                            }
+                            // Parse metric name and tags from last
+                            // section
+                            final String metricAndTags = mParts[mParts.length - 1];
+                            final int idx = metricAndTags.indexOf('{');
+                            if (-1 == idx) {
+                                // metric only
+                                sub.setMetric(metricAndTags);
+                            } else {
+                                sub.setMetric(metricAndTags.substring(0, idx));
+                                // Only supporting one set of {} as we
+                                // are not supporting filters right now.
+                                if (!metricAndTags.endsWith("}")) {
+                                    throw new IllegalArgumentException("Tag section does not end with '}'");
+                                }
+                                final String[] tags = metricAndTags.substring(idx).split("}");
+                                if (tags.length > 0) {
+                                    // Process the first set of tags, which
+                                    // are groupBy
+                                    final String groupingTags = tags[0];
+                                    final String[] gTags = groupingTags.substring(1, groupingTags.length()).split(",");
+                                    for (final String tag : gTags) {
+                                        final String[] tParts = tag.split("=");
+                                        final Filter f = new Filter();
+                                        f.setGroupBy(true);
+                                        f.setTagk(tParts[0]);
+                                        f.setFilter(tParts[1]);
+                                        sub.addFilter(f);
+                                    }
+                                    if (tags.length > 1) {
+                                        // Process the first set of tags,
+                                        // which are groupBy
+                                        final String nonGroupingTags = tags[1];
+                                        final String[] ngTags = nonGroupingTags.substring(1, nonGroupingTags.length())
+                                                .split(",");
+                                        for (final String tag : ngTags) {
+                                            final String[] tParts = tag.split("=");
+                                            sub.addTag(tParts[0], tParts[1]);
+                                        }
+
+                                    }
+                                }
+
+                            }
+                            query.addQuery(sub);
+                        });
+        }
+        if (decoder.parameters().containsKey("tsuid")) {
+            decoder.parameters().get("tsuid").forEach(ts -> {
+                final SubQuery sub = new SubQuery();
+                final int colon = ts.indexOf(':');
+                if (-1 != colon) {
+                    sub.setAggregator(ts.substring(0, colon));
+                }
+                for (final String tsuid : ts.substring(colon + 1).split(",")) {
+                    sub.addTsuid(tsuid);
+                }
+                query.addQuery(sub);
+            });
+        }
+        return query;
     }
 }

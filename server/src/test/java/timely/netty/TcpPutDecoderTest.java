@@ -15,11 +15,11 @@ import org.junit.Test;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
 import timely.auth.VisibilityCache;
-import timely.netty.tcp.TcpPutDecoder;
+import timely.netty.tcp.TcpDecoder;
 
 public class TcpPutDecoderTest {
 
-    private static class TestTcpPutDecoder extends TcpPutDecoder {
+    private static class TestTcpPutDecoder extends TcpDecoder {
 
         @Override
         public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {

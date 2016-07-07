@@ -1,4 +1,4 @@
-package timely.api;
+package timely.api.request;
 
 public interface Request {
 

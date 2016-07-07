@@ -51,20 +51,20 @@ import org.slf4j.LoggerFactory;
 import timely.api.query.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
-import timely.netty.http.StrictTransportHandler;
 import timely.netty.http.HttpAggregatorsRequestHandler;
 import timely.netty.http.HttpMetricsRequestHandler;
-import timely.netty.http.HttpQueryDecoder;
 import timely.netty.http.HttpQueryRequestHandler;
 import timely.netty.http.HttpSearchLookupRequestHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.HttpSuggestRequestHandler;
 import timely.netty.http.NonSecureHttpHandler;
+import timely.netty.http.StrictTransportHandler;
 import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.http.login.BasicAuthLoginRequestHandler;
 import timely.netty.http.login.X509LoginRequestHandler;
-import timely.netty.tcp.TcpPutDecoder;
+import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpPutHandler;
+import timely.netty.tcp.TcpVersionHandler;
 import timely.netty.websocket.WSSubscriptionRequestHandler;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
@@ -396,7 +396,7 @@ public class Server {
                 CorsConfig cors = ccb.build();
                 LOG.trace("Cors configuration: {}", cors);
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
-                ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder(config));
+                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
                 ch.pipeline().addLast("strict", new StrictTransportHandler(config));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config));
@@ -417,8 +417,9 @@ public class Server {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
-                ch.pipeline().addLast("putDecoder", new TcpPutDecoder());
+                ch.pipeline().addLast("putDecoder", new TcpDecoder());
                 ch.pipeline().addLast("putHandler", new TcpPutHandler(dataStore));
+                ch.pipeline().addLast("versionHandler", new TcpVersionHandler());
             }
         };
     }

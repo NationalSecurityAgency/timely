@@ -36,14 +36,14 @@ import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.request.SearchLookupRequest;
 import timely.api.query.request.SuggestRequest;
 import timely.auth.AuthCache;
-import timely.netty.http.HttpQueryDecoder;
+import timely.netty.http.HttpRequestDecoder;
 import timely.test.TestConfiguration;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 
-public class HttpQueryDecoderTest {
+public class HttpRequestDecoderTest {
 
-    public static class TestHttpQueryDecoder extends HttpQueryDecoder {
+    public static class TestHttpQueryDecoder extends HttpRequestDecoder {
 
         public TestHttpQueryDecoder(Configuration config) {
             super(config);

@@ -27,7 +27,7 @@ public class TcpPutHandler extends SimpleChannelInboundHandler<Metric> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Metric msg) throws Exception {
-        LOG.trace("Received PutMetric {}", msg);
+        LOG.trace("Received {}", msg);
         try {
             store.store(msg);
         } catch (Exception e) {

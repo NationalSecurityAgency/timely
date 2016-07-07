@@ -16,17 +16,27 @@ import org.apache.accumulo.core.util.ComparablePair;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import timely.api.Request;
+import timely.api.annotation.Http;
+import timely.api.annotation.Tcp;
+import timely.api.annotation.WebSocket;
+import timely.api.request.HttpPostRequest;
+import timely.api.request.TcpRequest;
+import timely.auth.VisibilityCache;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class Metric implements Request {
+@Tcp(operation = "put")
+@Http(path = "/api/put")
+@WebSocket(operation = "put")
+public class Metric implements TcpRequest, HttpPostRequest {
 
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());
     private static final DoubleLexicoder valueCoder = new DoubleLexicoder();
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
+    private static final String VISIBILITY_TAG = "viz=";
+    private static final int VISIBILITY_TAG_LENGTH = VISIBILITY_TAG.length();
 
     private String metric;
     private long timestamp;
@@ -173,6 +183,37 @@ public class Metric implements Request {
         equals.append(this.value, other.value);
         equals.append(this.tags, other.tags);
         return equals.isEquals();
+    }
+
+    @Override
+    public void parse(String line) {
+        // put specification
+        //
+        // put <metricName> <timestamp> <value> <tagK=tagV> <tagK=tagV> ...
+        String[] parts = line.split(" ");
+        this.setMetric(parts[1]);
+        long ts = Long.parseLong(parts[2]);
+        if (ts < 9999999999L) {
+            ts *= 1000;
+        }
+        this.setTimestamp(ts);
+        this.setValue(Double.valueOf(parts[3]));
+        String part;
+        for (int i = 4; i < parts.length; i++) {
+            part = parts[i];
+            if (part.startsWith(VISIBILITY_TAG) && part.length() > VISIBILITY_TAG_LENGTH) {
+                this.setVisibility(VisibilityCache.getColumnVisibility(part.substring(VISIBILITY_TAG_LENGTH)));
+            } else if (!part.isEmpty()) {
+                this.addTag(new Tag(parts[i]));
+            }
+        }
+
+    }
+
+    @Override
+    public HttpPostRequest parseBody(String content) throws Exception {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

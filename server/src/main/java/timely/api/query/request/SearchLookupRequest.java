@@ -1,5 +1,7 @@
 package timely.api.query.request;
 
+import io.netty.handler.codec.http.QueryStringDecoder;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -7,12 +9,17 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import timely.api.AuthenticatedRequest;
+import timely.api.annotation.Http;
 import timely.api.model.Tag;
+import timely.api.request.AuthenticatedRequest;
+import timely.api.request.HttpGetRequest;
+import timely.api.request.HttpPostRequest;
+import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SearchLookupRequest extends AuthenticatedRequest {
+@Http(path = "/api/search/lookup")
+public class SearchLookupRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest {
 
     @JsonProperty("metric")
     private String query;
@@ -85,6 +92,36 @@ public class SearchLookupRequest extends AuthenticatedRequest {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public HttpPostRequest parseBody(String content) throws Exception {
+        return JsonUtil.getObjectMapper().readValue(content, SearchLookupRequest.class);
+    }
+
+    @Override
+    public HttpGetRequest parseQueryParameters(QueryStringDecoder decoder) throws Exception {
+        final SearchLookupRequest search = new SearchLookupRequest();
+        if (!decoder.parameters().containsKey("m")) {
+            throw new IllegalArgumentException("m parameter is required for lookup");
+        }
+        final String m = decoder.parameters().get("m").get(0);
+        final int tagIdx = m.indexOf("{");
+        if (-1 == tagIdx) {
+            search.setQuery(m);
+        } else {
+            search.setQuery(m.substring(0, tagIdx));
+            final String[] tags = m.substring(tagIdx + 1, m.length() - 1).split(",");
+            for (final String tag : tags) {
+                final String[] tParts = tag.split("=");
+                final Tag t = new Tag(tParts[0], tParts[1]);
+                search.addTag(t);
+            }
+        }
+        if (decoder.parameters().containsKey("limit")) {
+            search.setLimit(Integer.parseInt(decoder.parameters().get("limit").get(0)));
+        }
+        return search;
     }
 
 }

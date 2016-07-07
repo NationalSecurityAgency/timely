@@ -1,4 +1,4 @@
-package timely.api;
+package timely.api.request;
 
 import java.util.Collections;
 import java.util.HashMap;

@@ -1,13 +1,18 @@
-package timely.api.websocket;
+package timely.api.request;
 
 import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import timely.api.request.AddSubscription;
+import timely.api.request.CloseSubscription;
+import timely.api.request.CreateSubscription;
+import timely.api.request.RemoveSubscription;
+import timely.api.request.WebSocketRequest;
 import timely.util.JsonUtil;
 
-public class JsonDeserializationTest {
+public class WebSocketRequestDeserializationTest {
 
     @Test
     public void testCreateDeserialization() throws Exception {
@@ -17,7 +22,7 @@ public class JsonDeserializationTest {
 				       + " \"sessionId\": \"1234\""
 				    + "}";
 		// @formatter:on
-        WSRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WSRequest.class);
+        WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(CreateSubscription.class, request.getClass());
         Assert.assertEquals("1234", ((CreateSubscription) request).getSessionId());
@@ -32,7 +37,7 @@ public class JsonDeserializationTest {
 				       + " \"metric\" : \"sys.cpu.user\""
 				    + "}";
 		// @formatter:on
-        WSRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WSRequest.class);
+        WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(RemoveSubscription.class, request.getClass());
         Assert.assertEquals("1234", ((RemoveSubscription) request).getSessionId());
@@ -47,7 +52,7 @@ public class JsonDeserializationTest {
 				       + " \"sessionId\": \"1234\""
 				    + "}";
 		// @formatter:on
-        WSRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WSRequest.class);
+        WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(CloseSubscription.class, request.getClass());
         Assert.assertEquals("1234", ((CloseSubscription) request).getSessionId());
@@ -62,7 +67,7 @@ public class JsonDeserializationTest {
 					    " \"metric\" : \"sys.cpu.user\"" +
 					  "}";
 		// @formatter:on
-        WSRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WSRequest.class);
+        WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());
         Assert.assertEquals("1234", ((AddSubscription) request).getSessionId());
@@ -81,7 +86,7 @@ public class JsonDeserializationTest {
 						"\"startTime\" : \"1000\"" +
 					  "}";
 		// @formatter:on
-        WSRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WSRequest.class);
+        WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());
         Assert.assertEquals("1234", ((AddSubscription) request).getSessionId());
@@ -106,7 +111,7 @@ public class JsonDeserializationTest {
 						"\"startTime\" : \"1000\"" +
 					  "}";
 		// @formatter:on
-        WSRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WSRequest.class);
+        WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());
         Assert.assertEquals("1234", ((AddSubscription) request).getSessionId());
@@ -137,7 +142,7 @@ public class JsonDeserializationTest {
 					    "\"delayTime\" : \"500\"" +
 					  "}";
 		// @formatter:on
-        WSRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WSRequest.class);
+        WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());
         Assert.assertEquals("1234", ((AddSubscription) request).getSessionId());

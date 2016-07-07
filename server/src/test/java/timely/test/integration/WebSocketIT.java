@@ -42,10 +42,10 @@ import org.slf4j.LoggerFactory;
 import timely.Server;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
-import timely.api.websocket.AddSubscription;
-import timely.api.websocket.CloseSubscription;
-import timely.api.websocket.CreateSubscription;
-import timely.api.websocket.RemoveSubscription;
+import timely.api.request.AddSubscription;
+import timely.api.request.CloseSubscription;
+import timely.api.request.CreateSubscription;
+import timely.api.request.RemoveSubscription;
 import timely.test.IntegrationTest;
 import timely.util.JsonUtil;
 

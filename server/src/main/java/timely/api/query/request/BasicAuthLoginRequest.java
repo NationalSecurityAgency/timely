@@ -1,8 +1,11 @@
 package timely.api.query.request;
 
-import timely.api.Request;
+import timely.api.annotation.Http;
+import timely.api.request.HttpPostRequest;
+import timely.util.JsonUtil;
 
-public class BasicAuthLoginRequest implements Request {
+@Http(path = "/api/login")
+public class BasicAuthLoginRequest implements HttpPostRequest {
 
     private String username;
     private String password;
@@ -25,7 +28,7 @@ public class BasicAuthLoginRequest implements Request {
 
     @Override
     public void validate() {
-        Request.super.validate();
+        HttpPostRequest.super.validate();
         if (username == null || password == null) {
             throw new IllegalArgumentException("Username and password are required.");
         }
@@ -34,6 +37,11 @@ public class BasicAuthLoginRequest implements Request {
     @Override
     public String toString() {
         return "Username: " + username;
+    }
+
+    @Override
+    public HttpPostRequest parseBody(String content) throws Exception {
+        return JsonUtil.getObjectMapper().readValue(content, BasicAuthLoginRequest.class);
     }
 
 }

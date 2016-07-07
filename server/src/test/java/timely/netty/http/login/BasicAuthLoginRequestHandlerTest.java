@@ -28,13 +28,13 @@ import timely.Configuration;
 import timely.api.query.request.BasicAuthLoginRequest;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
-import timely.netty.http.HttpQueryDecoder;
+import timely.netty.http.HttpRequestDecoder;
 import timely.test.CaptureChannelHandlerContext;
 import timely.test.TestConfiguration;
 
 public class BasicAuthLoginRequestHandlerTest {
 
-    private static class TestHttpQueryDecoder extends HttpQueryDecoder {
+    private static class TestHttpQueryDecoder extends HttpRequestDecoder {
 
         public TestHttpQueryDecoder(Configuration config) {
             super(config);

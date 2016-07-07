@@ -1,9 +1,12 @@
-package timely.api.websocket;
+package timely.api.request;
 
 import java.util.Map;
 import java.util.Optional;
 
-public class AddSubscription extends WSRequest {
+import timely.api.annotation.WebSocket;
+
+@WebSocket(operation = "add")
+public class AddSubscription extends WebSocketRequest {
 
     private String metric = null;
     private Optional<Map<String, String>> tags = Optional.empty();
