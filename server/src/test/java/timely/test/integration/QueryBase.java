@@ -17,13 +17,13 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.query.request.QueryRequest;
 import timely.api.query.response.QueryResponse;
+import timely.api.request.QueryRequest;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.databind.JavaType;
 
-public abstract class BaseQueryIT {
+public abstract class QueryBase {
 
     public static class NotSuccessfulException extends Exception {
 

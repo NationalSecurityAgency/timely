@@ -1,5 +1,8 @@
 package timely.api.request;
 
+/**
+ * Marker interface for a request
+ */
 public interface Request {
 
     /**

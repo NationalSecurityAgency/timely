@@ -32,7 +32,11 @@ import timely.Configuration;
 import timely.auth.AuthCache;
 import timely.test.TestConfiguration;
 
-public class OneWaySSLBaseIT extends BaseQueryIT {
+/**
+ * Base test class for SSL with anonymous access
+ */
+@SuppressWarnings("deprecation")
+public class OneWaySSLBase extends QueryBase {
 
     @ClassRule
     public static final TemporaryFolder temp = new TemporaryFolder();

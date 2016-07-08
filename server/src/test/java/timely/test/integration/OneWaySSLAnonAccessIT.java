@@ -12,13 +12,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import timely.Server;
-import timely.api.query.request.QueryRequest;
-import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.response.QueryResponse;
+import timely.api.request.QueryRequest;
+import timely.api.request.QueryRequest.SubQuery;
 import timely.test.IntegrationTest;
 
+/**
+ *
+ * Tests that OneWay SSL with anonymous access works.
+ *
+ */
 @Category(IntegrationTest.class)
-public class OneWaySSLAnonAccessIT extends OneWaySSLBaseIT {
+public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 

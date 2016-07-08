@@ -1,4 +1,4 @@
-package timely.test.integration;
+package timely.test.integration.tcp;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -44,11 +44,14 @@ import timely.Server;
 import timely.TestServer;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
-import timely.api.request.Version;
+import timely.api.request.VersionRequest;
 import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 
+/**
+ * Integration tests for the operations available over the TCP transport
+ */
 @Category(IntegrationTest.class)
 public class TimelyTcpIT {
 
@@ -109,8 +112,8 @@ public class TimelyTcpIT {
                 Thread.sleep(5);
             }
             Assert.assertEquals(1, m.getPutRequests().getResponses().size());
-            Assert.assertEquals(Version.class, m.getPutRequests().getResponses().get(0).getClass());
-            Version v = (Version) m.getPutRequests().getResponses().get(0);
+            Assert.assertEquals(VersionRequest.class, m.getPutRequests().getResponses().get(0).getClass());
+            VersionRequest v = (VersionRequest) m.getPutRequests().getResponses().get(0);
             Assert.assertEquals("0.0.2", v.getVersion());
         } finally {
             m.shutdown();

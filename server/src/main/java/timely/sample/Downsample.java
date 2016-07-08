@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
-import timely.api.query.request.QueryRequest.RateOption;
+import timely.api.request.QueryRequest.RateOption;
 
 public class Downsample implements Iterable<Sample>, Serializable {
 

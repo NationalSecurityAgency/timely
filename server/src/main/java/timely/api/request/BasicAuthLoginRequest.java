@@ -1,10 +1,9 @@
-package timely.api.query.request;
+package timely.api.request;
 
 import timely.api.annotation.Http;
-import timely.api.request.HttpPostRequest;
 import timely.util.JsonUtil;
 
-@Http(path = "/api/login")
+@Http(path = "/login")
 public class BasicAuthLoginRequest implements HttpPostRequest {
 
     private String username;

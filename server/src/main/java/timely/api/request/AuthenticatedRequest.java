@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * Base class for requests that require authentication
+ */
 public class AuthenticatedRequest implements Request {
 
     private String sessionId = null;

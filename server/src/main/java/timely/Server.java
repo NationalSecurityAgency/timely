@@ -52,11 +52,13 @@ import timely.api.query.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
 import timely.netty.http.HttpAggregatorsRequestHandler;
+import timely.netty.http.HttpMetricPutHandler;
 import timely.netty.http.HttpMetricsRequestHandler;
 import timely.netty.http.HttpQueryRequestHandler;
 import timely.netty.http.HttpSearchLookupRequestHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.HttpSuggestRequestHandler;
+import timely.netty.http.HttpVersionRequestHandler;
 import timely.netty.http.NonSecureHttpHandler;
 import timely.netty.http.StrictTransportHandler;
 import timely.netty.http.TimelyExceptionHandler;
@@ -65,6 +67,10 @@ import timely.netty.http.login.X509LoginRequestHandler;
 import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpPutHandler;
 import timely.netty.tcp.TcpVersionHandler;
+import timely.netty.websocket.WSAddSubscriptionRequestHandler;
+import timely.netty.websocket.WSCloseSubscriptionRequestHandler;
+import timely.netty.websocket.WSCreateSubscriptionRequestHandler;
+import timely.netty.websocket.WSRemoveSubscriptionRequestHandler;
 import timely.netty.websocket.WSSubscriptionRequestHandler;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
@@ -406,6 +412,8 @@ public class Server {
                 ch.pipeline().addLast("query", new HttpQueryRequestHandler(dataStore));
                 ch.pipeline().addLast("search", new HttpSearchLookupRequestHandler(dataStore));
                 ch.pipeline().addLast("suggest", new HttpSuggestRequestHandler(dataStore));
+                ch.pipeline().addLast("version", new HttpVersionRequestHandler());
+                ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler());
             }
         };
@@ -435,7 +443,11 @@ public class Server {
                 ch.pipeline().addLast("idle-handler",
                         new IdleStateHandler(Integer.parseInt(conf.get(Configuration.WS_TIMEOUT_SECONDS)), 0, 0));
                 ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
-                ch.pipeline().addLast("websocket", new WSSubscriptionRequestHandler(config, dataStore));
+                ch.pipeline().addLast("wsDecoder", new WSSubscriptionRequestHandler(config, dataStore));
+                ch.pipeline().addLast("create", new WSCreateSubscriptionRequestHandler(dataStore, config));
+                ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
+                ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());
+                ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());
             }
         };
 

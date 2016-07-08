@@ -7,7 +7,7 @@ import timely.Server;
 import timely.test.IntegrationTest;
 
 @Category(IntegrationTest.class)
-public class StaticFileServerIT extends OneWaySSLBaseIT {
+public class StaticFileServerIT extends OneWaySSLBase {
 
     @Test(expected = NotSuccessfulException.class)
     public void testGetFavIconRequest() throws Exception {

@@ -6,12 +6,12 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.nio.charset.StandardCharsets;
 
-import timely.api.request.Version;
+import timely.api.request.VersionRequest;
 
-public class TcpVersionHandler extends SimpleChannelInboundHandler<Version> {
+public class TcpVersionHandler extends SimpleChannelInboundHandler<VersionRequest> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Version v) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, VersionRequest v) throws Exception {
         final ByteBuf response = ctx.alloc().buffer();
         response.writeBytes(v.getVersion().getBytes(StandardCharsets.UTF_8));
         ctx.writeAndFlush(response);

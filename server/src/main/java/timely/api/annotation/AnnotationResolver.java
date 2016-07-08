@@ -80,10 +80,12 @@ public class AnnotationResolver {
     }
 
     public static HttpGetRequest getClassForHttpGet(String path) throws Exception {
+        LOG.trace("Looking for class that support http get at path: {}", path);
         for (Class<?> c : httpClasses) {
             Http http = c.getAnnotation(Http.class);
-            if (http.path().equals(path) && c.isAssignableFrom(HttpGetRequest.class)) {
+            if (http.path().equals(path) && (HttpGetRequest.class.isAssignableFrom(c))) {
                 Object o = c.newInstance();
+                LOG.trace("Returning: {}", c.getName());
                 return (HttpGetRequest) o;
             }
         }
@@ -91,10 +93,12 @@ public class AnnotationResolver {
     }
 
     public static HttpPostRequest getClassForHttpPost(String path) throws Exception {
+        LOG.trace("Looking for class that support http post at path: {}", path);
         for (Class<?> c : httpClasses) {
             Http http = c.getAnnotation(Http.class);
-            if (http.path().equals(path) && c.isAssignableFrom(HttpPostRequest.class)) {
+            if (http.path().equals(path) && (HttpPostRequest.class.isAssignableFrom(c))) {
                 Object o = c.newInstance();
+                LOG.trace("Returning: {}", c.getName());
                 return (HttpPostRequest) o;
             }
         }

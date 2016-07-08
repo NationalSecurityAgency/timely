@@ -12,8 +12,8 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.query.request.SearchLookupRequest;
 import timely.api.query.response.TimelyException;
+import timely.api.request.SearchLookupRequest;
 import timely.netty.Constants;
 import timely.store.DataStore;
 import timely.util.JsonUtil;

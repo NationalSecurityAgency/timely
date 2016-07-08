@@ -39,7 +39,8 @@ import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.TestConfiguration;
 
-public class TwoWaySSLFailureIT extends BaseQueryIT {
+@SuppressWarnings("deprecation")
+public class TwoWaySSLFailureIT extends QueryBase {
 
     @ClassRule
     public static final TemporaryFolder temp = new TemporaryFolder();

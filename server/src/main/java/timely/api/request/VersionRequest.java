@@ -6,9 +6,9 @@ import timely.api.annotation.Tcp;
 import timely.api.annotation.WebSocket;
 
 @Tcp(operation = "version")
-@Http(path = "/api/version")
+@Http(path = "/version")
 @WebSocket(operation = "version")
-public class Version implements TcpRequest, HttpGetRequest, HttpPostRequest {
+public class VersionRequest implements TcpRequest, HttpGetRequest, HttpPostRequest {
 
     public static final String VERSION = "0.0.2";
 
@@ -28,12 +28,12 @@ public class Version implements TcpRequest, HttpGetRequest, HttpPostRequest {
 
     @Override
     public HttpPostRequest parseBody(String content) {
-        return new Version();
+        return new VersionRequest();
     }
 
     @Override
     public HttpGetRequest parseQueryParameters(QueryStringDecoder decoder) {
-        return new Version();
+        return new VersionRequest();
     }
 
 }

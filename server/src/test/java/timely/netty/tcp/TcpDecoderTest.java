@@ -1,50 +1,94 @@
 package timely.netty.tcp;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.accumulo.core.security.ColumnVisibility;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import timely.api.model.Metric;
 import timely.api.model.Tag;
-import timely.api.request.Version;
+import timely.api.request.VersionRequest;
+import timely.auth.VisibilityCache;
 
 public class TcpDecoderTest {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
-    @Test
-    public void testTcpVersion() throws Exception {
-        TcpDecoder decoder = new TcpDecoder();
-        List<Object> out = new ArrayList<>();
-        decoder.decode(null, Unpooled.wrappedBuffer("version".getBytes()), out);
-        Assert.assertEquals(1, out.size());
-        Assert.assertTrue(out.get(0) instanceof Version);
-        Version v = (Version) out.get(0);
-        Assert.assertEquals("0.0.2", v.getVersion());
+    @Before
+    public void setup() {
+        VisibilityCache.init();
     }
 
     @Test
-    public void testPutMetric() throws Exception {
+    public void testPutNoViz() throws Exception {
         TcpDecoder decoder = new TcpDecoder();
-        List<Object> out = new ArrayList<>();
-        String metric = "put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2";
-        decoder.decode(null, Unpooled.wrappedBuffer(metric.getBytes()), out);
-        Assert.assertEquals(1, out.size());
-        Assert.assertTrue(out.get(0) instanceof Metric);
-        Metric actual = (Metric) out.get(0);
-        final Metric expected = new Metric();
+        List<Object> results = new ArrayList<Object>();
+        String put = "put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2";
+        ByteBuf buf = Unpooled.wrappedBuffer(put.getBytes());
+        decoder.decode(null, buf, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(Metric.class, results.get(0).getClass());
+        Metric m = (Metric) results.get(0);
+        Metric expected = new Metric();
         expected.setMetric("sys.cpu.user");
         expected.setTimestamp(TEST_TIME);
-        expected.setValue(1.0);
+        expected.setValue(1.0D);
         final List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("tag1", "value1"));
         tags.add(new Tag("tag2", "value2"));
         expected.setTags(tags);
-        Assert.assertEquals(expected, actual);
+        expected.setVisibility(Metric.EMPTY_VISIBILITY);
+        Assert.assertEquals(expected, m);
+    }
+
+    @Test
+    public void testPutWithViz() throws Exception {
+        TcpDecoder decoder = new TcpDecoder();
+        List<Object> results = new ArrayList<Object>();
+        String put = "put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 viz=a&b tag2=value2";
+        ByteBuf buf = Unpooled.wrappedBuffer(put.getBytes());
+        decoder.decode(null, buf, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(Metric.class, results.get(0).getClass());
+        Metric m = (Metric) results.get(0);
+        Metric expected = new Metric();
+        expected.setMetric("sys.cpu.user");
+        expected.setTimestamp(TEST_TIME);
+        expected.setValue(1.0D);
+        final List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("tag1", "value1"));
+        tags.add(new Tag("tag2", "value2"));
+        expected.setTags(tags);
+        ColumnVisibility cv = VisibilityCache.getColumnVisibility("a&b");
+        expected.setVisibility(cv);
+        Assert.assertEquals(expected, m);
+    }
+
+    @Test
+    public void testVersion() throws Exception {
+        TcpDecoder decoder = new TcpDecoder();
+        List<Object> results = new ArrayList<Object>();
+        String put = "version";
+        ByteBuf buf = Unpooled.wrappedBuffer(put.getBytes());
+        decoder.decode(null, buf, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(VersionRequest.class, results.get(0).getClass());
+    }
+
+    @Test
+    public void testUnknownOperation() throws Exception {
+        TcpDecoder decoder = new TcpDecoder();
+        List<Object> results = new ArrayList<Object>();
+        String put = "foo";
+        ByteBuf buf = Unpooled.wrappedBuffer(put.getBytes());
+        decoder.decode(null, buf, results);
+        Assert.assertEquals(0, results.size());
     }
 
 }

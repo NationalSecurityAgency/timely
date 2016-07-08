@@ -1,10 +1,9 @@
-package timely.api.query.request;
+package timely.api.request;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 import timely.api.annotation.Http;
-import timely.api.request.HttpGetRequest;
 
-@Http(path = "/api/login")
+@Http(path = "/login")
 public class X509LoginRequest implements HttpGetRequest {
 
     @Override

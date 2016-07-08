@@ -1,7 +1,8 @@
-package timely.test.integration;
+package timely.test.integration.http;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
@@ -9,21 +10,26 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import timely.Server;
-import timely.api.query.request.QueryRequest;
-import timely.api.query.request.QueryRequest.SubQuery;
 import timely.api.query.response.QueryResponse;
+import timely.api.request.QueryRequest;
+import timely.api.request.QueryRequest.SubQuery;
+import timely.api.request.VersionRequest;
 import timely.test.IntegrationTest;
+import timely.test.integration.OneWaySSLBase;
 
+/**
+ * Integration tests for the operations available over the HTTP transport
+ */
 @Category(IntegrationTest.class)
-public class HttpApiIT extends OneWaySSLBaseIT {
+public class HttpApiIT extends OneWaySSLBase {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
@@ -548,5 +554,26 @@ public class HttpApiIT extends OneWaySSLBaseIT {
         } finally {
             m.shutdown();
         }
+    }
+
+    @Test
+    public void testGetVersion() throws Exception {
+        final Server m = new Server(conf);
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
+                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
+                    + " 2.0 tag1=value1 tag3=value3 viz=secret");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            String response = query("https://127.0.0.1:54322/version", "application/json");
+            assertNotNull(response);
+            assertEquals("{\"version\":" + "\"" + VersionRequest.VERSION + "\"}", response);
+        } finally {
+            m.shutdown();
+        }
+    }
+
+    @Test
+    public void testPutMetric() throws Exception {
+
     }
 }

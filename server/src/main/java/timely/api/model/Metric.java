@@ -1,5 +1,6 @@
 package timely.api.model;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +23,7 @@ import timely.api.annotation.WebSocket;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.TcpRequest;
 import timely.auth.VisibilityCache;
+import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -212,8 +214,7 @@ public class Metric implements TcpRequest, HttpPostRequest {
 
     @Override
     public HttpPostRequest parseBody(String content) throws Exception {
-        // TODO Auto-generated method stub
-        return null;
+        return JsonUtil.getObjectMapper().readValue(content.getBytes(StandardCharsets.UTF_8), Metric.class);
     }
 
 }

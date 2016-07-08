@@ -1,4 +1,4 @@
-package timely.test.integration;
+package timely.test.integration.websocket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -47,10 +47,11 @@ import timely.api.request.CloseSubscription;
 import timely.api.request.CreateSubscription;
 import timely.api.request.RemoveSubscription;
 import timely.test.IntegrationTest;
+import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
 
 @Category(IntegrationTest.class)
-public class WebSocketIT extends OneWaySSLBaseIT {
+public class WebSocketIT extends OneWaySSLBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(WebSocketIT.class);
     private static final Long TEST_TIME = System.currentTimeMillis() - (240 * 1000);

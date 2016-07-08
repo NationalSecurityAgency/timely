@@ -1,4 +1,4 @@
-package timely.test.integration;
+package timely.test.integration.http;
 
 import static org.junit.Assert.assertEquals;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -14,9 +14,10 @@ import org.junit.experimental.categories.Category;
 import timely.Server;
 import timely.netty.http.StrictTransportHandler;
 import timely.test.IntegrationTest;
+import timely.test.integration.OneWaySSLBase;
 
 @Category(IntegrationTest.class)
-public class HTTPStrictTransportSecurityIT extends OneWaySSLBaseIT {
+public class HTTPStrictTransportSecurityIT extends OneWaySSLBase {
 
     @Test
     public void testHttpRequestGet() throws Exception {

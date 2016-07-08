@@ -1,4 +1,4 @@
-package timely.netty;
+package timely.netty.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -27,17 +27,20 @@ import org.junit.rules.TemporaryFolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import timely.Configuration;
+import timely.api.model.Metric;
 import timely.api.model.Tag;
-import timely.api.query.request.AggregatorsRequest;
-import timely.api.query.request.QueryRequest;
-import timely.api.query.request.QueryRequest.Filter;
-import timely.api.query.request.QueryRequest.RateOption;
-import timely.api.query.request.QueryRequest.SubQuery;
-import timely.api.query.request.SearchLookupRequest;
-import timely.api.query.request.SuggestRequest;
+import timely.api.request.AggregatorsRequest;
+import timely.api.request.QueryRequest;
+import timely.api.request.QueryRequest.Filter;
+import timely.api.request.QueryRequest.RateOption;
+import timely.api.request.QueryRequest.SubQuery;
+import timely.api.request.SearchLookupRequest;
+import timely.api.request.SuggestRequest;
+import timely.api.request.VersionRequest;
 import timely.auth.AuthCache;
-import timely.netty.http.HttpRequestDecoder;
+import timely.netty.Constants;
 import timely.test.TestConfiguration;
+import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 
@@ -55,6 +58,8 @@ public class HttpRequestDecoderTest {
         }
 
     }
+
+    private static final Long TEST_TIME = System.currentTimeMillis();
 
     @ClassRule
     public static final TemporaryFolder temp = new TemporaryFolder();
@@ -802,6 +807,66 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(true, first.isRate());
         RateOption firstRateOption = first.getRateOptions();
         Assert.assertEquals(false, firstRateOption.isCounter());
+    }
+
+    @Test
+    public void testVersionGet() throws Exception {
+        decoder = new TestHttpQueryDecoder(config);
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/version");
+        decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(VersionRequest.class, results.iterator().next().getClass());
+    }
+
+    @Test
+    public void testVersionPost() throws Exception {
+        decoder = new TestHttpQueryDecoder(config);
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/version");
+        decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(VersionRequest.class, results.iterator().next().getClass());
+    }
+
+    @Test
+    public void testPutMetricPost() throws Exception {
+        Metric m = new Metric();
+        m.setMetric("sys.cpu.user");
+        m.setTimestamp(TEST_TIME);
+        m.setValue(1.0D);
+        final List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("tag1", "value1"));
+        tags.add(new Tag("tag2", "value2"));
+        m.setTags(tags);
+        m.setVisibility(Metric.EMPTY_VISIBILITY);
+        byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(m);
+
+        decoder = new TestHttpQueryDecoder(config);
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/put");
+        request.content().writeBytes(buf);
+        decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(Metric.class, results.iterator().next().getClass());
+    }
+
+    @Test
+    public void testPutMetricGet() throws Exception {
+        Metric m = new Metric();
+        m.setMetric("sys.cpu.user");
+        m.setTimestamp(TEST_TIME);
+        m.setValue(1.0D);
+        final List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("tag1", "value1"));
+        tags.add(new Tag("tag2", "value2"));
+        m.setTags(tags);
+        m.setVisibility(Metric.EMPTY_VISIBILITY);
+        byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(m);
+
+        decoder = new TestHttpQueryDecoder(config);
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/put");
+        request.content().writeBytes(buf);
+        decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(request, results.iterator().next());
     }
 
 }

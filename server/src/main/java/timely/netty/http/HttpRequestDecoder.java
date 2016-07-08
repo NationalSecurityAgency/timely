@@ -82,17 +82,17 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
         final String sessionId = sId;
         LOG.trace("SessionID: " + sessionId);
 
-        final Request request;
+        Request request = null;
         try {
             if (msg.getMethod().equals(HttpMethod.GET)) {
                 HttpGetRequest get = AnnotationResolver.getClassForHttpGet(decoder.path());
                 request = get.parseQueryParameters(decoder);
             } else if (msg.getMethod().equals(HttpMethod.POST)) {
                 HttpPostRequest post = AnnotationResolver.getClassForHttpPost(decoder.path());
-                String content = new String();
+                String content = "";
                 ByteBuf body = msg.content();
                 if (null != body) {
-                	content = body.toString(StandardCharsets.UTF_8);
+                    content = body.toString(StandardCharsets.UTF_8);
                 }
                 request = post.parseBody(content);
             } else {
@@ -108,18 +108,20 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
             }
             LOG.trace(LOG_PARSED_REQUEST, request);
             request.validate();
-            try {
-                AuthCache.enforceAccess(conf, request);
-            } catch (Exception e) {
-                out.clear();
-                throw e;
-            }
             out.add(request);
-        } catch (UnsupportedOperationException e) {
+        } catch (UnsupportedOperationException | NullPointerException e) {
             // Return the original http request to route to the static file
             // server
+            LOG.error("Error decoding request: " + msg, e);
             msg.retain();
             out.add(msg);
+            return;
+        }
+        try {
+            AuthCache.enforceAccess(conf, request);
+        } catch (Exception e) {
+            out.clear();
+            throw e;
         }
 
     }
