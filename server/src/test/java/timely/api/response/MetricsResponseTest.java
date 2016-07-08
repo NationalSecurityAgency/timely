@@ -1,4 +1,4 @@
-package timely.api.query.response;
+package timely.api.response;
 
 import java.io.File;
 
@@ -10,6 +10,7 @@ import org.junit.rules.TemporaryFolder;
 
 import timely.Configuration;
 import timely.api.model.Meta;
+import timely.api.response.MetricsResponse;
 import timely.store.MetaCache;
 import timely.store.MetaCacheFactory;
 import timely.test.TestConfiguration;

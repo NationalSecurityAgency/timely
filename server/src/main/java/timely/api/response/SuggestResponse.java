@@ -1,4 +1,4 @@
-package timely.api.query.response;
+package timely.api.response;
 
 import java.io.IOException;
 import java.util.ArrayList;

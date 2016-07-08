@@ -17,8 +17,8 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.query.response.QueryResponse;
 import timely.api.request.QueryRequest;
+import timely.api.response.QueryResponse;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.databind.JavaType;

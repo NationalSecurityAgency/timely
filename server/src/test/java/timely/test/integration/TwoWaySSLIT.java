@@ -40,8 +40,8 @@ import org.junit.rules.TemporaryFolder;
 
 import timely.Configuration;
 import timely.Server;
-import timely.api.query.response.QueryResponse;
 import timely.api.request.QueryRequest;
+import timely.api.response.QueryResponse;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;

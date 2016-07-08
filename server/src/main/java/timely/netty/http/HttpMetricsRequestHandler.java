@@ -17,8 +17,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 
 import timely.Configuration;
-import timely.api.query.response.MetricsResponse;
 import timely.api.request.MetricsRequest;
+import timely.api.response.MetricsResponse;
 import timely.netty.Constants;
 import timely.util.JsonUtil;
 

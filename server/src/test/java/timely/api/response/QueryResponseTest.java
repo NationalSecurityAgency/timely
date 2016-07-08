@@ -1,10 +1,11 @@
-package timely.api.query.response;
+package timely.api.response;
 
 import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import timely.api.response.QueryResponse;
 import timely.util.JsonUtil;
 
 public class QueryResponseTest {

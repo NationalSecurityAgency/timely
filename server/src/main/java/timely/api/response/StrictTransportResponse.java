@@ -1,4 +1,4 @@
-package timely.api.query.response;
+package timely.api.response;
 
 public class StrictTransportResponse {
 

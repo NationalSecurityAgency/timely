@@ -1,4 +1,4 @@
-package timely.api.query.response;
+package timely.api.response;
 
 import java.util.HashMap;
 import java.util.Map;

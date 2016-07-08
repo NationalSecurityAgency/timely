@@ -12,9 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
 import timely.Configuration;
-import timely.api.query.response.TimelyException;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.Request;
+import timely.api.response.TimelyException;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;

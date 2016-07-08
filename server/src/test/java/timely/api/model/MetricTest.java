@@ -104,7 +104,7 @@ public class MetricTest {
         m.setTags(tags);
         m.setVisibility(new ColumnVisibility("(a&b)|(c&d)"));
         String json = JsonUtil.getObjectMapper().writeValueAsString(m);
-        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"key\":\"tag1\",\"value\":\"value1\"}]}";
+        String expected = "{\"operation\":\"put\",\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"key\":\"tag1\",\"value\":\"value1\"}]}";
         Assert.assertEquals(expected, json);
     }
 }

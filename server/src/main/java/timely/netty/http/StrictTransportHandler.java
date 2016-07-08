@@ -4,8 +4,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import timely.Configuration;
-import timely.api.query.response.StrictTransportResponse;
-import timely.api.query.response.TimelyException;
+import timely.api.response.StrictTransportResponse;
+import timely.api.response.TimelyException;
 
 public class StrictTransportHandler extends SimpleChannelInboundHandler<StrictTransportResponse> {
 

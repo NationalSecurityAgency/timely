@@ -22,6 +22,7 @@ import timely.api.annotation.Tcp;
 import timely.api.annotation.WebSocket;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.TcpRequest;
+import timely.api.request.WebSocketRequest;
 import timely.auth.VisibilityCache;
 import timely.util.JsonUtil;
 
@@ -30,7 +31,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Tcp(operation = "put")
 @Http(path = "/api/put")
 @WebSocket(operation = "put")
-public class Metric implements TcpRequest, HttpPostRequest {
+public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest {
 
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());

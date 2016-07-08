@@ -48,7 +48,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.query.response.TimelyException;
+import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
 import timely.netty.http.HttpAggregatorsRequestHandler;
@@ -71,7 +71,7 @@ import timely.netty.websocket.WSAddSubscriptionRequestHandler;
 import timely.netty.websocket.WSCloseSubscriptionRequestHandler;
 import timely.netty.websocket.WSCreateSubscriptionRequestHandler;
 import timely.netty.websocket.WSRemoveSubscriptionRequestHandler;
-import timely.netty.websocket.WSSubscriptionRequestHandler;
+import timely.netty.websocket.WebSocketRequestDecoder;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
 import timely.store.MetaCacheFactory;
@@ -230,7 +230,7 @@ public class Server {
             LOG.error("Error flushing to server during shutdown", e);
         }
         MetaCacheFactory.close();
-        WSSubscriptionRequestHandler.close();
+        WebSocketRequestDecoder.close();
         this.shutdown = true;
         LOG.info("Server shut down.");
     }
@@ -443,7 +443,7 @@ public class Server {
                 ch.pipeline().addLast("idle-handler",
                         new IdleStateHandler(Integer.parseInt(conf.get(Configuration.WS_TIMEOUT_SECONDS)), 0, 0));
                 ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
-                ch.pipeline().addLast("wsDecoder", new WSSubscriptionRequestHandler(config, dataStore));
+                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
                 ch.pipeline().addLast("create", new WSCreateSubscriptionRequestHandler(dataStore, config));
                 ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
                 ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());

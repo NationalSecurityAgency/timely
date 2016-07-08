@@ -1,8 +1,9 @@
-package timely.api.query.response;
+package timely.api.response;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import timely.api.response.AggregatorsResponse;
 import timely.util.JsonUtil;
 
 public class AggregatorsResponseTest {

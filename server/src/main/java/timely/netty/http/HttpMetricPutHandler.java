@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.api.model.Metric;
-import timely.api.query.response.TimelyException;
+import timely.api.response.TimelyException;
 import timely.netty.Constants;
 import timely.store.DataStore;
 

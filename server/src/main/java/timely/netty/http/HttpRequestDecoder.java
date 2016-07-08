@@ -18,12 +18,12 @@ import org.slf4j.LoggerFactory;
 
 import timely.Configuration;
 import timely.api.annotation.AnnotationResolver;
-import timely.api.query.response.StrictTransportResponse;
-import timely.api.query.response.TimelyException;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpGetRequest;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.Request;
+import timely.api.response.StrictTransportResponse;
+import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 

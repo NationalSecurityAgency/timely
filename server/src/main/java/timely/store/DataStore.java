@@ -6,13 +6,13 @@ import java.util.Map;
 import org.apache.accumulo.core.client.Scanner;
 
 import timely.api.model.Metric;
-import timely.api.query.response.QueryResponse;
-import timely.api.query.response.SearchLookupResponse;
-import timely.api.query.response.SuggestResponse;
-import timely.api.query.response.TimelyException;
 import timely.api.request.QueryRequest;
 import timely.api.request.SearchLookupRequest;
 import timely.api.request.SuggestRequest;
+import timely.api.response.QueryResponse;
+import timely.api.response.SearchLookupResponse;
+import timely.api.response.SuggestResponse;
+import timely.api.response.TimelyException;
 
 public interface DataStore {
 
