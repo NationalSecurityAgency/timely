@@ -46,6 +46,7 @@ import timely.api.request.AddSubscription;
 import timely.api.request.CloseSubscription;
 import timely.api.request.CreateSubscription;
 import timely.api.request.RemoveSubscription;
+import timely.api.response.MetricResponse;
 import timely.test.IntegrationTest;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
@@ -212,8 +213,8 @@ public class WebSocketIT extends OneWaySSLBase {
             secondTags.add(new Tag("tag3", "value3"));
             second.setTags(secondTags);
             for (String metrics : response) {
-                Metric m = JsonUtil.getObjectMapper().readValue(metrics, Metric.class);
-                Assert.assertTrue(m.equals(first) || m.equals(second));
+                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse()));
             }
 
             // Close client channel
@@ -297,8 +298,8 @@ public class WebSocketIT extends OneWaySSLBase {
             secondTags.add(new Tag("tag3", "value3"));
             second.setTags(secondTags);
             for (String metrics : response) {
-                Metric m = JsonUtil.getObjectMapper().readValue(metrics, Metric.class);
-                Assert.assertTrue(m.equals(first) || m.equals(second));
+                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse()));
             }
 
             // Add some more data
@@ -337,8 +338,8 @@ public class WebSocketIT extends OneWaySSLBase {
             secondTags.add(new Tag("tag3", "value3"));
             second.setTags(secondTags);
             for (String metrics : response) {
-                Metric m = JsonUtil.getObjectMapper().readValue(metrics, Metric.class);
-                Assert.assertTrue(m.equals(first) || m.equals(second));
+                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse()));
             }
 
             // Add subscription
@@ -396,8 +397,9 @@ public class WebSocketIT extends OneWaySSLBase {
             fourthTags.add(new Tag("tag4", "value4"));
             fourth.setTags(fourthTags);
             for (String metrics : response) {
-                Metric m = JsonUtil.getObjectMapper().readValue(metrics, Metric.class);
-                Assert.assertTrue(m.equals(first) || m.equals(second) || m.equals(third) || m.equals(fourth));
+                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse())
+                        || m.equals(third.toMetricResponse()) || m.equals(fourth.toMetricResponse()));
             }
 
             // Remove subscriptions to metric
@@ -422,4 +424,9 @@ public class WebSocketIT extends OneWaySSLBase {
             group.shutdownGracefully();
         }
     }
+
+    // TODO: aggregators
+
+    // TODO: metrics
+
 }

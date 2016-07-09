@@ -22,20 +22,9 @@ import timely.util.JsonUtil;
 public class HttpAggregatorsRequestHandler extends SimpleChannelInboundHandler<AggregatorsRequest> implements
         TimelyHttpHandler {
 
-    private static final AggregatorsResponse RESPONSE = new AggregatorsResponse();
-
-    static {
-        RESPONSE.addAggregator(Avg.class.getSimpleName().toLowerCase());
-        RESPONSE.addAggregator(Dev.class.getSimpleName().toLowerCase());
-        RESPONSE.addAggregator(Max.class.getSimpleName().toLowerCase());
-        RESPONSE.addAggregator(Min.class.getSimpleName().toLowerCase());
-        RESPONSE.addAggregator(Sum.class.getSimpleName().toLowerCase());
-        RESPONSE.addAggregator(Count.class.getSimpleName().toLowerCase());
-    }
-
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, AggregatorsRequest msg) throws Exception {
-        byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(RESPONSE);
+        byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(AggregatorsResponse.RESPONSE);
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.copiedBuffer(buf));
         response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);

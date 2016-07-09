@@ -93,7 +93,7 @@ public class MetricTest {
     }
 
     @Test
-    public void testToJson() throws Exception {
+    public void testToMetricResponse() throws Exception {
         long ts = 1000L;
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("tag1", "value1"));
@@ -103,8 +103,8 @@ public class MetricTest {
         m.setValue(2.0D);
         m.setTags(tags);
         m.setVisibility(new ColumnVisibility("(a&b)|(c&d)"));
-        String json = JsonUtil.getObjectMapper().writeValueAsString(m);
-        String expected = "{\"operation\":\"put\",\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"key\":\"tag1\",\"value\":\"value1\"}]}";
+        String json = JsonUtil.getObjectMapper().writeValueAsString(m.toMetricResponse());
+        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"key\":\"tag1\",\"value\":\"value1\"}]}";
         Assert.assertEquals(expected, json);
     }
 }

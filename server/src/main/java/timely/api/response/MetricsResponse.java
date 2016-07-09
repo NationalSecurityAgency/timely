@@ -1,5 +1,14 @@
 package timely.api.response;
 
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,11 +19,16 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 
 import timely.Configuration;
 import timely.api.model.Meta;
+import timely.netty.Constants;
 import timely.store.MetaCache;
 import timely.store.MetaCacheFactory;
+import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,6 +37,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class MetricsResponse {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MetricsResponse.class);
 
     private static final String DOCTYPE = "<!DOCTYPE html>\n";
     private static final String META = "<meta charset=\"UTF-8\">\n";
@@ -62,7 +78,71 @@ public class MetricsResponse {
         this.conf = conf;
     }
 
-    public StringBuilder generateHtml() {
+    public TextWebSocketFrame toWebSocketResponse(String acceptHeader) throws Exception {
+        MediaType negotiatedType = MediaType.TEXT_HTML;
+        if (null != acceptHeader) {
+            List<MediaType> requestedTypes = MediaType.parseMediaTypes(acceptHeader);
+            MediaType.sortBySpecificityAndQuality(requestedTypes);
+            LOG.trace("Acceptable response types: {}", MediaType.toString(requestedTypes));
+            for (MediaType t : requestedTypes) {
+                if (t.includes(MediaType.TEXT_HTML)) {
+                    negotiatedType = MediaType.TEXT_HTML;
+                    LOG.trace("{} allows HTML", t.toString());
+                    break;
+                }
+                if (t.includes(MediaType.APPLICATION_JSON)) {
+                    negotiatedType = MediaType.APPLICATION_JSON;
+                    LOG.trace("{} allows JSON", t.toString());
+                    break;
+                }
+            }
+        }
+        String result = null;
+        Object responseType = Constants.HTML_TYPE;
+        if (negotiatedType.equals(MediaType.APPLICATION_JSON)) {
+            result = this.generateJson(JsonUtil.getObjectMapper());
+            responseType = Constants.JSON_TYPE;
+        } else {
+            result = this.generateHtml().toString();
+        }
+        return new TextWebSocketFrame(result);
+    }
+
+    public FullHttpResponse toHttpResponse(String acceptHeader) throws Exception {
+        MediaType negotiatedType = MediaType.TEXT_HTML;
+        if (null != acceptHeader) {
+            List<MediaType> requestedTypes = MediaType.parseMediaTypes(acceptHeader);
+            MediaType.sortBySpecificityAndQuality(requestedTypes);
+            LOG.trace("Acceptable response types: {}", MediaType.toString(requestedTypes));
+            for (MediaType t : requestedTypes) {
+                if (t.includes(MediaType.TEXT_HTML)) {
+                    negotiatedType = MediaType.TEXT_HTML;
+                    LOG.trace("{} allows HTML", t.toString());
+                    break;
+                }
+                if (t.includes(MediaType.APPLICATION_JSON)) {
+                    negotiatedType = MediaType.APPLICATION_JSON;
+                    LOG.trace("{} allows JSON", t.toString());
+                    break;
+                }
+            }
+        }
+        byte[] buf = null;
+        Object responseType = Constants.HTML_TYPE;
+        if (negotiatedType.equals(MediaType.APPLICATION_JSON)) {
+            buf = this.generateJson(JsonUtil.getObjectMapper()).getBytes(StandardCharsets.UTF_8);
+            responseType = Constants.JSON_TYPE;
+        } else {
+            buf = this.generateHtml().toString().getBytes(StandardCharsets.UTF_8);
+        }
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer(buf));
+        response.headers().set(Names.CONTENT_TYPE, responseType);
+        response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
+        return response;
+    }
+
+    protected StringBuilder generateHtml() {
         final MetaCache cache = MetaCacheFactory.getCache(conf);
         TreeSet<Meta> tree = new TreeSet<>();
         cache.forEach(m -> tree.add(m));
@@ -112,7 +192,7 @@ public class MetricsResponse {
         return b;
     }
 
-    public String generateJson(final ObjectMapper mapper) throws JsonProcessingException {
+    protected String generateJson(final ObjectMapper mapper) throws JsonProcessingException {
         // map non-ignored metrics to their list of tags
         final MetaCache cache = MetaCacheFactory.getCache(conf);
         Map<String, List<JsonNode>> metricTagMap = new HashMap<>();

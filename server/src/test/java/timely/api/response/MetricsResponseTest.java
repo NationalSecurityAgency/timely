@@ -8,6 +8,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import timely.Configuration;
 import timely.api.model.Meta;
 import timely.api.response.MetricsResponse;
@@ -16,6 +19,24 @@ import timely.store.MetaCacheFactory;
 import timely.test.TestConfiguration;
 
 public class MetricsResponseTest {
+
+    public static class TestMetricsResponse extends MetricsResponse {
+
+        public TestMetricsResponse(Configuration conf) {
+            super(conf);
+        }
+
+        @Override
+        public StringBuilder generateHtml() {
+            return super.generateHtml();
+        }
+
+        @Override
+        public String generateJson(ObjectMapper mapper) throws JsonProcessingException {
+            return super.generateJson(mapper);
+        }
+
+    }
 
     @ClassRule
     public static final TemporaryFolder temp = new TemporaryFolder();
@@ -39,7 +60,7 @@ public class MetricsResponseTest {
             cache.add(new Meta("sys.cpu.user", "instance", "0"));
             cache.add(new Meta("sys.cpu.idle", "host", "localhost"));
             cache.add(new Meta("sys.cpu.idle", "instance", "0"));
-            MetricsResponse r = new MetricsResponse();
+            TestMetricsResponse r = new TestMetricsResponse(config);
             String html = r.generateHtml().toString();
             Assert.assertTrue(html.contains("<td>sys.cpu.idle</td>"));
             Assert.assertTrue(html.contains("<td>host=localhost instance=0 </td>"));
@@ -63,7 +84,7 @@ public class MetricsResponseTest {
             cache.add(new Meta("sys.cpu.user", "instance", "0"));
             cache.add(new Meta("sys.cpu.idle", "host", "localhost"));
             cache.add(new Meta("sys.cpu.idle", "instance", "0"));
-            MetricsResponse r = new MetricsResponse(config);
+            TestMetricsResponse r = new TestMetricsResponse(config);
             String html = r.generateHtml().toString();
             Assert.assertTrue(html.contains("<td>sys.cpu.idle</td>"));
             Assert.assertTrue(html.contains("<td>host=localhost </td>"));

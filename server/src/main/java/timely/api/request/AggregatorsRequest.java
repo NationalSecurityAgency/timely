@@ -2,9 +2,12 @@ package timely.api.request;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 import timely.api.annotation.Http;
+import timely.api.annotation.WebSocket;
 
 @Http(path = "/api/aggregators")
-public class AggregatorsRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest {
+@WebSocket(operation = "aggregators")
+public class AggregatorsRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest,
+        WebSocketRequest {
 
     @Override
     public String toString() {

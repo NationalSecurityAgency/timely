@@ -560,13 +560,9 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testGetVersion() throws Exception {
         final Server m = new Server(conf);
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
-                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
-                    + " 2.0 tag1=value1 tag3=value3 viz=secret");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
             String response = query("https://127.0.0.1:54322/version", "application/json");
             assertNotNull(response);
-            assertEquals("{\"version\":" + "\"" + VersionRequest.VERSION + "\"}", response);
+            assertEquals(VersionRequest.VERSION, response);
         } finally {
             m.shutdown();
         }

@@ -22,8 +22,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import timely.Configuration;
 import timely.api.model.Metric;
 import timely.api.request.AddSubscription;
+import timely.api.request.AggregatorsRequest;
 import timely.api.request.CloseSubscription;
 import timely.api.request.CreateSubscription;
+import timely.api.request.MetricsRequest;
 import timely.api.request.RemoveSubscription;
 import timely.api.request.VersionRequest;
 import timely.auth.AuthCache;
@@ -181,4 +183,27 @@ public class WebSocketRequestDecoderTest {
         Assert.assertEquals(CloseSubscription.class, results.get(0).getClass());
     }
 
+    @Test
+    public void testAggregrators() throws Exception {
+        CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
+        decoder = new WebSocketRequestDecoder(anonConfig);
+        String request = "{ \"operation\" : \"aggregators\", \"sessionId\" : \"1234\" }";
+        TextWebSocketFrame frame = new TextWebSocketFrame();
+        frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));
+        decoder.decode(ctx, frame, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(AggregatorsRequest.class, results.get(0).getClass());
+    }
+
+    @Test
+    public void testMetrics() throws Exception {
+        CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
+        decoder = new WebSocketRequestDecoder(anonConfig);
+        String request = "{ \"operation\" : \"metrics\", \"sessionId\" : \"1234\" }";
+        TextWebSocketFrame frame = new TextWebSocketFrame();
+        frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));
+        decoder.decode(ctx, frame, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(MetricsRequest.class, results.get(0).getClass());
+    }
 }

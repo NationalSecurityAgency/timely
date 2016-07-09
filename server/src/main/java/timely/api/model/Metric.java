@@ -23,6 +23,7 @@ import timely.api.annotation.WebSocket;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.TcpRequest;
 import timely.api.request.WebSocketRequest;
+import timely.api.response.MetricResponse;
 import timely.auth.VisibilityCache;
 import timely.util.JsonUtil;
 
@@ -216,6 +217,15 @@ public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest {
     @Override
     public HttpPostRequest parseBody(String content) throws Exception {
         return JsonUtil.getObjectMapper().readValue(content.getBytes(StandardCharsets.UTF_8), Metric.class);
+    }
+
+    public MetricResponse toMetricResponse() {
+        MetricResponse response = new MetricResponse();
+        response.setMetric(this.metric);
+        response.setTimestamp(this.timestamp);
+        response.setTags(this.tags);
+        response.setValue(this.value);
+        return response;
     }
 
 }
