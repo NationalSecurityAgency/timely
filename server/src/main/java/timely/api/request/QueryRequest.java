@@ -13,12 +13,15 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import timely.api.annotation.Http;
+import timely.api.annotation.WebSocket;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Http(path = "/api/query")
-public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest {
+@WebSocket(operation = "query")
+public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
     public static class RateOption {
 
@@ -478,6 +481,15 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
 
     @Override
     public HttpPostRequest parseBody(String content) throws Exception {
+        JsonNode root = JsonUtil.getObjectMapper().readValue(content, JsonNode.class);
+        JsonNode operation = root.findValue("operation");
+        if (null == operation) {
+            StringBuilder buf = new StringBuilder(content.length() + 10);
+            buf.append("{ \"operation\" : \"query\", ");
+            int open = content.indexOf("{");
+            buf.append(content.substring(open + 1));
+            return JsonUtil.getObjectMapper().readValue(buf.toString(), QueryRequest.class);
+        }
         return JsonUtil.getObjectMapper().readValue(content, QueryRequest.class);
     }
 

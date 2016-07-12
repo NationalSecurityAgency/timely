@@ -72,6 +72,7 @@ import timely.netty.websocket.WSAggregatorsRequestHandler;
 import timely.netty.websocket.WSCloseSubscriptionRequestHandler;
 import timely.netty.websocket.WSCreateSubscriptionRequestHandler;
 import timely.netty.websocket.WSMetricsRequestHandler;
+import timely.netty.websocket.WSQueryRequestHandler;
 import timely.netty.websocket.WSRemoveSubscriptionRequestHandler;
 import timely.netty.websocket.WebSocketRequestDecoder;
 import timely.store.DataStore;
@@ -452,7 +453,8 @@ public class Server {
                 ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());
                 ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new WSMetricsRequestHandler(config));
-                //TODO: Add the other HTTP operations
+                ch.pipeline().addLast("query", new WSQueryRequestHandler(dataStore));
+                // TODO: Add the other HTTP operations
             }
         };
 

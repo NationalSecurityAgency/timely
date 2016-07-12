@@ -51,13 +51,18 @@ public class AuthCache {
 
     public static Authorizations getAuthorizations(String sessionId) {
         if (!StringUtils.isEmpty(sessionId)) {
-            Collection<? extends GrantedAuthority> authorities = CACHE.asMap().get(sessionId).getAuthorities();
-            String[] auths = new String[authorities.size()];
-            final AtomicInteger i = new AtomicInteger(0);
-            authorities.forEach(a -> {
-                auths[i.getAndIncrement()] = a.getAuthority();
-            });
-            return new Authorizations(auths);
+            Authentication auth = CACHE.asMap().get(sessionId);
+            if (null != auth) {
+                Collection<? extends GrantedAuthority> authorities = CACHE.asMap().get(sessionId).getAuthorities();
+                String[] auths = new String[authorities.size()];
+                final AtomicInteger i = new AtomicInteger(0);
+                authorities.forEach(a -> {
+                    auths[i.getAndIncrement()] = a.getAuthority();
+                });
+                return new Authorizations(auths);
+            } else {
+                return null;
+            }
         } else {
             throw new IllegalArgumentException("session id cannot be null");
         }

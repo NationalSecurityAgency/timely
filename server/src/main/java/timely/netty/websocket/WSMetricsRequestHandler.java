@@ -18,7 +18,7 @@ public class WSMetricsRequestHandler extends SimpleChannelInboundHandler<Metrics
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MetricsRequest m) throws Exception {
         MetricsResponse r = new MetricsResponse(conf);
-        sendResponse(ctx, r.toHttpResponse("application/json"));
+        sendResponse(ctx, r.toWebSocketResponse("application/json"));
     }
 
 }

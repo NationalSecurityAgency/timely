@@ -26,6 +26,7 @@ import timely.api.request.AggregatorsRequest;
 import timely.api.request.CloseSubscription;
 import timely.api.request.CreateSubscription;
 import timely.api.request.MetricsRequest;
+import timely.api.request.QueryRequest;
 import timely.api.request.RemoveSubscription;
 import timely.api.request.VersionRequest;
 import timely.auth.AuthCache;
@@ -206,4 +207,59 @@ public class WebSocketRequestDecoderTest {
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(MetricsRequest.class, results.get(0).getClass());
     }
+
+    @Test
+    public void testQuery() throws Exception {
+        // @formatter:off
+        String request =
+        "{\n"+
+        "	 \"operation\" : \"query\",\n"+
+        "    \"sessionId\" : \"1234\",\n"+
+        "    \"start\": 1356998400,\n"+
+        "    \"end\": 1356998460,\n"+
+        "    \"queries\": [\n"+
+        "        {\n"+
+        "            \"aggregator\": \"sum\",\n"+
+        "            \"metric\": \"sys.cpu.user\",\n"+
+        "            \"rate\": \"true\",\n"+
+        "            \"rateOptions\": \n"+
+        "                {\"counter\":false,\"counterMax\":100,\"resetValue\":0},\n"+
+        "            \"tags\": {\n"+
+        "                   \"host\": \"*\",\n" +
+        "                   \"rack\": \"r1\"\n" +
+        "            },\n"+
+        "            \"filters\": [\n"+
+        "                {\n"+
+        "                   \"type\":\"wildcard\",\n"+
+        "                   \"tagk\":\"host\",\n"+
+        "                   \"filter\":\"*\",\n"+
+        "                   \"groupBy\":true\n"+
+        "                },\n"+
+        "                {\n"+
+        "                   \"type\":\"literal_or\",\n"+
+        "                   \"tagk\":\"rack\",\n"+
+        "                   \"filter\":\"r1|r2\",\n"+
+        "                   \"groupBy\":false\n"+
+        "                }\n"+
+        "            ]\n"+
+        "        },\n"+
+        "        {\n"+
+        "            \"aggregator\": \"sum\",\n"+
+        "            \"tsuids\": [\n"+
+        "                \"000001000002000042\",\n"+
+        "                \"000001000002000043\"\n"+
+        "            ]\n"+
+        "        }\n"+
+        "    ]\n"+
+        "}";
+        // @formatter:on
+        CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
+        decoder = new WebSocketRequestDecoder(anonConfig);
+        TextWebSocketFrame frame = new TextWebSocketFrame();
+        frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));
+        decoder.decode(ctx, frame, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(QueryRequest.class, results.get(0).getClass());
+    }
+
 }

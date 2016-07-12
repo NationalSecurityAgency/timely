@@ -735,12 +735,26 @@ public class DataStoreImpl implements DataStore {
     }
 
     private Authorizations getSessionAuthorizations(String sessionId) {
-        if (!StringUtils.isEmpty(sessionId)) {
-            return AuthCache.getAuthorizations(sessionId);
-        } else if (!anonAccessAllowed) {
-            throw new RuntimeException("Anonymous user attempting to query");
+        if (anonAccessAllowed) {
+            if (StringUtils.isEmpty(sessionId)) {
+                return Authorizations.EMPTY;
+            } else {
+                Authorizations auths = AuthCache.getAuthorizations(sessionId);
+                if (null == auths) {
+                    auths = Authorizations.EMPTY;
+                }
+                return auths;
+            }
         } else {
-            return Authorizations.EMPTY;
+            if (StringUtils.isEmpty(sessionId)) {
+                throw new IllegalArgumentException("session id cannot be null");
+            } else {
+                Authorizations auths = AuthCache.getAuthorizations(sessionId);
+                if (null == auths) {
+                    throw new IllegalStateException("No auths found for sessionId: " + sessionId);
+                }
+                return auths;
+            }
         }
     }
 

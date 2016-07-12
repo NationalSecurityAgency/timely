@@ -1,5 +1,8 @@
 package timely.test.integration.websocket;
 
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,22 +34,33 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.util.UtilWaitThread;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+
+import com.fasterxml.jackson.databind.JavaType;
 
 import timely.Server;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
 import timely.api.request.AddSubscription;
+import timely.api.request.AggregatorsRequest;
 import timely.api.request.CloseSubscription;
 import timely.api.request.CreateSubscription;
+import timely.api.request.MetricsRequest;
 import timely.api.request.RemoveSubscription;
+import timely.api.response.AggregatorsResponse;
 import timely.api.response.MetricResponse;
+import timely.api.response.QueryResponse;
+import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
@@ -72,6 +86,7 @@ public class WebSocketIT extends OneWaySSLBase {
         private final WebSocketClientHandshaker handshaker;
         private ChannelPromise handshakeFuture;
         private List<String> responses = new ArrayList<>();
+        private volatile boolean connected = false;
 
         public ClientHandler(WebSocketClientHandshaker handshaker) {
             this.handshaker = handshaker;
@@ -81,11 +96,13 @@ public class WebSocketIT extends OneWaySSLBase {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             LOG.info("Client connected.");
             handshaker.handshake(ctx.channel());
+            this.connected = true;
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
             LOG.info("Client disconnected.");
+            this.connected = false;
         }
 
         @Override
@@ -117,6 +134,7 @@ public class WebSocketIT extends OneWaySSLBase {
             if (!this.handshaker.isHandshakeComplete()) {
                 this.handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
                 LOG.info("Client connected.");
+                this.connected = true;
                 this.handshakeFuture.setSuccess();
                 return;
             }
@@ -139,34 +157,52 @@ public class WebSocketIT extends OneWaySSLBase {
             }
         }
 
+        public boolean isConnected() {
+            return connected;
+        }
+
+    }
+
+    @AfterClass
+    public static void after() {
+        AuthCache.resetSessionMaxAge();
+    }
+
+    private EventLoopGroup group = null;
+    private Channel ch = null;
+    private ClientHandler handler = null;
+    private Server s = null;
+
+    @Before
+    public void setup() throws Exception {
+        s = new Server(conf);
+        AuthCache.getCache().put("1234", new UsernamePasswordAuthenticationToken("test", "test1"));
+        group = new NioEventLoopGroup();
+        SslContext ssl = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+        WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(LOCATION,
+                WebSocketVersion.V13, (String) null, false, (HttpHeaders) new DefaultHttpHeaders());
+        handler = new ClientHandler(handshaker);
+        Bootstrap boot = new Bootstrap();
+        boot.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
+
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast("ssl", ssl.newHandler(ch.alloc(), "127.0.0.1", WS_PORT));
+                ch.pipeline().addLast(new HttpClientCodec());
+                ch.pipeline().addLast(new HttpObjectAggregator(8192));
+                ch.pipeline().addLast(handler);
+            }
+        });
+        ch = boot.connect("127.0.0.1", WS_PORT).sync().channel();
+        // Wait until handshake is complete
+        while (!handshaker.isHandshakeComplete()) {
+            UtilWaitThread.sleep(500L);
+        }
     }
 
     @Test
     public void testClientDisappears() throws Exception {
-        final EventLoopGroup group = new NioEventLoopGroup();
-        final Server s = new Server(conf);
         try {
-            SslContext ssl = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-            WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(LOCATION,
-                    WebSocketVersion.V13, (String) null, false, (HttpHeaders) new DefaultHttpHeaders());
-            final ClientHandler handler = new ClientHandler(handshaker);
-            Bootstrap boot = new Bootstrap();
-            boot.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
-
-                @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast("ssl", ssl.newHandler(ch.alloc(), "127.0.0.1", WS_PORT));
-                    ch.pipeline().addLast(new HttpClientCodec());
-                    ch.pipeline().addLast(new HttpObjectAggregator(8192));
-                    ch.pipeline().addLast(handler);
-                }
-            });
-            Channel ch = boot.connect("127.0.0.1", WS_PORT).sync().channel();
-            // Wait until handshake is complete
-            while (!handshaker.isHandshakeComplete()) {
-                UtilWaitThread.sleep(500L);
-            }
-
             final String sessionId = "1235";
             CreateSubscription c = new CreateSubscription();
             c.setSessionId(sessionId);
@@ -189,7 +225,7 @@ public class WebSocketIT extends OneWaySSLBase {
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add)));
 
             List<String> response = handler.getResponses();
-            while (response.size() == 0) {
+            while (response.size() == 0 && handler.isConnected()) {
                 LOG.info("Waiting for web socket response");
                 UtilWaitThread.sleep(500L);
                 response = handler.getResponses();
@@ -216,11 +252,8 @@ public class WebSocketIT extends OneWaySSLBase {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
                 Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse()));
             }
-
-            // Close client channel
-            ch.close().sync();
-
         } finally {
+            ch.close().sync();
             s.shutdown();
             group.shutdownGracefully();
         }
@@ -228,30 +261,7 @@ public class WebSocketIT extends OneWaySSLBase {
 
     @Test
     public void testSubscriptionWorkflow() throws Exception {
-        final EventLoopGroup group = new NioEventLoopGroup();
-        final Server s = new Server(conf);
         try {
-            SslContext ssl = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-            WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(LOCATION,
-                    WebSocketVersion.V13, (String) null, false, (HttpHeaders) new DefaultHttpHeaders());
-            final ClientHandler handler = new ClientHandler(handshaker);
-            Bootstrap boot = new Bootstrap();
-            boot.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
-
-                @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast("ssl", ssl.newHandler(ch.alloc(), "127.0.0.1", WS_PORT));
-                    ch.pipeline().addLast(new HttpClientCodec());
-                    ch.pipeline().addLast(new HttpObjectAggregator(8192));
-                    ch.pipeline().addLast(handler);
-                }
-            });
-            Channel ch = boot.connect("127.0.0.1", WS_PORT).sync().channel();
-            // Wait until handshake is complete
-            while (!handshaker.isHandshakeComplete()) {
-                UtilWaitThread.sleep(500L);
-            }
-
             final String sessionId = "1234";
             CreateSubscription c = new CreateSubscription();
             c.setSessionId(sessionId);
@@ -274,7 +284,7 @@ public class WebSocketIT extends OneWaySSLBase {
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add)));
 
             List<String> response = handler.getResponses();
-            while (response.size() == 0) {
+            while (response.size() == 0 && handler.isConnected()) {
                 LOG.info("Waiting for web socket response");
                 UtilWaitThread.sleep(500L);
                 response = handler.getResponses();
@@ -312,12 +322,11 @@ public class WebSocketIT extends OneWaySSLBase {
             UtilWaitThread.sleep(5000L);
 
             response = handler.getResponses();
-            while (response.size() == 0) {
+            while (response.size() == 0 && handler.isConnected()) {
                 LOG.info("Waiting for web socket response");
                 UtilWaitThread.sleep(500L);
                 response = handler.getResponses();
             }
-            ;
 
             // confirm data
             first = new Metric();
@@ -354,12 +363,11 @@ public class WebSocketIT extends OneWaySSLBase {
 
             // Confirm receipt of all data sent to this point
             response = handler.getResponses();
-            while (response.size() == 0) {
+            while (response.size() == 0 && handler.isConnected()) {
                 LOG.info("Waiting for web socket response");
                 UtilWaitThread.sleep(500L);
                 response = handler.getResponses();
             }
-            ;
             first = new Metric();
             first.setMetric("sys.cpu.idle");
             first.setTimestamp(TEST_TIME + 2);
@@ -416,17 +424,120 @@ public class WebSocketIT extends OneWaySSLBase {
             CloseSubscription close = new CloseSubscription();
             close.setSessionId(sessionId);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(close)));
-
-            // Close client channel
-            ch.close().sync();
         } finally {
+            ch.close().sync();
             s.shutdown();
             group.shutdownGracefully();
         }
     }
 
-    // TODO: aggregators
+    @Test
+    public void testWSAggregators() throws Exception {
+        try {
+            AggregatorsRequest request = new AggregatorsRequest();
+            request.setSessionId("1234");
+            ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(request)));
+            // Latency in TestConfiguration is 3s, wait for it
+            UtilWaitThread.sleep(5000L);
 
-    // TODO: metrics
+            // Confirm receipt of all data sent to this point
+            List<String> response = handler.getResponses();
+            while (response.size() == 0 && handler.isConnected()) {
+                LOG.info("Waiting for web socket response");
+                UtilWaitThread.sleep(500L);
+                response = handler.getResponses();
+            }
+            Assert.assertEquals(1, response.size());
+            AggregatorsResponse agg = JsonUtil.getObjectMapper().readValue(response.get(0), AggregatorsResponse.class);
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
+    }
 
+    @Test
+    public void testWSMetrics() throws Exception {
+        try {
+            MetricsRequest request = new MetricsRequest();
+            request.setSessionId("1234");
+            ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(request)));
+
+            // Confirm receipt of all data sent to this point
+            List<String> response = handler.getResponses();
+            while (response.size() == 0 && handler.isConnected()) {
+                LOG.info("Waiting for web socket response");
+                UtilWaitThread.sleep(500L);
+                response = handler.getResponses();
+            }
+            Assert.assertEquals(1, response.size());
+            Assert.assertEquals("{\"metrics\":[]}", response.get(0));
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testWSQuery() throws Exception {
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
+                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
+                    + " 2.0 tag1=value1 tag3=value3 viz=secret");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+
+            // @formatter:off
+            String request =
+            "{"+
+            "    \"operation\" : \"query\","+
+            "    \"sessionId\" : \"1234\","+
+            "    \"start\": "+TEST_TIME+","+
+            "    \"end\": "+(TEST_TIME+6000)+","+
+            "    \"queries\": ["+
+            "        {"+
+            "            \"aggregator\": \"sum\","+
+            "            \"metric\": \"sys.cpu.user\","+
+            "            \"rate\": \"true\","+
+            "            \"rateOptions\": "+
+            "                {\"counter\":false,\"counterMax\":100,\"resetValue\":0},"+
+            "            \"downsample\":\"1s-max\"," +
+            "            \"tags\": {"+
+            "                   \"tag1\": \".*\"" +
+            "            }"+
+            "        }"+
+            "    ]"+
+            "}";
+            // @formatter:on
+            ch.writeAndFlush(new TextWebSocketFrame(request));
+
+            // Confirm receipt of all data sent to this point
+            List<String> response = handler.getResponses();
+            while (response.size() == 0 && handler.isConnected()) {
+                LOG.info("Waiting for web socket response");
+                UtilWaitThread.sleep(500L);
+                response = handler.getResponses();
+            }
+            assertEquals(1, response.size());
+            System.out.println(response.get(0));
+
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
+                    .constructCollectionType(List.class, QueryResponse.class);
+            List<QueryResponse> results = JsonUtil.getObjectMapper().readValue(response.get(0), type);
+
+            assertEquals(1, results.size());
+            QueryResponse query = results.get(0);
+            assertEquals("sys.cpu.user", query.getMetric());
+            assertEquals(1, query.getTags().size());
+            assertTrue(query.getTags().containsKey("tag1"));
+            assertEquals("value1", query.getTags().get("tag1"));
+            assertEquals(2, query.getDps().size());
+
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
+
+    }
 }

@@ -98,10 +98,8 @@ public class MetricsResponse {
             }
         }
         String result = null;
-        Object responseType = Constants.HTML_TYPE;
         if (negotiatedType.equals(MediaType.APPLICATION_JSON)) {
             result = this.generateJson(JsonUtil.getObjectMapper());
-            responseType = Constants.JSON_TYPE;
         } else {
             result = this.generateHtml().toString();
         }
