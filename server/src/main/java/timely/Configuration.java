@@ -85,7 +85,6 @@ public class Configuration {
     public static final String SESSION_MAX_AGE = "timely.session.max.age";
     public static final long SESSION_MAX_AGE_DEFAULT = 86400;
     public static final String TIMELY_HTTP_HOST = "timely.http.host";
-    public static final String GRAFANA_HTTP_ADDRESS = "grafana.http.address";
     public static final String ALLOW_ANONYMOUS_ACCESS = "timely.allow.anonymous.access";
     private static final String ALLOW_ANONYMOUS_ACCESS_DEFAULT = "false";
 
@@ -110,7 +109,6 @@ public class Configuration {
         REQUIRED_PROPERTIES.add(USERNAME);
         REQUIRED_PROPERTIES.add(PASSWORD);
         REQUIRED_PROPERTIES.add(TIMELY_HTTP_HOST);
-        REQUIRED_PROPERTIES.add(GRAFANA_HTTP_ADDRESS);
     };
 
     private final Properties props = new Properties();

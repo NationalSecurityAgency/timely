@@ -121,7 +121,7 @@ public class TwoWaySSLOpenSSLIT extends BaseQueryIT {
         if (401 == responseCode) {
             throw new UnauthorizedUserException();
         }
-        Assert.assertEquals(307, responseCode);
+        Assert.assertEquals(200, responseCode);
         List<String> cookies = con.getHeaderFields().get(Names.SET_COOKIE);
         Assert.assertEquals(1, cookies.size());
         Cookie sessionCookie = ClientCookieDecoder.STRICT.decode(cookies.get(0));

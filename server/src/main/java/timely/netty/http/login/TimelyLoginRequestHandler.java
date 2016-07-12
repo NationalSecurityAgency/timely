@@ -29,7 +29,6 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
 
     private long maxAge = Configuration.SESSION_MAX_AGE_DEFAULT;
     private String domain = null;
-    private String redirect = null;
 
     public TimelyLoginRequestHandler(Configuration conf) {
         String ma = conf.get(Configuration.SESSION_MAX_AGE);
@@ -37,7 +36,6 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
             maxAge = Long.parseLong(ma);
         }
         domain = conf.get(Configuration.TIMELY_HTTP_HOST);
-        redirect = conf.get(Configuration.GRAFANA_HTTP_ADDRESS);
     }
 
     @Override
@@ -48,11 +46,9 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
             LOG.trace("Authenticated {}", auth);
             String sessionId = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
             AuthCache.getCache().put(sessionId, auth);
-            FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                    HttpResponseStatus.TEMPORARY_REDIRECT);
+            FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
             response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
-            response.headers().set(Names.LOCATION, redirect);
             DefaultCookie cookie = new DefaultCookie(Constants.COOKIE_NAME, sessionId);
             cookie.setDomain(domain);
             cookie.setMaxAge(maxAge);

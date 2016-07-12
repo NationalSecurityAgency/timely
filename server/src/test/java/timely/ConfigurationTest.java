@@ -32,7 +32,6 @@ public class ConfigurationTest {
             writer.write(Configuration.USERNAME + "=root\n");
             writer.write(Configuration.PASSWORD + "=secret\n");
             writer.write(Configuration.TIMELY_HTTP_HOST + "=localhost\n");
-            writer.write(Configuration.GRAFANA_HTTP_ADDRESS + "=http://localhost:3000/\n");
             writer.write(Configuration.SSL_USE_GENERATED_KEYPAIR + "=true\n");
         }
         new Configuration(conf);
@@ -52,7 +51,6 @@ public class ConfigurationTest {
             writer.write(Configuration.USERNAME + "=root\n");
             writer.write(Configuration.PASSWORD + "=secret\n");
             writer.write(Configuration.TIMELY_HTTP_HOST + "=localhost\n");
-            writer.write(Configuration.GRAFANA_HTTP_ADDRESS + "=http://localhost:3000/\n");
         }
         new Configuration(conf);
     }
@@ -71,7 +69,6 @@ public class ConfigurationTest {
             writer.write(Configuration.USERNAME + "=root\n");
             writer.write(Configuration.PASSWORD + "=secret\n");
             writer.write(Configuration.TIMELY_HTTP_HOST + "=localhost\n");
-            writer.write(Configuration.GRAFANA_HTTP_ADDRESS + "=http://localhost:3000/\n");
             writer.write(Configuration.SSL_CERTIFICATE_FILE + "=/tmp/foo\n");
             writer.write(Configuration.SSL_PRIVATE_KEY_FILE + "=/tmp/bar\n");
         }
