@@ -28,6 +28,7 @@ import timely.api.request.CreateSubscription;
 import timely.api.request.MetricsRequest;
 import timely.api.request.QueryRequest;
 import timely.api.request.RemoveSubscription;
+import timely.api.request.SearchLookupRequest;
 import timely.api.request.VersionRequest;
 import timely.auth.AuthCache;
 import timely.test.CaptureChannelHandlerContext;
@@ -262,4 +263,16 @@ public class WebSocketRequestDecoderTest {
         Assert.assertEquals(QueryRequest.class, results.get(0).getClass());
     }
 
+    @Test
+    public void testLookup() throws Exception {
+        String request = "{ \"operation\" : \"lookup\", \"sessionId\" : \"1234\", \"metric\" : \"sys.cpu.user\" }";
+        CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
+        decoder = new WebSocketRequestDecoder(anonConfig);
+        TextWebSocketFrame frame = new TextWebSocketFrame();
+        frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));
+        decoder.decode(ctx, frame, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(SearchLookupRequest.class, results.get(0).getClass());
+
+    }
 }

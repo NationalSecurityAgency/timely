@@ -46,8 +46,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
-import com.fasterxml.jackson.databind.JavaType;
-
 import timely.Server;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
@@ -60,10 +58,14 @@ import timely.api.request.RemoveSubscription;
 import timely.api.response.AggregatorsResponse;
 import timely.api.response.MetricResponse;
 import timely.api.response.QueryResponse;
+import timely.api.response.SearchLookupResponse;
+import timely.api.response.SearchLookupResponse.Result;
 import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
+
+import com.fasterxml.jackson.databind.JavaType;
 
 @Category(IntegrationTest.class)
 public class WebSocketIT extends OneWaySSLBase {
@@ -448,7 +450,7 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
             Assert.assertEquals(1, response.size());
-            AggregatorsResponse agg = JsonUtil.getObjectMapper().readValue(response.get(0), AggregatorsResponse.class);
+            JsonUtil.getObjectMapper().readValue(response.get(0), AggregatorsResponse.class);
         } finally {
             ch.close().sync();
             s.shutdown();
@@ -519,7 +521,6 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
             assertEquals(1, response.size());
-            System.out.println(response.get(0));
 
             JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
                     .constructCollectionType(List.class, QueryResponse.class);
@@ -538,6 +539,46 @@ public class WebSocketIT extends OneWaySSLBase {
             s.shutdown();
             group.shutdownGracefully();
         }
+    }
 
+    @Test
+    public void testWSLookup() throws Exception {
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
+                    + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+            sleepUninterruptibly(8, TimeUnit.SECONDS);
+
+            // @formatter:off
+            String request = "{"+
+            		"\"operation\" : \"lookup\","+
+            		"\"sessionId\" : \"1234\","+
+            		"\"metric\" : \"sys.cpu.idle\","+
+            		"\"tags\" : ["+
+            			"\"tag3=*\""+
+            		"]"+
+    	    "}";
+            // @formatter:on
+            ch.writeAndFlush(new TextWebSocketFrame(request));
+
+            // Confirm receipt of all data sent to this point
+            List<String> response = handler.getResponses();
+            while (response.size() == 0 && handler.isConnected()) {
+                LOG.info("Waiting for web socket response");
+                UtilWaitThread.sleep(500L);
+                response = handler.getResponses();
+            }
+            assertEquals(1, response.size());
+            SearchLookupResponse r = JsonUtil.getObjectMapper().readValue(response.get(0), SearchLookupResponse.class);
+            assertEquals(1, r.getResults().size());
+            Result lookupResult = r.getResults().get(0);
+            assertEquals(1, lookupResult.getTags().size());
+            assertEquals("value3", lookupResult.getTags().get("tag3"));
+
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
     }
 }

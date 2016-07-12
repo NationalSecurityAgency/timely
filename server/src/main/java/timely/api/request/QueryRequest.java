@@ -481,6 +481,8 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
 
     @Override
     public HttpPostRequest parseBody(String content) throws Exception {
+        // Add the operation node to the json if it does not exist for proper
+        // parsing
         JsonNode root = JsonUtil.getObjectMapper().readValue(content, JsonNode.class);
         JsonNode operation = root.findValue("operation");
         if (null == operation) {

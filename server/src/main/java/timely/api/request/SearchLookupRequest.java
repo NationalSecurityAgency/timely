@@ -10,13 +10,17 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import timely.api.annotation.Http;
+import timely.api.annotation.WebSocket;
 import timely.api.model.Tag;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Http(path = "/api/search/lookup")
-public class SearchLookupRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest {
+@WebSocket(operation = "lookup")
+public class SearchLookupRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest,
+        WebSocketRequest {
 
     @JsonProperty("metric")
     private String query;
@@ -93,6 +97,17 @@ public class SearchLookupRequest extends AuthenticatedRequest implements HttpGet
 
     @Override
     public HttpPostRequest parseBody(String content) throws Exception {
+        // Add the operation node to the json if it does not exist for proper
+        // parsing
+        JsonNode root = JsonUtil.getObjectMapper().readValue(content, JsonNode.class);
+        JsonNode operation = root.findValue("operation");
+        if (null == operation) {
+            StringBuilder buf = new StringBuilder(content.length() + 10);
+            buf.append("{ \"operation\" : \"lookup\", ");
+            int open = content.indexOf("{");
+            buf.append(content.substring(open + 1));
+            return JsonUtil.getObjectMapper().readValue(buf.toString(), SearchLookupRequest.class);
+        }
         return JsonUtil.getObjectMapper().readValue(content, SearchLookupRequest.class);
     }
 
