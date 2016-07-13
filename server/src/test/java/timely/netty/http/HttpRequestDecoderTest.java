@@ -839,7 +839,6 @@ public class HttpRequestDecoderTest {
         m.setTags(tags);
         m.setVisibility(Metric.EMPTY_VISIBILITY);
         byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(m);
-
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/put");
         request.content().writeBytes(buf);

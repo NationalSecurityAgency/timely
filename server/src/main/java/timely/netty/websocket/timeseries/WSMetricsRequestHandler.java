@@ -1,4 +1,4 @@
-package timely.netty.websocket;
+package timely.netty.websocket.timeseries;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;

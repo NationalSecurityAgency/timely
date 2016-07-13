@@ -1,4 +1,4 @@
-package timely.netty.http;
+package timely.netty.http.timeseries;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
+import timely.netty.http.TimelyHttpHandler;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
 

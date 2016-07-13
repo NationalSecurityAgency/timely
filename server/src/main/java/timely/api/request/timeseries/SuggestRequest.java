@@ -9,15 +9,19 @@ import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import timely.api.annotation.Http;
+import timely.api.annotation.WebSocket;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpGetRequest;
 import timely.api.request.HttpPostRequest;
+import timely.api.request.WebSocketRequest;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Http(path = "/api/suggest")
-public class SuggestRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest {
+@WebSocket(operation = "suggest")
+public class SuggestRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
     private static List<String> validTypes = new ArrayList<>();
     static {
@@ -73,6 +77,17 @@ public class SuggestRequest extends AuthenticatedRequest implements HttpGetReque
 
     @Override
     public HttpPostRequest parseBody(String content) throws Exception {
+        // Add the operation node to the json if it does not exist for proper
+        // parsing
+        JsonNode root = JsonUtil.getObjectMapper().readValue(content, JsonNode.class);
+        JsonNode operation = root.findValue("operation");
+        if (null == operation) {
+            StringBuilder buf = new StringBuilder(content.length() + 10);
+            buf.append("{ \"operation\" : \"suggest\", ");
+            int open = content.indexOf("{");
+            buf.append(content.substring(open + 1));
+            return JsonUtil.getObjectMapper().readValue(buf.toString(), SuggestRequest.class);
+        }
         return JsonUtil.getObjectMapper().readValue(content, SuggestRequest.class);
     }
 

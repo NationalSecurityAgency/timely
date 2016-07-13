@@ -1,4 +1,4 @@
-package timely.netty.http;
+package timely.netty.http.timeseries;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import timely.api.request.timeseries.AggregatorsRequest;
 import timely.api.response.timeseries.AggregatorsResponse;
 import timely.netty.Constants;
+import timely.netty.http.TimelyHttpHandler;
 import timely.sample.aggregators.Avg;
 import timely.sample.aggregators.Count;
 import timely.sample.aggregators.Dev;

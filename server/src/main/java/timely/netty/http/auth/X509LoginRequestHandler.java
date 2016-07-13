@@ -1,4 +1,4 @@
-package timely.netty.http.login;
+package timely.netty.http.auth;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.ssl.SslHandler;

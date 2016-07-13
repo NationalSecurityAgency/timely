@@ -1,4 +1,4 @@
-package timely.netty.websocket;
+package timely.netty.websocket.subscription;
 
 import java.util.Map;
 

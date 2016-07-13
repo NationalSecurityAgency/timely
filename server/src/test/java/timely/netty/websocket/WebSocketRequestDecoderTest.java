@@ -30,6 +30,7 @@ import timely.api.request.timeseries.AggregatorsRequest;
 import timely.api.request.timeseries.MetricsRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
+import timely.api.request.timeseries.SuggestRequest;
 import timely.auth.AuthCache;
 import timely.test.CaptureChannelHandlerContext;
 import timely.test.TestConfiguration;
@@ -89,12 +90,20 @@ public class WebSocketRequestDecoderTest {
     @Test
     public void testPutMetric() throws Exception {
         decoder = new WebSocketRequestDecoder(anonConfig);
-        String request = "{ \"operation\" : \"put\" }";
+        String request = "{" + "\"operation\" : \"put\",\n" + "\"metric\" : \"sys.cpu.user\",\n" + "\"timestamp\":"
+                + TEST_TIME + ",\n" + "\"value\":1.0,\n" + "\"tags\":[ {\n" + "\"key\":\"tag1\",\n"
+                + "\"value\":\"value1\"\n" + "},{\n" + "\"key\":\"tag2\",\n" + "\"value\":\"value2\"\n" + "}]\n" + "}";
+
         TextWebSocketFrame frame = new TextWebSocketFrame();
         frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));
         decoder.decode(null, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(Metric.class, results.get(0).getClass());
+        Metric metric = (Metric) results.iterator().next();
+        Assert.assertEquals("sys.cpu.user", metric.getMetric());
+        Assert.assertEquals(TEST_TIME, (Long) metric.getTimestamp());
+        Assert.assertEquals(1.0D, metric.getValue(), 0.0D);
+        Assert.assertEquals(2, metric.getTags().size());
     }
 
     @Test
@@ -147,6 +156,8 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(CreateSubscription.class, results.get(0).getClass());
+        CreateSubscription create = (CreateSubscription) results.iterator().next();
+        create.validate();
     }
 
     @Test
@@ -159,6 +170,8 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(AddSubscription.class, results.get(0).getClass());
+        AddSubscription add = (AddSubscription) results.iterator().next();
+        add.validate();
     }
 
     @Test
@@ -171,6 +184,8 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(RemoveSubscription.class, results.get(0).getClass());
+        RemoveSubscription remove = (RemoveSubscription) results.iterator().next();
+        remove.validate();
     }
 
     @Test
@@ -183,6 +198,8 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(CloseSubscription.class, results.get(0).getClass());
+        CloseSubscription close = (CloseSubscription) results.iterator().next();
+        close.validate();
     }
 
     @Test
@@ -195,6 +212,8 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(AggregatorsRequest.class, results.get(0).getClass());
+        AggregatorsRequest agg = (AggregatorsRequest) results.iterator().next();
+        agg.validate();
     }
 
     @Test
@@ -207,6 +226,8 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(MetricsRequest.class, results.get(0).getClass());
+        MetricsRequest metrics = (MetricsRequest) results.iterator().next();
+        metrics.validate();
     }
 
     @Test
@@ -261,6 +282,8 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(QueryRequest.class, results.get(0).getClass());
+        QueryRequest query = (QueryRequest) results.iterator().next();
+        query.validate();
     }
 
     @Test
@@ -273,6 +296,34 @@ public class WebSocketRequestDecoderTest {
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(SearchLookupRequest.class, results.get(0).getClass());
+        SearchLookupRequest lookup = (SearchLookupRequest) results.iterator().next();
+        Assert.assertEquals("sys.cpu.user", lookup.getQuery());
+        lookup.validate();
+    }
 
+    @Test
+    public void testSuggest() throws Exception {
+        // @formatter:off
+    	String request = 
+    			"{\n" +
+    			"    \"operation\" : \"suggest\",\n" +
+    	        "    \"sessionId\" : \"1234\",\n" +
+    	        "    \"type\": \"metrics\",\n" +
+    	        "    \"q\": \"sys.cpu.user\",\n" +
+    	        "    \"max\": 30\n" +    			
+    			"}";
+    	// @formatter:on
+        CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
+        decoder = new WebSocketRequestDecoder(anonConfig);
+        TextWebSocketFrame frame = new TextWebSocketFrame();
+        frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));
+        decoder.decode(ctx, frame, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(SuggestRequest.class, results.get(0).getClass());
+        SuggestRequest suggest = (SuggestRequest) results.iterator().next();
+        Assert.assertEquals("metrics", suggest.getType());
+        Assert.assertEquals("sys.cpu.user", suggest.getQuery().get());
+        Assert.assertEquals(30, suggest.getMax());
+        suggest.validate();
     }
 }

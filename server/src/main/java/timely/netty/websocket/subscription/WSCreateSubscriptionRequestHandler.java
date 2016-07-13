@@ -1,4 +1,4 @@
-package timely.netty.websocket;
+package timely.netty.websocket.subscription;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

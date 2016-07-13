@@ -1,4 +1,4 @@
-package timely.netty.websocket;
+package timely.netty.websocket.timeseries;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -10,12 +10,11 @@ import org.slf4j.LoggerFactory;
 
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
-import timely.netty.http.HttpQueryRequestHandler;
-import timely.netty.http.TimelyHttpHandler;
+import timely.netty.http.timeseries.HttpQueryRequestHandler;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
 
-public class WSQueryRequestHandler extends SimpleChannelInboundHandler<QueryRequest> implements TimelyHttpHandler {
+public class WSQueryRequestHandler extends SimpleChannelInboundHandler<QueryRequest> {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpQueryRequestHandler.class);
     private final DataStore dataStore;

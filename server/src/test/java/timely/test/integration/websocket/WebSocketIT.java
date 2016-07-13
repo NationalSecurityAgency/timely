@@ -60,6 +60,7 @@ import timely.api.response.timeseries.AggregatorsResponse;
 import timely.api.response.timeseries.QueryResponse;
 import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
+import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
 import timely.test.integration.OneWaySSLBase;
@@ -575,6 +576,45 @@ public class WebSocketIT extends OneWaySSLBase {
             assertEquals(1, lookupResult.getTags().size());
             assertEquals("value3", lookupResult.getTags().get("tag3"));
 
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testWSSuggest() throws Exception {
+        try {
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
+                    + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
+            sleepUninterruptibly(10, TimeUnit.SECONDS);
+
+            // @formatter:off
+        	String request = 
+        			"{\n" +
+        			"    \"operation\" : \"suggest\",\n" +
+        	        "    \"sessionId\" : \"1234\",\n" +
+        	        "    \"type\": \"metrics\",\n" +
+        	        "    \"q\": \"sys.cpu.user\",\n" +
+        	        "    \"max\": 30\n" +    			
+        			"}";
+        	// @formatter:on
+            ch.writeAndFlush(new TextWebSocketFrame(request));
+
+            // Confirm receipt of all data sent to this point
+            List<String> response = handler.getResponses();
+            while (response.size() == 0 && handler.isConnected()) {
+                LOG.info("Waiting for web socket response");
+                UtilWaitThread.sleep(500L);
+                response = handler.getResponses();
+            }
+            assertEquals(1, response.size());
+            System.out.println(response.get(0));
+            SuggestResponse r = JsonUtil.getObjectMapper().readValue(response.get(0), SuggestResponse.class);
+            assertEquals(1, r.getSuggestions().size());
+            assertEquals("sys.cpu.user", r.getSuggestions().get(0));
         } finally {
             ch.close().sync();
             s.shutdown();

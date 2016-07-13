@@ -29,6 +29,7 @@ import timely.api.request.auth.BasicAuthLoginRequest;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.netty.http.HttpRequestDecoder;
+import timely.netty.http.auth.BasicAuthLoginRequestHandler;
 import timely.test.CaptureChannelHandlerContext;
 import timely.test.TestConfiguration;
 

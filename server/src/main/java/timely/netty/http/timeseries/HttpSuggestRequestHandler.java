@@ -1,4 +1,4 @@
-package timely.netty.http;
+package timely.netty.http.timeseries;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -12,32 +12,29 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.request.timeseries.QueryRequest;
+import timely.api.request.timeseries.SuggestRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
+import timely.netty.http.TimelyHttpHandler;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
 
-public class HttpQueryRequestHandler extends SimpleChannelInboundHandler<QueryRequest> implements TimelyHttpHandler {
+public class HttpSuggestRequestHandler extends SimpleChannelInboundHandler<SuggestRequest> implements TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpQueryRequestHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HttpSuggestRequestHandler.class);
     private final DataStore dataStore;
 
-    public HttpQueryRequestHandler(DataStore dataStore) {
+    public HttpSuggestRequestHandler(DataStore dataStore) {
         this.dataStore = dataStore;
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, QueryRequest msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, SuggestRequest msg) throws Exception {
         byte[] buf = null;
         try {
-            buf = JsonUtil.getObjectMapper().writeValueAsBytes(dataStore.query(msg));
+            buf = JsonUtil.getObjectMapper().writeValueAsBytes(dataStore.suggest(msg));
         } catch (TimelyException e) {
-            if (e.getMessage().contains("No matching tags")) {
-                LOG.trace(e.getMessage());
-            } else {
-                LOG.error(e.getMessage(), e);
-            }
+            LOG.error(e.getMessage(), e);
             this.sendHttpError(ctx, e);
             return;
         }
