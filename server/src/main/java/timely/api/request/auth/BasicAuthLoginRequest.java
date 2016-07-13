@@ -1,6 +1,7 @@
-package timely.api.request;
+package timely.api.request.auth;
 
 import timely.api.annotation.Http;
+import timely.api.request.HttpPostRequest;
 import timely.util.JsonUtil;
 
 @Http(path = "/login")

@@ -1,6 +1,7 @@
-package timely.api.request;
+package timely.api.request.subscription;
 
 import timely.api.annotation.WebSocket;
+import timely.api.request.AuthenticatedWebSocketRequest;
 
 @WebSocket(operation = "remove")
 public class RemoveSubscription extends AuthenticatedWebSocketRequest {

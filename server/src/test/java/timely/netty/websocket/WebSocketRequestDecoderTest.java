@@ -21,15 +21,15 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 
 import timely.Configuration;
 import timely.api.model.Metric;
-import timely.api.request.AddSubscription;
-import timely.api.request.AggregatorsRequest;
-import timely.api.request.CloseSubscription;
-import timely.api.request.CreateSubscription;
-import timely.api.request.MetricsRequest;
-import timely.api.request.QueryRequest;
-import timely.api.request.RemoveSubscription;
-import timely.api.request.SearchLookupRequest;
 import timely.api.request.VersionRequest;
+import timely.api.request.subscription.AddSubscription;
+import timely.api.request.subscription.CloseSubscription;
+import timely.api.request.subscription.CreateSubscription;
+import timely.api.request.subscription.RemoveSubscription;
+import timely.api.request.timeseries.AggregatorsRequest;
+import timely.api.request.timeseries.MetricsRequest;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.request.timeseries.SearchLookupRequest;
 import timely.auth.AuthCache;
 import timely.test.CaptureChannelHandlerContext;
 import timely.test.TestConfiguration;

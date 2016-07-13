@@ -3,8 +3,8 @@ package timely.netty.websocket;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import timely.api.request.AggregatorsRequest;
-import timely.api.response.AggregatorsResponse;
+import timely.api.request.timeseries.AggregatorsRequest;
+import timely.api.response.timeseries.AggregatorsResponse;
 import timely.netty.http.TimelyHttpHandler;
 import timely.util.JsonUtil;
 

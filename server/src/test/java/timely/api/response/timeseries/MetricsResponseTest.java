@@ -1,4 +1,4 @@
-package timely.api.response;
+package timely.api.response.timeseries;
 
 import java.io.File;
 
@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import timely.Configuration;
 import timely.api.model.Meta;
-import timely.api.response.MetricsResponse;
+import timely.api.response.timeseries.MetricsResponse;
 import timely.store.MetaCache;
 import timely.store.MetaCacheFactory;
 import timely.test.TestConfiguration;

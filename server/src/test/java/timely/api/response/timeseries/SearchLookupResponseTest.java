@@ -1,4 +1,4 @@
-package timely.api.response;
+package timely.api.response.timeseries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,8 +6,8 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
-import timely.api.response.SearchLookupResponse;
-import timely.api.response.SearchLookupResponse.Result;
+import timely.api.response.timeseries.SearchLookupResponse;
+import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.util.JsonUtil;
 
 public class SearchLookupResponseTest {

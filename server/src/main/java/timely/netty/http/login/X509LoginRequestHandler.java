@@ -9,7 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 
 import timely.Configuration;
-import timely.api.request.X509LoginRequest;
+import timely.api.request.auth.X509LoginRequest;
 import timely.auth.AuthenticationService;
 
 public class X509LoginRequestHandler extends TimelyLoginRequestHandler<X509LoginRequest> {

@@ -1,11 +1,11 @@
-package timely.api.response;
+package timely.api.response.timeseries;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import timely.api.response.AggregatorsResponse.AggregatorsResponseDeserializer;
-import timely.api.response.AggregatorsResponse.AggregatorsResponseSerializer;
+import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseDeserializer;
+import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseSerializer;
 import timely.sample.aggregators.Avg;
 import timely.sample.aggregators.Count;
 import timely.sample.aggregators.Dev;

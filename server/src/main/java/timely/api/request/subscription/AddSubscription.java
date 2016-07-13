@@ -1,9 +1,10 @@
-package timely.api.request;
+package timely.api.request.subscription;
 
 import java.util.Map;
 import java.util.Optional;
 
 import timely.api.annotation.WebSocket;
+import timely.api.request.AuthenticatedWebSocketRequest;
 
 @WebSocket(operation = "add")
 public class AddSubscription extends AuthenticatedWebSocketRequest {

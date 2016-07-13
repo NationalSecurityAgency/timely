@@ -1,15 +1,15 @@
-package timely.api.request;
+package timely.api.request.subscription;
 
 import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import timely.api.request.AddSubscription;
-import timely.api.request.CloseSubscription;
-import timely.api.request.CreateSubscription;
-import timely.api.request.RemoveSubscription;
 import timely.api.request.WebSocketRequest;
+import timely.api.request.subscription.AddSubscription;
+import timely.api.request.subscription.CloseSubscription;
+import timely.api.request.subscription.CreateSubscription;
+import timely.api.request.subscription.RemoveSubscription;
 import timely.util.JsonUtil;
 
 public class WebSocketRequestDeserializationTest {

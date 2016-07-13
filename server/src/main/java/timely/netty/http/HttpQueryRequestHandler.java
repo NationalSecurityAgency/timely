@@ -12,7 +12,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.request.QueryRequest;
+import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
 import timely.store.DataStore;

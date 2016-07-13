@@ -1,4 +1,4 @@
-package timely.api.response;
+package timely.api.response.timeseries;
 
 import java.util.ArrayList;
 import java.util.HashMap;

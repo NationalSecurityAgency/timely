@@ -1,4 +1,4 @@
-package timely.api.response;
+package timely.api.response.timeseries;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;

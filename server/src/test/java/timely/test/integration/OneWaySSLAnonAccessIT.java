@@ -12,9 +12,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import timely.Server;
-import timely.api.request.QueryRequest;
-import timely.api.request.QueryRequest.SubQuery;
-import timely.api.response.QueryResponse;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.request.timeseries.QueryRequest.SubQuery;
+import timely.api.response.timeseries.QueryResponse;
 import timely.test.IntegrationTest;
 
 /**

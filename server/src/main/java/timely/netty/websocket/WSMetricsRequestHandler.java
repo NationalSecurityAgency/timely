@@ -3,8 +3,8 @@ package timely.netty.websocket;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import timely.Configuration;
-import timely.api.request.MetricsRequest;
-import timely.api.response.MetricsResponse;
+import timely.api.request.timeseries.MetricsRequest;
+import timely.api.response.timeseries.MetricsResponse;
 import timely.netty.http.TimelyHttpHandler;
 
 public class WSMetricsRequestHandler extends SimpleChannelInboundHandler<MetricsRequest> implements TimelyHttpHandler {

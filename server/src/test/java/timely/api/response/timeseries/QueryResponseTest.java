@@ -1,11 +1,11 @@
-package timely.api.response;
+package timely.api.response.timeseries;
 
 import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import timely.api.response.QueryResponse;
+import timely.api.response.timeseries.QueryResponse;
 import timely.util.JsonUtil;
 
 public class QueryResponseTest {

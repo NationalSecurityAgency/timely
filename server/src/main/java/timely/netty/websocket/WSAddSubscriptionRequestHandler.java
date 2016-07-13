@@ -5,7 +5,7 @@ import java.util.Map;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import timely.api.request.AddSubscription;
+import timely.api.request.subscription.AddSubscription;
 import timely.netty.http.TimelyHttpHandler;
 import timely.subscription.Subscription;
 import timely.subscription.SubscriptionRegistry;

@@ -1,4 +1,4 @@
-package timely.api.request;
+package timely.api.request.timeseries;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 
@@ -14,6 +14,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import timely.api.annotation.Http;
 import timely.api.annotation.WebSocket;
+import timely.api.request.AuthenticatedRequest;
+import timely.api.request.HttpGetRequest;
+import timely.api.request.HttpPostRequest;
+import timely.api.request.WebSocketRequest;
 import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;

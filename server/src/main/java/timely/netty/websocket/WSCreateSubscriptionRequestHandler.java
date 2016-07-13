@@ -5,7 +5,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import timely.Configuration;
-import timely.api.request.CreateSubscription;
+import timely.api.request.subscription.CreateSubscription;
 import timely.netty.http.TimelyHttpHandler;
 import timely.store.DataStore;
 import timely.subscription.Subscription;

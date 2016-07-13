@@ -25,7 +25,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import timely.Configuration;
-import timely.api.request.BasicAuthLoginRequest;
+import timely.api.request.auth.BasicAuthLoginRequest;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.netty.http.HttpRequestDecoder;

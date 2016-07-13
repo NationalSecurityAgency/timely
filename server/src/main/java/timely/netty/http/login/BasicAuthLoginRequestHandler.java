@@ -7,7 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 
 import timely.Configuration;
-import timely.api.request.BasicAuthLoginRequest;
+import timely.api.request.auth.BasicAuthLoginRequest;
 import timely.auth.AuthenticationService;
 
 public class BasicAuthLoginRequestHandler extends TimelyLoginRequestHandler<BasicAuthLoginRequest> {

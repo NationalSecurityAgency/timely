@@ -1,4 +1,4 @@
-package timely.api.response;
+package timely.api.response.timeseries;
 
 import java.io.IOException;
 import java.util.ArrayList;
