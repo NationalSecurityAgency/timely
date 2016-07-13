@@ -34,7 +34,8 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
                     + " 2.0 tag1=value1 tag3=value3 viz=secret");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

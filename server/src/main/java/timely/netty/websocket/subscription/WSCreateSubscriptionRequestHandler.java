@@ -4,16 +4,19 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import timely.Configuration;
 import timely.api.request.subscription.CreateSubscription;
-import timely.netty.http.TimelyHttpHandler;
 import timely.store.DataStore;
 import timely.subscription.Subscription;
 import timely.subscription.SubscriptionRegistry;
 
-public class WSCreateSubscriptionRequestHandler extends SimpleChannelInboundHandler<CreateSubscription> implements
-        TimelyHttpHandler {
+public class WSCreateSubscriptionRequestHandler extends SimpleChannelInboundHandler<CreateSubscription> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(WSCreateSubscriptionRequestHandler.class);
     private final DataStore store;
     private final Configuration conf;
 

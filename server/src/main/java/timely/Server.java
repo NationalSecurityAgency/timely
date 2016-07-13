@@ -67,6 +67,8 @@ import timely.netty.http.timeseries.HttpSuggestRequestHandler;
 import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpPutHandler;
 import timely.netty.tcp.TcpVersionHandler;
+import timely.netty.websocket.WSMetricPutHandler;
+import timely.netty.websocket.WSVersionRequestHandler;
 import timely.netty.websocket.WebSocketRequestDecoder;
 import timely.netty.websocket.subscription.WSAddSubscriptionRequestHandler;
 import timely.netty.websocket.subscription.WSCloseSubscriptionRequestHandler;
@@ -449,15 +451,18 @@ public class Server {
                         new IdleStateHandler(Integer.parseInt(conf.get(Configuration.WS_TIMEOUT_SECONDS)), 0, 0));
                 ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
-                ch.pipeline().addLast("create", new WSCreateSubscriptionRequestHandler(dataStore, config));
-                ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
-                ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());
-                ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());
                 ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new WSMetricsRequestHandler(config));
                 ch.pipeline().addLast("query", new WSQueryRequestHandler(dataStore));
                 ch.pipeline().addLast("lookup", new WSSearchLookupRequestHandler(dataStore));
                 ch.pipeline().addLast("suggest", new WSSuggestRequestHandler(dataStore));
+                ch.pipeline().addLast("version", new WSVersionRequestHandler());
+                ch.pipeline().addLast("put", new WSMetricPutHandler(dataStore));
+                ch.pipeline().addLast("create", new WSCreateSubscriptionRequestHandler(dataStore, config));
+                ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
+                ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());
+                ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());
+
             }
         };
 

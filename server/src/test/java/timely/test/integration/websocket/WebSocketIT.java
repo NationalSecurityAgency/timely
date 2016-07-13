@@ -49,6 +49,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import timely.Server;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
+import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
 import timely.api.request.subscription.CreateSubscription;
@@ -217,8 +218,8 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
-            // Latency in TestConfiguration is 3s, wait for it
-            UtilWaitThread.sleep(5000L);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
@@ -276,8 +277,8 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
-            // Latency in TestConfiguration is 3s, wait for it
-            UtilWaitThread.sleep(5000L);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
@@ -321,8 +322,8 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
-            // Latency in TestConfiguration is 3s, wait for it
-            UtilWaitThread.sleep(5000L);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             response = handler.getResponses();
             while (response.size() == 0 && handler.isConnected()) {
@@ -361,8 +362,8 @@ public class WebSocketIT extends OneWaySSLBase {
             add2.setDelayTime(1000L);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add2)));
 
-            // Latency in TestConfiguration is 3s, wait for it
-            UtilWaitThread.sleep(5000L);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // Confirm receipt of all data sent to this point
             response = handler.getResponses();
@@ -440,8 +441,8 @@ public class WebSocketIT extends OneWaySSLBase {
             AggregatorsRequest request = new AggregatorsRequest();
             request.setSessionId("1234");
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(request)));
-            // Latency in TestConfiguration is 3s, wait for it
-            UtilWaitThread.sleep(5000L);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // Confirm receipt of all data sent to this point
             List<String> response = handler.getResponses();
@@ -488,7 +489,8 @@ public class WebSocketIT extends OneWaySSLBase {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
                     + " 2.0 tag1=value1 tag3=value3 viz=secret");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // @formatter:off
             String request =
@@ -548,7 +550,8 @@ public class WebSocketIT extends OneWaySSLBase {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // @formatter:off
             String request = "{"+
@@ -589,7 +592,8 @@ public class WebSocketIT extends OneWaySSLBase {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
-            sleepUninterruptibly(10, TimeUnit.SECONDS);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // @formatter:off
         	String request = 
@@ -615,6 +619,46 @@ public class WebSocketIT extends OneWaySSLBase {
             SuggestResponse r = JsonUtil.getObjectMapper().readValue(response.get(0), SuggestResponse.class);
             assertEquals(1, r.getSuggestions().size());
             assertEquals("sys.cpu.user", r.getSuggestions().get(0));
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testPutMetric() throws Exception {
+        try {
+            Metric m = new Metric();
+            m.setMetric("sys.cpu.user");
+            m.setTimestamp(TEST_TIME);
+            m.setValue(1.0D);
+            List<Tag> tags = new ArrayList<>();
+            tags.add(new Tag("tag1", "value1"));
+            m.setTags(tags);
+            String json = JsonUtil.getObjectMapper().writeValueAsString(m);
+            ch.writeAndFlush(new TextWebSocketFrame(json));
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testVersion() throws Exception {
+        try {
+            String request = "{ \"operation\" : \"version\" }";
+            ch.writeAndFlush(new TextWebSocketFrame(request));
+            // Confirm receipt of all data sent to this point
+            List<String> response = handler.getResponses();
+            while (response.size() == 0 && handler.isConnected()) {
+                LOG.info("Waiting for web socket response");
+                UtilWaitThread.sleep(500L);
+                response = handler.getResponses();
+            }
+            assertEquals(1, response.size());
+            assertEquals(VersionRequest.VERSION, response.get(0));
         } finally {
             ch.close().sync();
             s.shutdown();

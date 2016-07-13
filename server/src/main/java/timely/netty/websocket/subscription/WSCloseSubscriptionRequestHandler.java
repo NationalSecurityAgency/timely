@@ -3,12 +3,10 @@ package timely.netty.websocket.subscription;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import timely.api.request.subscription.CloseSubscription;
-import timely.netty.http.TimelyHttpHandler;
 import timely.subscription.Subscription;
 import timely.subscription.SubscriptionRegistry;
 
-public class WSCloseSubscriptionRequestHandler extends SimpleChannelInboundHandler<CloseSubscription> implements
-        TimelyHttpHandler {
+public class WSCloseSubscriptionRequestHandler extends SimpleChannelInboundHandler<CloseSubscription> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, CloseSubscription close) throws Exception {

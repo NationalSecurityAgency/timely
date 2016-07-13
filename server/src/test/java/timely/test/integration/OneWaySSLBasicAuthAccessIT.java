@@ -210,7 +210,8 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
                     + " 2.0 tag1=value1 tag3=value3 viz=A", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=D", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=G");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

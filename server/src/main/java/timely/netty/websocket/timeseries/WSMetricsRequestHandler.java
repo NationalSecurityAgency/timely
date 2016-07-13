@@ -5,9 +5,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import timely.Configuration;
 import timely.api.request.timeseries.MetricsRequest;
 import timely.api.response.timeseries.MetricsResponse;
-import timely.netty.http.TimelyHttpHandler;
 
-public class WSMetricsRequestHandler extends SimpleChannelInboundHandler<MetricsRequest> implements TimelyHttpHandler {
+public class WSMetricsRequestHandler extends SimpleChannelInboundHandler<MetricsRequest> {
 
     private Configuration conf = null;
 
@@ -18,7 +17,7 @@ public class WSMetricsRequestHandler extends SimpleChannelInboundHandler<Metrics
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MetricsRequest m) throws Exception {
         MetricsResponse r = new MetricsResponse(conf);
-        sendResponse(ctx, r.toWebSocketResponse("application/json"));
+        ctx.writeAndFlush(r.toWebSocketResponse("application/json"));
     }
 
 }
