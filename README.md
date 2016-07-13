@@ -208,7 +208,6 @@ timely.ssl.use.openssl | Use OpenSSL (vs JDK SSL) | true
 timely.ssl.use.ciphers | List of allowed SSL ciphers | see Configuration.java
 timely.session.max.age | Setting for max age of session cookie (in seconds) | 86400
 timely.http.host | Address for the Timely server, used for the session cookie domain |
-grafana.http.address | Address for the Grafana server |
 timely.allow.anonymous.access | Allow anonymous access | false
 timely.visibility.cache.expiration.minutes | Column Visibility Cache Expiration (minutes) | 60
 timely.visibility.cache.initial.capacity | Column Visibility Cache Initial Capacity | 2000

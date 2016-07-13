@@ -103,9 +103,7 @@ public class BasicAuthLoginRequestHandlerTest {
         Assert.assertNotNull(ctx.msg);
         Assert.assertTrue(ctx.msg instanceof DefaultFullHttpResponse);
         DefaultFullHttpResponse response = (DefaultFullHttpResponse) ctx.msg;
-        Assert.assertEquals(HttpResponseStatus.TEMPORARY_REDIRECT, response.getStatus());
-        Assert.assertTrue(response.headers().contains(Names.LOCATION));
-        Assert.assertEquals(TestConfiguration.GRAFANA_HTTP_ADDRESS_DEFAULT, response.headers().get(Names.LOCATION));
+        Assert.assertEquals(HttpResponseStatus.OK, response.getStatus());
         Assert.assertTrue(response.headers().contains(Names.CONTENT_TYPE));
         Assert.assertEquals(Constants.JSON_TYPE, response.headers().get(Names.CONTENT_TYPE));
         Assert.assertTrue(response.headers().contains(Names.SET_COOKIE));

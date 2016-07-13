@@ -11,7 +11,6 @@ import com.google.common.io.Files;
 public class TestConfiguration extends Properties {
 
     private static final long serialVersionUID = 1L;
-    public static final String GRAFANA_HTTP_ADDRESS_DEFAULT = "http://localhost:3000/";
     public static final String TIMELY_HTTP_ADDRESS_DEFAULT = "localhost";
 
     public Configuration toConfiguration(File propertiesFile) throws Exception {
@@ -30,7 +29,6 @@ public class TestConfiguration extends Properties {
         cfg.put(Configuration.USERNAME, "root");
         cfg.put(Configuration.PASSWORD, "secret");
         cfg.put(Configuration.TIMELY_HTTP_HOST, "localhost");
-        cfg.put(Configuration.GRAFANA_HTTP_ADDRESS, GRAFANA_HTTP_ADDRESS_DEFAULT);
         cfg.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "true");
         cfg.put(Configuration.MAX_LATENCY, "3s");
         cfg.put(Configuration.WS_TIMEOUT_SECONDS, "20");
