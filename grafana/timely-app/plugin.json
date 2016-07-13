@@ -1,0 +1,41 @@
+{
+  "type": "app",
+  "name": "Timely",
+  "id": "timely-app",
+
+  "css": {
+    "dark":  "css/dark.css",
+    "light":  "css/light.css"
+  },
+
+  "info": {
+    "description": "Timely App",
+    "author": {
+      "name": "National Security Agency",
+      "url": "http://github.com/NationalSecurityAgency"
+    },
+    "keywords": ["timely app datasource"],
+    "logos": {
+      "small": "img/accumulo_small_logo.png",
+      "large": "img/accumulo_large_logo.png"
+    },
+    "links": [
+      {"name": "Project site", "url": "https://github.com/NationalSecurityAgency/timely"},
+      {"name": "License & Terms", "url": "https://raw.githubusercontent.com/NationalSecurityAgency/timely/master/LICENSE"}
+    ],
+    "version": "0.0.2",
+    "updated": "2016-06-30"
+  },
+
+  "includes": [
+    {"type": "datasource", "name": "Timely"},
+    { "type": "page", "name": "Authorize", "component": "AuthsPageCtrl", "role": "Viewer", "addToNav": true},
+    { "type": "page", "name": "Metrics", "component": "MetricsPageCtrl", "role": "Viewer", "addToNav": true}
+  ],
+
+  "dependencies": {
+    "grafanaVersion": "3.x.x",
+    "plugins": []
+  }
+
+}

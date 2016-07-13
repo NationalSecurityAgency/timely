@@ -62,8 +62,11 @@ public class StandaloneServer extends Server {
         macConfig.setMemory(ServerType.TABLET_SERVER, 1, MemoryUnit.GIGABYTE);
         try {
             mac = new MiniAccumuloCluster(macConfig);
+            LOG.info("Starting MiniAccumuloCluster");
             mac.start();
-            mac.getInstanceName();
+            LOG.info("MiniAccumuloCluster started.");
+            String instanceName = mac.getInstanceName();
+            LOG.info("MiniAccumuloCluster instance name: {}", instanceName);
 
         } catch (IOException | InterruptedException e) {
             System.err.println("Error starting MiniAccumuloCluster: " + e.getMessage());
@@ -79,6 +82,7 @@ public class StandaloneServer extends Server {
             System.exit(1);
         }
         try {
+            LOG.info("Starting StandaloneServer");
             new StandaloneServer(conf);
         } catch (Exception e) {
             System.err.println("Error starting server");

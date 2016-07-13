@@ -12,6 +12,7 @@ services:
     command: /timely-server-src/bin/docker/deploy-startup-standalone.sh
     environment:
      - LD_LIBRARY_PATH=/timely/bin/META-INF/native
+     - TIMELY_VERSION=0.0.2-SNAPSHOT
   ingest:
     image: timely
     entrypoint: /timely-server-src/bin/docker/deploy-wait-and-insert.sh
@@ -26,5 +27,7 @@ services:
     image: grafana/grafana
     ports:
      - "3000:3000"
+    volumes:
+     - ${PWD}/../grafana/timely-app:/var/lib/grafana/plugins/timely-app
     depends_on:
      - timely
