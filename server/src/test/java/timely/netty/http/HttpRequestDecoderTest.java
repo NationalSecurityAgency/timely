@@ -847,25 +847,4 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(Metric.class, results.iterator().next().getClass());
     }
 
-    @Test
-    public void testPutMetricGet() throws Exception {
-        Metric m = new Metric();
-        m.setMetric("sys.cpu.user");
-        m.setTimestamp(TEST_TIME);
-        m.setValue(1.0D);
-        final List<Tag> tags = new ArrayList<>();
-        tags.add(new Tag("tag1", "value1"));
-        tags.add(new Tag("tag2", "value2"));
-        m.setTags(tags);
-        m.setVisibility(Metric.EMPTY_VISIBILITY);
-        byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(m);
-
-        decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/put");
-        request.content().writeBytes(buf);
-        decoder.decode(null, request, results);
-        Assert.assertEquals(1, results.size());
-        Assert.assertEquals(request, results.iterator().next());
-    }
-
 }
