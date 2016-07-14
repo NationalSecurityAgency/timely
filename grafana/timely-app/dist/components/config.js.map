@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/components/config.js"],"names":[],"mappings":";;;;;;;;;;;;;;;;qCACa,mB,GAEX,+BAAc;AAAA;AAEb,O;;;;AAGH,0BAAoB,WAApB,GAAkC,wBAAlC","file":"config.js","sourcesContent":["\nexport class TimelyAppConfigCtrl {\n\n  constructor() {\n    \n  }\n\n}\nTimelyAppConfigCtrl.templateUrl = 'components/config.html';\n"]}
