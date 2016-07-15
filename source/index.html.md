@@ -3,9 +3,9 @@
 title: Timely API Reference
 
 language_tabs:
-  - plaintext: tcp
-  - http: https
-  - json-doc: websocket
+  - plaintext: TCP
+  - http: HTTP
+  - json-doc: WebSocket
 
 toc_footers:
   - <a href='https://github.com/tripit/slate'>Documentation Powered by Slate</a>
