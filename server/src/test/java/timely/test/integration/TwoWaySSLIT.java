@@ -40,18 +40,23 @@ import org.junit.rules.TemporaryFolder;
 
 import timely.Configuration;
 import timely.Server;
-import timely.api.query.request.QueryRequest;
-import timely.api.query.response.QueryResponse;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
-
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.junit.Assert.assertEquals;
 
+/**
+ *
+ * Tests that Two way SSL without anonymous access works.
+ *
+ */
+@SuppressWarnings("deprecation")
 @Category(IntegrationTest.class)
-public class TwoWaySSLIT extends BaseQueryIT {
+public class TwoWaySSLIT extends QueryBase {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
@@ -196,7 +201,7 @@ public class TwoWaySSLIT extends BaseQueryIT {
                     + " 2.0 tag1=value1 tag3=value3 viz=A", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=D", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=G");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

@@ -64,20 +64,20 @@ import org.slf4j.LoggerFactory;
 
 import timely.Configuration;
 import timely.Server;
-import timely.api.AuthenticatedRequest;
 import timely.api.model.Meta;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
-import timely.api.query.request.QueryRequest;
-import timely.api.query.request.QueryRequest.RateOption;
-import timely.api.query.request.QueryRequest.SubQuery;
-import timely.api.query.request.SearchLookupRequest;
-import timely.api.query.request.SuggestRequest;
-import timely.api.query.response.QueryResponse;
-import timely.api.query.response.SearchLookupResponse;
-import timely.api.query.response.SearchLookupResponse.Result;
-import timely.api.query.response.SuggestResponse;
-import timely.api.query.response.TimelyException;
+import timely.api.request.AuthenticatedRequest;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.request.timeseries.SearchLookupRequest;
+import timely.api.request.timeseries.SuggestRequest;
+import timely.api.request.timeseries.QueryRequest.RateOption;
+import timely.api.request.timeseries.QueryRequest.SubQuery;
+import timely.api.response.TimelyException;
+import timely.api.response.timeseries.QueryResponse;
+import timely.api.response.timeseries.SearchLookupResponse;
+import timely.api.response.timeseries.SuggestResponse;
+import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.auth.AuthCache;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
@@ -735,12 +735,26 @@ public class DataStoreImpl implements DataStore {
     }
 
     private Authorizations getSessionAuthorizations(String sessionId) {
-        if (!StringUtils.isEmpty(sessionId)) {
-            return AuthCache.getAuthorizations(sessionId);
-        } else if (!anonAccessAllowed) {
-            throw new RuntimeException("Anonymous user attempting to query");
+        if (anonAccessAllowed) {
+            if (StringUtils.isEmpty(sessionId)) {
+                return Authorizations.EMPTY;
+            } else {
+                Authorizations auths = AuthCache.getAuthorizations(sessionId);
+                if (null == auths) {
+                    auths = Authorizations.EMPTY;
+                }
+                return auths;
+            }
         } else {
-            return Authorizations.EMPTY;
+            if (StringUtils.isEmpty(sessionId)) {
+                throw new IllegalArgumentException("session id cannot be null");
+            } else {
+                Authorizations auths = AuthCache.getAuthorizations(sessionId);
+                if (null == auths) {
+                    throw new IllegalStateException("No auths found for sessionId: " + sessionId);
+                }
+                return auths;
+            }
         }
     }
 

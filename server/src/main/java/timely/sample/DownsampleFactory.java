@@ -1,7 +1,7 @@
 package timely.sample;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import timely.api.query.response.TimelyException;
+import timely.api.response.TimelyException;
 
 public class DownsampleFactory {
 

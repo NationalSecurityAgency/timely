@@ -48,24 +48,37 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.query.response.TimelyException;
+import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
-import timely.netty.http.StrictTransportHandler;
-import timely.netty.http.HttpAggregatorsRequestHandler;
-import timely.netty.http.HttpMetricsRequestHandler;
-import timely.netty.http.HttpQueryDecoder;
-import timely.netty.http.HttpQueryRequestHandler;
-import timely.netty.http.HttpSearchLookupRequestHandler;
+import timely.netty.http.HttpMetricPutHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
-import timely.netty.http.HttpSuggestRequestHandler;
+import timely.netty.http.HttpVersionRequestHandler;
 import timely.netty.http.NonSecureHttpHandler;
+import timely.netty.http.StrictTransportHandler;
 import timely.netty.http.TimelyExceptionHandler;
-import timely.netty.http.login.BasicAuthLoginRequestHandler;
-import timely.netty.http.login.X509LoginRequestHandler;
-import timely.netty.tcp.TcpPutDecoder;
+import timely.netty.http.auth.BasicAuthLoginRequestHandler;
+import timely.netty.http.auth.X509LoginRequestHandler;
+import timely.netty.http.timeseries.HttpAggregatorsRequestHandler;
+import timely.netty.http.timeseries.HttpMetricsRequestHandler;
+import timely.netty.http.timeseries.HttpQueryRequestHandler;
+import timely.netty.http.timeseries.HttpSearchLookupRequestHandler;
+import timely.netty.http.timeseries.HttpSuggestRequestHandler;
+import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpPutHandler;
-import timely.netty.websocket.WSSubscriptionRequestHandler;
+import timely.netty.tcp.TcpVersionHandler;
+import timely.netty.websocket.WSMetricPutHandler;
+import timely.netty.websocket.WSVersionRequestHandler;
+import timely.netty.websocket.WebSocketRequestDecoder;
+import timely.netty.websocket.subscription.WSAddSubscriptionRequestHandler;
+import timely.netty.websocket.subscription.WSCloseSubscriptionRequestHandler;
+import timely.netty.websocket.subscription.WSCreateSubscriptionRequestHandler;
+import timely.netty.websocket.subscription.WSRemoveSubscriptionRequestHandler;
+import timely.netty.websocket.timeseries.WSAggregatorsRequestHandler;
+import timely.netty.websocket.timeseries.WSMetricsRequestHandler;
+import timely.netty.websocket.timeseries.WSQueryRequestHandler;
+import timely.netty.websocket.timeseries.WSSearchLookupRequestHandler;
+import timely.netty.websocket.timeseries.WSSuggestRequestHandler;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
 import timely.store.MetaCacheFactory;
@@ -224,7 +237,7 @@ public class Server {
             LOG.error("Error flushing to server during shutdown", e);
         }
         MetaCacheFactory.close();
-        WSSubscriptionRequestHandler.close();
+        WebSocketRequestDecoder.close();
         this.shutdown = true;
         LOG.info("Server shut down.");
     }
@@ -396,7 +409,7 @@ public class Server {
                 CorsConfig cors = ccb.build();
                 LOG.trace("Cors configuration: {}", cors);
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
-                ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder(config));
+                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
                 ch.pipeline().addLast("strict", new StrictTransportHandler(config));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config));
@@ -406,6 +419,8 @@ public class Server {
                 ch.pipeline().addLast("query", new HttpQueryRequestHandler(dataStore));
                 ch.pipeline().addLast("search", new HttpSearchLookupRequestHandler(dataStore));
                 ch.pipeline().addLast("suggest", new HttpSuggestRequestHandler(dataStore));
+                ch.pipeline().addLast("version", new HttpVersionRequestHandler());
+                ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler());
             }
         };
@@ -417,8 +432,9 @@ public class Server {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
-                ch.pipeline().addLast("putDecoder", new TcpPutDecoder());
+                ch.pipeline().addLast("putDecoder", new TcpDecoder());
                 ch.pipeline().addLast("putHandler", new TcpPutHandler(dataStore));
+                ch.pipeline().addLast("versionHandler", new TcpVersionHandler());
             }
         };
     }
@@ -434,7 +450,19 @@ public class Server {
                 ch.pipeline().addLast("idle-handler",
                         new IdleStateHandler(Integer.parseInt(conf.get(Configuration.WS_TIMEOUT_SECONDS)), 0, 0));
                 ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
-                ch.pipeline().addLast("websocket", new WSSubscriptionRequestHandler(config, dataStore));
+                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
+                ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
+                ch.pipeline().addLast("metrics", new WSMetricsRequestHandler(config));
+                ch.pipeline().addLast("query", new WSQueryRequestHandler(dataStore));
+                ch.pipeline().addLast("lookup", new WSSearchLookupRequestHandler(dataStore));
+                ch.pipeline().addLast("suggest", new WSSuggestRequestHandler(dataStore));
+                ch.pipeline().addLast("version", new WSVersionRequestHandler());
+                ch.pipeline().addLast("put", new WSMetricPutHandler(dataStore));
+                ch.pipeline().addLast("create", new WSCreateSubscriptionRequestHandler(dataStore, config));
+                ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
+                ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());
+                ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());
+
             }
         };
 

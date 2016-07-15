@@ -12,13 +12,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import timely.Server;
-import timely.api.query.request.QueryRequest;
-import timely.api.query.request.QueryRequest.SubQuery;
-import timely.api.query.response.QueryResponse;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.request.timeseries.QueryRequest.SubQuery;
+import timely.api.response.timeseries.QueryResponse;
 import timely.test.IntegrationTest;
 
+/**
+ *
+ * Tests that OneWay SSL with anonymous access works.
+ *
+ */
 @Category(IntegrationTest.class)
-public class OneWaySSLAnonAccessIT extends OneWaySSLBaseIT {
+public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
@@ -29,7 +34,8 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBaseIT {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
                     + " 2.0 tag1=value1 tag3=value3 viz=secret");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

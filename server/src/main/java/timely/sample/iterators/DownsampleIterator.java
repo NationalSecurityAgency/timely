@@ -19,7 +19,7 @@ import org.apache.accumulo.core.iterators.WrappingIterator;
 
 import timely.api.model.Metric;
 import timely.api.model.Tag;
-import timely.api.query.response.TimelyException;
+import timely.api.response.TimelyException;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.DownsampleFactory;
