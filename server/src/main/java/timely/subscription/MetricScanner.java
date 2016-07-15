@@ -19,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.api.model.Metric;
-import timely.api.query.response.TimelyException;
+import timely.api.response.TimelyException;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
 
@@ -70,7 +70,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     Entry<Key, Value> e = this.iter.next();
                     m = Metric.parse(e.getKey(), e.getValue());
                     try {
-                        String json = om.writeValueAsString(m);
+                        String json = om.writeValueAsString(m.toMetricResponse());
                         LOG.trace("Returning {} for subscription", json);
                         this.ctx.writeAndFlush(new TextWebSocketFrame(json));
                     } catch (JsonProcessingException e1) {

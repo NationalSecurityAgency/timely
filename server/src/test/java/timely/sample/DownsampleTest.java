@@ -10,7 +10,7 @@ import java.util.Iterator;
 
 import org.junit.Test;
 
-import timely.api.query.request.QueryRequest.RateOption;
+import timely.api.request.timeseries.QueryRequest.RateOption;
 import timely.sample.aggregators.Avg;
 import timely.sample.aggregators.Max;
 import timely.sample.aggregators.Min;

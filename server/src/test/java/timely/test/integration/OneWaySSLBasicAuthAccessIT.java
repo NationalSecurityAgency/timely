@@ -3,7 +3,6 @@ package timely.test.integration;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
-
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -45,17 +44,23 @@ import org.junit.rules.TemporaryFolder;
 
 import timely.Configuration;
 import timely.Server;
-import timely.api.query.request.BasicAuthLoginRequest;
-import timely.api.query.request.QueryRequest;
-import timely.api.query.response.QueryResponse;
+import timely.api.request.auth.BasicAuthLoginRequest;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 import timely.util.JsonUtil;
 
+/**
+ *
+ * Tests that OneWay SSL without anonymous access works.
+ *
+ */
+@SuppressWarnings("deprecation")
 @Category(IntegrationTest.class)
-public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBaseIT {
+public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
@@ -205,7 +210,8 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBaseIT {
                     + " 2.0 tag1=value1 tag3=value3 viz=A", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=D", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=G");
-            sleepUninterruptibly(8, TimeUnit.SECONDS);
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

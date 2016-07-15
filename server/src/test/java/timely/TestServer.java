@@ -12,13 +12,12 @@ import io.netty.handler.ssl.SslContext;
 
 import java.io.File;
 
-import timely.netty.http.HttpQueryDecoder;
-import timely.netty.tcp.TcpPutDecoder;
+import timely.netty.tcp.TcpDecoder;
 import timely.test.TestCaptureRequestHandler;
 
 public class TestServer extends Server {
 
-    private TestCaptureRequestHandler putRequests = new TestCaptureRequestHandler();
+    private TestCaptureRequestHandler tcpRequests = new TestCaptureRequestHandler();
     private TestCaptureRequestHandler httpRequests = new TestCaptureRequestHandler();
 
     public TestServer(File conf) throws Exception {
@@ -35,7 +34,7 @@ public class TestServer extends Server {
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("queryDecoder", new HttpQueryDecoder(config));
+                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config));
                 ch.pipeline().addLast("capture", httpRequests);
             }
         };
@@ -48,14 +47,14 @@ public class TestServer extends Server {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
-                ch.pipeline().addLast("putDecoder", new TcpPutDecoder());
-                ch.pipeline().addLast("capture", putRequests);
+                ch.pipeline().addLast("putDecoder", new TcpDecoder());
+                ch.pipeline().addLast("capture", tcpRequests);
             }
         };
     }
 
     public TestCaptureRequestHandler getPutRequests() {
-        return putRequests;
+        return tcpRequests;
     }
 
     public TestCaptureRequestHandler getHttpRequests() {

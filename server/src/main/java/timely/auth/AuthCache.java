@@ -12,9 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
 import timely.Configuration;
-import timely.api.AuthenticatedRequest;
-import timely.api.Request;
-import timely.api.query.response.TimelyException;
+import timely.api.request.AuthenticatedRequest;
+import timely.api.request.Request;
+import timely.api.response.TimelyException;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -51,13 +51,18 @@ public class AuthCache {
 
     public static Authorizations getAuthorizations(String sessionId) {
         if (!StringUtils.isEmpty(sessionId)) {
-            Collection<? extends GrantedAuthority> authorities = CACHE.asMap().get(sessionId).getAuthorities();
-            String[] auths = new String[authorities.size()];
-            final AtomicInteger i = new AtomicInteger(0);
-            authorities.forEach(a -> {
-                auths[i.getAndIncrement()] = a.getAuthority();
-            });
-            return new Authorizations(auths);
+            Authentication auth = CACHE.asMap().get(sessionId);
+            if (null != auth) {
+                Collection<? extends GrantedAuthority> authorities = CACHE.asMap().get(sessionId).getAuthorities();
+                String[] auths = new String[authorities.size()];
+                final AtomicInteger i = new AtomicInteger(0);
+                authorities.forEach(a -> {
+                    auths[i.getAndIncrement()] = a.getAuthority();
+                });
+                return new Authorizations(auths);
+            } else {
+                return null;
+            }
         } else {
             throw new IllegalArgumentException("session id cannot be null");
         }

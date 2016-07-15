@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.Request;
+import timely.api.request.Request;
 
 public class TestCaptureRequestHandler extends SimpleChannelInboundHandler<Request> {
 
