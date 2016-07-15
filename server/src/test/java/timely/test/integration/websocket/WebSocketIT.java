@@ -554,13 +554,14 @@ public class WebSocketIT extends OneWaySSLBase {
             sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // @formatter:off
-            String request = "{"+
-            		"\"operation\" : \"lookup\","+
-            		"\"sessionId\" : \"1234\","+
-            		"\"metric\" : \"sys.cpu.idle\","+
-            		"\"tags\" : ["+
-            			"\"tag3=*\""+
-            		"]"+
+            String request = 
+            "{"+
+            "   \"operation\" : \"lookup\","+
+            "   \"sessionId\" : \"1234\","+
+            "   \"metric\" : \"sys.cpu.idle\","+
+            "   \"tags\" : ["+
+                   "\"tag3=*\""+
+                "]"+
     	    "}";
             // @formatter:on
             ch.writeAndFlush(new TextWebSocketFrame(request));

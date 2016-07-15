@@ -114,7 +114,7 @@ public class TimelyTcpIT {
             Assert.assertEquals(1, m.getPutRequests().getResponses().size());
             Assert.assertEquals(VersionRequest.class, m.getPutRequests().getResponses().get(0).getClass());
             VersionRequest v = (VersionRequest) m.getPutRequests().getResponses().get(0);
-            Assert.assertEquals("0.0.2", v.getVersion());
+            Assert.assertEquals(VersionRequest.VERSION, v.getVersion());
         } finally {
             m.shutdown();
         }

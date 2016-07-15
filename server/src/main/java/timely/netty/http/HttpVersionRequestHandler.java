@@ -20,7 +20,7 @@ public class HttpVersionRequestHandler extends SimpleChannelInboundHandler<Versi
     protected void channelRead0(ChannelHandlerContext ctx, VersionRequest v) throws Exception {
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.copiedBuffer(VersionRequest.VERSION.getBytes(StandardCharsets.UTF_8)));
-        response.headers().set(Names.CONTENT_TYPE, Constants.HTML_TYPE);
+        response.headers().set(Names.CONTENT_TYPE, Constants.TEXT_TYPE);
         response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
         sendResponse(ctx, response);
     }

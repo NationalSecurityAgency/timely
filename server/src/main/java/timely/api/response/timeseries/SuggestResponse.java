@@ -48,7 +48,6 @@ public class SuggestResponse {
             }
             return response;
         }
-
     }
 
     private List<String> suggestions = new ArrayList<>();
