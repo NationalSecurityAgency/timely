@@ -2,7 +2,12 @@
   <h1>Metrics Browser</h1>
 </div>
 
-<div class="gf-box">
+<div ng-if"!ctrl.datasources">
+  <h4>No Timely datasources are defined.</h4>
+  <i><a href="datasources/new">Create one</a></i>
+</div>
+
+<div class="gf-box" ng-if="ctrl.datasources">
 
 <div class="gf-box-header">
 <div class="gf-form-inline">

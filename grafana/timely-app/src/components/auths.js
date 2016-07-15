@@ -36,37 +36,55 @@ export class AuthsCtrl {
       this.doGetLogin(uri);
     }
 
-
-    this.$timeout(function(){
-      console.log('timeout complete')
-      this.fetching.done = true;
-      this.fetching.status = 'success';
-      this.fetching.title = "Success";
-
-    }.bind(this), 3000);
-
   }
 
   doPostLogin(uri, authBlob){
-    console.log('post ' + uri + ' <- ' + JSON.stringify(authBlob));
-
-    this.backendSrv.post(uri, authBlob).then(function(result){
-      this.handleLoginResult(result);
-    }.bind(this));
+    this.doXHR('POST', uri, authBlob);
   }
 
   doGetLogin(uri){
-    console.log('get ' + uri);
-
-    this.backendSrv.get(uri).then( function(result){
-      this.handleLoginResult(result);
-    }.bind(this));
+    this.doXHR('GET', uri)
   }
 
-  handleLoginResult(result){
-    console.log("Login Result:")
-    console.log(result);
+  doXHR(verb, uri, data){
+    if( !data){
+      data = "";
+    }
+    var r = new XMLHttpRequest();
+    r.open(verb, uri, true);
+    r.withCredentials = true;
+    r.setRequestHeader('Content-Type', 'application/json');
+    r.onreadystatechange = function () {
+      this.handleLoginResult(r);
+    }.bind(this);
+    r.send(JSON.stringify(data));
+  }
 
+  handleLoginResult(response){
+    // wait for readyState to be '4 => done'
+    if (response.readyState != 4) return;
+
+    this.fetching.done = true;
+
+    switch(response.status){
+      case 200:
+        var cookie = (document.cookie.match(/^(?:.*;)?TSESSIONID=([^;]+)(?:.*)?$/)||[,null])[1]
+        console.log(cookie);
+        console.log(document.cookie);
+        
+        this.fetching.status = 'success';
+        this.fetching.title = 'Login successful';
+        this.$rootScope.appEvent('alert-success', ['Success', '']);
+        break;
+      default:
+        this.fetching.status = 'warning';
+        this.fetching.title = response.statusText;
+        this.$rootScope.appEvent('alert-warning', [response.status+': '+response.statusText,'']);
+        break;
+    }
+
+    if (r.readyState != 4 || r.status != 200) return;
+    alert("Success: " + r.getResponseHeader('Set-Cookie'));
   }
 
   _getURI(jsonData){

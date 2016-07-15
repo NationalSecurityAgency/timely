@@ -1,6 +1,11 @@
 
 <div class="page-header">
-  <h1>Retrieve Authorizations</h1>
+  <h1>Fetch Authorizations</h1>
+</div>
+
+<div ng-if="ctrl.datasources.length === 0">
+  <h4>No Timely datasources are defined.</h4>
+  <i><a href="datasources/new">Create one</a></i>
 </div>
 
 <div ng-repeat="source in ctrl.datasources" ng-init="d=source" ng-controller="AuthsCtrl as actrl">
@@ -8,7 +13,7 @@
     <div class="gf-box-header p-x-1 p-y-1">
       <h3 class="">{{d.name}}
         <span class="pull-right">
-          <h6><i>https://{{d.jsonData.timelyHost}}:{{d.jsonData.httpsPort}}</i></h6>
+          <h6><i>https://{{d.jsonData.timelyHost}}:{{d.jsonData.httpsPort}}/login</i></h6>
         </span>
       </h3>
     </div>
