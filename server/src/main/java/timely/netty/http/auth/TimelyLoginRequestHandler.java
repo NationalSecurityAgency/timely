@@ -52,6 +52,7 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
             DefaultCookie cookie = new DefaultCookie(Constants.COOKIE_NAME, sessionId);
             cookie.setDomain(domain);
             cookie.setMaxAge(maxAge);
+            cookie.setPath("/");
             cookie.setHttpOnly(true);
             cookie.setSecure(true);
             response.headers().set(Names.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
