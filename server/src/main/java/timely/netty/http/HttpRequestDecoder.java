@@ -106,7 +106,6 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
         } catch (UnsupportedOperationException | NullPointerException e) {
             // Return the original http request to route to the static file
             // server
-            LOG.error("Error decoding request: " + msg, e);
             msg.retain();
             out.add(msg);
             return;
