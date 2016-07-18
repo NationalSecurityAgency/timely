@@ -12,12 +12,6 @@ import timely.api.request.timeseries.AggregatorsRequest;
 import timely.api.response.timeseries.AggregatorsResponse;
 import timely.netty.Constants;
 import timely.netty.http.TimelyHttpHandler;
-import timely.sample.aggregators.Avg;
-import timely.sample.aggregators.Count;
-import timely.sample.aggregators.Dev;
-import timely.sample.aggregators.Max;
-import timely.sample.aggregators.Min;
-import timely.sample.aggregators.Sum;
 import timely.util.JsonUtil;
 
 public class HttpAggregatorsRequestHandler extends SimpleChannelInboundHandler<AggregatorsRequest> implements
