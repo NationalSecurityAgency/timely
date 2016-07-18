@@ -5,18 +5,27 @@ import {AuthsPageCtrl} from 'plugins/timely-app/components/authspage';
 export class MetricsPageCtrl {
 
   constructor(backendSrv, datasourceSrv){
+    this.hasDatasource = false;
     this.backendSrv = backendSrv;
     var apc = new AuthsPageCtrl(backendSrv, datasourceSrv);
     this.datasources = apc.getTimelyDatasources();
-    this.source = this.datasources[0];
-    this.updateDatasource();
+    if( this.datasources.length > 0){
+      this.source = this.datasources[0];
+      this.updateDatasource();
+    }
   }
 
   updateDatasource(){
-    console.log('updating datasource')
-    this.backendSrv.get(this._getURI(this.source.jsonData)).then(
+    var uri = this._getURI(this.source.jsonData);
+    this.backendSrv.request(
+      { method: 'GET',
+        url: uri,
+        withCredentials: true,
+        params: "" }
+    ).then(
       response => {
         this.metrics = this._transformMetrics(response.metrics);
+        this.hasDatasource = true;
       });
   }
 

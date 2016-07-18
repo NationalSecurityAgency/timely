@@ -40,11 +40,14 @@ System.register(['lodash', 'plugins/timely-app/components/authspage'], function 
         function MetricsPageCtrl(backendSrv, datasourceSrv) {
           _classCallCheck(this, MetricsPageCtrl);
 
+          this.hasDatasource = false;
           this.backendSrv = backendSrv;
           var apc = new AuthsPageCtrl(backendSrv, datasourceSrv);
           this.datasources = apc.getTimelyDatasources();
-          this.source = this.datasources[0];
-          this.updateDatasource();
+          if (this.datasources.length > 0) {
+            this.source = this.datasources[0];
+            this.updateDatasource();
+          }
         }
 
         _createClass(MetricsPageCtrl, [{
@@ -52,9 +55,13 @@ System.register(['lodash', 'plugins/timely-app/components/authspage'], function 
           value: function updateDatasource() {
             var _this = this;
 
-            console.log('updating datasource');
-            this.backendSrv.get(this._getURI(this.source.jsonData)).then(function (response) {
+            var uri = this._getURI(this.source.jsonData);
+            this.backendSrv.request({ method: 'GET',
+              url: uri,
+              withCredentials: true,
+              params: "" }).then(function (response) {
               _this.metrics = _this._transformMetrics(response.metrics);
+              _this.hasDatasource = true;
             });
           }
         }, {

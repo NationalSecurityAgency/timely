@@ -24,16 +24,15 @@
       		<span class="gf-form-label width-7">
       			User
       		</span>
-      		<input class="gf-form-input max-width-21" type="text"  ng-model='actrl.basicAuthUser' placeholder="user" required></input>
+      		<input id="timlely-user" class="gf-form-input max-width-21" type="text" ng-model='actrl.basicAuthUser' placeholder="user" required></input>
       	</div>
 
       	<div class="gf-form">
       		<span class="gf-form-label width-7">
       			Password
       		</span>
-      		<input class="gf-form-input max-width-21" type="password" ng-model='actrl.basicAuthPassword' placeholder="password" required></input>
+      		<input id="timely-password" class="gf-form-input max-width-21" type="password" ng-model='actrl.basicAuthPassword' placeholder="password" required></input>
       	</div>
-
       </div>
 
       <div ng-if="actrl.fetching" class="gf-row">
