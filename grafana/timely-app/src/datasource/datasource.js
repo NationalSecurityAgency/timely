@@ -85,7 +85,7 @@ export class TimelyDatasource {
   // REQUIRED INTERFACE
   testDatasource(){
     return this.backendSrv.datasourceRequest({
-      url: this.url + '/api/aggregators',
+      url: this.url + '/version',
       method: 'GET'
     }).then(response => {
       if (response.status === 200) {

@@ -129,7 +129,7 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
           key: 'testDatasource',
           value: function testDatasource() {
             return this.backendSrv.datasourceRequest({
-              url: this.url + '/api/aggregators',
+              url: this.url + '/version',
               method: 'GET'
             }).then(function (response) {
               if (response.status === 200) {
