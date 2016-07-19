@@ -85,7 +85,7 @@ Row | ColumnFamily | ColumnQualifier | Value
 ----|--------------|-----------------|------
 metric\timestamp | tagKey=tagValue | tagKey=tagValue,tagKey=tagValue,... | metricValue
 
-### Storage Example
+## Data Storage Example
 
 As an example, if you sent the following metric to the put api: `sys.cpu.user 1447879348291 2.0 rack=r001 host=r001n01 instance=0` it would get stored in the following manner in the `meta` table:
 

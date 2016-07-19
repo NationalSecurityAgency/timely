@@ -1,1 +1,1 @@
-# CollectD Plugins
+# Plugins for CollectD
