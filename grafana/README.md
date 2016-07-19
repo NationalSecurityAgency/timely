@@ -5,23 +5,29 @@ This is an app plugin for the [Grafana](http://grafana.org) time-series visualiz
 ## Installation
 
 Unpack the contents of the timely-app directory into the grafana plugins directory.
+
 By default, `/var/lib/grafana/plugins/`  
+
 Restart Grafana.
 
 Login to Grafana and the Home dashboard should show the Timely App is available.
+
 ![App Available Home](screencaps/AppAvailableHome.png)
 
 ## Enable Timely App
 
-The timely app must first be enabled in Grafana. Clicking the Enable Now link or navigating to the app list
-in Grafana ![AppInstalled](screencaps/AppInstalled.png)
+The timely app must first be enabled in Grafana. Clicking the Enable Now link or navigate to the app list
+in Grafana
+
+![AppInstalled](screencaps/AppInstalled.png)
+
 will bring you to the enable page.
 
 ![EnablePage](screencaps/EnableApp.png)
 
 Once enabled, Timely should appear in Grafana plugins menu.
 
-![TimelyEnabled](screencaps/AppEnabled)
+![TimelyEnabled](screencaps/AppEnabled.png)
 
 ## Create Datasource
 
