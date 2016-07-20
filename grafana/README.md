@@ -55,7 +55,7 @@ View dashboard - this should now be working
 
 If more than one Timely datasource is defined, multiple Login prompts will be available. Here, the top data source was defined with BasicAuths checked, and the second one assumes a valid Certificate is loaded in the browser and will be passed to Timely when Login is clicked.
 
-![Multi Login](srceencaps/MultiDatasourceLogin.png)
+![Multi Login](screencaps/MultiDatasourceLogin.png)
 
 ## Metrics Browser
 
@@ -64,3 +64,9 @@ To help browsing the data in Timely, the Timely menu also contains a Metrics lin
 ![Metrics Browser](screencaps/MetricsBrowser.png)
 
 Timely data sources can be selected from the drop down menu and the results can be filtered by typing in the filter box.
+
+## Dashboard
+
+Currently the imported dashboard has one plot for timely ingest metrics, and three other plots to display the artificial data inserted by the `timely.util.InsertTestData` program.
+
+![Graphs](screencaps/Graphs.png)
