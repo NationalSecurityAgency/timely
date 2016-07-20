@@ -12,6 +12,57 @@ The standalone server will not save your metric data across restarts.
 
 To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.properties file appropriately. Then copy the `lib/timely-server.jar` file to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
 
+## SSL Setup
+
+To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the `timely.ssl.key.pass` property if there is no password for your private key.
+
+### Creating your own SSL keys and certificates
+
+There are plenty of resources on the Internet for doing this. This example is taken from instructions in the Accumulo [user manual](http://accumulo.apache.org/1.7/accumulo_user_manual#_generate_a_certificate_keystore_per_host).
+
+#### Create your Certificate Authority
+
+
+Create a private key
+
+`openssl genrsa -des3 -out CA.key 4096`
+
+Create a certificate request using the private key
+
+`openssl req -x509 -new -key CA.key -days 365 -out CA.pem`
+
+#### Create your SSL material for Grafana
+
+Create the private key for the Grafana server
+
+`openssl genrsa -out grafana.key 4096`
+
+Generate a certificate signing request (CSR) with our Grafana private key
+
+`openssl req -new -key grafana.key -out grafana.csr`
+
+Use the CSR and the CA to create a certificate for the server (a reply to the CSR)
+
+`openssl x509 -req -in grafana.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out grafana.crt -days 365`
+
+#### Create your SSL material for Timely
+
+Create the private key for the Grafana server
+
+`openssl genrsa -out timely.key 4096`
+
+Generate a certificate signing request (CSR) with our Grafana private key
+
+`openssl req -new -key timely.key -out timely.csr`
+
+Use the CSR and the CA to create a certificate for the server (a reply to the CSR)
+
+`openssl x509 -req -in timely.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out timely.crt -days 365`
+
+Convert the private key to pkcs#8 format
+
+`openssl pkcs8 -topk8 -inform PEM -outform PEM -in timely.key -out timely-pkcs8.key`
+
 ## Configuration
 
 The `NUM_SERVER_THREADS` variable in the `timely-server.sh` script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the `conf` directory supports the following properties:

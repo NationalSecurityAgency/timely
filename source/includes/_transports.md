@@ -4,6 +4,7 @@ The Timely server supports clients sending requests over different protocols. No
 
 > The TCP, HTTPS, and WebSocket ports can be specified in the Timely configuration properties.
 
+
 > The endpoint for the WebSocket protocol is `/websocket` 
 
 Operation | TCP | HTTPS | WebSocket

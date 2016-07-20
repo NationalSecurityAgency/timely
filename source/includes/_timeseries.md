@@ -1,5 +1,7 @@
 # Timeseries API
 
+The Timeseries API contains operations for getting metadata about the time series, and retrieving the data points.
+
 ## Suggest Response
 
 ```http
@@ -127,6 +129,14 @@ metric | string | metric name for this time series
 tags | map | tags associated with this time series
 aggregatedTags | map | not used
 dps | map | map of timestamp to metric value
+
+## Aggregators Response
+
+TODO
+
+## Metrics Response
+
+TODO
 
 ## Put Operation
 
@@ -356,17 +366,16 @@ Attribute | Type | Description
 ----------|------|------------
 start | long | start time in ms for this query
 end | long | end time in ms for this query
-queries | array | array of metric sub query types
+queries | array | array of metric sub query types. Used in HTTP Post or WebSocket
 
 ### Metric SubQuery Type
 
-Attribute | Type | Description
-----------|------|------------
-metric | string | metric name or prefix. Used in HTTP POST and WebSocket
-m | string | metric name or prefix. Used in HTTP GET
-limit | int | (Optional default:25) maximum number of results
+TODO
 
 ## Aggregators Operation
 
+TODO
+
 ## Metrics Operation
 
+TODO

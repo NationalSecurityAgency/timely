@@ -1,6 +1,6 @@
 ---
 
-title: Timely API Reference
+title: Timely Reference
 
 language_tabs:
   - plaintext: TCP
@@ -8,7 +8,7 @@ language_tabs:
   - json: WebSocket
 
 toc_footers:
-  - <a href='https://github.com/tripit/slate'>Documentation Powered by Slate</a>
+  - <a href='https://github.com/lord/slate'>Documentation Powered by Slate</a>
 
 includes:
   - transports
@@ -17,9 +17,10 @@ includes:
   - subscription
   - security
   - server
-  - developer
+  - quickstart
   - collectd
   - grafana
+  - developer
   - documentation
 
 search: true
