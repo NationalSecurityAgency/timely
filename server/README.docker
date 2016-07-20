@@ -12,12 +12,9 @@ Launch the various containers using docker-compose
 docker-compose up
 ```
 
-This starts timely, grafana and a process to insert fake test data. It also configures Grafana with the correct datasource
-and creates an example dashboard.
+This starts timely, grafana and a process to insert fake test data. It also mounts the timely grafana plugin for grafana.
 
 Browse to the UIs:
 
-[Grafana](http://localhost:3000) User: admin Password: admin
-
-[Timely Metrics](https://localhost:54322/api/metrics) You'll get a security warning in your browser, but should be able to click through it.
+[Grafana](https://localhost:3000) User: admin Password: admin
 

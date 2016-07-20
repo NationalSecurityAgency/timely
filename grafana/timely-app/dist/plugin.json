@@ -29,7 +29,7 @@
 
   "includes": [
     {"type": "datasource", "name": "Timely"},
-    { "type": "page", "name": "Authorize", "component": "AuthsPageCtrl", "role": "Viewer", "addToNav": true},
+    { "type": "page", "name": "Login", "component": "AuthsPageCtrl", "role": "Viewer", "addToNav": true},
     { "type": "page", "name": "Metrics", "component": "MetricsPageCtrl", "role": "Viewer", "addToNav": true}
   ],
 
