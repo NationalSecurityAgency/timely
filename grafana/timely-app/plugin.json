@@ -16,8 +16,8 @@
     },
     "keywords": ["timely app datasource"],
     "logos": {
-      "small": "img/accumulo_small_logo.png",
-      "large": "img/accumulo_large_logo.png"
+      "small": "img/t2.png",
+      "large": "img/t1.png"
     },
     "links": [
       {"name": "Project site", "url": "https://github.com/NationalSecurityAgency/timely"},
