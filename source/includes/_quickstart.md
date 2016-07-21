@@ -48,8 +48,7 @@
 10. Import Standalone Test dashboard into Grafana.
 
 
-# Notes on Security Options
----
+## Notes on Security Options
 
 1. If anonymous access is disabled, then users will only be able to see unlabeled data.
 2. If anonymous access is enabled, then users must login before Grafana will work.
