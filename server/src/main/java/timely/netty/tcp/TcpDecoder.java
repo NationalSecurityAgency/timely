@@ -23,41 +23,45 @@ public class TcpDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         ByteBuf buf = in.readBytes(in.readableBytes());
-        if (buf == Unpooled.EMPTY_BUFFER) {
-            return;
-        }
-        final String input;
-        if (buf.hasArray()) {
-            input = new String(buf.array(), UTF_8);
-        } else {
-            input = buf.toString(UTF_8);
-        }
-        if (StringUtils.isEmpty(input)) {
-            LOG.warn("Received no input");
-            return;
-        }
-        LOG.trace("Received input {}", input);
-
-        String[] parts = input.split(" ");
-        String operation = null;
-        if (parts.length == 0 && !StringUtils.isEmpty(input)) {
-            operation = input;
-        } else {
-            operation = parts[0];
-        }
-        TcpRequest tcp = null;
         try {
-            tcp = (TcpRequest) AnnotationResolver.getClassForTcpOperation(operation);
-        } catch (Exception e) {
-            LOG.error("Error getting class for operation: " + operation, e);
+            if (buf == Unpooled.EMPTY_BUFFER) {
+                return;
+            }
+            final String input;
+            if (buf.hasArray()) {
+                input = new String(buf.array(), UTF_8);
+            } else {
+                input = buf.toString(UTF_8);
+            }
+            if (StringUtils.isEmpty(input)) {
+                LOG.warn("Received no input");
+                return;
+            }
+            LOG.trace("Received input {}", input);
+
+            String[] parts = input.split(" ");
+            String operation = null;
+            if (parts.length == 0 && !StringUtils.isEmpty(input)) {
+                operation = input;
+            } else {
+                operation = parts[0];
+            }
+            TcpRequest tcp = null;
+            try {
+                tcp = (TcpRequest) AnnotationResolver.getClassForTcpOperation(operation);
+            } catch (Exception e) {
+                LOG.error("Error getting class for operation: " + operation, e);
+            }
+            if (null == tcp) {
+                LOG.error("Unknown tcp operation: " + parts[0]);
+                return;
+            }
+            tcp.parse(input);
+            out.add(tcp);
+            LOG.trace("Converted {} to {}", input, tcp);
+        } finally {
+            buf.release();
         }
-        if (null == tcp) {
-            LOG.error("Unknown tcp operation: " + parts[0]);
-            return;
-        }
-        tcp.parse(input);
-        out.add(tcp);
-        LOG.trace("Converted {} to {}", input, tcp);
     }
 
 }
