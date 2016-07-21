@@ -167,6 +167,9 @@ public abstract class CollectDPluginParent {
         } else if (vl.getPlugin().equals("ipmi")) {
             metric.append("sys.ipmi.").append(vl.getType());
             tags.append(INSTANCE).append(vl.getTypeInstance().replaceAll(" ", "_"));
+        } else if (vl.getPlugin().equals("snmp")) {
+            metric.append("sys.snmp.").append(vl.getType());
+            tags.append(INSTANCE).append(vl.getTypeInstance().replaceAll(" ", "_"));
         } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance())
                 && notEmpty(vl.getPlugin())) {
             metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD)
