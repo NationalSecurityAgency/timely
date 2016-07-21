@@ -1,0 +1,24 @@
+{
+  "type": "datasource",
+  "name": "Timely",
+  "id": "timely-datasource",
+
+  "metrics": true,
+  "defaultMatchFormat": "pipe",
+  "annotations": true,
+
+  "includes": [
+    {"type": "dashboard", "name": "Timely Metrics", "path": "dashboards/standalone_test.json"}
+  ],
+
+  "info": {
+    "author": {
+      "name": "National Security Agency",
+      "url": "http://github.com/NationalSecurityAgency/timely"
+    },
+    "logos": {
+      "small": "../timely-app/img/t2.png",
+      "large": "../timely-app/img/t1.png"
+    }
+  }
+}

@@ -1,0 +1,53 @@
+<div class="page-header">
+  <h1>Metrics Browser</h1>
+</div>
+
+<div ng-hide="ctrl.hasDatasource" >
+  <h4>No Timely datasources are defined.</h4>
+  <i><a href="datasources/new">Create one</a></i>
+</div>
+
+<div class="gf-box" ng-show="ctrl.hasDatasource">
+
+  <div class="gf-box-header">
+    <div class="gf-form-inline">
+    	<div class="gf-form max-width-30">
+    		<span class="gf-label width-7 p-y-1 p-x-1">Datasource</span>
+    		<div class="gf-form-select-wrapper gf-form-select-wrapper--has-help-icon max-width-24">
+    			<select class="gf-form-input"
+            ng-model="ctrl.source"
+            ng-options="d.name for d in ctrl.datasources"
+            ng-change=ctrl.updateDatasource()></select>
+    			<info-popover mode="right-absolute">
+    				Select a Datasource<br>
+    			</info-popover>
+    		</div>
+
+
+    	</div>
+    </div>
+  </div>
+
+  <div class="gf-box-body">
+    <div class="grafana-options-table">
+      <div class="gf-form width-20 pull-right">
+        <input type="text" class="gf-form-input" placeholder="filter" ng-model="searchText">
+        </input>
+      </div>
+
+      <table>
+        <tr>
+          <th>Metric</th>
+          <th>Tags</th>
+        </tr>
+            <tr ng-repeat="metric in ctrl.metrics | filter:searchText">
+              <td>{{metric.metric}}</td>
+              <td class="p-x-1" ng-repeat="tag in metric.tags">
+                {{tag.name}} = {{tag.values}}
+              </td>
+            </tr>
+      </table>
+    </div>
+  </div>
+
+</div>
