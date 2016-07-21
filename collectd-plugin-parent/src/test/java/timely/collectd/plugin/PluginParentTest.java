@@ -186,6 +186,28 @@ public class PluginParentTest {
     }
 
     @Test
+    public void testSnmp() throws Exception {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("snmp");
+        // vl.setPluginInstance("sda");
+        vl.setTime(TIME);
+        vl.setType("if_octets");
+        vl.setTypeInstance("Ethernet1");
+        vl.setValues(Collections.singletonList((Number) 0.0D));
+        DataSet ds = new DataSet("GAUGE");
+        ds.addDataSource(new DataSource("value", 1, 0.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+        test.process(vl);
+        assertEquals(
+                "put sys.snmp.if_octets 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo instance=Ethernet1 sample=value sampleType=GAUGE\n",
+                result);
+
+    }
+
+    @Test
     public void testSensors() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
