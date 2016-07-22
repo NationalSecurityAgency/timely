@@ -9,7 +9,8 @@
     {
       if (window.WebSocket)
       {
-        var sock = new WebSocket("wss://127.0.0.1:54323/websocket");
+        var host = window.location.hostname;
+        var sock = new WebSocket("wss://"+host+":54323/websocket");
         sock.onmessage = function(msg)
         {
           var metric = msg.data;
