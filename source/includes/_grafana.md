@@ -7,9 +7,11 @@ In the grafana directory in the source tree exists a Timely application for Graf
 Compiling the timely-app requrires [NodeJS](https://nodejs.org/en/) to be installed. Once installed, simply download
 the dependencies with `npm` and run `grunt`
 
-1. ```cd grafana/timely-app```
-2. ```npm install```
-3. ```grunt```
+`cd grafana/timely-app`
+
+`npm install`
+
+`grunt`
 
 For development, running `grunt watch` will watch for file changes and continuously rebuild everything.
 
