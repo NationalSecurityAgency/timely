@@ -17,8 +17,8 @@
       "url": "http://github.com/NationalSecurityAgency/timely"
     },
     "logos": {
-      "small": "../timely-app/img/t2.png",
-      "large": "../timely-app/img/t1.png"
+      "small": "../timely-app/img/brand_small.png",
+      "large": "../timely-app/img/brand_large.png"
     }
   }
 }
