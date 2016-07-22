@@ -16,6 +16,7 @@ export class MetricsPageCtrl {
   }
 
   updateDatasource(){
+    this._clearMetrics();
     var uri = this._getURI(this.source.jsonData);
     this.backendSrv.request(
       { method: 'GET',
@@ -27,6 +28,10 @@ export class MetricsPageCtrl {
         this.metrics = this._transformMetrics(response.metrics);
         this.hasDatasource = true;
       });
+  }
+
+  _clearMetrics(){
+    this.metrics = [];
   }
 
   _transformMetrics(metrics){

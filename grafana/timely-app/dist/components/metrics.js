@@ -55,6 +55,7 @@ System.register(['lodash', 'plugins/timely-app/components/authspage'], function 
           value: function updateDatasource() {
             var _this = this;
 
+            this._clearMetrics();
             var uri = this._getURI(this.source.jsonData);
             this.backendSrv.request({ method: 'GET',
               url: uri,
@@ -63,6 +64,11 @@ System.register(['lodash', 'plugins/timely-app/components/authspage'], function 
               _this.metrics = _this._transformMetrics(response.metrics);
               _this.hasDatasource = true;
             });
+          }
+        }, {
+          key: '_clearMetrics',
+          value: function _clearMetrics() {
+            this.metrics = [];
           }
         }, {
           key: '_transformMetrics',
