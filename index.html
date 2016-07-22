@@ -877,7 +877,7 @@
 The standalone server will not save your metric data across restarts.
 </aside>
 
-<p>To deploy Timely with a running Accumulo instance you will need to modify the <code class="prettyprint">conf/timely.properties file appropriately. Then copy the</code>lib/timely-server.jar<code class="prettyprint">file to your Accumulo tablet servers. Finally, launch Timely using the</code>bin/timely-server.sh` script.</p>
+<p>To deploy Timely with a running Accumulo instance you will need to modify the <code class="prettyprint">conf/timely.properties</code> file appropriately. Then copy the <code class="prettyprint">lib/timely-server.jar</code> file to your Accumulo tablet servers. Finally, launch Timely using the <code class="prettyprint">bin/timely-server.sh</code> script.</p>
 
 <h2 id="ssl-setup">SSL Setup</h2>
 
@@ -895,7 +895,7 @@ The standalone server will not save your metric data across restarts.
 
 <p>Create a certificate request using the private key</p>
 
-<p><code class="prettyprint">openssl req -x509 -new -key CA.key -days 365 -out CA.pem</code></p>
+<p><code class="prettyprint">openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem</code></p>
 
 <h4 id="create-your-ssl-material-for-grafana">Create your SSL material for Grafana</h4>
 
@@ -905,7 +905,7 @@ The standalone server will not save your metric data across restarts.
 
 <p>Generate a certificate signing request (CSR) with our Grafana private key</p>
 
-<p><code class="prettyprint">openssl req -new -key grafana.key -out grafana.csr</code></p>
+<p><code class="prettyprint">openssl req -new -key grafana.key -sha256 -nodes -out grafana.csr</code></p>
 
 <p>Use the CSR and the CA to create a certificate for the server (a reply to the CSR)</p>
 
@@ -913,13 +913,13 @@ The standalone server will not save your metric data across restarts.
 
 <h4 id="create-your-ssl-material-for-timely">Create your SSL material for Timely</h4>
 
-<p>Create the private key for the Grafana server</p>
+<p>Create the private key for the Timely server</p>
 
 <p><code class="prettyprint">openssl genrsa -out timely.key 4096</code></p>
 
-<p>Generate a certificate signing request (CSR) with our Grafana private key</p>
+<p>Generate a certificate signing request (CSR) with our Timely private key</p>
 
-<p><code class="prettyprint">openssl req -new -key timely.key -out timely.csr</code></p>
+<p><code class="prettyprint">openssl req -new -key timely.key -sha256 -nodes -subj &#39;/C=US/ST=Confusion/L=Here/O=Timely/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1&#39; &gt; timely.csr</code></p>
 
 <p>Use the CSR and the CA to create a certificate for the server (a reply to the CSR)</p>
 
@@ -934,6 +934,8 @@ The standalone server will not save your metric data across restarts.
 <p>The <code class="prettyprint">NUM_SERVER_THREADS</code> variable in the <code class="prettyprint">timely-server.sh</code> script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the <code class="prettyprint">conf</code> directory supports the following properties:</p>
 
 <blockquote>
+<p>Note: If you comment out a property, then the default will be used. If a property is left uncommented with no value, then the property will have no value which may result in an error.</p>
+
 <p>Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the <code class="prettyprint">timely.write.latency</code> and <code class="prettyprint">timely.write.threads</code> configuration property, but the buffer size for each BatchWriter is <code class="prettyprint">timely.write.buffer.size</code> divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.write.latency=30s, timely.write.threads=2 timely.write.buffer.size=1G</p>
 
 <p>Note: The <code class="prettyprint">timely.scanner.threads</code> property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.</p>
@@ -1411,13 +1413,123 @@ Timely stores your metric N times in the metrics table, where N is the number of
 
           <h1 id="plugins-for-collectd">Plugins for CollectD</h1>
 
+<p>The source tree includes plugins for <a href="http://collectd.org/">CollectD</a>, an agent based system statistics collector. The CollectD plugins parse and transform the metrics and sends them to Timely.</p>
+
+<h2 id="collectd-plugin-to-send-data-to-timely">CollectD plugin to send data to Timely</h2>
+<pre class="highlight python"><code><span class="n">LoadPlugin</span> <span class="n">java</span>
+<span class="o">&lt;</span><span class="n">Plugin</span> <span class="n">java</span><span class="o">&gt;</span>
+        <span class="n">JVMArg</span> <span class="s">"-verbose:jni"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Djava.class.path=/usr/share/collectd/java/collectd-api.jar:&lt;path_to_jar&gt;/collectd-timely-plugin.jar"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xms128m"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xmx128m"</span>
+        <span class="n">LoadPlugin</span> <span class="s">"timely.collectd.plugin.WriteTimelyPlugin"</span>
+        <span class="o">&lt;</span><span class="n">Plugin</span> <span class="s">"timely.collectd.plugin.WriteTimelyPlugin"</span><span class="o">&gt;</span>
+          <span class="n">Host</span> <span class="s">"&lt;TimelyHost&gt;"</span>
+          <span class="n">Port</span> <span class="s">"&lt;TimelyPutPort&gt;"</span>
+          <span class="n">Tags</span> <span class="s">"&lt;comma separated list of additional key=value pairs&gt;"</span>
+        <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+<span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+</code></pre>
+
+<p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-timely-plugin directory. Place the resulting jar file somewhere on the local filesystem and the plugin configuration to the right to the collectd configuration file.</p>
+
+<h2 id="collectd-plugin-to-send-data-to-nsq">CollectD plugin to send data to <a href="http://nsq.io/">NSQ</a></h2>
+<pre class="highlight python"><code><span class="n">LoadPlugin</span> <span class="n">java</span>
+<span class="o">&lt;</span><span class="n">Plugin</span> <span class="n">java</span><span class="o">&gt;</span>
+        <span class="n">JVMArg</span> <span class="s">"-verbose:jni"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Djava.class.path=/usr/share/collectd/java/collectd-api.jar:&lt;path_to_jar&gt;/collectd-nsq-plugin.jar"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xms128m"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xmx128m"</span>
+        <span class="n">LoadPlugin</span> <span class="s">"timely.collectd.plugin.WriteNSQPlugin"</span>
+        <span class="o">&lt;</span><span class="n">Plugin</span> <span class="s">"timely.collectd.plugin.WriteNSQPlugin"</span><span class="o">&gt;</span>
+          <span class="n">Host</span> <span class="s">"&lt;NSQHost[,NSQHost]&gt;"</span>
+          <span class="n">Port</span> <span class="s">"&lt;NSQHttpPort&gt;"</span>
+          <span class="n">Tags</span> <span class="s">"&lt;comma separated list of additional key=value pairs&gt;"</span>
+        <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+<span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+</code></pre>
+
+<p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-nsq-plugin directory. Place the resulting jar file somewhere on the local filesystem and add the plugin configuration to the right to the collectd configuration file.</p>
+
+<h2 id="collecting-metrics-from-hadoop-and-accumulo">Collecting Metrics from Hadoop and Accumulo</h2>
+
+<p>CollectD contains <a href="https://github.com/etsy/statsd">StatsD</a> plugin that listens on a configured port for UDP traffic in the StatsD protocol. More recent versions of Hadoop contain a StatsD <a href="https://issues.apache.org/jira/browse/HADOOP-12360">sink</a> for the Hadoop <a href="http://hadoop.apache.org/docs/r2.7.2/hadoop-project-dist/hadoop-common/Metrics.html">Metrics2</a> framework. Accumulo also uses the Hadoop Metrics2 framework and when configured correctly can emit its metrics via the same mechanism.</p>
+
+<h3 id="configuring-hadoop-to-use-the-statsd-sink">Configuring Hadoop to use the StatsD sink</h3>
+<pre class="highlight python"><code><span class="o">*.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="o">*.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">period</span><span class="o">=</span><span class="mi">60</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">NameNode</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">DataNode</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">ResourceManager</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">NodeManager</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">MRAppMaster</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">JobHistoryServer</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">MapTask</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">ReduceTask</span>
+</code></pre>
+
+<p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2.properties file.</p>
+
+<h3 id="configuring-accumulo-to-use-the-statsd-sink">Configuring Accumulo to use the StatsD sink</h3>
+<pre class="highlight python"><code><span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">TabletServer</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">Master</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">Thrift</span>
+</code></pre>
+
+<p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2-accumulo.properties file.</p>
+
           <h1 id="grafana">Grafana</h1>
 
 <p>In the grafana directory in the source tree exists a Timely application for Grafana.</p>
 
 <h2 id="compiling">Compiling</h2>
 
-<p>TODO</p>
+<p>Compiling the timely-app requrires <a href="https://nodejs.org/en/">NodeJS</a> to be installed. Once installed, simply download
+the dependencies with <code class="prettyprint">npm</code> and run <code class="prettyprint">grunt</code></p>
+
+<p><code class="prettyprint">cd grafana/timely-app</code></p>
+
+<p><code class="prettyprint">npm install</code></p>
+
+<p><code class="prettyprint">grunt</code></p>
+
+<p>For development, running <code class="prettyprint">grunt watch</code> will watch for file changes and continuously rebuild everything.</p>
 
 <h2 id="packaging">Packaging</h2>
 
@@ -1579,7 +1691,49 @@ decoder to deserialize the message sent across the wire to a Java object.</p>
 
           <h1 id="maintaining-the-documentation">Maintaining the Documentation</h1>
 
-<p>This documentation is created using <a href="https://github.com/lord/slate">Slate</a>. To build you will need to install some Ruby dependencies described <a href="https://github.com/lord/slate/wiki/Installing-Slate">here</a>. Once you have the dependencies, then you will want to checkout the slate branch to modify the documentation. You can update the slate branch from it&rsquo;s origin using these <a href="https://github.com/lord/slate/wiki/Updating-Slate">instructions</a></p>
+<p>This documentation is created using <a href="https://github.com/lord/slate">Slate</a>. To build you will need to install some Ruby dependencies described <a href="https://github.com/lord/slate/wiki/Installing-Slate">here</a>. Once you have the dependencies, then you will want to checkout the slate branch to modify the documentation.</p>
+
+<h2 id="viewing-your-changes-locally">Viewing your changes locally</h2>
+
+<p>From the slate branch, execute <code class="prettyprint">bundle exec middleman server</code> and go to http://localhost:4567 in your browser</p>
+
+<h2 id="pushing-changes-to-gh-pages-branch">Pushing changes to gh-pages branch</h2>
+
+<p>From the slate branch, execute <code class="prettyprint">bundle exec middleman build --clean</code> which will generate the static pages in a directory called <code class="prettyprint">build</code>. Move the build directory somewhere and checkout the gh-pages branch. Copy the contents of the build directory into the gh-pages branch, commit, and push.</p>
+
+<h2 id="updating-slate">Updating Slate</h2>
+
+<p>The slate branch is a point-in-time copy of the master branch at https://github.com/lord/slate. You can update our slate branch to get new features using these <a href="https://github.com/lord/slate/wiki/Updating-Slate">instructions</a></p>
+
+          <h1 id="examples">Examples</h1>
+
+<h2 id="websocket-example">WebSocket Example</h2>
+
+<p>Timely will serve up files located in the <code class="prettyprint">bin/webapp</code> directory. The source of the index.html file contains an example of how to use the <a href="#subscription-api">Subscription</a> Api with WebSockets. For this example to work with the standalone server, you first need to create some user certificates signed by the certificate authority that Timely is using. If you followed the instructions in the <a href="#ssl-setup">SSL</a> Setup section, then you just need to do the following:</p>
+
+<blockquote>
+<p>Note: When prompted for input parameters during the certificate request creation, enter the value <code class="prettyprint">example.com</code> for the Common Name. In the default <code class="prettyprint">conf/security.xml</code> file it is looking for this value in X509 login requests.</p>
+</blockquote>
+
+<p><code class="prettyprint">
+openssl genrsa -out timely-user.key 4096
+</code></p>
+
+<p><code class="prettyprint">
+openssl req -new -key timely-user.key -sha256 -nodes -out timely-user.csr
+</code></p>
+
+<p><code class="prettyprint">
+openssl x509 -req -in timely-user.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out timely-user.crt -days 365
+</code></p>
+
+<p><code class="prettyprint">
+openssl pkcs12 -export -out timely-user.p12 -inkey timely-user.key -in timely-user.crt -certfile CA.pem
+</code></p>
+
+<p>Next, load the timely-user.p12 file into your web browser. 
+Then, start the standalone server.
+Finally, navigate to <code class="prettyprint">https://localhost:54322/webapp/index.html</code> in your web browser.</p>
 
       </div>
       <div class="dark-box">
