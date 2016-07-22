@@ -10,7 +10,7 @@ If you are just starting out with Timely and want to see what it can do, then st
 The standalone server will not save your metric data across restarts.
 </aside>
 
-To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.properties file appropriately. Then copy the `lib/timely-server.jar` file to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
+To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.properties` file appropriately. Then copy the `lib/timely-server.jar` file to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
 
 ## SSL Setup
 
@@ -22,14 +22,13 @@ There are plenty of resources on the Internet for doing this. This example is ta
 
 #### Create your Certificate Authority
 
-
 Create a private key
 
 `openssl genrsa -des3 -out CA.key 4096`
 
 Create a certificate request using the private key
 
-`openssl req -x509 -new -key CA.key -days 365 -out CA.pem`
+`openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem`
 
 #### Create your SSL material for Grafana
 
@@ -39,7 +38,7 @@ Create the private key for the Grafana server
 
 Generate a certificate signing request (CSR) with our Grafana private key
 
-`openssl req -new -key grafana.key -out grafana.csr`
+`openssl req -new -key grafana.key -sha256 -nodes -out grafana.csr`
 
 Use the CSR and the CA to create a certificate for the server (a reply to the CSR)
 
@@ -47,13 +46,13 @@ Use the CSR and the CA to create a certificate for the server (a reply to the CS
 
 #### Create your SSL material for Timely
 
-Create the private key for the Grafana server
+Create the private key for the Timely server
 
 `openssl genrsa -out timely.key 4096`
 
-Generate a certificate signing request (CSR) with our Grafana private key
+Generate a certificate signing request (CSR) with our Timely private key
 
-`openssl req -new -key timely.key -out timely.csr`
+`openssl req -new -key timely.key -sha256 -nodes -subj '/C=US/ST=Confusion/L=Here/O=Timely/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1' > timely.csr`
 
 Use the CSR and the CA to create a certificate for the server (a reply to the CSR)
 
@@ -66,6 +65,8 @@ Convert the private key to pkcs#8 format
 ## Configuration
 
 The `NUM_SERVER_THREADS` variable in the `timely-server.sh` script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the `conf` directory supports the following properties:
+
+> Note: If you comment out a property, then the default will be used. If a property is left uncommented with no value, then the property will have no value which may result in an error.
 
 > Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the `timely.write.latency` and `timely.write.threads` configuration property, but the buffer size for each BatchWriter is `timely.write.buffer.size` divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.write.latency=30s, timely.write.threads=2 timely.write.buffer.size=1G
 

@@ -22,6 +22,7 @@ includes:
   - grafana
   - developer
   - documentation
+  - examples
 
 search: true
 
