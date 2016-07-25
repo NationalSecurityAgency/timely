@@ -112,6 +112,7 @@
       <div id="toc">
       </div>
         <ul class="toc-footer">
+            <li><a href='https://github.com/NationalSecurityAgency/timely'>Timely on GitHub</a></li>
             <li><a href='https://github.com/lord/slate'>Documentation Powered by Slate</a></li>
         </ul>
     </div>
@@ -122,7 +123,781 @@
 
 <p>Timely is a time series database application that provides secure access to time series data. Timely is written in Java and designed to work with <a href="http://accumulo.apache.org/">Apache Accumulo</a> and <a href="http://www.grafana.org">Grafana</a>.</p>
 
-          <h1 id="transports">Transports</h1>
+<h1 id="getting-started">Getting Started</h1>
+
+<p>Getting started with Timely requires that you:</p>
+
+<blockquote>
+<p>Use the <a href="#standalone-quick-start">standalone</a> server to get a test environment up and running quickly</p>
+</blockquote>
+
+<ol>
+<li><p>Install and configure a Timely <a href="#timely-server">server</a></p></li>
+<li><p>Install and configure the Timely <a href="#deployment">app</a>  within Grafana</p></li>
+</ol>
+
+<blockquote>
+<p>Timely should accept data from TCollector with no changes. A <a href="#plugins-for-collectd">plugin</a> exists for sending data from CollectD.</p>
+</blockquote>
+
+<ol>
+<li>Send metrics to Timely using <a href="http://collectd.org/">CollectD</a>, OpenTSDBs <a href="https://github.com/OpenTSDB/tcollector">TCollector</a>, etc.</li>
+</ol>
+
+          <h1 id="timely-server">Timely Server</h1>
+
+<h2 id="starting-timely">Starting Timely</h2>
+
+<blockquote>
+<p>Note: The Timely server requires a Java 8 runtime. Timely utilizes iterators for Apache Accumulo, so your Accumulo instance will need to be run with Java 8 also.</p>
+</blockquote>
+
+<p>If you are just starting out with Timely and want to see what it can do, then start up the standalone server using the <code class="prettyprint">bin/timely-standalone.sh</code> script. This will start up the necessary HDFS, Accumulo, and Timely processes on your local machine. You can use the <code class="prettyprint">bin/insert-test-data*.sh</code> scripts to push same fake data to the Timely server.</p>
+
+<aside class="warning">
+The standalone server will not save your metric data across restarts.
+</aside>
+
+<p>To deploy Timely with a running Accumulo instance you will need to modify the <code class="prettyprint">conf/timely.properties</code> file appropriately. Then copy the <code class="prettyprint">lib/timely-server.jar</code> and <code class="prettyprint">lib/commons-lang3-*.jar</code> files to your Accumulo tablet servers. Finally, launch Timely using the <code class="prettyprint">bin/timely-server.sh</code> script.</p>
+
+<h2 id="ssl-setup">SSL Setup</h2>
+
+<p>To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the <code class="prettyprint">timely.ssl.key.pass</code> property if there is no password for your private key.</p>
+
+<h3 id="creating-your-own-ssl-keys-and-certificates">Creating your own SSL keys and certificates</h3>
+
+<p>There are plenty of resources on the Internet for doing this. This example is taken from instructions in the Accumulo <a href="http://accumulo.apache.org/1.7/accumulo_user_manual#_generate_a_certificate_keystore_per_host">user manual</a>.</p>
+
+<h4 id="create-your-certificate-authority">Create your Certificate Authority</h4>
+
+<p>Create a private key</p>
+
+<p><code class="prettyprint">openssl genrsa -des3 -out CA.key 4096</code></p>
+
+<p>Create a certificate request using the private key</p>
+
+<p><code class="prettyprint">openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem</code></p>
+
+<h4 id="create-your-ssl-material-for-grafana">Create your SSL material for Grafana</h4>
+
+<p>Create the private key for the Grafana server</p>
+
+<p><code class="prettyprint">openssl genrsa -out grafana.key 4096</code></p>
+
+<p>Generate a certificate signing request (CSR) with our Grafana private key</p>
+
+<p><code class="prettyprint">openssl req -new -key grafana.key -sha256 -nodes -out grafana.csr</code></p>
+
+<p>Use the CSR and the CA to create a certificate for the server (a reply to the CSR)</p>
+
+<p><code class="prettyprint">openssl x509 -req -in grafana.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out grafana.crt -days 365</code></p>
+
+<h4 id="create-your-ssl-material-for-timely">Create your SSL material for Timely</h4>
+
+<p>Create the private key for the Timely server</p>
+
+<p><code class="prettyprint">openssl genrsa -out timely.key 4096</code></p>
+
+<p>Generate a certificate signing request (CSR) with our Timely private key</p>
+
+<p><code class="prettyprint">openssl req -new -key timely.key -sha256 -nodes -subj &#39;/C=US/ST=Confusion/L=Here/O=Timely/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1&#39; &gt; timely.csr</code></p>
+
+<p>Use the CSR and the CA to create a certificate for the server (a reply to the CSR)</p>
+
+<p><code class="prettyprint">openssl x509 -req -in timely.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out timely.crt -days 365</code></p>
+
+<p>Convert the private key to pkcs#8 format</p>
+
+<p><code class="prettyprint">openssl pkcs8 -topk8 -inform PEM -outform PEM -in timely.key -out timely-pkcs8.key</code></p>
+
+<h2 id="configuration">Configuration</h2>
+
+<p>The <code class="prettyprint">NUM_SERVER_THREADS</code> variable in the <code class="prettyprint">timely-server.sh</code> script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the <code class="prettyprint">conf</code> directory supports the following properties:</p>
+
+<blockquote>
+<p>Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the <code class="prettyprint">timely.write.latency</code> and <code class="prettyprint">timely.write.threads</code> configuration property, but the buffer size for each BatchWriter is <code class="prettyprint">timely.write.buffer.size</code> divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.write.latency=30s, timely.write.threads=2 timely.write.buffer.size=1G</p>
+
+<p>Note: The <code class="prettyprint">timely.scanner.threads</code> property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.</p>
+
+<p>Note: The Timely server contains an object called the meta cache, which is a cache of the keys that would be inserted into the meta table if they did not already exist. This cache is used to reduce the insert load of duplicate keys into the meta table and to serve up data to the <code class="prettyprint">/api/metrics</code> endpoint. The meta cache is an object that supports eviction based on last access time and can be tuned with the <code class="prettyprint">timely.meta.cache.*</code> properties.</p>
+</blockquote>
+
+<table><thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+<th>Default Value</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>timely.ip</td>
+<td>The ip address where the Timely server is running</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.port.put</td>
+<td>The port that will be used for processing put requests</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.port.query</td>
+<td>The port that will be used for processing query requests</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.port.websocket</td>
+<td>The port that will be used for processing web socket requests</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.instance_name</td>
+<td>The name of your Accumulo instance</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.zookeepers</td>
+<td>The list of Zookeepers for your Accumulo instance</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.username</td>
+<td>The username that Timely will use to connect to Accumulo</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.password</td>
+<td>The password of the Accumulo user</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.table</td>
+<td>The name of the metrics table</td>
+<td>timely.metrics</td>
+</tr>
+<tr>
+<td>timely.meta</td>
+<td>The name of the meta table</td>
+<td>timely.meta</td>
+</tr>
+<tr>
+<td>timely.write.latency</td>
+<td>The Accumulo BatchWriter latency</td>
+<td>5s</td>
+</tr>
+<tr>
+<td>timely.write.threads</td>
+<td>The Accumulo BatchWriter number of threads</td>
+<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L49">default</a></td>
+</tr>
+<tr>
+<td>timely.write.buffer.size</td>
+<td>The Accumulo BatchWriter buffer size</td>
+<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L40">default</a></td>
+</tr>
+<tr>
+<td>timely.metric.age.off.days</td>
+<td>The number of days to keep metrics</td>
+<td>7</td>
+</tr>
+<tr>
+<td>timely.cors.allow.any.origin</td>
+<td>Allow any origin in cross origin requests (true/false)</td>
+<td>false</td>
+</tr>
+<tr>
+<td>timely.cors.allow.null.origin</td>
+<td>Allow null origins in cross origin requests (true/false)</td>
+<td>false</td>
+</tr>
+<tr>
+<td>timely.cors.allowed.origins</td>
+<td>List of allowed origins in cross origin requests (can be null or comma separated list)</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.cors.allowed.methods</td>
+<td>List of allowed methods for cross origin requests</td>
+<td><ul><li>DELETE</li><li>GET</li><li>HEAD</li><li>OPTIONS</li><li>PUT</li><li>POST</li></ul></td>
+</tr>
+<tr>
+<td>timely.cors.allowed.headers</td>
+<td>Comma separated list of allowed HTTP headers for cross origin requests</td>
+<td>content-type</td>
+</tr>
+<tr>
+<td>timely.cors.allow.credentials</td>
+<td>Allow credentials to be passed in cross origin requests (true/false)</td>
+<td>true</td>
+</tr>
+<tr>
+<td>timely.scanner.threads</td>
+<td>Number of BatchScanner threads to be used in a query</td>
+<td>4</td>
+</tr>
+<tr>
+<td>timely.metrics.report.tags.ignored</td>
+<td>Comma separated list of tags which will not be shown in the /api/metrics response</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.meta.cache.expiration.minutes</td>
+<td>Number of minutes after which unaccessed meta information will be purged from the meta cache</td>
+<td>60</td>
+</tr>
+<tr>
+<td>timely.meta.cache.initial.capacity</td>
+<td>Initial capacity of the meta cache</td>
+<td>2000</td>
+</tr>
+<tr>
+<td>timely.meta.cache.max.capacity</td>
+<td>Maximum capacity of the meta cache</td>
+<td>10000</td>
+</tr>
+<tr>
+<td>timely.ssl.certificate.file</td>
+<td>Public certificate to use for the Timely server (x509 pem format)</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.ssl.key.file</td>
+<td>Private key to use for the Timely server (in pkcs8 format)</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.ssl.key.pass</td>
+<td>Password to the private key</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.ssl.use.generated.keypair</td>
+<td>Use a generated certificate/key pair - useful for testing</td>
+<td>false</td>
+</tr>
+<tr>
+<td>timely.ssl.trust.store.file</td>
+<td>Certificate trust store (a concatenated list of trusted CA x509 pem certificates)</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.ssl.use.openssl</td>
+<td>Use OpenSSL (vs JDK SSL)</td>
+<td>true</td>
+</tr>
+<tr>
+<td>timely.ssl.use.ciphers</td>
+<td>List of allowed SSL ciphers</td>
+<td>see Configuration.java</td>
+</tr>
+<tr>
+<td>timely.session.max.age</td>
+<td>Setting for max age of session cookie (in seconds)</td>
+<td>86400</td>
+</tr>
+<tr>
+<td>timely.http.host</td>
+<td>Address for the Timely server, used for the session cookie domain</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.allow.anonymous.access</td>
+<td>Allow anonymous access</td>
+<td>false</td>
+</tr>
+<tr>
+<td>timely.visibility.cache.expiration.minutes</td>
+<td>Column Visibility Cache Expiration (minutes)</td>
+<td>60</td>
+</tr>
+<tr>
+<td>timely.visibility.cache.initial.capacity</td>
+<td>Column Visibility Cache Initial Capacity</td>
+<td>2000</td>
+</tr>
+<tr>
+<td>timely.visibility.cache.max.capacity</td>
+<td>Column Visibility Cache Max Capacity</td>
+<td>10000</td>
+</tr>
+<tr>
+<td>timely.web.socket.timeout</td>
+<td>Number of seconds with no client ping response before closing subscription</td>
+<td>60</td>
+</tr>
+<tr>
+<td>timely.ws.subscription.lag</td>
+<td>Number of seconds that subscriptions should lag to account for latency</td>
+<td>120</td>
+</tr>
+<tr>
+<td>timely.http.redirect.path</td>
+<td>Path to use for HTTP to HTTPS redirect</td>
+<td>/secure-me</td>
+</tr>
+<tr>
+<td>timely.hsts.max.age</td>
+<td>HTTP Strict Transport Security max age (in seconds)</td>
+<td>604800</td>
+</tr>
+</tbody></table>
+
+<aside class="notice">
+If you comment out a property, then the default will be used. If a property is left uncommented with no value, then the property will have no value which may result in an error.
+</aside>
+
+<h2 id="data-storage">Data Storage</h2>
+
+<p>Metrics sent to Timely are stored in two Accumulo tables, <code class="prettyprint">meta</code> and <code class="prettyprint">metrics</code>.</p>
+
+<h3 id="meta-table-format">Meta Table Format</h3>
+
+<table><thead>
+<tr>
+<th>Row</th>
+<th>ColumnFamily</th>
+<th>ColumnQualifier</th>
+<th>Value</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>m:metric</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>t:metric</td>
+<td>tagKey</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>v:metric</td>
+<td>tagKey</td>
+<td>tagValue</td>
+<td></td>
+</tr>
+</tbody></table>
+
+<h3 id="metric-table-format">Metric Table Format</h3>
+
+<table><thead>
+<tr>
+<th>Row</th>
+<th>ColumnFamily</th>
+<th>ColumnQualifier</th>
+<th>Value</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>metric\timestamp</td>
+<td>tagKey=tagValue</td>
+<td>tagKey=tagValue,tagKey=tagValue,&hellip;</td>
+<td>metricValue</td>
+</tr>
+</tbody></table>
+
+<h2 id="data-storage-example">Data Storage Example</h2>
+
+<p>As an example, if you sent the following metric to the put api: <code class="prettyprint">sys.cpu.user 1447879348291 2.0 rack=r001 host=r001n01 instance=0</code> it would get stored in the following manner in the <code class="prettyprint">meta</code> table:</p>
+
+<table><thead>
+<tr>
+<th>Row</th>
+<th>ColumnFamily</th>
+<th>ColumnQualifier</th>
+<th>Value</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>m:sys.cpu.user</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>t:sys.cpu.user</td>
+<td>host</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>t:sys.cpu.user</td>
+<td>instance</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>t:sys.cpu.user</td>
+<td>rack</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>v:sys.cpu.user</td>
+<td>host</td>
+<td>r001n01</td>
+<td></td>
+</tr>
+<tr>
+<td>v:sys.cpu.user</td>
+<td>instance</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td>v:sys.cpu.user</td>
+<td>rack</td>
+<td>r001</td>
+<td></td>
+</tr>
+</tbody></table>
+
+<p>and in the following manner in the <code class="prettyprint">metrics</code> table</p>
+
+<blockquote>
+<p>Note: Not shown in the examples is the encoding of the row and value. You can apply the Timely formatter to your metrics table using the Accumulo shell command: <code class="prettyprint">config -t timely.metrics -s table.formatter=timely.util.TimelyMetricsFormatter</code></p>
+</blockquote>
+
+<table><thead>
+<tr>
+<th>Row</th>
+<th>ColumnFamily</th>
+<th>ColumnQualifier</th>
+<th>Value</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>sys.cpu.user\1447879348291</td>
+<td>host=r001n01</td>
+<td>instance=0,rack=r001</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>sys.cpu.user\1447879348291</td>
+<td>instance=0</td>
+<td>host=r001n01,rack=r001</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>sys.cpu.user\1447879348291</td>
+<td>rack=r001</td>
+<td>host=r001n01,instance=0</td>
+<td>2.0</td>
+</tr>
+</tbody></table>
+
+<aside class="notice">
+Timely stores your metric N times in the metrics table, where N is the number of tags in your metric data.
+</aside>
+
+<h2 id="accumulo-configuration">Accumulo Configuration</h2>
+
+<p>You can generate split points for the metrics table after sending data to Timely for a short amount of time. The <code class="prettyprint">bin/get-metric-split-points.sh</code> script will print out a set of split points based on the metric names in the meta table. Yuo can use this output in the Accumulo <code class="prettyprint">addsplits</code> command.</p>
+
+<p>You can lower the <code class="prettyprint">table.scan.max.memory</code> property on your metrics table. This will send data back from the Tablet Servers to the Timely server at a faster rate.</p>
+
+<p>If you don&rsquo;t mind losing some metric data in the event of an Accumulo tablet server death, you can set the <code class="prettyprint">table.walog.enabled</code> property to false and the <code class="prettyprint">table.durability</code> property to none on your metrics table. This should speed up ingest a little.</p>
+
+          <h1 id="security">Security</h1>
+
+<p>Timely allows users to optionally label their data using Accumulo column visibility expressions. To enable this feature, users should put the expressions in a tag named <code class="prettyprint">viz</code>. Timely will <a href="http://accumulo.apache.org/1.7/apidocs/org/apache/accumulo/core/security/ColumnVisibility.html#flatten%28%29">flatten</a> this expression and store it in the column visibility of the data point in the metrics table. Column visibilities are <em>not</em> stored in the meta table, so anyone can see metric names, tag names, and tag values.</p>
+
+<blockquote>
+<p>With anonymous access users that have not logged in will only see unlabeled data.</p>
+</blockquote>
+
+<p>Timely uses Spring Security to configure user authentication and user role information. Users must call the <code class="prettyprint">/login</code> endpoint for authentication and Timely will respond by setting a HTTP cookie with a session id. When anonymous access is disabled, a call to any operation that requires the session id will fail. When anonymous access is enabled, these calls will succeed but only unlabeled data will be returned. When using Grafana, it must be configured to use https also. For more information see the <a href="quick-start/QUICK_START.md">Quick Start</a> documentation.</p>
+
+          <h1 id="standalone-quick-start">Standalone Quick Start</h1>
+
+<ol>
+<li>Install latest version of Grafana (3.0.4 at time of writing)</li>
+<li>Create a grafana configuration file (e.g: <code class="prettyprint">conf/settings.ini</code>)
+
+<ol>
+<li><code class="prettyprint">protocol = https</code></li>
+<li><code class="prettyprint">http_addr = localhost</code></li>
+<li><code class="prettyprint">cert_file= &lt;path to PEM encoded certificate file&gt;</code></li>
+<li><code class="prettyprint">key_file= &lt;path to PEM encoded un-encrypted private key file&gt;</code></li>
+</ol></li>
+<li>Start Grafana (<code class="prettyprint">./bin/grafana-server -c conf/settings.ini</code>)
+
+<ol>
+<li>Visit <code class="prettyprint">https://localhost:3000</code> to verify Grafana is working</li>
+</ol></li>
+<li>Build Timely
+
+<ol>
+<li>set <code class="prettyprint">JAVA_HOME</code> to point to a JDK 8 installation</li>
+<li>cd into the server directory and run <code class="prettyprint">mvn clean package</code></li>
+</ol></li>
+<li>Untar Timely server distribution (found in <code class="prettyprint">target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz</code>)</li>
+<li>Modify <code class="prettyprint">timely-standalone.properties</code>:
+
+<ol>
+<li>Use generated server side SSL certificates</li>
+<li><code class="prettyprint">timely.ssl.use.generated.keypair=true</code></li>
+<li>or, use your own SSL certificates - see <a href="#ssl-setup">SSL</a> Setup</li>
+<li><code class="prettyprint">timely.ssl.use.generated.keypair=false</code></li>
+<li><code class="prettyprint">timely.ssl.certificate.file=&lt;path to PEM encoded certificate file&gt;</code></li>
+<li><code class="prettyprint">timely.ssl.key.file=&lt;path to PKCS8 PEM encoded private key file&gt;</code></li>
+<li><code class="prettyprint">timely.ssl.key.pass=&lt;private key password&gt;</code></li>
+<li><code class="prettyprint">timely.ssl.use.openssl=true</code> (if openssl installed locally, else false)</li>
+<li><code class="prettyprint">timely.ssl.use.ciphers=&lt;list of ciphers&gt;</code> (comma-delimited list of ciphers to use if you do not want to use the default)</li>
+<li>Set Timely domain information, this is used for the HTTP Cookie</li>
+<li><code class="prettyprint">timely.http.address=localhost</code></li>
+<li>Set Grafana login address, used for HTTP redirect after login</li>
+<li><code class="prettyprint">grafana.http.address=https://localhost:3000/login</code></li>
+<li>Set Anonymous access for Timely</li>
+<li><code class="prettyprint">timely.allow.anonymous.access=&lt;true or false&gt;</code></li>
+</ol></li>
+<li>Start the Timely standalone server
+
+<ol>
+<li><code class="prettyprint">cd bin; ./timely-standalone.sh</code></li>
+</ol></li>
+<li>Insert test data
+
+<ol>
+<li><code class="prettyprint">cd bin; ./insert-test-data.sh</code></li>
+</ol></li>
+<li>Add the Timely datasource to Grafana
+
+<ol>
+<li>Go to <code class="prettyprint">https://localhost:54322/api/metrics</code> in your browser and accept the certificate</li>
+<li>Login to Grafana, go to &lsquo;DataSources&rsquo;</li>
+<li>Click &#39;Add data source&rsquo;</li>
+<li>Enter the following information:</li>
+<li>Name: <code class="prettyprint">Timely Standalone</code></li>
+<li>Type: <code class="prettyprint">OpenTSDB</code></li>
+<li>Url: <code class="prettyprint">https://localhost:54322</code></li>
+<li>Access: <code class="prettyprint">direct</code></li>
+<li>With Credentials: <code class="prettyprint">checked</code></li>
+<li>Version: <code class="prettyprint">&lt;=2.1</code></li>
+<li>Resolution: <code class="prettyprint">millisecond</code></li>
+<li>Click <code class="prettyprint">Save &amp; Test</code>. Note that you will get an error, but it will save.</li>
+</ol></li>
+<li>Import Standalone Test dashboard into Grafana.</li>
+</ol>
+
+<h2 id="notes-on-security-options">Notes on Security Options</h2>
+
+<ol>
+<li>If anonymous access is disabled, then users will only be able to see unlabeled data.</li>
+<li>If anonymous access is enabled, then users must login before Grafana will work.</li>
+<li>Access control is configured in <code class="prettyprint">conf/security.xml</code> and supports basic auth and SSL client certificates. Upon a successful login the response will include a HTTP Session Cookie. Once this is set, access to Timely from Grafana should work.
+
+<ol>
+<li>For SSL client certificate auth, users should perform a GET request to the <code class="prettyprint">/login</code> endpoint over HTTPS. The default <code class="prettyprint">conf/security.xml</code> specifies a user <code class="prettyprint">example.com</code> with authorizations <code class="prettyprint">D</code>,<code class="prettyprint">E</code>,<code class="prettyprint">F</code>. The username will be extracted from the certificate&rsquo;s <code class="prettyprint">CN</code> using the <code class="prettyprint">x509PrincipalExtractor</code> bean.</li>
+<li>For basic password authentication users should perform a POST request to the <code class="prettyprint">/login</code> endpoint.</li>
+<li>This can be done using Poster or HttpRequester with the content-type of &ldquo;application/json&rdquo; and the following content:
+<code class="prettyprint">
+    {
+      &quot;username&quot;: &quot;&lt;&gt;&quot;,
+      &quot;password&quot;: &quot;&lt;&gt;&quot;
+    }
+</code></li>
+<li>The default <code class="prettyprint">conf/security.xml</code> specifies a user <code class="prettyprint">test</code> with password <code class="prettyprint">test1</code> that has the authorizations for <code class="prettyprint">A</code>,<code class="prettyprint">B</code>,<code class="prettyprint">C</code>.</li>
+</ol></li>
+<li>The user specified in <code class="prettyprint">timely.user</code> must have authorizations compatible with the visibility values on your data to be able to return that data to a client. Use <code class="prettyprint">setauths</code> in the Accumulo shell to configure this.</li>
+<li><code class="prettyprint">insert-test-data.sh</code> will insert some data with visibilities, specifically <code class="prettyprint">sys.eth0.rx.*</code> will have <code class="prettyprint">A</code>,<code class="prettyprint">B</code> or <code class="prettyprint">C</code> and <code class="prettyprint">sys.eth0.tx.*</code> will have <code class="prettyprint">D</code>,<code class="prettyprint">E</code> or <code class="prettyprint">F</code>.</li>
+</ol>
+
+          <h1 id="grafana">Grafana</h1>
+
+<p>The grafana directory in the source tree contains the Timely application for Grafana.</p>
+
+<h2 id="compiling">Compiling</h2>
+
+<blockquote>
+<p>For development, running <code class="prettyprint">grunt watch</code> will watch for file changes and continuously rebuild everything.</p>
+</blockquote>
+
+<p>Compiling the timely-app requrires <a href="https://nodejs.org/en/">NodeJS</a> to be installed. Once installed, simply download
+the dependencies with <code class="prettyprint">npm</code> and run <code class="prettyprint">grunt</code></p>
+
+<p><code class="prettyprint">cd grafana/timely-app</code></p>
+
+<p><code class="prettyprint">npm install</code></p>
+
+<p><code class="prettyprint">grunt</code></p>
+
+<h2 id="packaging">Packaging</h2>
+
+<p>Run <code class="prettyprint">mvn clean package</code></p>
+
+<h2 id="deployment">Deployment</h2>
+
+<p>Take the resulting tar and unpack it in <code class="prettyprint">/var/lib/grafana/plugins</code> on your Grafana server and restart Grafana.</p>
+
+<h2 id="using-the-timely-app">Using the Timely App</h2>
+
+<p>Login to Grafana and the Home dashboard should show the Timely App is available.</p>
+
+<p><img alt="App Available Home" src="images/screencaps/AppAvailableHome.png" /></p>
+
+<h3 id="enable-timely-app">Enable Timely App</h3>
+
+<p>Once installed, the Timely App must be enabled in Grafana. Clicking the Enable Now
+link on the Home Dashboard or navigate to the app list in the Grafana Plugins page.</p>
+
+<p><img alt="AppInstalled" src="images/screencaps/AppInstalled.png" /></p>
+
+<p>These will both bring you to the enable page.</p>
+
+<p><img alt="EnablePage" src="images/screencaps/EnableApp.png" /></p>
+
+<p>Once enabled, Timely should appear in Grafana menu.</p>
+
+<p><img alt="TimelyEnabled" src="images/screencaps/AppEnabled.png" /></p>
+
+<h3 id="create-datasource">Create Datasource</h3>
+
+<p>Go to the Grafana Data Sources menu and add a new Data Source. In the Type drop down menu, select Timely and the Timely Server settings UI will populate.</p>
+
+<p><img alt="Server Settings" src="images/screencaps/AddDatasource.png" /></p>
+
+<p>Fill in the timely server details as required. The Browser Test opens a new browser window to allow you to add an exception to the Timely server cert. This is only necessary if using self-signed certs.</p>
+
+<p>Click Add, and the datasource will be tested and added.</p>
+
+<p><img alt="Datasource Added" src="images/screencaps/SavedDatasource.png" /></p>
+
+<p>Clicking the Dashboards tab will allow you to import a dashboard to display Timely&rsquo;s internal metrics. Depending on the security setup, the dashboard may not show any data until the Login process is completed.</p>
+
+<p><img alt="Import Dashboard" src="images/screencaps/ImportDashboard.png" /></p>
+
+<h3 id="login">Login</h3>
+
+<p>From the Timely App menu, select the Login page. This will present you a login prompt to authenticate you with the Timely datasources. This will set a cookie in your Browser
+that will be passed with the dashboard queries and Timely will pass your Accumulo column visibilities during data scans.</p>
+
+<p><img alt="Login" src="images/screencaps/Login.png" />
+View dashboard - this should now be working</p>
+
+<p>If more than one Timely datasource is defined, multiple Login prompts will be available. Here, the top data source was defined with BasicAuths checked, and the second one assumes a valid Certificate is loaded in the browser and will be passed to Timely when Login is clicked.</p>
+
+<p><img alt="Multi Login" src="images/screencaps/MultiDatasourceLogin.png" /></p>
+
+<h3 id="metrics-browser">Metrics Browser</h3>
+
+<p>To help browsing the data in Timely, the Timely menu also contains a Metrics link to take you to the Metrics Broswer</p>
+
+<p><img alt="Metrics Browser" src="images/screencaps/MetricsBrowser.png" /></p>
+
+<p>Timely data sources can be selected from the drop down menu and the results can be filtered by typing in the filter box.</p>
+
+<h3 id="dashboard">Dashboard</h3>
+
+<p>Currently the imported dashboard has one plot for timely ingest metrics, and three other plots to display the artificial data inserted by the <code class="prettyprint">timely.util.InsertTestData</code> program.</p>
+
+<p><img alt="Graphs" src="images/screencaps/Graphs.png" /></p>
+
+          <h1 id="plugins-for-collectd">Plugins for CollectD</h1>
+
+<p>The source tree includes plugins for <a href="http://collectd.org/">CollectD</a>, an agent based system statistics collector. The CollectD plugins parse and transform the metrics and sends them to Timely.</p>
+
+<h2 id="collectd-plugin-to-send-data-to-timely">CollectD plugin to send data to Timely</h2>
+<pre class="highlight python"><code><span class="n">LoadPlugin</span> <span class="n">java</span>
+<span class="o">&lt;</span><span class="n">Plugin</span> <span class="n">java</span><span class="o">&gt;</span>
+        <span class="n">JVMArg</span> <span class="s">"-verbose:jni"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Djava.class.path=/usr/share/collectd/java/collectd-api.jar:&lt;path_to_jar&gt;/collectd-timely-plugin.jar"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xms128m"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xmx128m"</span>
+        <span class="n">LoadPlugin</span> <span class="s">"timely.collectd.plugin.WriteTimelyPlugin"</span>
+        <span class="o">&lt;</span><span class="n">Plugin</span> <span class="s">"timely.collectd.plugin.WriteTimelyPlugin"</span><span class="o">&gt;</span>
+          <span class="n">Host</span> <span class="s">"&lt;TimelyHost&gt;"</span>
+          <span class="n">Port</span> <span class="s">"&lt;TimelyPutPort&gt;"</span>
+          <span class="n">Tags</span> <span class="s">"&lt;comma separated list of additional key=value pairs&gt;"</span>
+        <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+<span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+</code></pre>
+
+<p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-timely-plugin directory. Place the resulting jar file somewhere on the local filesystem and the plugin configuration to the right to the collectd configuration file.</p>
+
+<h2 id="collectd-plugin-to-send-data-to-nsq">CollectD plugin to send data to <a href="http://nsq.io/">NSQ</a></h2>
+<pre class="highlight python"><code><span class="n">LoadPlugin</span> <span class="n">java</span>
+<span class="o">&lt;</span><span class="n">Plugin</span> <span class="n">java</span><span class="o">&gt;</span>
+        <span class="n">JVMArg</span> <span class="s">"-verbose:jni"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Djava.class.path=/usr/share/collectd/java/collectd-api.jar:&lt;path_to_jar&gt;/collectd-nsq-plugin.jar"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xms128m"</span>
+        <span class="n">JVMArg</span> <span class="s">"-Xmx128m"</span>
+        <span class="n">LoadPlugin</span> <span class="s">"timely.collectd.plugin.WriteNSQPlugin"</span>
+        <span class="o">&lt;</span><span class="n">Plugin</span> <span class="s">"timely.collectd.plugin.WriteNSQPlugin"</span><span class="o">&gt;</span>
+          <span class="n">Host</span> <span class="s">"&lt;NSQHost[,NSQHost]&gt;"</span>
+          <span class="n">Port</span> <span class="s">"&lt;NSQHttpPort&gt;"</span>
+          <span class="n">Tags</span> <span class="s">"&lt;comma separated list of additional key=value pairs&gt;"</span>
+        <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+<span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
+</code></pre>
+
+<p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-nsq-plugin directory. Place the resulting jar file somewhere on the local filesystem and add the plugin configuration to the right to the collectd configuration file.</p>
+
+<h2 id="collecting-metrics-from-hadoop-and-accumulo">Collecting Metrics from Hadoop and Accumulo</h2>
+
+<p>CollectD contains <a href="https://github.com/etsy/statsd">StatsD</a> plugin that listens on a configured port for UDP traffic in the StatsD protocol. More recent versions of Hadoop contain a StatsD <a href="https://issues.apache.org/jira/browse/HADOOP-12360">sink</a> for the Hadoop <a href="http://hadoop.apache.org/docs/r2.7.2/hadoop-project-dist/hadoop-common/Metrics.html">Metrics2</a> framework. Accumulo also uses the Hadoop Metrics2 framework and when configured correctly can emit its metrics via the same mechanism.</p>
+
+<h3 id="configuring-hadoop-to-use-the-statsd-sink">Configuring Hadoop to use the StatsD sink</h3>
+<pre class="highlight python"><code><span class="o">*.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="o">*.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">period</span><span class="o">=</span><span class="mi">60</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">NameNode</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">DataNode</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">ResourceManager</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">NodeManager</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">MRAppMaster</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">JobHistoryServer</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">MapTask</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">ReduceTask</span>
+</code></pre>
+
+<p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2.properties file.</p>
+
+<h3 id="configuring-accumulo-to-use-the-statsd-sink">Configuring Accumulo to use the StatsD sink</h3>
+<pre class="highlight python"><code><span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">TabletServer</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">Master</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
+<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">Thrift</span>
+</code></pre>
+
+<p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2-accumulo.properties file.</p>
+
+          <h1 id="api-overview">API Overview</h1>
 
 <p>The Timely server supports clients sending requests over different protocols. Not all operations are supported over all protocols. The table below summarizes the protocols supported for each operation. The API documention is organized into sections that describe the general, time series, and subscription operations.</p>
 
@@ -853,755 +1628,6 @@
 
 <p>Remove all subscriptions associated with this WebSocket channel.</p>
 
-          <h1 id="security">Security</h1>
-
-<p>Timely allows users to optionally label their data using Accumulo column visibility expressions. To enable this feature, users should put the expressions in a tag named <code class="prettyprint">viz</code>. Timely will <a href="http://accumulo.apache.org/1.7/apidocs/org/apache/accumulo/core/security/ColumnVisibility.html#flatten%28%29">flatten</a> this expression and store it in the column visibility of the data point in the metrics table. Column visibilities are <em>not</em> stored in the meta table, so anyone can see metric names, tag names, and tag values.</p>
-
-<blockquote>
-<p>With anonymous access users that have not logged in will only see unlabeled data.</p>
-</blockquote>
-
-<p>Timely uses Spring Security to configure user authentication and user role information. Users must call the <code class="prettyprint">/login</code> endpoint for authentication and Timely will respond by setting a HTTP cookie with a session id. When anonymous access is disabled, a call to any operation that requires the session id will fail. When anonymous access is enabled, these calls will succeed but only unlabeled data will be returned. When using Grafana, it must be configured to use https also. For more information see the <a href="quick-start/QUICK_START.md">Quick Start</a> documentation.</p>
-
-          <h1 id="timely-server">Timely Server</h1>
-
-<h2 id="starting-timely">Starting Timely</h2>
-
-<blockquote>
-<p>Note: The Timely server requires a Java 8 runtime. Timely utilizes iterators for Apache Accumulo, so your Accumulo instance will need to be run with Java 8 also.</p>
-</blockquote>
-
-<p>If you are just starting out with Timely and want to see what it can do, then start up the standalone server using the <code class="prettyprint">bin/timely-standalone.sh</code> script. This will start up the necessary HDFS, Accumulo, and Timely processes on your local machine. You can use the <code class="prettyprint">bin/insert-test-data*.sh</code> scripts to push same fake data to the Timely server.</p>
-
-<aside class="warning">
-The standalone server will not save your metric data across restarts.
-</aside>
-
-<p>To deploy Timely with a running Accumulo instance you will need to modify the <code class="prettyprint">conf/timely.properties</code> file appropriately. Then copy the <code class="prettyprint">lib/timely-server.jar</code> file to your Accumulo tablet servers. Finally, launch Timely using the <code class="prettyprint">bin/timely-server.sh</code> script.</p>
-
-<h2 id="ssl-setup">SSL Setup</h2>
-
-<p>To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the <code class="prettyprint">timely.ssl.key.pass</code> property if there is no password for your private key.</p>
-
-<h3 id="creating-your-own-ssl-keys-and-certificates">Creating your own SSL keys and certificates</h3>
-
-<p>There are plenty of resources on the Internet for doing this. This example is taken from instructions in the Accumulo <a href="http://accumulo.apache.org/1.7/accumulo_user_manual#_generate_a_certificate_keystore_per_host">user manual</a>.</p>
-
-<h4 id="create-your-certificate-authority">Create your Certificate Authority</h4>
-
-<p>Create a private key</p>
-
-<p><code class="prettyprint">openssl genrsa -des3 -out CA.key 4096</code></p>
-
-<p>Create a certificate request using the private key</p>
-
-<p><code class="prettyprint">openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem</code></p>
-
-<h4 id="create-your-ssl-material-for-grafana">Create your SSL material for Grafana</h4>
-
-<p>Create the private key for the Grafana server</p>
-
-<p><code class="prettyprint">openssl genrsa -out grafana.key 4096</code></p>
-
-<p>Generate a certificate signing request (CSR) with our Grafana private key</p>
-
-<p><code class="prettyprint">openssl req -new -key grafana.key -sha256 -nodes -out grafana.csr</code></p>
-
-<p>Use the CSR and the CA to create a certificate for the server (a reply to the CSR)</p>
-
-<p><code class="prettyprint">openssl x509 -req -in grafana.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out grafana.crt -days 365</code></p>
-
-<h4 id="create-your-ssl-material-for-timely">Create your SSL material for Timely</h4>
-
-<p>Create the private key for the Timely server</p>
-
-<p><code class="prettyprint">openssl genrsa -out timely.key 4096</code></p>
-
-<p>Generate a certificate signing request (CSR) with our Timely private key</p>
-
-<p><code class="prettyprint">openssl req -new -key timely.key -sha256 -nodes -subj &#39;/C=US/ST=Confusion/L=Here/O=Timely/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1&#39; &gt; timely.csr</code></p>
-
-<p>Use the CSR and the CA to create a certificate for the server (a reply to the CSR)</p>
-
-<p><code class="prettyprint">openssl x509 -req -in timely.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out timely.crt -days 365</code></p>
-
-<p>Convert the private key to pkcs#8 format</p>
-
-<p><code class="prettyprint">openssl pkcs8 -topk8 -inform PEM -outform PEM -in timely.key -out timely-pkcs8.key</code></p>
-
-<h2 id="configuration">Configuration</h2>
-
-<p>The <code class="prettyprint">NUM_SERVER_THREADS</code> variable in the <code class="prettyprint">timely-server.sh</code> script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the <code class="prettyprint">conf</code> directory supports the following properties:</p>
-
-<blockquote>
-<p>Note: If you comment out a property, then the default will be used. If a property is left uncommented with no value, then the property will have no value which may result in an error.</p>
-
-<p>Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the <code class="prettyprint">timely.write.latency</code> and <code class="prettyprint">timely.write.threads</code> configuration property, but the buffer size for each BatchWriter is <code class="prettyprint">timely.write.buffer.size</code> divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.write.latency=30s, timely.write.threads=2 timely.write.buffer.size=1G</p>
-
-<p>Note: The <code class="prettyprint">timely.scanner.threads</code> property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.</p>
-
-<p>Note: The Timely server contains an object called the meta cache, which is a cache of the keys that would be inserted into the meta table if they did not already exist. This cache is used to reduce the insert load of duplicate keys into the meta table and to serve up data to the <code class="prettyprint">/api/metrics</code> endpoint. The meta cache is an object that supports eviction based on last access time and can be tuned with the <code class="prettyprint">timely.meta.cache.*</code> properties.</p>
-</blockquote>
-
-<table><thead>
-<tr>
-<th>Property</th>
-<th>Description</th>
-<th>Default Value</th>
-</tr>
-</thead><tbody>
-<tr>
-<td>timely.ip</td>
-<td>The ip address where the Timely server is running</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.port.put</td>
-<td>The port that will be used for processing put requests</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.port.query</td>
-<td>The port that will be used for processing query requests</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.port.websocket</td>
-<td>The port that will be used for processing web socket requests</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.instance_name</td>
-<td>The name of your Accumulo instance</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.zookeepers</td>
-<td>The list of Zookeepers for your Accumulo instance</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.username</td>
-<td>The username that Timely will use to connect to Accumulo</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.password</td>
-<td>The password of the Accumulo user</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.table</td>
-<td>The name of the metrics table</td>
-<td>timely.metrics</td>
-</tr>
-<tr>
-<td>timely.meta</td>
-<td>The name of the meta table</td>
-<td>timely.meta</td>
-</tr>
-<tr>
-<td>timely.write.latency</td>
-<td>The Accumulo BatchWriter latency</td>
-<td>5s</td>
-</tr>
-<tr>
-<td>timely.write.threads</td>
-<td>The Accumulo BatchWriter number of threads</td>
-<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L49">default</a></td>
-</tr>
-<tr>
-<td>timely.write.buffer.size</td>
-<td>The Accumulo BatchWriter buffer size</td>
-<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L40">default</a></td>
-</tr>
-<tr>
-<td>timely.metric.age.off.days</td>
-<td>The number of days to keep metrics</td>
-<td>7</td>
-</tr>
-<tr>
-<td>timely.cors.allow.any.origin</td>
-<td>Allow any origin in cross origin requests (true/false)</td>
-<td>false</td>
-</tr>
-<tr>
-<td>timely.cors.allow.null.origin</td>
-<td>Allow null origins in cross origin requests (true/false)</td>
-<td>false</td>
-</tr>
-<tr>
-<td>timely.cors.allowed.origins</td>
-<td>List of allowed origins in cross origin requests (can be null or comma separated list)</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.cors.allowed.methods</td>
-<td>List of allowed methods for cross origin requests</td>
-<td><ul><li>DELETE</li><li>GET</li><li>HEAD</li><li>OPTIONS</li><li>PUT</li><li>POST</li></ul></td>
-</tr>
-<tr>
-<td>timely.cors.allowed.headers</td>
-<td>Comma separated list of allowed HTTP headers for cross origin requests</td>
-<td>content-type</td>
-</tr>
-<tr>
-<td>timely.cors.allow.credentials</td>
-<td>Allow credentials to be passed in cross origin requests (true/false)</td>
-<td>true</td>
-</tr>
-<tr>
-<td>timely.scanner.threads</td>
-<td>Number of BatchScanner threads to be used in a query</td>
-<td>4</td>
-</tr>
-<tr>
-<td>timely.metrics.report.tags.ignored</td>
-<td>Comma separated list of tags which will not be shown in the /api/metrics response</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.meta.cache.expiration.minutes</td>
-<td>Number of minutes after which unaccessed meta information will be purged from the meta cache</td>
-<td>60</td>
-</tr>
-<tr>
-<td>timely.meta.cache.initial.capacity</td>
-<td>Initial capacity of the meta cache</td>
-<td>2000</td>
-</tr>
-<tr>
-<td>timely.meta.cache.max.capacity</td>
-<td>Maximum capacity of the meta cache</td>
-<td>10000</td>
-</tr>
-<tr>
-<td>timely.ssl.certificate.file</td>
-<td>Public certificate to use for the Timely server (x509 pem format)</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.ssl.key.file</td>
-<td>Private key to use for the Timely server (in pkcs8 format)</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.ssl.key.pass</td>
-<td>Password to the private key</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.ssl.use.generated.keypair</td>
-<td>Use a generated certificate/key pair - useful for testing</td>
-<td>false</td>
-</tr>
-<tr>
-<td>timely.ssl.trust.store.file</td>
-<td>Certificate trust store (a concatenated list of trusted CA x509 pem certificates)</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.ssl.use.openssl</td>
-<td>Use OpenSSL (vs JDK SSL)</td>
-<td>true</td>
-</tr>
-<tr>
-<td>timely.ssl.use.ciphers</td>
-<td>List of allowed SSL ciphers</td>
-<td>see Configuration.java</td>
-</tr>
-<tr>
-<td>timely.session.max.age</td>
-<td>Setting for max age of session cookie (in seconds)</td>
-<td>86400</td>
-</tr>
-<tr>
-<td>timely.http.host</td>
-<td>Address for the Timely server, used for the session cookie domain</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.allow.anonymous.access</td>
-<td>Allow anonymous access</td>
-<td>false</td>
-</tr>
-<tr>
-<td>timely.visibility.cache.expiration.minutes</td>
-<td>Column Visibility Cache Expiration (minutes)</td>
-<td>60</td>
-</tr>
-<tr>
-<td>timely.visibility.cache.initial.capacity</td>
-<td>Column Visibility Cache Initial Capacity</td>
-<td>2000</td>
-</tr>
-<tr>
-<td>timely.visibility.cache.max.capacity</td>
-<td>Column Visibility Cache Max Capacity</td>
-<td>10000</td>
-</tr>
-<tr>
-<td>timely.web.socket.timeout</td>
-<td>Number of seconds with no client ping response before closing subscription</td>
-<td>60</td>
-</tr>
-<tr>
-<td>timely.ws.subscription.lag</td>
-<td>Number of seconds that subscriptions should lag to account for latency</td>
-<td>120</td>
-</tr>
-<tr>
-<td>timely.http.redirect.path</td>
-<td>Path to use for HTTP to HTTPS redirect</td>
-<td>/secure-me</td>
-</tr>
-<tr>
-<td>timely.hsts.max.age</td>
-<td>HTTP Strict Transport Security max age (in seconds)</td>
-<td>604800</td>
-</tr>
-</tbody></table>
-
-<h2 id="data-storage">Data Storage</h2>
-
-<p>Metrics sent to Timely are stored in two Accumulo tables, <code class="prettyprint">meta</code> and <code class="prettyprint">metrics</code>.</p>
-
-<h3 id="meta-table-format">Meta Table Format</h3>
-
-<table><thead>
-<tr>
-<th>Row</th>
-<th>ColumnFamily</th>
-<th>ColumnQualifier</th>
-<th>Value</th>
-</tr>
-</thead><tbody>
-<tr>
-<td>m:metric</td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>t:metric</td>
-<td>tagKey</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>v:metric</td>
-<td>tagKey</td>
-<td>tagValue</td>
-<td></td>
-</tr>
-</tbody></table>
-
-<h3 id="metric-table-format">Metric Table Format</h3>
-
-<table><thead>
-<tr>
-<th>Row</th>
-<th>ColumnFamily</th>
-<th>ColumnQualifier</th>
-<th>Value</th>
-</tr>
-</thead><tbody>
-<tr>
-<td>metric\timestamp</td>
-<td>tagKey=tagValue</td>
-<td>tagKey=tagValue,tagKey=tagValue,&hellip;</td>
-<td>metricValue</td>
-</tr>
-</tbody></table>
-
-<h2 id="data-storage-example">Data Storage Example</h2>
-
-<p>As an example, if you sent the following metric to the put api: <code class="prettyprint">sys.cpu.user 1447879348291 2.0 rack=r001 host=r001n01 instance=0</code> it would get stored in the following manner in the <code class="prettyprint">meta</code> table:</p>
-
-<table><thead>
-<tr>
-<th>Row</th>
-<th>ColumnFamily</th>
-<th>ColumnQualifier</th>
-<th>Value</th>
-</tr>
-</thead><tbody>
-<tr>
-<td>m:sys.cpu.user</td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>t:sys.cpu.user</td>
-<td>host</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>t:sys.cpu.user</td>
-<td>instance</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>t:sys.cpu.user</td>
-<td>rack</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>v:sys.cpu.user</td>
-<td>host</td>
-<td>r001n01</td>
-<td></td>
-</tr>
-<tr>
-<td>v:sys.cpu.user</td>
-<td>instance</td>
-<td>0</td>
-<td></td>
-</tr>
-<tr>
-<td>v:sys.cpu.user</td>
-<td>rack</td>
-<td>r001</td>
-<td></td>
-</tr>
-</tbody></table>
-
-<p>and in the following manner in the <code class="prettyprint">metrics</code> table</p>
-
-<blockquote>
-<p>Note: Not shown in the examples is the encoding of the row and value. You can apply the Timely formatter to your metrics table using the Accumulo shell command: <code class="prettyprint">config -t timely.metrics -s table.formatter=timely.util.TimelyMetricsFormatter</code></p>
-</blockquote>
-
-<table><thead>
-<tr>
-<th>Row</th>
-<th>ColumnFamily</th>
-<th>ColumnQualifier</th>
-<th>Value</th>
-</tr>
-</thead><tbody>
-<tr>
-<td>sys.cpu.user\1447879348291</td>
-<td>host=r001n01</td>
-<td>instance=0,rack=r001</td>
-<td>2.0</td>
-</tr>
-<tr>
-<td>sys.cpu.user\1447879348291</td>
-<td>instance=0</td>
-<td>host=r001n01,rack=r001</td>
-<td>2.0</td>
-</tr>
-<tr>
-<td>sys.cpu.user\1447879348291</td>
-<td>rack=r001</td>
-<td>host=r001n01,instance=0</td>
-<td>2.0</td>
-</tr>
-</tbody></table>
-
-<aside class="notice">
-Timely stores your metric N times in the metrics table, where N is the number of tags in your metric data.
-</aside>
-
-<h2 id="accumulo-configuration">Accumulo Configuration</h2>
-
-<p>You can generate split points for the metrics table after sending data to Timely for a short amount of time. The <code class="prettyprint">bin/get-metric-split-points.sh</code> script will print out a set of split points based on the metric names in the meta table. Yuo can use this output in the Accumulo <code class="prettyprint">addsplits</code> command.</p>
-
-<p>You can lower the <code class="prettyprint">table.scan.max.memory</code> property on your metrics table. This will send data back from the Tablet Servers to the Timely server at a faster rate.</p>
-
-<p>If you don&rsquo;t mind losing some metric data in the event of an Accumulo tablet server death, you can set the <code class="prettyprint">table.walog.enabled</code> property to false and the <code class="prettyprint">table.durability</code> property to none on your metrics table. This should speed up ingest a little.</p>
-
-          <h1 id="standalone-quick-start">Standalone Quick Start</h1>
-
-<ol>
-<li>Install latest version of Grafana (3.0.4 at time of writing)</li>
-<li>Create a grafana configuration file (e.g: <code class="prettyprint">conf/settings.ini</code>)
-
-<ol>
-<li><code class="prettyprint">protocol = https</code></li>
-<li><code class="prettyprint">http_addr = localhost</code></li>
-<li><code class="prettyprint">cert_file= &lt;path to PEM encoded certificate file&gt;</code></li>
-<li><code class="prettyprint">key_file= &lt;path to PEM encoded un-encrypted private key file&gt;</code></li>
-</ol></li>
-<li>Start Grafana (<code class="prettyprint">./bin/grafana-server -c conf/settings.ini</code>)
-
-<ol>
-<li>Visit <code class="prettyprint">https://localhost:3000</code> to verify Grafana is working</li>
-</ol></li>
-<li>Build Timely
-
-<ol>
-<li>set <code class="prettyprint">JAVA_HOME</code> to point to a JDK 8 installation</li>
-<li>cd into the server directory and run <code class="prettyprint">mvn clean package</code></li>
-</ol></li>
-<li>Untar Timely server distribution (found in <code class="prettyprint">target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz</code>)</li>
-<li>Modify <code class="prettyprint">timely-standalone.properties</code>:
-
-<ol>
-<li>Use generated server side SSL certificates</li>
-<li><code class="prettyprint">timely.ssl.use.generated.keypair=true</code></li>
-<li>or, use your own SSL certificates - see <a href="#ssl-setup">SSL</a> Setup</li>
-<li><code class="prettyprint">timely.ssl.use.generated.keypair=false</code></li>
-<li><code class="prettyprint">timely.ssl.certificate.file=&lt;path to PEM encoded certificate file&gt;</code></li>
-<li><code class="prettyprint">timely.ssl.key.file=&lt;path to PKCS8 PEM encoded private key file&gt;</code></li>
-<li><code class="prettyprint">timely.ssl.key.pass=&lt;private key password&gt;</code></li>
-<li><code class="prettyprint">timely.ssl.use.openssl=true</code> (if openssl installed locally, else false)</li>
-<li><code class="prettyprint">timely.ssl.use.ciphers=&lt;list of ciphers&gt;</code> (comma-delimited list of ciphers to use if you do not want to use the default)</li>
-<li>Set Timely domain information, this is used for the HTTP Cookie</li>
-<li><code class="prettyprint">timely.http.address=localhost</code></li>
-<li>Set Grafana login address, used for HTTP redirect after login</li>
-<li><code class="prettyprint">grafana.http.address=https://localhost:3000/login</code></li>
-<li>Set Anonymous access for Timely</li>
-<li><code class="prettyprint">timely.allow.anonymous.access=&lt;true or false&gt;</code></li>
-</ol></li>
-<li>Start the Timely standalone server
-
-<ol>
-<li><code class="prettyprint">cd bin; ./timely-standalone.sh</code></li>
-</ol></li>
-<li>Insert test data
-
-<ol>
-<li><code class="prettyprint">cd bin; ./insert-test-data.sh</code></li>
-</ol></li>
-<li>Add the Timely datasource to Grafana
-
-<ol>
-<li>Go to <code class="prettyprint">https://localhost:54322/api/metrics</code> in your browser and accept the certificate</li>
-<li>Login to Grafana, go to &lsquo;DataSources&rsquo;</li>
-<li>Click &#39;Add data source&rsquo;</li>
-<li>Enter the following information:</li>
-<li>Name: <code class="prettyprint">Timely Standalone</code></li>
-<li>Type: <code class="prettyprint">OpenTSDB</code></li>
-<li>Url: <code class="prettyprint">https://localhost:54322</code></li>
-<li>Access: <code class="prettyprint">direct</code></li>
-<li>With Credentials: <code class="prettyprint">checked</code></li>
-<li>Version: <code class="prettyprint">&lt;=2.1</code></li>
-<li>Resolution: <code class="prettyprint">millisecond</code></li>
-<li>Click <code class="prettyprint">Save &amp; Test</code>. Note that you will get an error, but it will save.</li>
-</ol></li>
-<li>Import Standalone Test dashboard into Grafana.</li>
-</ol>
-
-<h2 id="notes-on-security-options">Notes on Security Options</h2>
-
-<ol>
-<li>If anonymous access is disabled, then users will only be able to see unlabeled data.</li>
-<li>If anonymous access is enabled, then users must login before Grafana will work.</li>
-<li>Access control is configured in <code class="prettyprint">conf/security.xml</code> and supports basic auth and SSL client certificates. Upon a successful login the response will include a HTTP Session Cookie. Once this is set, access to Timely from Grafana should work.
-
-<ol>
-<li>For SSL client certificate auth, users should perform a GET request to the <code class="prettyprint">/login</code> endpoint over HTTPS. The default <code class="prettyprint">conf/security.xml</code> specifies a user <code class="prettyprint">example.com</code> with authorizations <code class="prettyprint">D</code>,<code class="prettyprint">E</code>,<code class="prettyprint">F</code>. The username will be extracted from the certificate&rsquo;s <code class="prettyprint">CN</code> using the <code class="prettyprint">x509PrincipalExtractor</code> bean.</li>
-<li>For basic password authentication users should perform a POST request to the <code class="prettyprint">/login</code> endpoint.</li>
-<li>This can be done using Poster or HttpRequester with the content-type of &ldquo;application/json&rdquo; and the following content:
-<code class="prettyprint">
-    {
-      &quot;username&quot;: &quot;&lt;&gt;&quot;,
-      &quot;password&quot;: &quot;&lt;&gt;&quot;
-    }
-</code></li>
-<li>The default <code class="prettyprint">conf/security.xml</code> specifies a user <code class="prettyprint">test</code> with password <code class="prettyprint">test1</code> that has the authorizations for <code class="prettyprint">A</code>,<code class="prettyprint">B</code>,<code class="prettyprint">C</code>.</li>
-</ol></li>
-<li>The user specified in <code class="prettyprint">timely.user</code> must have authorizations compatible with the visibility values on your data to be able to return that data to a client. Use <code class="prettyprint">setauths</code> in the Accumulo shell to configure this.</li>
-<li><code class="prettyprint">insert-test-data.sh</code> will insert some data with visibilities, specifically <code class="prettyprint">sys.eth0.rx.*</code> will have <code class="prettyprint">A</code>,<code class="prettyprint">B</code> or <code class="prettyprint">C</code> and <code class="prettyprint">sys.eth0.tx.*</code> will have <code class="prettyprint">D</code>,<code class="prettyprint">E</code> or <code class="prettyprint">F</code>.</li>
-</ol>
-
-          <h1 id="plugins-for-collectd">Plugins for CollectD</h1>
-
-<p>The source tree includes plugins for <a href="http://collectd.org/">CollectD</a>, an agent based system statistics collector. The CollectD plugins parse and transform the metrics and sends them to Timely.</p>
-
-<h2 id="collectd-plugin-to-send-data-to-timely">CollectD plugin to send data to Timely</h2>
-<pre class="highlight python"><code><span class="n">LoadPlugin</span> <span class="n">java</span>
-<span class="o">&lt;</span><span class="n">Plugin</span> <span class="n">java</span><span class="o">&gt;</span>
-        <span class="n">JVMArg</span> <span class="s">"-verbose:jni"</span>
-        <span class="n">JVMArg</span> <span class="s">"-Djava.class.path=/usr/share/collectd/java/collectd-api.jar:&lt;path_to_jar&gt;/collectd-timely-plugin.jar"</span>
-        <span class="n">JVMArg</span> <span class="s">"-Xms128m"</span>
-        <span class="n">JVMArg</span> <span class="s">"-Xmx128m"</span>
-        <span class="n">LoadPlugin</span> <span class="s">"timely.collectd.plugin.WriteTimelyPlugin"</span>
-        <span class="o">&lt;</span><span class="n">Plugin</span> <span class="s">"timely.collectd.plugin.WriteTimelyPlugin"</span><span class="o">&gt;</span>
-          <span class="n">Host</span> <span class="s">"&lt;TimelyHost&gt;"</span>
-          <span class="n">Port</span> <span class="s">"&lt;TimelyPutPort&gt;"</span>
-          <span class="n">Tags</span> <span class="s">"&lt;comma separated list of additional key=value pairs&gt;"</span>
-        <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
-<span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
-</code></pre>
-
-<p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-timely-plugin directory. Place the resulting jar file somewhere on the local filesystem and the plugin configuration to the right to the collectd configuration file.</p>
-
-<h2 id="collectd-plugin-to-send-data-to-nsq">CollectD plugin to send data to <a href="http://nsq.io/">NSQ</a></h2>
-<pre class="highlight python"><code><span class="n">LoadPlugin</span> <span class="n">java</span>
-<span class="o">&lt;</span><span class="n">Plugin</span> <span class="n">java</span><span class="o">&gt;</span>
-        <span class="n">JVMArg</span> <span class="s">"-verbose:jni"</span>
-        <span class="n">JVMArg</span> <span class="s">"-Djava.class.path=/usr/share/collectd/java/collectd-api.jar:&lt;path_to_jar&gt;/collectd-nsq-plugin.jar"</span>
-        <span class="n">JVMArg</span> <span class="s">"-Xms128m"</span>
-        <span class="n">JVMArg</span> <span class="s">"-Xmx128m"</span>
-        <span class="n">LoadPlugin</span> <span class="s">"timely.collectd.plugin.WriteNSQPlugin"</span>
-        <span class="o">&lt;</span><span class="n">Plugin</span> <span class="s">"timely.collectd.plugin.WriteNSQPlugin"</span><span class="o">&gt;</span>
-          <span class="n">Host</span> <span class="s">"&lt;NSQHost[,NSQHost]&gt;"</span>
-          <span class="n">Port</span> <span class="s">"&lt;NSQHttpPort&gt;"</span>
-          <span class="n">Tags</span> <span class="s">"&lt;comma separated list of additional key=value pairs&gt;"</span>
-        <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
-<span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
-</code></pre>
-
-<p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-nsq-plugin directory. Place the resulting jar file somewhere on the local filesystem and add the plugin configuration to the right to the collectd configuration file.</p>
-
-<h2 id="collecting-metrics-from-hadoop-and-accumulo">Collecting Metrics from Hadoop and Accumulo</h2>
-
-<p>CollectD contains <a href="https://github.com/etsy/statsd">StatsD</a> plugin that listens on a configured port for UDP traffic in the StatsD protocol. More recent versions of Hadoop contain a StatsD <a href="https://issues.apache.org/jira/browse/HADOOP-12360">sink</a> for the Hadoop <a href="http://hadoop.apache.org/docs/r2.7.2/hadoop-project-dist/hadoop-common/Metrics.html">Metrics2</a> framework. Accumulo also uses the Hadoop Metrics2 framework and when configured correctly can emit its metrics via the same mechanism.</p>
-
-<h3 id="configuring-hadoop-to-use-the-statsd-sink">Configuring Hadoop to use the StatsD sink</h3>
-<pre class="highlight python"><code><span class="o">*.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
-<span class="o">*.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">period</span><span class="o">=</span><span class="mi">60</span>
-<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">namenode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">NameNode</span>
-<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">datanode</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">DataNode</span>
-<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">resourcemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">ResourceManager</span>
-<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">nodemanager</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">NodeManager</span>
-<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">mrappmaster</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">MRAppMaster</span>
-<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">jobhistoryserver</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">JobHistoryServer</span>
-<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">maptask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">MapTask</span>
-<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">ReduceTask</span>
-</code></pre>
-
-<p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2.properties file.</p>
-
-<h3 id="configuring-accumulo-to-use-the-statsd-sink">Configuring Accumulo to use the StatsD sink</h3>
-<pre class="highlight python"><code><span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">tserver</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">TabletServer</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">master</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">Master</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">class</span><span class="o">=</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">hadoop</span><span class="o">.</span><span class="n">metrics2</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">StatsDSink</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">port</span><span class="o">=</span><span class="mi">8125</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
-<span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">Thrift</span>
-</code></pre>
-
-<p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2-accumulo.properties file.</p>
-
-          <h1 id="grafana">Grafana</h1>
-
-<p>In the grafana directory in the source tree exists a Timely application for Grafana.</p>
-
-<h2 id="compiling">Compiling</h2>
-
-<p>Compiling the timely-app requrires <a href="https://nodejs.org/en/">NodeJS</a> to be installed. Once installed, simply download
-the dependencies with <code class="prettyprint">npm</code> and run <code class="prettyprint">grunt</code></p>
-
-<p><code class="prettyprint">cd grafana/timely-app</code></p>
-
-<p><code class="prettyprint">npm install</code></p>
-
-<p><code class="prettyprint">grunt</code></p>
-
-<p>For development, running <code class="prettyprint">grunt watch</code> will watch for file changes and continuously rebuild everything.</p>
-
-<h2 id="packaging">Packaging</h2>
-
-<p>Run <code class="prettyprint">mvn clean package</code></p>
-
-<h2 id="deployment">Deployment</h2>
-
-<p>Take the resulting tar and unpack it in <code class="prettyprint">/var/lib/grafana/plugins</code> on your Grafana server and restart Grafana.</p>
-
-<h2 id="using-the-timely-app">Using the Timely App</h2>
-
-<p>Login to Grafana and the Home dashboard should show the Timely App is available.</p>
-
-<p><img alt="App Available Home" src="images/screencaps/AppAvailableHome.png" /></p>
-
-<h3 id="enable-timely-app">Enable Timely App</h3>
-
-<p>Once installed, the Timely App must be enabled in Grafana. Clicking the Enable Now
-link on the Home Dashboard or navigate to the app list in the Grafana Plugins page.</p>
-
-<p><img alt="AppInstalled" src="images/screencaps/AppInstalled.png" /></p>
-
-<p>These will both bring you to the enable page.</p>
-
-<p><img alt="EnablePage" src="images/screencaps/EnableApp.png" /></p>
-
-<p>Once enabled, Timely should appear in Grafana menu.</p>
-
-<p><img alt="TimelyEnabled" src="images/screencaps/AppEnabled.png" /></p>
-
-<h3 id="create-datasource">Create Datasource</h3>
-
-<p>Go to the Grafana Data Sources menu and add a new Data Source. In the Type drop down menu, select Timely and the Timely Server settings UI will populate.</p>
-
-<p><img alt="Server Settings" src="images/screencaps/AddDatasource.png" /></p>
-
-<p>Fill in the timely server details as required. The Browser Test opens a new browser window to allow you to add an exception to the Timely server cert. This is only necessary if using self-signed certs.</p>
-
-<p>Click Add, and the datasource will be tested and added.</p>
-
-<p><img alt="Datasource Added" src="images/screencaps/SavedDatasource.png" /></p>
-
-<p>Clicking the Dashboards tab will allow you to import a dashboard to display Timely&rsquo;s internal metrics. Depending on the security setup, the dashboard may not show any data until the Login process is completed.</p>
-
-<p><img alt="Import Dashboard" src="images/screencaps/ImportDashboard.png" /></p>
-
-<h3 id="login">Login</h3>
-
-<p>From the Timely App menu, select the Login page. This will present you a login prompt to authenticate you with the Timely datasources. This will set a cookie in your Browser
-that will be passed with the dashboard queries and Timely will pass your Accumulo column visibilities during data scans.</p>
-
-<p><img alt="Login" src="images/screencaps/Login.png" />
-View dashboard - this should now be working</p>
-
-<p>If more than one Timely datasource is defined, multiple Login prompts will be available. Here, the top data source was defined with BasicAuths checked, and the second one assumes a valid Certificate is loaded in the browser and will be passed to Timely when Login is clicked.</p>
-
-<p><img alt="Multi Login" src="images/screencaps/MultiDatasourceLogin.png" /></p>
-
-<h3 id="metrics-browser">Metrics Browser</h3>
-
-<p>To help browsing the data in Timely, the Timely menu also contains a Metrics link to take you to the Metrics Broswer</p>
-
-<p><img alt="Metrics Browser" src="images/screencaps/MetricsBrowser.png" /></p>
-
-<p>Timely data sources can be selected from the drop down menu and the results can be filtered by typing in the filter box.</p>
-
-<h3 id="dashboard">Dashboard</h3>
-
-<p>Currently the imported dashboard has one plot for timely ingest metrics, and three other plots to display the artificial data inserted by the <code class="prettyprint">timely.util.InsertTestData</code> program.</p>
-
-<p><img alt="Graphs" src="images/screencaps/Graphs.png" /></p>
-
           <h1 id="developer-information">Developer Information</h1>
 
 <h2 id="building-timely">Building Timely</h2>
@@ -1636,28 +1662,16 @@ View dashboard - this should now be working</p>
 </tr>
 </tbody></table>
 
-<blockquote>
-<p><a href="http://collectd.org/">CollectD</a></p>
-</blockquote>
-
 <aside class="warning">
 The CollectD plugins require that CollectD is installed locally as the `/usr/share/collectd/java/collectd-api.jar` file is a dependency.
 </aside>
 
-<blockquote>
-<p><a href="https://github.com/trustin/os-maven-plugin#issues-with-eclipse-m2e-or-other-ides">os-maven-plugin</a></p>
-</blockquote>
-
-<aside class="warning">
-If you are having trouble with the server pom in your IDE, take a look at the os-maven-plugin page.
+<aside class="notice">
+If you are having trouble with the server pom in your IDE, take a look at the <a href="https://github.com/trustin/os-maven-plugin#issues-with-eclipse-m2e-or-other-ides">os-maven-plugin</a> page.
 </aside>
 
-<blockquote>
-<p><a href="http://netty.io/wiki/forked-tomcat-native.html">Netty-TCNative</a></p>
-</blockquote>
-
-<aside class="warning">
-Timely uses the netty-tcnative module to provide native access to OpenSSL. The correct version of the artifact is downloaded during the build. If you are building for a different platform, then you can override the classifier by specifying the `os.detected.classifier` property on the Maven command line. See the netty-tcnative wiki for more information.
+<aside class="notice">
+Timely uses the netty-tcnative module to provide native access to OpenSSL. The correct version of the artifact is downloaded during the build. If you are building for a different platform, then you can override the classifier by specifying the `os.detected.classifier` property on the Maven command line. See the netty-tcnative <a href="http://netty.io/wiki/forked-tomcat-native.html">wiki</a> for more information.
 </aside>
 
 <h2 id="netty-pipeline-design">Netty Pipeline Design</h2>
@@ -1697,6 +1711,10 @@ decoder to deserialize the message sent across the wire to a Java object.</p>
 
 <p>From the slate branch, execute <code class="prettyprint">bundle exec middleman server</code> and go to http://localhost:4567 in your browser</p>
 
+<aside class="success">
+Reload your browser to see saved changes.
+</aside>
+
 <h2 id="pushing-changes-to-gh-pages-branch">Pushing changes to gh-pages branch</h2>
 
 <p>From the slate branch, execute <code class="prettyprint">bundle exec middleman build --clean</code> which will generate the static pages in a directory called <code class="prettyprint">build</code>. Move the build directory somewhere and checkout the gh-pages branch. Copy the contents of the build directory into the gh-pages branch, commit, and push.</p>
@@ -1731,9 +1749,15 @@ openssl x509 -req -in timely-user.csr -CA CA.pem -CAkey CA.key -CAcreateserial -
 openssl pkcs12 -export -out timely-user.p12 -inkey timely-user.key -in timely-user.crt -certfile CA.pem
 </code></p>
 
-<p>Next, load the timely-user.p12 file into your web browser. 
-Then, start the standalone server.
-Finally, navigate to <code class="prettyprint">https://localhost:54322/webapp/index.html</code> in your web browser.</p>
+<ol>
+<li>Next, load the timely-user.p12 file into your web browser. </li>
+<li>Then, start the standalone server.</li>
+<li>Finally, navigate to <code class="prettyprint">https://localhost:54322/webapp/index.html</code> in your web browser.</li>
+</ol>
+
+<aside class="success">
+You should see metrics show up after a minute or two. If you do not, check for an error using developer tools.
+</aside>
 
       </div>
       <div class="dark-box">
