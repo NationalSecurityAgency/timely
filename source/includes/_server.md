@@ -10,7 +10,7 @@ If you are just starting out with Timely and want to see what it can do, then st
 The standalone server will not save your metric data across restarts.
 </aside>
 
-To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.properties` file appropriately. Then copy the `lib/timely-server.jar` file to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
+To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.properties` file appropriately. Then copy the `lib/timely-server.jar` and `lib/commons-lang3-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
 
 ## SSL Setup
 
