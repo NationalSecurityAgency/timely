@@ -1,8 +1,10 @@
 # Grafana
 
-In the grafana directory in the source tree exists a Timely application for Grafana.
+The grafana directory in the source tree contains the Timely application for Grafana.
 
 ## Compiling
+
+> For development, running `grunt watch` will watch for file changes and continuously rebuild everything.
 
 Compiling the timely-app requrires [NodeJS](https://nodejs.org/en/) to be installed. Once installed, simply download
 the dependencies with `npm` and run `grunt`
@@ -12,8 +14,6 @@ the dependencies with `npm` and run `grunt`
 `npm install`
 
 `grunt`
-
-For development, running `grunt watch` will watch for file changes and continuously rebuild everything.
 
 ## Packaging
 

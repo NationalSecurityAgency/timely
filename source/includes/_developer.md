@@ -12,22 +12,16 @@ mvn package | Runs findbugs and creates a distribution
 mvn verify | Runs integration tests
 mvn verify site | Creates the site
 
-> [CollectD] (http://collectd.org/)
-
 <aside class="warning">
 The CollectD plugins require that CollectD is installed locally as the `/usr/share/collectd/java/collectd-api.jar` file is a dependency.
 </aside>
 
-> [os-maven-plugin] (https://github.com/trustin/os-maven-plugin#issues-with-eclipse-m2e-or-other-ides)
-
-<aside class="warning">
-If you are having trouble with the server pom in your IDE, take a look at the os-maven-plugin page.
+<aside class="notice">
+If you are having trouble with the server pom in your IDE, take a look at the <a href="https://github.com/trustin/os-maven-plugin#issues-with-eclipse-m2e-or-other-ides">os-maven-plugin</a> page.
 </aside>
 
-> [Netty-TCNative] (http://netty.io/wiki/forked-tomcat-native.html)
-
-<aside class="warning">
-Timely uses the netty-tcnative module to provide native access to OpenSSL. The correct version of the artifact is downloaded during the build. If you are building for a different platform, then you can override the classifier by specifying the `os.detected.classifier` property on the Maven command line. See the netty-tcnative wiki for more information.
+<aside class="notice">
+Timely uses the netty-tcnative module to provide native access to OpenSSL. The correct version of the artifact is downloaded during the build. If you are building for a different platform, then you can override the classifier by specifying the `os.detected.classifier` property on the Maven command line. See the netty-tcnative <a href="http://netty.io/wiki/forked-tomcat-native.html">wiki</a> for more information.
 </aside>
 
 ## Netty Pipeline Design

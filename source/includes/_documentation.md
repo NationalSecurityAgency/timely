@@ -6,6 +6,10 @@ This documentation is created using [Slate] (https://github.com/lord/slate). To 
 
 From the slate branch, execute `bundle exec middleman server` and go to http://localhost:4567 in your browser
 
+<aside class="success">
+Reload your browser to see saved changes.
+</aside>
+
 ## Pushing changes to gh-pages branch
 
 From the slate branch, execute `bundle exec middleman build --clean` which will generate the static pages in a directory called `build`. Move the build directory somewhere and checkout the gh-pages branch. Copy the contents of the build directory into the gh-pages branch, commit, and push.

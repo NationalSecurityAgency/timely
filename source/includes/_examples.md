@@ -22,6 +22,10 @@ openssl x509 -req -in timely-user.csr -CA CA.pem -CAkey CA.key -CAcreateserial -
 openssl pkcs12 -export -out timely-user.p12 -inkey timely-user.key -in timely-user.crt -certfile CA.pem
 `
 
-Next, load the timely-user.p12 file into your web browser. 
-Then, start the standalone server.
-Finally, navigate to `https://localhost:54322/webapp/index.html` in your web browser.
+1. Next, load the timely-user.p12 file into your web browser. 
+2. Then, start the standalone server.
+3. Finally, navigate to `https://localhost:54322/webapp/index.html` in your web browser.
+
+<aside class="success">
+You should see metrics show up after a minute or two. If you do not, check for an error using developer tools.
+</aside>

@@ -1,4 +1,4 @@
-# Transports
+# API Overview
 
 The Timely server supports clients sending requests over different protocols. Not all operations are supported over all protocols. The table below summarizes the protocols supported for each operation. The API documention is organized into sections that describe the general, time series, and subscription operations.
 

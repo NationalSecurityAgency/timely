@@ -66,8 +66,6 @@ Convert the private key to pkcs#8 format
 
 The `NUM_SERVER_THREADS` variable in the `timely-server.sh` script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the `conf` directory supports the following properties:
 
-> Note: If you comment out a property, then the default will be used. If a property is left uncommented with no value, then the property will have no value which may result in an error.
-
 > Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the `timely.write.latency` and `timely.write.threads` configuration property, but the buffer size for each BatchWriter is `timely.write.buffer.size` divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.write.latency=30s, timely.write.threads=2 timely.write.buffer.size=1G
 
 > Note: The `timely.scanner.threads` property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.
@@ -118,6 +116,10 @@ timely.web.socket.timeout | Number of seconds with no client ping response befor
 timely.ws.subscription.lag | Number of seconds that subscriptions should lag to account for latency | 120
 timely.http.redirect.path | Path to use for HTTP to HTTPS redirect | /secure-me
 timely.hsts.max.age | HTTP Strict Transport Security max age (in seconds) | 604800
+
+<aside class="notice">
+If you comment out a property, then the default will be used. If a property is left uncommented with no value, then the property will have no value which may result in an error.
+</aside>
 
 ## Data Storage
 
