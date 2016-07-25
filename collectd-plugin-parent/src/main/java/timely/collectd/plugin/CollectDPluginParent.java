@@ -64,7 +64,9 @@ public abstract class CollectDPluginParent {
         String host = vl.getHost();
         int idx = host.indexOf(PERIOD);
         if (-1 != idx) {
-            tags.append(" host=").append(vl.getHost().substring(0, idx));
+            tags.append(" host=").append(host.substring(0, idx));
+        } else {
+            tags.append(" host=").append(host);
         }
         int nIdx = host.indexOf('n');
         if (-1 != nIdx) {

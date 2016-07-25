@@ -52,7 +52,7 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
                 }
             } else {
                 Collectd.logWarning("Not writing to Timely, waiting to reconnect");
-                return 0;
+                return -1;
             }
         }
         return 0;
