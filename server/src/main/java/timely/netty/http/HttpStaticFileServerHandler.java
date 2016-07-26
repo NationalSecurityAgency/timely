@@ -135,10 +135,9 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
-        final String uri = request.getUri();
+        String uri = request.getUri();
         if (uri.startsWith("/favicon.ico")) {
-            sendError(ctx, NOT_FOUND);
-            return;
+            uri = uri.replaceFirst("\\/", "/webapp/");
         }
 
         if (!uri.startsWith("/webapp")) {
