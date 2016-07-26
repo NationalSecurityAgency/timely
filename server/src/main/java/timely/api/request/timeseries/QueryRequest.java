@@ -262,7 +262,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
         }
 
         public void setTags(Map<String, String> tags) {
-            this.tags = tags;
+            this.tags = (tags == null) ? new LinkedHashMap<>() : tags;
         }
 
         public void addTag(String key, String value) {

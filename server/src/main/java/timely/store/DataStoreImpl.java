@@ -515,7 +515,7 @@ public class DataStoreImpl implements DataStore {
     private List<String> prioritizeTags(SubQuery query) {
         // trivial cases
         Map<String, String> tags = query.getTags();
-        if (null == tags || tags.isEmpty()) {
+        if (tags.isEmpty()) {
             return Collections.emptyList();
         }
         if (tags.size() == 1) {

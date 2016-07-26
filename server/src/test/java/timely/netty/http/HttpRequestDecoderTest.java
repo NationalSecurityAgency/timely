@@ -635,6 +635,54 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testQueryEmptyTags() throws Exception {
+        // @formatter:off
+        String content =
+                "{\n"+
+                        "    \"start\": 1356998400,\n"+
+                        "    \"end\": 1356998460,\n"+
+                        "    \"queries\": [\n"+
+                        "        {\n"+
+                        "            \"aggregator\": \"sum\",\n"+
+                        "            \"metric\": \"sys.cpu.user\",\n"+
+                        "            \"rate\": \"true\",\n"+
+                        "            \"rateOptions\": \n"+
+                        "                {\"counter\":false,\"counterMax\":100,\"resetValue\":0},\n"+
+                        "            \"tags\":[]" +
+                        "        }\n"+
+                        "    ]\n"+
+                        "}";
+        // @formatter:on
+        decoder = new TestHttpQueryDecoder(config);
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
+        request.content().writeBytes(content.getBytes());
+        addCookie(request);
+        decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(QueryRequest.class, results.iterator().next().getClass());
+        QueryRequest query = (QueryRequest) results.iterator().next();
+        Assert.assertEquals(1356998400, query.getStart());
+        Assert.assertEquals(1356998460, query.getEnd());
+
+        Assert.assertEquals(1, query.getQueries().size());
+        Iterator<SubQuery> iter = query.getQueries().iterator();
+        SubQuery first = iter.next();
+        Assert.assertEquals(true, first.isMetricQuery());
+        Assert.assertEquals(false, first.isTsuidQuery());
+        Assert.assertEquals("sum", first.getAggregator());
+        Assert.assertEquals("sys.cpu.user", first.getMetric());
+        Assert.assertEquals(true, first.isRate());
+        RateOption firstRateOption = first.getRateOptions();
+        Assert.assertEquals(false, firstRateOption.isCounter());
+        Assert.assertEquals(100, firstRateOption.getCounterMax());
+        Assert.assertEquals(0, firstRateOption.getResetValue());
+        Assert.assertEquals(false, first.getDownsample().isPresent());
+        Assert.assertEquals(0, first.getTags().size());
+        query.validate();
+
+    }
+
+    @Test
     public void testQueryPostAll() throws Exception {
         // @formatter:off
         String content =
