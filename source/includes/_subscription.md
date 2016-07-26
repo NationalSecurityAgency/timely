@@ -1,6 +1,6 @@
 # Subscription API
 
-The subscription API allows the user to subscribe to metrics data. The create, add, remove, and close operations are expected to be [Text] (https://tools.ietf.org/html/rfc6455#section-5.6) frames and do not return a response for successful invocation. They return a [Close] (https://tools.ietf.org/html/rfc6455#section-5.5.1) frame with a message upon error condition.
+The subscription API allows the user to subscribe to metrics data using WebSockets. The create, add, remove, and close operations are expected to be [Text] (https://tools.ietf.org/html/rfc6455#section-5.6) frames and do not return a response for successful invocation. They return a [Close] (https://tools.ietf.org/html/rfc6455#section-5.5.1) frame with a message upon error condition.
 
 ## Metric Response
 
@@ -36,7 +36,7 @@ The Metric response contains the metric name, tag set, value for the metric, and
 }
 ```
 
-Initialize this WebSocket connection for subscription requests. This method doees 
+Initialize this WebSocket connection for subscription requests. This method doees
 
 
 ## Add Operation
@@ -87,4 +87,3 @@ metric | string | metric name
 ```
 
 Remove all subscriptions associated with this WebSocket channel.
-
