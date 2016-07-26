@@ -308,7 +308,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
             ToStringBuilder tsb = new ToStringBuilder(this);
             tsb.append("aggregator", aggregator);
             tsb.append("metric", metric);
-            tsb.append("rate", tags);
+            tsb.append("rate", rate);
             tsb.append("rateOptions", rateOptions);
             tsb.append("downsample", downsample);
             tsb.append("tags", tags);
