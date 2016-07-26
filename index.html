@@ -607,7 +607,7 @@ Timely stores your metric N times in the metrics table, where N is the number of
 <p>With anonymous access users that have not logged in will only see unlabeled data.</p>
 </blockquote>
 
-<p>Timely uses Spring Security to configure user authentication and user role information. Users must call the <code class="prettyprint">/login</code> endpoint for authentication and Timely will respond by setting a HTTP cookie with a session id. When anonymous access is disabled, a call to any operation that requires the session id will fail. When anonymous access is enabled, these calls will succeed but only unlabeled data will be returned. When using Grafana, it must be configured to use https also. For more information see the <a href="quick-start/QUICK_START.md">Quick Start</a> documentation.</p>
+<p>Timely uses Spring Security to configure user authentication and user role information. Users must call the <code class="prettyprint">/login</code> endpoint for authentication and Timely will respond by setting a HTTP cookie with a session id. When anonymous access is disabled, a call to any operation that requires the session id will fail. When anonymous access is enabled, these calls will succeed but only unlabeled data will be returned. When using Grafana, it must be configured to use https also. For more information see the <a href="#standalone-quick-start">Quick Start</a> documentation.</p>
 
           <h1 id="standalone-quick-start">Standalone Quick Start</h1>
 
@@ -991,28 +991,6 @@ View dashboard - this should now be working</p>
 
           <h1 id="general-api">General API</h1>
 
-<h2 id="version-response">Version Response</h2>
-<pre class="highlight plaintext"><code>0.0.2
-</code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
-<span class="s">0.0.2</span>
-</code></pre>
-<pre class="highlight json"><code><span class="mf">0.0</span><span class="err">.</span><span class="mi">2</span><span class="w">
-</span></code></pre>
-
-<p>Represents the version of the Timely server. Contents are a single string with the version.</p>
-
-<h2 id="login-response">Login Response</h2>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
-<span class="s">Set-Cookie TSESSIONID=e480176b-b0d4-4c96-8437-55eef3f1f6d8; Max-Age=86400; Expires=Thu, 14 Jul 2016 13:57:20 GMT; Domain=localhost; Secure; HTTPOnly</span>
-</code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">401</span> <span class="ne">Unauthorized</span>
-</code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">500</span> <span class="ne">Internal Server Error</span>
-</code></pre>
-
-<p>Login response contains an error or a HTTP cookie for use in subsequent calls.</p>
-
 <h2 id="version-operation">Version Operation</h2>
 <pre class="highlight plaintext"><code>echo "version" | nc &lt;host&gt; &lt;port&gt;
 </code></pre>
@@ -1027,6 +1005,17 @@ View dashboard - this should now be working</p>
 
 <p>Get the version of the Timely server. Returns a <a href="#version-response">Version</a> response.</p>
 
+<h2 id="version-response">Version Response</h2>
+<pre class="highlight plaintext"><code>0.0.2
+</code></pre>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="s">0.0.2</span>
+</code></pre>
+<pre class="highlight json"><code><span class="mf">0.0</span><span class="err">.</span><span class="mi">2</span><span class="w">
+</span></code></pre>
+
+<p>Represents the version of the Timely server. Contents are a single string with the version.</p>
+
 <h2 id="login-operation">Login Operation</h2>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/login</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
@@ -1039,185 +1028,20 @@ View dashboard - this should now be working</p>
 
 <p>Timely uses Spring Security for user authentication. When successful, a HTTP Set-Cookie header is returned in the response with the name <code class="prettyprint">TSESSIONID</code>. If a user does not log in, and anonymous access is enabled, then the user will only see data that is not marked. If a user does not log in, and anonymous access is disabled, then any operation that requires authentication will return an error. HTTP GET and POST methods are supported, the GET request is used when client SSL authentication is configured. When using the HTTP protocol, the <code class="prettyprint">TSESSIONID</code> cookie should be sent along with the request. For the WebSocket protocol the client will need to add the <code class="prettyprint">TSESSIONID</code> cookie value to the request in the <code class="prettyprint">sessionId</code> property. If using the WebSocket protocol with anonymous access, then use a unique <code class="prettyprint">sessionId</code> value for the duration of the client session. Returns a <a href="#login-response">Login</a> response.</p>
 
-          <h1 id="timeseries-api">Timeseries API</h1>
-
-<p>The Timeseries API contains operations for getting metadata about the time series, and retrieving the data points.</p>
-
-<h2 id="suggest-response">Suggest Response</h2>
+<h2 id="login-response">Login Response</h2>
 <pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
-<span class="s">[</span>
-<span class="s">  "sys.cpu.idle", </span>
-<span class="s">  "sys.cpu.user", </span>
-<span class="s">  "sys.cpu.wait"</span>
-<span class="s">]</span>
+<span class="s">Set-Cookie TSESSIONID=e480176b-b0d4-4c96-8437-55eef3f1f6d8; Max-Age=86400; Expires=Thu, 14 Jul 2016 13:57:20 GMT; Domain=localhost; Secure; HTTPOnly</span>
 </code></pre>
 <pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">401</span> <span class="ne">Unauthorized</span>
 </code></pre>
 <pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">500</span> <span class="ne">Internal Server Error</span>
 </code></pre>
-<pre class="highlight json"><code><span class="p">[</span><span class="w">
-  </span><span class="s2">"sys.cpu.idle"</span><span class="p">,</span><span class="w"> 
-  </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w"> 
-  </span><span class="s2">"sys.cpu.wait"</span><span class="w">
-</span><span class="p">]</span><span class="w">
-</span></code></pre>
 
-<p>The response to the suggest operation contains a list of suggestions based on the request parameters or an error. An HTTP 401 error will be returned on a missing or unknown <code class="prettyprint">TSESSIONID</code> cookie. A TextWebSocketFrame will be returned on a successful WebSocket request, otherwise a CloseWebSocketFrame will be returned. </p>
+<p>Login response contains an error or a HTTP cookie for use in subsequent calls.</p>
 
-<h2 id="lookup-response">Lookup Response</h2>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
-<span class="s">{</span>
-<span class="s">  "type":"LOOKUP",</span>
-<span class="s">  "metric":"sys.cpu.idle",</span>
-<span class="s">  "tags":{</span>
-<span class="s">    "tag3":"*"</span>
-<span class="s">  },</span>
-<span class="s">  "limit":25,</span>
-<span class="s">  "time":49,</span>
-<span class="s">  "totalResults":1,</span>
-<span class="s">  "results":[</span>
-<span class="s">    {</span>
-<span class="s">      "metric":null,</span>
-<span class="s">      "tags":{</span>
-<span class="s">        "tag3":"value3"</span>
-<span class="s">      },</span>
-<span class="s">      "tsuid":null</span>
-<span class="s">    }</span>
-<span class="s">  ]</span>
-<span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"LOOKUP"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"metric"</span><span class="p">:</span><span class="s2">"sys.cpu.idle"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"tags"</span><span class="p">:{</span><span class="w">
-    </span><span class="nt">"tag3"</span><span class="p">:</span><span class="s2">"*"</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"limit"</span><span class="p">:</span><span class="mi">25</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"time"</span><span class="p">:</span><span class="mi">49</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"totalResults"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"results"</span><span class="p">:[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"metric"</span><span class="p">:</span><span class="kc">null</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"tags"</span><span class="p">:{</span><span class="w">
-        </span><span class="nt">"tag3"</span><span class="p">:</span><span class="s2">"value3"</span><span class="w">
-      </span><span class="p">},</span><span class="w">
-      </span><span class="nt">"tsuid"</span><span class="p">:</span><span class="kc">null</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
+          <h1 id="timeseries-api">Timeseries API</h1>
 
-<p>The response to the lookup operation contains a set of metric names and tag set information that matches the request parameters. Response attributes are:</p>
-
-<table><thead>
-<tr>
-<th>Attribute</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead><tbody>
-<tr>
-<td>type</td>
-<td>string</td>
-<td>constant value of LOOKUP</td>
-</tr>
-<tr>
-<td>metric</td>
-<td>string</td>
-<td>copy of the metric input parameter</td>
-</tr>
-<tr>
-<td>tags</td>
-<td>map</td>
-<td>copy of the tags input parameter</td>
-</tr>
-<tr>
-<td>limit</td>
-<td>int</td>
-<td>copy of the limit input parameter</td>
-</tr>
-<tr>
-<td>time</td>
-<td>int</td>
-<td>operation duration in ms</td>
-</tr>
-<tr>
-<td>totalResults</td>
-<td>int</td>
-<td>number of results</td>
-</tr>
-<tr>
-<td>results</td>
-<td>array</td>
-<td>array of result objects that contain matching metric names and tag sets</td>
-</tr>
-</tbody></table>
-
-<h2 id="query-response">Query Response</h2>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
-<span class="s">{</span>
-<span class="s">  "metric" : "sys.cpu.user",</span>
-<span class="s">  "tags" :{</span>
-<span class="s">    "tag1" : "value1"</span>
-<span class="s">  },</span>
-<span class="s">  "aggregatedTags"  :[],</span>
-<span class="s">  "dps" : {</span>
-<span class="s">    "1468954529" : 1.0,</span>
-<span class="s">    "1468954530" : 3.0</span>
-<span class="s">  }</span>
-<span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">[{</span><span class="w">
-  </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"tags"</span><span class="w"> </span><span class="p">:{</span><span class="w">
-    </span><span class="nt">"tag1"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"value1"</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"aggregatedTags"</span><span class="w">  </span><span class="p">:[],</span><span class="w">
-  </span><span class="nt">"dps"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"1468954529"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"1468954530"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">3.0</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}]</span><span class="w">
-</span></code></pre>
-
-<p>The response to the query operation contains a set of an array of time series data points. Each array element contains the metric and associated set of tags along with the metric values and associated timestamps. Reponse attributes are:</p>
-
-<table><thead>
-<tr>
-<th>Attribute</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead><tbody>
-<tr>
-<td>metric</td>
-<td>string</td>
-<td>metric name for this time series</td>
-</tr>
-<tr>
-<td>tags</td>
-<td>map</td>
-<td>tags associated with this time series</td>
-</tr>
-<tr>
-<td>aggregatedTags</td>
-<td>map</td>
-<td>not used</td>
-</tr>
-<tr>
-<td>dps</td>
-<td>map</td>
-<td>map of timestamp to metric value</td>
-</tr>
-</tbody></table>
-
-<h2 id="aggregators-response">Aggregators Response</h2>
-
-<p>TODO</p>
-
-<h2 id="metrics-response">Metrics Response</h2>
-
-<p>TODO</p>
+<p>The Timeseries API contains operations for getting metadata about the time series, and retrieving the data points.</p>
 
 <h2 id="put-operation">Put Operation</h2>
 <pre class="highlight plaintext"><code>echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc &lt;host&gt; &lt;port&gt;
@@ -1333,9 +1157,30 @@ View dashboard - this should now be working</p>
 </tr>
 </tbody></table>
 
-<h2 id="lookup-operation">Lookup Operation</h2>
-<pre class="highlight http"><code><span class="err">GET /api/search/lookup?m=sys.cpu.user{host=*}&amp;limit=3000 HTTP/1.1 
+<h2 id="suggest-response">Suggest Response</h2>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="s">[</span>
+<span class="s">  "sys.cpu.idle",</span>
+<span class="s">  "sys.cpu.user",</span>
+<span class="s">  "sys.cpu.wait"</span>
+<span class="s">]</span>
+</code></pre>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">401</span> <span class="ne">Unauthorized</span>
+</code></pre>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">500</span> <span class="ne">Internal Server Error</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">[</span><span class="w">
+  </span><span class="s2">"sys.cpu.idle"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sys.cpu.wait"</span><span class="w">
+</span><span class="p">]</span><span class="w">
 </span></code></pre>
+
+<p>The response to the suggest operation contains a list of suggestions based on the request parameters or an error. An HTTP 401 error will be returned on a missing or unknown <code class="prettyprint">TSESSIONID</code> cookie. A TextWebSocketFrame will be returned on a successful WebSocket request, otherwise a CloseWebSocketFrame will be returned.</p>
+
+<h2 id="lookup-operation">Lookup Operation</h2>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/search/lookup?m=sys.cpu.user{host=*}&amp;limit=3000</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
 <pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/search/lookup</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="s">{</span>
 <span class="s">  "metric": "sys.cpu.user",</span>
@@ -1390,6 +1235,95 @@ View dashboard - this should now be working</p>
 <td>tags</td>
 <td>map</td>
 <td>(Optional) Pairs of K,V strings to to match results against</td>
+</tr>
+</tbody></table>
+
+<h2 id="lookup-response">Lookup Response</h2>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="s">{</span>
+<span class="s">  "type":"LOOKUP",</span>
+<span class="s">  "metric":"sys.cpu.idle",</span>
+<span class="s">  "tags":{</span>
+<span class="s">    "tag3":"*"</span>
+<span class="s">  },</span>
+<span class="s">  "limit":25,</span>
+<span class="s">  "time":49,</span>
+<span class="s">  "totalResults":1,</span>
+<span class="s">  "results":[</span>
+<span class="s">    {</span>
+<span class="s">      "metric":null,</span>
+<span class="s">      "tags":{</span>
+<span class="s">        "tag3":"value3"</span>
+<span class="s">      },</span>
+<span class="s">      "tsuid":null</span>
+<span class="s">    }</span>
+<span class="s">  ]</span>
+<span class="s">}</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"LOOKUP"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"metric"</span><span class="p">:</span><span class="s2">"sys.cpu.idle"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"tags"</span><span class="p">:{</span><span class="w">
+    </span><span class="nt">"tag3"</span><span class="p">:</span><span class="s2">"*"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"limit"</span><span class="p">:</span><span class="mi">25</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"time"</span><span class="p">:</span><span class="mi">49</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"totalResults"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"results"</span><span class="p">:[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"metric"</span><span class="p">:</span><span class="kc">null</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"tags"</span><span class="p">:{</span><span class="w">
+        </span><span class="nt">"tag3"</span><span class="p">:</span><span class="s2">"value3"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"tsuid"</span><span class="p">:</span><span class="kc">null</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>The response to the lookup operation contains a set of metric names and tag set information that matches the request parameters. Response attributes are:</p>
+
+<table><thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>type</td>
+<td>string</td>
+<td>constant value of LOOKUP</td>
+</tr>
+<tr>
+<td>metric</td>
+<td>string</td>
+<td>copy of the metric input parameter</td>
+</tr>
+<tr>
+<td>tags</td>
+<td>map</td>
+<td>copy of the tags input parameter</td>
+</tr>
+<tr>
+<td>limit</td>
+<td>int</td>
+<td>copy of the limit input parameter</td>
+</tr>
+<tr>
+<td>time</td>
+<td>int</td>
+<td>operation duration in ms</td>
+</tr>
+<tr>
+<td>totalResults</td>
+<td>int</td>
+<td>number of results</td>
+</tr>
+<tr>
+<td>results</td>
+<td>array</td>
+<td>array of result objects that contain matching metric names and tag sets</td>
 </tr>
 </tbody></table>
 
@@ -1505,6 +1439,64 @@ View dashboard - this should now be working</p>
 </tr>
 </tbody></table>
 
+<h2 id="query-response">Query Response</h2>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="s">{</span>
+<span class="s">  "metric" : "sys.cpu.user",</span>
+<span class="s">  "tags" :{</span>
+<span class="s">    "tag1" : "value1"</span>
+<span class="s">  },</span>
+<span class="s">  "aggregatedTags"  :[],</span>
+<span class="s">  "dps" : {</span>
+<span class="s">    "1468954529" : 1.0,</span>
+<span class="s">    "1468954530" : 3.0</span>
+<span class="s">  }</span>
+<span class="s">}</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">[{</span><span class="w">
+  </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"tags"</span><span class="w"> </span><span class="p">:{</span><span class="w">
+    </span><span class="nt">"tag1"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"value1"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"aggregatedTags"</span><span class="w">  </span><span class="p">:[],</span><span class="w">
+  </span><span class="nt">"dps"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"1468954529"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"1468954530"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">3.0</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}]</span><span class="w">
+</span></code></pre>
+
+<p>The response to the query operation contains a set of an array of time series data points. Each array element contains the metric and associated set of tags along with the metric values and associated timestamps. Reponse attributes are:</p>
+
+<table><thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>metric</td>
+<td>string</td>
+<td>metric name for this time series</td>
+</tr>
+<tr>
+<td>tags</td>
+<td>map</td>
+<td>tags associated with this time series</td>
+</tr>
+<tr>
+<td>aggregatedTags</td>
+<td>map</td>
+<td>not used</td>
+</tr>
+<tr>
+<td>dps</td>
+<td>map</td>
+<td>map of timestamp to metric value</td>
+</tr>
+</tbody></table>
+
 <h3 id="metric-subquery-type">Metric SubQuery Type</h3>
 
 <p>TODO</p>
@@ -1513,13 +1505,21 @@ View dashboard - this should now be working</p>
 
 <p>TODO</p>
 
+<h2 id="aggregators-response">Aggregators Response</h2>
+
+<p>TODO</p>
+
 <h2 id="metrics-operation">Metrics Operation</h2>
+
+<p>TODO</p>
+
+<h2 id="metrics-response">Metrics Response</h2>
 
 <p>TODO</p>
 
           <h1 id="subscription-api">Subscription API</h1>
 
-<p>The subscription API allows the user to subscribe to metrics data. The create, add, remove, and close operations are expected to be <a href="https://tools.ietf.org/html/rfc6455#section-5.6">Text</a> frames and do not return a response for successful invocation. They return a <a href="https://tools.ietf.org/html/rfc6455#section-5.5.1">Close</a> frame with a message upon error condition.</p>
+<p>The subscription API allows the user to subscribe to metrics data using WebSockets. The create, add, remove, and close operations are expected to be <a href="https://tools.ietf.org/html/rfc6455#section-5.6">Text</a> frames and do not return a response for successful invocation. They return a <a href="https://tools.ietf.org/html/rfc6455#section-5.5.1">Close</a> frame with a message upon error condition.</p>
 
 <h2 id="metric-response">Metric Response</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
@@ -1551,7 +1551,7 @@ View dashboard - this should now be working</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<p>Initialize this WebSocket connection for subscription requests. This method doees </p>
+<p>Initialize this WebSocket connection for subscription requests. This method doees</p>
 
 <h2 id="add-operation">Add Operation</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
