@@ -2,142 +2,6 @@
 
 The Timeseries API contains operations for getting metadata about the time series, and retrieving the data points.
 
-## Suggest Response
-
-```http
-HTTP/1.1 200 OK
-[
-  "sys.cpu.idle", 
-  "sys.cpu.user", 
-  "sys.cpu.wait"
-]
-```
-
-```http
-HTTP/1.1 401 Unauthorized
-```
-
-```http
-HTTP/1.1 500 Internal Server Error
-```
-
-```json
-[
-  "sys.cpu.idle", 
-  "sys.cpu.user", 
-  "sys.cpu.wait"
-]
-```
-
-The response to the suggest operation contains a list of suggestions based on the request parameters or an error. An HTTP 401 error will be returned on a missing or unknown `TSESSIONID` cookie. A TextWebSocketFrame will be returned on a successful WebSocket request, otherwise a CloseWebSocketFrame will be returned. 
-
-## Lookup Response
-
-```http
-HTTP/1.1 200 OK
-{
-  "type":"LOOKUP",
-  "metric":"sys.cpu.idle",
-  "tags":{
-    "tag3":"*"
-  },
-  "limit":25,
-  "time":49,
-  "totalResults":1,
-  "results":[
-    {
-      "metric":null,
-      "tags":{
-        "tag3":"value3"
-      },
-      "tsuid":null
-    }
-  ]
-}
-```
-
-```json
-{
-  "type":"LOOKUP",
-  "metric":"sys.cpu.idle",
-  "tags":{
-    "tag3":"*"
-  },
-  "limit":25,
-  "time":49,
-  "totalResults":1,
-  "results":[
-    {
-      "metric":null,
-      "tags":{
-        "tag3":"value3"
-      },
-      "tsuid":null
-    }
-  ]
-}
-```
-
-The response to the lookup operation contains a set of metric names and tag set information that matches the request parameters. Response attributes are:
-
-Attribute | Type | Description
-----------|------|------------
-type | string | constant value of LOOKUP
-metric | string | copy of the metric input parameter
-tags | map | copy of the tags input parameter
-limit | int | copy of the limit input parameter
-time | int | operation duration in ms
-totalResults | int | number of results
-results | array | array of result objects that contain matching metric names and tag sets
-
-## Query Response
-
-```http
-HTTP/1.1 200 OK
-{
-  "metric" : "sys.cpu.user",
-  "tags" :{
-    "tag1" : "value1"
-  },
-  "aggregatedTags"  :[],
-  "dps" : {
-    "1468954529" : 1.0,
-    "1468954530" : 3.0
-  }
-}
-```
-
-```json
-[{
-  "metric" : "sys.cpu.user",
-  "tags" :{
-    "tag1" : "value1"
-  },
-  "aggregatedTags"  :[],
-  "dps" : {
-    "1468954529" : 1.0,
-    "1468954530" : 3.0
-  }
-}]
-```
-
-The response to the query operation contains a set of an array of time series data points. Each array element contains the metric and associated set of tags along with the metric values and associated timestamps. Reponse attributes are:
-
-Attribute | Type | Description
-----------|------|------------
-metric | string | metric name for this time series
-tags | map | tags associated with this time series
-aggregatedTags | map | not used
-dps | map | map of timestamp to metric value
-
-## Aggregators Response
-
-TODO
-
-## Metrics Response
-
-TODO
-
 ## Put Operation
 
 ```plaintext
@@ -224,10 +88,39 @@ type | string | one of metrics, tagk, tagv
 q | string | the query string
 max | integer | the maximum number of results
 
+## Suggest Response
+
+```http
+HTTP/1.1 200 OK
+[
+  "sys.cpu.idle",
+  "sys.cpu.user",
+  "sys.cpu.wait"
+]
+```
+
+```http
+HTTP/1.1 401 Unauthorized
+```
+
+```http
+HTTP/1.1 500 Internal Server Error
+```
+
+```json
+[
+  "sys.cpu.idle",
+  "sys.cpu.user",
+  "sys.cpu.wait"
+]
+```
+
+The response to the suggest operation contains a list of suggestions based on the request parameters or an error. An HTTP 401 error will be returned on a missing or unknown `TSESSIONID` cookie. A TextWebSocketFrame will be returned on a successful WebSocket request, otherwise a CloseWebSocketFrame will be returned.
+
 ## Lookup Operation
 
 ```http
-GET /api/search/lookup?m=sys.cpu.user{host=*}&limit=3000 HTTP/1.1 
+GET /api/search/lookup?m=sys.cpu.user{host=*}&limit=3000 HTTP/1.1
 ```
 
 ```http
@@ -267,6 +160,65 @@ metric | string | metric name or prefix. Used in HTTP POST and WebSocket
 m | string | metric name or prefix. Used in HTTP GET
 limit | int | (Optional default:25) maximum number of results
 tags | map | (Optional) Pairs of K,V strings to to match results against
+
+## Lookup Response
+
+```http
+HTTP/1.1 200 OK
+{
+  "type":"LOOKUP",
+  "metric":"sys.cpu.idle",
+  "tags":{
+    "tag3":"*"
+  },
+  "limit":25,
+  "time":49,
+  "totalResults":1,
+  "results":[
+    {
+      "metric":null,
+      "tags":{
+        "tag3":"value3"
+      },
+      "tsuid":null
+    }
+  ]
+}
+```
+
+```json
+{
+  "type":"LOOKUP",
+  "metric":"sys.cpu.idle",
+  "tags":{
+    "tag3":"*"
+  },
+  "limit":25,
+  "time":49,
+  "totalResults":1,
+  "results":[
+    {
+      "metric":null,
+      "tags":{
+        "tag3":"value3"
+      },
+      "tsuid":null
+    }
+  ]
+}
+```
+
+The response to the lookup operation contains a set of metric names and tag set information that matches the request parameters. Response attributes are:
+
+Attribute | Type | Description
+----------|------|------------
+type | string | constant value of LOOKUP
+metric | string | copy of the metric input parameter
+tags | map | copy of the tags input parameter
+limit | int | copy of the limit input parameter
+time | int | operation duration in ms
+totalResults | int | number of results
+results | array | array of result objects that contain matching metric names and tag sets
 
 ## Query Operation
 
@@ -368,6 +320,46 @@ start | long | start time in ms for this query
 end | long | end time in ms for this query
 queries | array | array of metric sub query types. Used in HTTP Post or WebSocket
 
+## Query Response
+
+```http
+HTTP/1.1 200 OK
+{
+  "metric" : "sys.cpu.user",
+  "tags" :{
+    "tag1" : "value1"
+  },
+  "aggregatedTags"  :[],
+  "dps" : {
+    "1468954529" : 1.0,
+    "1468954530" : 3.0
+  }
+}
+```
+
+```json
+[{
+  "metric" : "sys.cpu.user",
+  "tags" :{
+    "tag1" : "value1"
+  },
+  "aggregatedTags"  :[],
+  "dps" : {
+    "1468954529" : 1.0,
+    "1468954530" : 3.0
+  }
+}]
+```
+
+The response to the query operation contains a set of an array of time series data points. Each array element contains the metric and associated set of tags along with the metric values and associated timestamps. Reponse attributes are:
+
+Attribute | Type | Description
+----------|------|------------
+metric | string | metric name for this time series
+tags | map | tags associated with this time series
+aggregatedTags | map | not used
+dps | map | map of timestamp to metric value
+
 ### Metric SubQuery Type
 
 TODO
@@ -376,6 +368,14 @@ TODO
 
 TODO
 
+## Aggregators Response
+
+TODO
+
 ## Metrics Operation
+
+TODO
+
+## Metrics Response
 
 TODO
