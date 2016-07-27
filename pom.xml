@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>timely</groupId>
     <artifactId>timely</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.2</version>
     <packaging>pom</packaging>
     <modules>
         <module>server</module>
