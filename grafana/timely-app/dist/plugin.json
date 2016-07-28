@@ -30,7 +30,9 @@
   "includes": [
     {"type": "datasource", "name": "Timely"},
     { "type": "page", "name": "Login", "component": "AuthsPageCtrl", "role": "Viewer", "addToNav": true},
-    { "type": "page", "name": "Metrics", "component": "MetricsPageCtrl", "role": "Viewer", "addToNav": true}
+    { "type": "page", "name": "Metrics", "component": "MetricsPageCtrl", "role": "Viewer", "addToNav": true},
+    { "type": "page", "name": "WebSocket", "component": "WebsocketPageCtrl", "role": "Viewer", "addToNav": true}
+
   ],
 
   "dependencies": {

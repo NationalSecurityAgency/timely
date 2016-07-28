@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['./components/config', './components/metrics', './components/authspage'], function (_export, _context) {
+System.register(['./components/config', './components/metrics', './components/authspage', './components/websocket'], function (_export, _context) {
   "use strict";
 
-  var TimelyAppConfigCtrl, MetricsPageCtrl, AuthsPageCtrl;
+  var TimelyAppConfigCtrl, MetricsPageCtrl, AuthsPageCtrl, WebsocketPageCtrl;
   return {
     setters: [function (_componentsConfig) {
       TimelyAppConfigCtrl = _componentsConfig.TimelyAppConfigCtrl;
@@ -11,6 +11,8 @@ System.register(['./components/config', './components/metrics', './components/au
       MetricsPageCtrl = _componentsMetrics.MetricsPageCtrl;
     }, function (_componentsAuthspage) {
       AuthsPageCtrl = _componentsAuthspage.AuthsPageCtrl;
+    }, function (_componentsWebsocket) {
+      WebsocketPageCtrl = _componentsWebsocket.WebsocketPageCtrl;
     }],
     execute: function () {
       _export('ConfigCtrl', TimelyAppConfigCtrl);
@@ -18,6 +20,8 @@ System.register(['./components/config', './components/metrics', './components/au
       _export('MetricsPageCtrl', MetricsPageCtrl);
 
       _export('AuthsPageCtrl', AuthsPageCtrl);
+
+      _export('WebsocketPageCtrl', WebsocketPageCtrl);
     }
   };
 });

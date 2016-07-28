@@ -108,9 +108,7 @@ System.register(['lodash'], function (_export, _context) {
 
             switch (response.status) {
               case 200:
-                var cookie = (document.cookie.match(/^(?:.*;)?TSESSIONID=([^;]+)(?:.*)?$/) || [, null])[1];
-                console.log(cookie);
-                console.log(document.cookie);
+                console.log(this.getCookie('TSESSIONID'));
 
                 this.fetching.status = 'success';
                 this.fetching.title = 'Login successful';
@@ -125,6 +123,13 @@ System.register(['lodash'], function (_export, _context) {
 
             if (r.readyState != 4 || r.status != 200) return;
             alert("Success: " + r.getResponseHeader('Set-Cookie'));
+          }
+        }, {
+          key: 'getCookie',
+          value: function getCookie(name) {
+            var value = "; " + document.cookie;
+            var parts = value.split("; " + name + "=");
+            if (parts.length == 2) return parts.pop().split(";").shift();
           }
         }, {
           key: '_getURI',
