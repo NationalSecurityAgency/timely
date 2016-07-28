@@ -7,8 +7,8 @@
     }
   ],
   "id": null,
-  "title": "${DS_NAME} - Status",
-  "originalTitle": "${DS_NAME} - Status",
+  "title": "Timely Standalone Demo",
+  "originalTitle": "Timely Standalone Demo",
   "tags": ["imported"],
   "style": "dark",
   "timezone": "browser",
