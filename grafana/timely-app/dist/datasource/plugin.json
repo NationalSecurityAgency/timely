@@ -8,7 +8,11 @@
   "annotations": true,
 
   "includes": [
-    {"type": "dashboard", "name": "Timely Metrics", "path": "dashboards/standalone_test.json"}
+    {"type": "dashboard", "name": "Timely Standalone Test", "path": "dashboards/standalone_test.json"},
+    {"type": "dashboard", "name": "Accumulo Overview", "path": "dashboards/AccumuloOverview.json"},
+    {"type": "dashboard", "name": "Hadoop Overview", "path": "dashboards/HadoopOverview.json"},
+    {"type": "dashboard", "name": "System Overview", "path": "dashboards/SystemOverview.json"},
+    {"type": "dashboard", "name": "Timely Status", "path": "dashboards/TimelyStatus.json"}
   ],
 
   "info": {
