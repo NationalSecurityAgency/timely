@@ -1,0 +1,10 @@
+Fire Engine Red #CB2129
+Raisin Black #1E1E24
+Arsenic #403F4C
+
+Gainsboro #DADDD8
+
+Gunmetal #2C2B3C
+Dark Gunmetal #1B2432
+
+font-family: "Arial Rounded MT Bold", "Helvetica Rounded", Arial, sans-serif;
