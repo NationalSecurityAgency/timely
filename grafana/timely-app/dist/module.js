@@ -3,7 +3,7 @@
 System.register(['./components/config', './components/metrics', './components/authspage', './components/websocket'], function (_export, _context) {
   "use strict";
 
-  var TimelyAppConfigCtrl, MetricsPageCtrl, AuthsPageCtrl, WebsocketPageCtrl;
+  var TimelyAppConfigCtrl, MetricsPageCtrl, AuthsPageCtrl, WebsocketCtrl;
   return {
     setters: [function (_componentsConfig) {
       TimelyAppConfigCtrl = _componentsConfig.TimelyAppConfigCtrl;
@@ -12,7 +12,7 @@ System.register(['./components/config', './components/metrics', './components/au
     }, function (_componentsAuthspage) {
       AuthsPageCtrl = _componentsAuthspage.AuthsPageCtrl;
     }, function (_componentsWebsocket) {
-      WebsocketPageCtrl = _componentsWebsocket.WebsocketPageCtrl;
+      WebsocketCtrl = _componentsWebsocket.WebsocketCtrl;
     }],
     execute: function () {
       _export('ConfigCtrl', TimelyAppConfigCtrl);
@@ -21,7 +21,7 @@ System.register(['./components/config', './components/metrics', './components/au
 
       _export('AuthsPageCtrl', AuthsPageCtrl);
 
-      _export('WebsocketPageCtrl', WebsocketPageCtrl);
+      _export('WebsocketPageCtrl', WebsocketCtrl);
     }
   };
 });
