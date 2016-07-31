@@ -1,5 +1,5 @@
 
-export class WebsocketConfigCtrl {
+export class WebsocketCtrl {
 
   constructor() {
 
