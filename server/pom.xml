@@ -35,13 +35,11 @@
         <dependency>
             <groupId>com.lmax</groupId>
             <artifactId>disruptor</artifactId>
-            <version>3.3.2</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.github.lukehutch</groupId>
             <artifactId>fast-classpath-scanner</artifactId>
-            <version>1.10.4</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -134,14 +132,13 @@
             <extension>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
-                <version>1.5.0.Final</version>
+                <version>${version.os-maven}</version>
             </extension>
         </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.6</version>
                 <executions>
                     <execution>
                         <id>assemble</id>
@@ -161,7 +158,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.10</version>
                 <executions>
                     <execution>
                         <id>copy-dependencies</id>
@@ -200,7 +196,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.19</version>
                 <configuration>
                     <argLine>${failsafeArgLine} -Djava.library.path=${project.build.dir}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
                     <includes>
@@ -249,7 +244,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.19</version>
                 <configuration>
                     <argLine>${sureFireArgLine} -Djava.library.path=${project.build.dir}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
                     <excludedGroups>timely.test.IntegrationTest</excludedGroups>
@@ -259,7 +253,6 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.6.201602180812</version>
                 <executions>
                     <execution>
                         <id>jacoco-prepare-ut</id>
@@ -288,7 +281,6 @@
             <plugin>
                 <groupId>net.revelc.code</groupId>
                 <artifactId>formatter-maven-plugin</artifactId>
-                <version>0.5.2</version>
                 <configuration>
                     <configFile>${project.parent.basedir}/eclipse/Eclipse-Formatter.xml</configFile>
                     <lineEnding>LF</lineEnding>
@@ -303,50 +295,6 @@
                 </executions>
             </plugin>
         </plugins>
-        <pluginManagement>
-            <plugins>
-                <!--This plugin's configuration is used to store Eclipse m2e settings 
-					only. It has no influence on the Maven build itself. -->
-                <plugin>
-                    <groupId>org.eclipse.m2e</groupId>
-                    <artifactId>lifecycle-mapping</artifactId>
-                    <version>1.0.0</version>
-                    <configuration>
-                        <lifecycleMappingMetadata>
-                            <pluginExecutions>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
-                                        <groupId>net.revelc.code</groupId>
-                                        <artifactId>formatter-maven-plugin</artifactId>
-                                        <versionRange>[0.5.2,)</versionRange>
-                                        <goals>
-                                            <goal>format</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <ignore/>
-                                    </action>
-                                </pluginExecution>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
-                                        <groupId>org.apache.maven.plugins</groupId>
-                                        <artifactId>maven-dependency-plugin</artifactId>
-                                        <versionRange>[2.10,)</versionRange>
-                                        <goals>
-                                            <goal>copy-dependencies</goal>
-                                            <goal>unpack</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <ignore/>
-                                    </action>
-                                </pluginExecution>
-                            </pluginExecutions>
-                        </lifecycleMappingMetadata>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
     </build>
     <profiles>
         <profile>
@@ -356,7 +304,6 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>rpm-maven-plugin</artifactId>
-                        <version>2.1.4</version>
                         <executions>
                             <execution>
                                 <id>generate-rpm</id>
@@ -434,7 +381,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>findbugs-maven-plugin</artifactId>
-                <version>3.0.3</version>
+                <version>${version.findbugs-maven}</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Medium</threshold>
@@ -443,7 +390,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.6</version>
+                <version>${version.maven-pmd}</version>
                 <configuration>
                     <targetJdk>1.8</targetJdk>
                 </configuration>
@@ -451,7 +398,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.6.201602180812</version>
+                <version>${version.jacoco}</version>
                 <reportSets>
                     <reportSet>
                         <id>JaCoCo Unit Test Coverage</id>
