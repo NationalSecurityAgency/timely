@@ -601,7 +601,17 @@ Timely stores your metric N times in the metrics table, where N is the number of
 
           <h1 id="security">Security</h1>
 
-<p>Timely allows users to optionally label their data using Accumulo column visibility expressions. To enable this feature, users should put the expressions in a tag named <code class="prettyprint">viz</code>. Timely will <a href="http://accumulo.apache.org/1.7/apidocs/org/apache/accumulo/core/security/ColumnVisibility.html#flatten%28%29">flatten</a> this expression and store it in the column visibility of the data point in the metrics table. Column visibilities are <em>not</em> stored in the meta table, so anyone can see metric names, tag names, and tag values.</p>
+<h2 id="securing-the-transport">Securing the Transport</h2>
+
+<p>Timely only exposes two operations over a non-secure transport, one to the version of the server and the other to insert data. All other operations are protected by either HTTPS or WSS protocols. The server <a href="#configuration">configuration</a> allows the user to change many of the security settings such as: CORS origins, specific SSL/TLS ciphers, duration of the HTTP session cookie, and more.</p>
+
+<h3 id="http-strict-transport-security">HTTP Strict Transport Security</h3>
+
+<p>Timely returns a <a href="https://tools.ietf.org/html/rfc6797">HTTP Strict Transport Security</a> header to callers that attempt to use HTTP. The max age for this header can be set in the configuration.</p>
+
+<h2 id="securing-data">Securing Data</h2>
+
+<p>Timely allows users to optionally label their data using Accumulo column visibility expressions. To enable this feature, users should put the expressions in a tag named <code class="prettyprint">viz</code>. Timely will <a href="http://accumulo.apache.org/1.7/apidocs/org/apache/accumulo/core/security/ColumnVisibility.html#flatten%28%29">flatten</a> this expression and store it in the column visibility of the data point in the metrics table. Column visibilities are <em>not</em> stored in the meta table, so anyone can see metric names, tag names, and tag values. Additionally, column visibilities are not returned with the data.</p>
 
 <blockquote>
 <p>With anonymous access users that have not logged in will only see unlabeled data.</p>
@@ -1519,7 +1529,7 @@ View dashboard - this should now be working</p>
 
           <h1 id="subscription-api">Subscription API</h1>
 
-<p>The subscription API allows the user to subscribe to metrics data using WebSockets. The create, add, remove, and close operations are expected to be <a href="https://tools.ietf.org/html/rfc6455#section-5.6">Text</a> frames and do not return a response for successful invocation. They return a <a href="https://tools.ietf.org/html/rfc6455#section-5.5.1">Close</a> frame with a message upon error condition.</p>
+<p>The subscription API allows the user to subscribe to metrics data using WebSockets. The create, add, remove, and close operations are expected to be <a href="https://tools.ietf.org/html/rfc6455#section-5.6">Text</a> frames and do not return a response for successful invocation. They return a <a href="https://tools.ietf.org/html/rfc6455#section-5.5.1">Close</a> frame with a message upon error condition. Each subscription is identified by a subscription id, a unique string, that the client will use to manipulate the subscription. This allows a client to create multiple subscriptions, using different subscription ids, on the same WebSocket channel.</p>
 
 <h2 id="metric-response">Metric Response</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
@@ -1538,7 +1548,8 @@ View dashboard - this should now be working</p>
       </span><span class="nt">"key"</span><span class="p">:</span><span class="s2">"tag4"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"value"</span><span class="p">:</span><span class="s2">"value4"</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"subscriptionId"</span><span class="p">:</span><span class="s2">"&lt;unique id&gt;"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
@@ -1547,16 +1558,16 @@ View dashboard - this should now be working</p>
 <h2 id="create-operation">Create Operation</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"create"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"sessionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;value of TSESSIONID&gt;"</span><span class="w">
+  </span><span class="nt">"subscriptionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;unique id&gt;"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<p>Initialize this WebSocket connection for subscription requests. This method doees</p>
+<p>Initialize this WebSocket connection for subscription requests. This method does not return a response.</p>
 
 <h2 id="add-operation">Add Operation</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"add"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"sessionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;value of TSESSIONID&gt;"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"subscriptionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;unique id&gt;"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"tags"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
   </span><span class="nt">"startTime"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
@@ -1598,7 +1609,7 @@ View dashboard - this should now be working</p>
 <h2 id="remove-operation">Remove Operation</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"remove"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"sessionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;value of TSESSIONID&gt;"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"subscriptionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;unique id&gt;"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
@@ -1622,7 +1633,7 @@ View dashboard - this should now be working</p>
 <h2 id="close-operation">Close Operation</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"close"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"sessionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;value of TSESSIONID&gt;"</span><span class="w">
+  </span><span class="nt">"subscriptionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;unique id&gt;"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
