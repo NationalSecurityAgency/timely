@@ -37,6 +37,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final String name;
     private final int lag;
     private final String subscriptionId;
+    private final String metric;
 
     public MetricScanner(String subscriptionId, String sessionId, DataStore store, String metric,
             Map<String, String> tags, long startTime, long delay, int lag, ChannelHandlerContext ctx)
@@ -45,6 +46,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
         this.setUncaughtExceptionHandler(this);
         this.ctx = ctx;
         this.lag = lag;
+        this.metric = metric;
         this.scanner = store.createScannerForMetric(sessionId, metric, tags, startTime, lag);
         this.iter = scanner.iterator();
         this.delay = delay;
@@ -80,20 +82,25 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         LOG.error("Error serializing metric: " + m, e1);
                     }
                 } else {
-                    // Reset the starting range to the last key returned
-                    LOG.debug("Exhausted scanner, waiting {}ms to retry.", delay);
-                    UtilWaitThread.sleep(delay);
+                    long endTime = (System.currentTimeMillis() - (lag * 1000));
+                    byte[] end = Metric.encodeRowKey(this.metric, endTime);
+                    Text endRow = new Text(end);
                     this.scanner.close();
                     Range prevRange = this.scanner.getRange();
-                    if (null != m) {
-                        long endTime = (System.currentTimeMillis() - (lag * 1000));
-                        byte[] end = Metric.encodeRowKey(m.getMetric(), endTime);
-                        Text endRow = new Text(end);
+                    if (null == m) {
+                        LOG.debug("No results found, waiting {}ms to retry.", delay);
+                        UtilWaitThread.sleep(delay);
+                        this.scanner.setRange(new Range(prevRange.getStartKey().getRow(), prevRange
+                                .isStartKeyInclusive(), endRow, false));
+                        this.iter = this.scanner.iterator();
+                    } else {
+                        // Reset the starting range to the last key returned
+                        LOG.debug("Exhausted scanner, waiting {}ms to retry.", delay);
+                        UtilWaitThread.sleep(delay);
                         this.scanner.setRange(new Range(new Text(Metric.encodeRowKey(m.getMetric(), m.getTimestamp())),
                                 false, endRow, prevRange.isEndKeyInclusive()));
-                        m = null;
+                        this.iter = this.scanner.iterator();
                     }
-                    this.iter = this.scanner.iterator();
                 }
             }
         } finally {

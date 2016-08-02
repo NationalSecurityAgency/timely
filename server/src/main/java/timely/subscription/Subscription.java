@@ -47,7 +47,7 @@ public class Subscription {
     }
 
     public void addMetric(String metric, Map<String, String> tags, long startTime, long delay) throws TimelyException {
-        LOG.debug("Adding metric scanner for subscription {}", this.sessionId);
+        LOG.debug("Adding metric scanner for subscription {}", this.subscriptionId);
         MetricScanner m = new MetricScanner(this.subscriptionId, this.sessionId, store, metric, tags, startTime, delay,
                 lag, ctx);
         METRICS.put(metric, m);
@@ -67,7 +67,7 @@ public class Subscription {
     }
 
     public void close() {
-        LOG.info("Closing subscriptions for session: " + this.sessionId);
+        LOG.info("Closing subscriptions for {}", this.subscriptionId);
         this.ping.cancel(false);
         METRICS.forEach((k, v) -> {
             v.close();
