@@ -1,6 +1,6 @@
 # Subscription API
 
-The subscription API allows the user to subscribe to metrics data using WebSockets. The create, add, remove, and close operations are expected to be [Text] (https://tools.ietf.org/html/rfc6455#section-5.6) frames and do not return a response for successful invocation. They return a [Close] (https://tools.ietf.org/html/rfc6455#section-5.5.1) frame with a message upon error condition.
+The subscription API allows the user to subscribe to metrics data using WebSockets. The create, add, remove, and close operations are expected to be [Text] (https://tools.ietf.org/html/rfc6455#section-5.6) frames and do not return a response for successful invocation. They return a [Close] (https://tools.ietf.org/html/rfc6455#section-5.5.1) frame with a message upon error condition. Each subscription is identified by a subscription id, a unique string, that the client will use to manipulate the subscription. This allows a client to create multiple subscriptions, using different subscription ids, on the same WebSocket channel.
 
 ## Metric Response
 
@@ -21,7 +21,8 @@ The subscription API allows the user to subscribe to metrics data using WebSocke
       "key":"tag4",
       "value":"value4"
     }
-  ]
+  ],
+  "subscriptionId":"<unique id>"
 }
 ```
 
@@ -32,11 +33,11 @@ The Metric response contains the metric name, tag set, value for the metric, and
 ```json
 {
   "operation" : "create",
-  "sessionId" : "<value of TSESSIONID>"
+  "subscriptionId" : "<unique id>"
 }
 ```
 
-Initialize this WebSocket connection for subscription requests. This method doees
+Initialize this WebSocket connection for subscription requests. This method does not return a response.
 
 
 ## Add Operation
@@ -44,7 +45,7 @@ Initialize this WebSocket connection for subscription requests. This method doee
 ```json
 {
   "operation" : "add",
-  "sessionId" : "<value of TSESSIONID>",
+  "subscriptionId" : "<unique id>",
   "metric" : "sys.cpu.user",
   "tags" : null,
   "startTime" : null,
@@ -66,7 +67,7 @@ delayTime | long | Wait time to look for the arrival of new data.
 ```json
 {
   "operation" : "remove",
-  "sessionId" : "<value of TSESSIONID>",
+  "subscriptionId" : "<unique id>",
   "metric" : "sys.cpu.user"
 }
 ```
@@ -82,7 +83,7 @@ metric | string | metric name
 ```json
 {
   "operation" : "close",
-  "sessionId" : "<value of TSESSIONID>"
+  "subscriptionId" : "<unique id>"
 }
 ```
 
