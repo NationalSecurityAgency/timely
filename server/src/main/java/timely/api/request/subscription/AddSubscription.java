@@ -4,10 +4,9 @@ import java.util.Map;
 import java.util.Optional;
 
 import timely.api.annotation.WebSocket;
-import timely.api.request.AuthenticatedWebSocketRequest;
 
 @WebSocket(operation = "add")
-public class AddSubscription extends AuthenticatedWebSocketRequest {
+public class AddSubscription extends SubscriptionRequest {
 
     private String metric = null;
     private Optional<Map<String, String>> tags = Optional.empty();

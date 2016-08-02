@@ -27,19 +27,21 @@ public class WSCreateSubscriptionRequestHandler extends SimpleChannelInboundHand
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, CreateSubscription create) throws Exception {
-        SubscriptionRegistry.get().put(create.getSessionId(),
-                new Subscription(create.getSessionId(), store, ctx, this.conf));
+        final String subscriptionId = create.getSubscriptionId();
+        SubscriptionRegistry.get().put(subscriptionId,
+                new Subscription(subscriptionId, create.getSessionId(), store, ctx, this.conf));
 
         // Store the session id as an attribute on the context.
-        ctx.attr(SubscriptionRegistry.SESSION_ID_ATTR).set(create.getSessionId());
+        ctx.channel().attr(SubscriptionRegistry.SUBSCRIPTION_ID_ATTR).set(subscriptionId);
+        LOG.info("Created subscription {} on channel {}", subscriptionId, ctx);
 
         ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
 
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
-                Subscription s = SubscriptionRegistry.get().remove(create.getSessionId());
+                Subscription s = SubscriptionRegistry.get().remove(subscriptionId);
                 if (null != s) {
-                    LOG.info("Channel closed, closing subscriptions for sessionId: " + create.getSessionId());
+                    LOG.info("Channel closed, closing subscriptions for subscriptionId: " + subscriptionId);
                     s.close();
                 }
             }

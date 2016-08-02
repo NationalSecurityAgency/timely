@@ -19,7 +19,7 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, AddSubscription add) throws Exception {
-        Subscription s = SubscriptionRegistry.get().get(add.getSessionId());
+        Subscription s = SubscriptionRegistry.get().get(add.getSubscriptionId());
         if (null != s) {
             String metric = add.getMetric();
             if (null == metric) {
@@ -40,8 +40,8 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
             }
             s.addMetric(metric, tags, startTime, delayTime);
         } else {
-            LOG.error("Unknown session id, create subscription first");
-            ctx.writeAndFlush(new CloseWebSocketFrame(1003, "Unknown session id, create subscription first"));
+            LOG.error("Unknown subscription id, create subscription first");
+            ctx.writeAndFlush(new CloseWebSocketFrame(1003, "Unknown subscription id, create subscription first"));
         }
     }
 

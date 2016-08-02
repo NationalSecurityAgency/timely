@@ -10,7 +10,7 @@ public class WSCloseSubscriptionRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, CloseSubscription close) throws Exception {
-        Subscription s = SubscriptionRegistry.get().remove(close.getSessionId());
+        Subscription s = SubscriptionRegistry.get().remove(close.getSubscriptionId());
         if (null != s) {
             s.close();
         }

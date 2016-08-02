@@ -25,8 +25,11 @@ public class Subscription {
     private final ChannelHandlerContext ctx;
     private final ScheduledFuture<?> ping;
     private final Integer lag;
+    private final String subscriptionId;
 
-    public Subscription(String sessionId, DataStore store, ChannelHandlerContext ctx, Configuration conf) {
+    public Subscription(String subscriptionId, String sessionId, DataStore store, ChannelHandlerContext ctx,
+            Configuration conf) {
+        this.subscriptionId = subscriptionId;
         this.sessionId = sessionId;
         this.store = store;
         this.ctx = ctx;
@@ -45,7 +48,8 @@ public class Subscription {
 
     public void addMetric(String metric, Map<String, String> tags, long startTime, long delay) throws TimelyException {
         LOG.debug("Adding metric scanner for subscription {}", this.sessionId);
-        MetricScanner m = new MetricScanner(this.sessionId, store, metric, tags, startTime, delay, lag, ctx);
+        MetricScanner m = new MetricScanner(this.subscriptionId, this.sessionId, store, metric, tags, startTime, delay,
+                lag, ctx);
         METRICS.put(metric, m);
         m.start();
     }

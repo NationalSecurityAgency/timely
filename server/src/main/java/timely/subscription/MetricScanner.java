@@ -36,9 +36,11 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final long delay;
     private final String name;
     private final int lag;
+    private final String subscriptionId;
 
-    public MetricScanner(String sessionId, DataStore store, String metric, Map<String, String> tags, long startTime,
-            long delay, int lag, ChannelHandlerContext ctx) throws TimelyException {
+    public MetricScanner(String subscriptionId, String sessionId, DataStore store, String metric,
+            Map<String, String> tags, long startTime, long delay, int lag, ChannelHandlerContext ctx)
+            throws TimelyException {
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(this);
         this.ctx = ctx;
@@ -46,6 +48,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
         this.scanner = store.createScannerForMetric(sessionId, metric, tags, startTime, lag);
         this.iter = scanner.iterator();
         this.delay = delay;
+        this.subscriptionId = subscriptionId;
         ToStringBuilder buf = new ToStringBuilder(this);
         buf.append("sessionId", sessionId);
         buf.append("metric", metric);
@@ -70,7 +73,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     Entry<Key, Value> e = this.iter.next();
                     m = Metric.parse(e.getKey(), e.getValue());
                     try {
-                        String json = om.writeValueAsString(m.toMetricResponse());
+                        String json = om.writeValueAsString(m.toMetricResponse(this.subscriptionId));
                         LOG.trace("Returning {} for subscription", json);
                         this.ctx.writeAndFlush(new TextWebSocketFrame(json));
                     } catch (JsonProcessingException e1) {

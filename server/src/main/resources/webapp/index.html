@@ -24,23 +24,23 @@
           console.log("Web socket connection established.");
           var create = {
             "operation" : "create",
-            "sessionId" : "12345"
+            "subscriptionId" : "12345"
           }
           sock.send(JSON.stringify(create));
 
           var m1 = {
             "operation" : "add",
-            "sessionId" : "12345",
+            "subscriptionId" : "12345",
             "metric" : "timely.metrics.received"
           }
           sock.send(JSON.stringify(m1));
           
-          var m1 = {
+          var m2 = {
             "operation" : "add",
-            "sessionId" : "12345",
+            "subscriptionId" : "12345",
             "metric" : "timely.keys.metric.inserted"
           }
-          sock.send(JSON.stringify(m1));
+          sock.send(JSON.stringify(m2));
         }
         sock.onclose = function()
         {
@@ -50,7 +50,7 @@
         {
           var close = {
             "operation" : "close",
-            "sessionId" : "12345"
+            "subscriptionId" : "12345"
           }
           sock.send(JSON.stringify(close));
           sock.close();

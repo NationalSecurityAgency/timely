@@ -10,7 +10,7 @@ public class WSRemoveSubscriptionRequestHandler extends SimpleChannelInboundHand
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, RemoveSubscription remove) throws Exception {
-        Subscription s = SubscriptionRegistry.get().get(remove.getSessionId());
+        Subscription s = SubscriptionRegistry.get().get(remove.getSubscriptionId());
         if (null != s) {
             s.removeMetric(remove.getMetric());
         }

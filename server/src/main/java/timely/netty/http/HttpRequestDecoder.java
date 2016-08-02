@@ -44,6 +44,26 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
         this.nonSecureRedirectAddress = conf.get(Configuration.NON_SECURE_REDIRECT_PATH);
     }
 
+    public static String getSessionId(FullHttpRequest msg, boolean anonymousAccessAllowed) {
+        final StringBuilder buf = new StringBuilder();
+        msg.headers().getAll(Names.COOKIE).forEach(h -> {
+            ServerCookieDecoder.STRICT.decode(h).forEach(c -> {
+                if (c.name().equals(Constants.COOKIE_NAME)) {
+                    if (buf.length() == 0) {
+                        buf.append(c.value());
+                    }
+                }
+            });
+        });
+        String sessionId = buf.toString();
+        if (sessionId.length() == 0 && anonymousAccessAllowed) {
+            sessionId = NO_AUTHORIZATIONS;
+        } else if (sessionId.length() == 0) {
+            sessionId = null;
+        }
+        return sessionId;
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, FullHttpRequest msg, List<Object> out) throws Exception {
 
@@ -56,24 +76,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
             return;
         }
 
-        final StringBuilder buf = new StringBuilder();
-        msg.headers().getAll(Names.COOKIE).forEach(h -> {
-            ServerCookieDecoder.STRICT.decode(h).forEach(c -> {
-                if (c.name().equals(Constants.COOKIE_NAME)) {
-                    if (buf.length() == 0) {
-                        buf.append(c.value());
-                    }
-                }
-            });
-        });
-
-        String sId = buf.toString();
-        if (sId.length() == 0 && this.anonymousAccessAllowed) {
-            sId = NO_AUTHORIZATIONS;
-        } else if (sId.length() == 0) {
-            sId = null;
-        }
-        final String sessionId = sId;
+        final String sessionId = getSessionId(msg, this.anonymousAccessAllowed);
         LOG.trace("SessionID: " + sessionId);
 
         Request request = null;

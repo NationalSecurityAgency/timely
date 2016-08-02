@@ -14,6 +14,7 @@ public class MetricResponse {
     private long timestamp;
     private double value;
     private List<Tag> tags;
+    private String subscriptionId;
 
     public String getMetric() {
         return metric;
@@ -47,6 +48,14 @@ public class MetricResponse {
         this.tags = tags;
     }
 
+    public String getSubscriptionId() {
+        return subscriptionId;
+    }
+
+    public void setSubscriptionId(String subscriptionId) {
+        this.subscriptionId = subscriptionId;
+    }
+
     @Override
     public int hashCode() {
         HashCodeBuilder hash = new HashCodeBuilder();
@@ -54,6 +63,7 @@ public class MetricResponse {
         hash.append(this.timestamp);
         hash.append(this.value);
         hash.append(this.tags);
+        hash.append(this.subscriptionId);
         return hash.hashCode();
     }
 
@@ -74,6 +84,7 @@ public class MetricResponse {
         equals.append(this.timestamp, other.timestamp);
         equals.append(this.value, other.value);
         equals.append(this.tags, other.tags);
+        equals.append(this.subscriptionId, other.subscriptionId);
         return equals.isEquals();
     }
 
@@ -84,6 +95,7 @@ public class MetricResponse {
         tsb.append("timestamp", this.timestamp);
         tsb.append("value", this.value);
         tsb.append("tags", this.tags);
+        tsb.append("subscriptionId", this.subscriptionId);
         return tsb.toString();
     }
 

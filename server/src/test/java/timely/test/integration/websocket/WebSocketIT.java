@@ -17,7 +17,9 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -34,6 +36,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.util.UtilWaitThread;
@@ -63,6 +66,7 @@ import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
+import timely.netty.Constants;
 import timely.test.IntegrationTest;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
@@ -176,15 +180,22 @@ public class WebSocketIT extends OneWaySSLBase {
     private Channel ch = null;
     private ClientHandler handler = null;
     private Server s = null;
+    private String sessionId = null;
 
     @Before
     public void setup() throws Exception {
         s = new Server(conf);
-        AuthCache.getCache().put("1234", new UsernamePasswordAuthenticationToken("test", "test1"));
+        this.sessionId = UUID.randomUUID().toString();
+        AuthCache.getCache().put(sessionId, new UsernamePasswordAuthenticationToken("test", "test1"));
         group = new NioEventLoopGroup();
         SslContext ssl = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+
+        String cookieVal = ClientCookieEncoder.STRICT.encode(Constants.COOKIE_NAME, sessionId);
+        HttpHeaders headers = new DefaultHttpHeaders();
+        headers.add(Names.COOKIE, cookieVal);
+
         WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(LOCATION,
-                WebSocketVersion.V13, (String) null, false, (HttpHeaders) new DefaultHttpHeaders());
+                WebSocketVersion.V13, (String) null, false, headers);
         handler = new ClientHandler(handshaker);
         Bootstrap boot = new Bootstrap();
         boot.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
@@ -201,15 +212,16 @@ public class WebSocketIT extends OneWaySSLBase {
         // Wait until handshake is complete
         while (!handshaker.isHandshakeComplete()) {
             UtilWaitThread.sleep(500L);
+            LOG.debug("Waiting for Handshake to complete");
         }
     }
 
     @Test
     public void testClientDisappears() throws Exception {
         try {
-            final String sessionId = "1235";
+            final String subscriptionId = "1235";
             CreateSubscription c = new CreateSubscription();
-            c.setSessionId(sessionId);
+            c.setSubscriptionId(subscriptionId);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(c)));
 
             // Add some data
@@ -223,7 +235,7 @@ public class WebSocketIT extends OneWaySSLBase {
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
-            add.setSessionId(sessionId);
+            add.setSubscriptionId(subscriptionId);
             add.setMetric("sys.cpu.user");
             add.setDelayTime(1000L);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add)));
@@ -254,7 +266,8 @@ public class WebSocketIT extends OneWaySSLBase {
             second.setTags(secondTags);
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse()));
+                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
+                        || m.equals(second.toMetricResponse(subscriptionId)));
             }
         } finally {
             ch.close().sync();
@@ -266,9 +279,9 @@ public class WebSocketIT extends OneWaySSLBase {
     @Test
     public void testSubscriptionWorkflow() throws Exception {
         try {
-            final String sessionId = "1234";
+            final String subscriptionId = "1234";
             CreateSubscription c = new CreateSubscription();
-            c.setSessionId(sessionId);
+            c.setSubscriptionId(subscriptionId);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(c)));
 
             // Add some data
@@ -282,7 +295,7 @@ public class WebSocketIT extends OneWaySSLBase {
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
-            add.setSessionId(sessionId);
+            add.setSubscriptionId(subscriptionId);
             add.setMetric("sys.cpu.user");
             add.setDelayTime(1000L);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add)));
@@ -313,7 +326,8 @@ public class WebSocketIT extends OneWaySSLBase {
             second.setTags(secondTags);
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse()));
+                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
+                        || m.equals(second.toMetricResponse(subscriptionId)));
             }
 
             // Add some more data
@@ -352,12 +366,13 @@ public class WebSocketIT extends OneWaySSLBase {
             second.setTags(secondTags);
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse()));
+                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
+                        || m.equals(second.toMetricResponse(subscriptionId)));
             }
 
             // Add subscription
             AddSubscription add2 = new AddSubscription();
-            add2.setSessionId(sessionId);
+            add2.setSubscriptionId(subscriptionId);
             add2.setMetric("sys.cpu.idle");
             add2.setDelayTime(1000L);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add2)));
@@ -410,23 +425,25 @@ public class WebSocketIT extends OneWaySSLBase {
             fourth.setTags(fourthTags);
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse()) || m.equals(second.toMetricResponse())
-                        || m.equals(third.toMetricResponse()) || m.equals(fourth.toMetricResponse()));
+                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
+                        || m.equals(second.toMetricResponse(subscriptionId))
+                        || m.equals(third.toMetricResponse(subscriptionId))
+                        || m.equals(fourth.toMetricResponse(subscriptionId)));
             }
 
             // Remove subscriptions to metric
             RemoveSubscription remove1 = new RemoveSubscription();
-            remove1.setSessionId(sessionId);
+            remove1.setSubscriptionId(subscriptionId);
             remove1.setMetric("sys.cpu.user");
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(remove1)));
             RemoveSubscription remove2 = new RemoveSubscription();
-            remove2.setSessionId(sessionId);
+            remove2.setSubscriptionId(subscriptionId);
             remove2.setMetric("sys.cpu.idle");
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(remove2)));
 
             // Close subscription
             CloseSubscription close = new CloseSubscription();
-            close.setSessionId(sessionId);
+            close.setSubscriptionId(subscriptionId);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(close)));
         } finally {
             ch.close().sync();
@@ -439,7 +456,6 @@ public class WebSocketIT extends OneWaySSLBase {
     public void testWSAggregators() throws Exception {
         try {
             AggregatorsRequest request = new AggregatorsRequest();
-            request.setSessionId("1234");
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(request)));
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
@@ -464,7 +480,6 @@ public class WebSocketIT extends OneWaySSLBase {
     public void testWSMetrics() throws Exception {
         try {
             MetricsRequest request = new MetricsRequest();
-            request.setSessionId("1234");
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(request)));
 
             // Confirm receipt of all data sent to this point
@@ -496,7 +511,6 @@ public class WebSocketIT extends OneWaySSLBase {
             String request =
             "{"+
             "    \"operation\" : \"query\","+
-            "    \"sessionId\" : \"1234\","+
             "    \"start\": "+TEST_TIME+","+
             "    \"end\": "+(TEST_TIME+6000)+","+
             "    \"queries\": ["+
@@ -557,7 +571,6 @@ public class WebSocketIT extends OneWaySSLBase {
             String request = 
             "{"+
             "   \"operation\" : \"lookup\","+
-            "   \"sessionId\" : \"1234\","+
             "   \"metric\" : \"sys.cpu.idle\","+
             "   \"tags\" : ["+
                    "\"tag3=*\""+
@@ -600,7 +613,6 @@ public class WebSocketIT extends OneWaySSLBase {
         	String request = 
         			"{\n" +
         			"    \"operation\" : \"suggest\",\n" +
-        	        "    \"sessionId\" : \"1234\",\n" +
         	        "    \"type\": \"metrics\",\n" +
         	        "    \"q\": \"sys.cpu.user\",\n" +
         	        "    \"max\": 30\n" +    			

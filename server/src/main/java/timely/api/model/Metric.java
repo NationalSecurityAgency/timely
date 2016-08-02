@@ -219,12 +219,13 @@ public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest {
         return JsonUtil.getObjectMapper().readValue(content.getBytes(StandardCharsets.UTF_8), Metric.class);
     }
 
-    public MetricResponse toMetricResponse() {
+    public MetricResponse toMetricResponse(String subscriptionId) {
         MetricResponse response = new MetricResponse();
         response.setMetric(this.metric);
         response.setTimestamp(this.timestamp);
         response.setTags(this.tags);
         response.setValue(this.value);
+        response.setSubscriptionId(subscriptionId);
         return response;
     }
 

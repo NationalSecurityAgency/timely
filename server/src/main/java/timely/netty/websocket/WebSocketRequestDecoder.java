@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.Configuration;
+import timely.api.request.AuthenticatedRequest;
 import timely.api.request.WebSocketRequest;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
@@ -39,6 +40,13 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
             String content = frame.text();
             WebSocketRequest request = JsonUtil.getObjectMapper().readValue(content, WebSocketRequest.class);
             LOG.trace("Received WS request {}", content);
+
+            String sessionId = ctx.channel().attr(SubscriptionRegistry.SESSION_ID_ATTR).get();
+            if (request instanceof AuthenticatedRequest && !StringUtils.isEmpty(sessionId)) {
+                LOG.info("Found session id in WebSocket channel, setting sessionId {} on request", sessionId);
+                AuthenticatedRequest ar = (AuthenticatedRequest) request;
+                ar.setSessionId(sessionId);
+            }
 
             try {
                 request.validate();
@@ -81,14 +89,14 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
             if (idle.state() == IdleState.READER_IDLE) {
                 // We have not read any data from client in a while, let's close
                 // the subscriptions for this context.
-                String sessionId = ctx.attr(SubscriptionRegistry.SESSION_ID_ATTR).get();
-                if (!StringUtils.isEmpty(sessionId)) {
-                    if (SubscriptionRegistry.get().containsKey(sessionId)) {
-                        LOG.info("Closing subscription with session id {} due to idle event", sessionId);
-                        SubscriptionRegistry.get().get(sessionId).close();
+                String subscriptionId = ctx.channel().attr(SubscriptionRegistry.SUBSCRIPTION_ID_ATTR).get();
+                if (!StringUtils.isEmpty(subscriptionId)) {
+                    if (SubscriptionRegistry.get().containsKey(subscriptionId)) {
+                        LOG.info("Closing subscription with subscription id {} due to idle event", subscriptionId);
+                        SubscriptionRegistry.get().get(subscriptionId).close();
                     }
                 } else {
-                    LOG.warn("Channel idle, but no session id found on context. Unable to close subscriptions");
+                    LOG.warn("Channel idle, but no subscription id found on context. Unable to close subscriptions");
                 }
             }
         } else {
