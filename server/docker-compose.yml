@@ -11,7 +11,7 @@ services:
      - ${PWD}/:/timely-server-src
     command: /timely-server-src/bin/docker/deploy-startup-standalone.sh
     environment:
-     - TIMELY_VERSION=0.0.2-SNAPSHOT
+     - TIMELY_VERSION=0.0.3-SNAPSHOT
   ingest:
     image: timely
     entrypoint: /timely-server-src/bin/docker/deploy-wait-and-insert.sh
