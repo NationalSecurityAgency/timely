@@ -15,6 +15,8 @@ the dependencies with `npm` and run `grunt`
 
 `grunt`
 
+Note: for the `grunt` command to work, you must have the grunt-cli application installed on your system: `npm install -g grunt-cli`
+
 ## Packaging
 
 Run `mvn clean package`
