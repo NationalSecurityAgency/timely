@@ -363,7 +363,9 @@ public class Server {
         }
         String trustStore = config.get(Configuration.SSL_TRUST_STORE_FILE);
         if (null != trustStore) {
-            ssl.trustManager(new File(trustStore));
+            if (!trustStore.isEmpty()) {
+                ssl.trustManager(new File(trustStore));
+            }
         }
         return ssl.build();
     }
