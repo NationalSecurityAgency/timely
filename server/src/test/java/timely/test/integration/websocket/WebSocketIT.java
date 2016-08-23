@@ -573,7 +573,7 @@ public class WebSocketIT extends OneWaySSLBase {
             "   \"operation\" : \"lookup\","+
             "   \"metric\" : \"sys.cpu.idle\","+
             "   \"tags\" : ["+
-                   "\"tag3=*\""+
+                   "\"tag3=.*\""+
                 "]"+
     	    "}";
             // @formatter:on

@@ -131,20 +131,20 @@ public class HttpApiIT extends OneWaySSLBase {
             String suggest = "https://localhost:54322/api/search/lookup?";
 
             // Test a known query
-            String result = query(suggest + "m=sys.cpu.idle%7Btag3%3D*%7D");
+            String result = query(suggest + "m=sys.cpu.idle%7Btag3%3D.*%7D");
             assertTrue(result, result.indexOf("\"results\":[{\"tags\":{\"tag3\":\"value3\"}") >= 0);
 
             // Test a fail
-            result = query(suggest + "m=sys.cpu.idle%7Btag3%3Dstupid%7D");
+            result = query(suggest + "m=sys.cpu.idle%7Btag3%3Dnomatch%7D");
             assertTrue(result.indexOf("\"results\":[]") >= 0);
 
             // Test multiple results
-            result = query(suggest + "m=sys.cpu.idle%7Btag3%3D*,tag4%3D*%7D");
+            result = query(suggest + "m=sys.cpu.idle%7Btag3%3D.*,tag4%3D.*%7D");
             assertTrue(result, result.indexOf("\"results\":[{\"tags\":{\"tag3\":\"value3\"}") >= 0);
             assertTrue(result, result.indexOf("{\"tags\":{\"tag4\":\"value4\"}") >= 0);
 
             // Find a tag only in the metric that matches
-            result = query(suggest + "m=sys.cpu.idle%7Btag1%3D*%7D");
+            result = query(suggest + "m=sys.cpu.idle%7Btag1%3D.*%7D");
             assertTrue(result, result.indexOf("\"results\":[]") >= 0);
 
         } finally {

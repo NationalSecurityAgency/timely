@@ -392,6 +392,10 @@ public class DataStoreImpl implements DataStore {
         }
         result.setTags(tags);
         result.setLimit(msg.getLimit());
+        Map<String, Pattern> tagPatterns = new HashMap<>();
+        tags.forEach((k, v) -> {
+            tagPatterns.put(k, Pattern.compile(v));
+        });
         try {
             List<Result> resultField = new ArrayList<>();
             Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
@@ -399,11 +403,11 @@ public class DataStoreImpl implements DataStore {
             Key end = start.followingKey(PartialKey.ROW);
             Range range = new Range(start, end);
             scanner.setRange(range);
-            // TODO compute columns to fetch
+            tags.keySet().forEach(k -> scanner.fetchColumnFamily(new Text(k)));
             int total = 0;
             for (Entry<Key, Value> entry : scanner) {
                 Meta metaEntry = Meta.parse(entry.getKey(), entry.getValue());
-                if (matches(metaEntry.getTagKey(), metaEntry.getTagValue(), tags)) {
+                if (matches(metaEntry.getTagKey(), metaEntry.getTagValue(), tagPatterns)) {
                     if (resultField.size() < msg.getLimit()) {
                         Result r = new Result();
                         r.putTag(metaEntry.getTagKey(), metaEntry.getTagValue());
@@ -423,12 +427,9 @@ public class DataStoreImpl implements DataStore {
         return result;
     }
 
-    private boolean matches(String tagk, String tagv, Map<String, String> tags) {
-        // first, match keys...
-        for (Entry<String, String> entry : tags.entrySet()) {
-            String k = entry.getKey();
-            String v = entry.getValue();
-            if (("*".equals(k) || tagk.equals(k)) && ("*".equals(v) || tagv.equals(v))) {
+    private boolean matches(String tagk, String tagv, Map<String, Pattern> tags) {
+        for (Entry<String, Pattern> entry : tags.entrySet()) {
+            if (tagk.equals(entry.getKey()) && entry.getValue().matcher(tagv).matches()) {
                 return true;
             }
         }
