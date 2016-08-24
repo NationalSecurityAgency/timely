@@ -33,16 +33,12 @@ public class Subscription {
         this.sessionId = sessionId;
         this.store = store;
         this.ctx = ctx;
-        this.lag = Integer.parseInt(conf.get(Configuration.WS_SUBSCRIPTION_LAG));
+        this.lag = conf.getWebSocket().getSubscriptionLag();
         // send a websocket ping at half the timeout interval.
-        int rate = (Integer.parseInt(conf.get(Configuration.WS_TIMEOUT_SECONDS)) / 2);
-        this.ping = this.ctx.executor().scheduleAtFixedRate(new Runnable() {
-
-            @Override
-            public void run() {
-                LOG.trace("Sending ping on channel {}", ctx.channel());
-                ctx.writeAndFlush(new PingWebSocketFrame());
-            }
+        int rate = conf.getWebSocket().getTimeout() / 2;
+        this.ping = this.ctx.executor().scheduleAtFixedRate(() -> {
+            LOG.trace("Sending ping on channel {}", ctx.channel());
+            ctx.writeAndFlush(new PingWebSocketFrame());
         }, rate, rate, TimeUnit.SECONDS);
     }
 

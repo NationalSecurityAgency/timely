@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -62,20 +61,15 @@ public class MetricsResponse {
     private static final String TD_END = "</td>\n";
 
     private Set<String> ignoredTags = Collections.emptySet();
-    private Configuration conf = null;
+    private final Configuration conf;
 
     public MetricsResponse() {
+        conf = null;
     }
 
     public MetricsResponse(Configuration conf) {
-        String tagsToIgnore = conf.get(Configuration.METRICS_IGNORED_TAGS);
-        if (!StringUtils.isEmpty(tagsToIgnore)) {
-            this.ignoredTags = new HashSet<>();
-            for (String tag : tagsToIgnore.split(",")) {
-                ignoredTags.add(tag);
-            }
-        }
         this.conf = conf;
+        ignoredTags = new HashSet<>(conf.getMetricsReportIgnoredTags());
     }
 
     public TextWebSocketFrame toWebSocketResponse(String acceptHeader) throws Exception {

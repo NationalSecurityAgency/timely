@@ -10,8 +10,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.ssl.SslContext;
 
-import java.io.File;
-
 import timely.netty.tcp.TcpDecoder;
 import timely.test.TestCaptureRequestHandler;
 
@@ -20,7 +18,7 @@ public class TestServer extends Server {
     private TestCaptureRequestHandler tcpRequests = new TestCaptureRequestHandler();
     private TestCaptureRequestHandler httpRequests = new TestCaptureRequestHandler();
 
-    public TestServer(File conf) throws Exception {
+    public TestServer(Configuration conf) throws Exception {
         super(conf);
     }
 

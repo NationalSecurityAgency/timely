@@ -51,12 +51,11 @@
         <version.jackson>2.6.1</version.jackson>
         <version.javassist>3.20.0-GA</version.javassist>
         <version.jcip-annotations>1.0</version.jcip-annotations>
-        <version.junit>4.11</version.junit>
+        <version.junit>4.12</version.junit>
         <version.log4j>2.5</version.log4j>
         <version.netty>4.0.38.Final</version.netty>
         <version.netty-tcnative>1.1.33.Fork18</version.netty-tcnative>
         <version.powermock>1.6.4</version.powermock>
-        <version.security>4.0.4.RELEASE</version.security>
         <version.slf4j>1.7.12</version.slf4j>
         <!-- plugin versions -->
         <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
@@ -113,6 +112,11 @@
 	            <version>${version.disruptor}</version>
 	            <scope>runtime</scope>
 	        </dependency>
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>LATEST</version>
+            </dependency>
             <dependency>
                 <groupId>commons-configuration</groupId>
                 <artifactId>commons-configuration</artifactId>
@@ -265,19 +269,17 @@
 	            <scope>test</scope>
 	        </dependency>
             <dependency>
-                <groupId>org.springframework.security</groupId>
-                <artifactId>spring-security-config</artifactId>
-                <version>${version.security}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.security</groupId>
-                <artifactId>spring-security-web</artifactId>
-                <version>${version.security}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${version.slf4j}</version>
+            </dependency>
+            <dependency>
+                <!-- Import dependency management from Spring Boot -->
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>1.4.0.RELEASE</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

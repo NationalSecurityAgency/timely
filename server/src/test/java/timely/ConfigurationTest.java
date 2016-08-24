@@ -1,78 +1,62 @@
 package timely;
 
-import java.io.File;
-import java.io.FileWriter;
-
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
+import org.junit.After;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ConfigurationTest {
 
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
+    private final AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 
-    @BeforeClass
-    public static void before() throws Exception {
-        temp.create();
+    @After
+    public void closeContext() {
+        context.close();
     }
 
     @Test
     public void testMinimalConfiguration() throws Exception {
-        File conf = temp.newFile("config.properties");
-        conf.deleteOnExit();
-        try (FileWriter writer = new FileWriter(conf)) {
-            writer.write(Configuration.IP + "=127.0.0.1\n");
-            writer.write(Configuration.PUT_PORT + "=54321\n");
-            writer.write(Configuration.QUERY_PORT + "=54322\n");
-            writer.write(Configuration.WEBSOCKET_PORT + "=54323\n");
-            writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
-            writer.write(Configuration.INSTANCE_NAME + "=test\n");
-            writer.write(Configuration.USERNAME + "=root\n");
-            writer.write(Configuration.PASSWORD + "=secret\n");
-            writer.write(Configuration.TIMELY_HTTP_HOST + "=localhost\n");
-            writer.write(Configuration.SSL_USE_GENERATED_KEYPAIR + "=true\n");
-        }
-        new Configuration(conf);
+        context.register(SpringBootstrap.class);
+        EnvironmentTestUtils.addEnvironment(this.context, "timely.ip:127.0.0.1", "timely.port.put:54321",
+                "timely.port.query:54322", "timely.port.websocket:54323", "timely.zookeepers:localhost:2181",
+                "timely.instance-name:test", "timely.username:root", "timely.password:secret",
+                "timely.http.host:localhost", "timely.ssl.use-generated-keypair:true");
+        context.refresh();
+        Configuration config = this.context.getBean(Configuration.class);
+        assertEquals("127.0.0.1", config.getIp());
+        assertEquals(54321, config.getPort().getPut());
+        assertEquals(54322, config.getPort().getQuery());
+        assertEquals(54323, config.getPort().getWebsocket());
+        assertEquals("localhost:2181", config.getZookeepers());
+        assertEquals("test", config.getInstanceName());
+        assertEquals("root", config.getUsername());
+        assertEquals("secret", config.getPassword());
+        assertEquals("localhost", config.getHttp().getHost());
+        assertTrue(config.getSsl().isUseGeneratedKeypair());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = BeanCreationException.class)
     public void testMissingSSLProperty() throws Exception {
-        File conf = temp.newFile("config2.properties");
-        conf.deleteOnExit();
-        try (FileWriter writer = new FileWriter(conf)) {
-            writer.write(Configuration.IP + "=127.0.0.1\n");
-            writer.write(Configuration.PUT_PORT + "=54321\n");
-            writer.write(Configuration.QUERY_PORT + "=54322\n");
-            writer.write(Configuration.WEBSOCKET_PORT + "=54323\n");
-            writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
-            writer.write(Configuration.INSTANCE_NAME + "=test\n");
-            writer.write(Configuration.USERNAME + "=root\n");
-            writer.write(Configuration.PASSWORD + "=secret\n");
-            writer.write(Configuration.TIMELY_HTTP_HOST + "=localhost\n");
-        }
-        new Configuration(conf);
+        context.register(SpringBootstrap.class);
+        EnvironmentTestUtils.addEnvironment(this.context, "timely.ip:127.0.0.1", "timely.port.put:54321",
+                "timely.port.query:54322", "timely.port.websocket:54323", "timely.zookeepers:localhost:2181",
+                "timely.instance-name:test", "timely.username:root", "timely.password:secret",
+                "timely.http.host:localhost");
+        context.refresh();
     }
 
     @Test
     public void testSSLProperty() throws Exception {
-        File conf = temp.newFile("config3.properties");
-        conf.deleteOnExit();
-        try (FileWriter writer = new FileWriter(conf)) {
-            writer.write(Configuration.IP + "=127.0.0.1\n");
-            writer.write(Configuration.PUT_PORT + "=54321\n");
-            writer.write(Configuration.QUERY_PORT + "=54322\n");
-            writer.write(Configuration.WEBSOCKET_PORT + "=54323\n");
-            writer.write(Configuration.ZOOKEEPERS + "=localhost:2181\n");
-            writer.write(Configuration.INSTANCE_NAME + "=test\n");
-            writer.write(Configuration.USERNAME + "=root\n");
-            writer.write(Configuration.PASSWORD + "=secret\n");
-            writer.write(Configuration.TIMELY_HTTP_HOST + "=localhost\n");
-            writer.write(Configuration.SSL_CERTIFICATE_FILE + "=/tmp/foo\n");
-            writer.write(Configuration.SSL_PRIVATE_KEY_FILE + "=/tmp/bar\n");
-        }
-        new Configuration(conf);
+        context.register(SpringBootstrap.class);
+        EnvironmentTestUtils.addEnvironment(this.context, "timely.ip:127.0.0.1", "timely.port.put:54321",
+                "timely.port.query:54322", "timely.port.websocket:54323", "timely.zookeepers:localhost:2181",
+                "timely.instance-name:test", "timely.username:root", "timely.password:secret",
+                "timely.http.host:localhost", "timely.ssl.certificate-file:/tmp/foo", "timely.ssl.key-file:/tmp/bar");
+        context.refresh();
     }
 
 }

@@ -1,0 +1,8 @@
+  ${AnsiColor.BLUE}.${AnsiColor.DEFAULT}_____________                _
+ ${AnsiColor.BLUE}..${AnsiColor.DEFAULT} __(___   ___)              | |
+   ${AnsiColor.BLUE}..${AnsiColor.DEFAULT}____ | |(_)_ __ ___  ____ | |_    _
+       ${AnsiColor.BLUE}..${AnsiColor.DEFAULT}_| || | '_ ' _ \/ /_\ \ | \  / /
+    ${AnsiColor.BLUE}.  .${AnsiColor.DEFAULT}_ | || | | | | | | ____/ |\ \/ /
+ ${AnsiColor.BLUE}.. .${AnsiColor.DEFAULT}_ ___|_||_|_| |_| |_|_\___,_| \  /
+=================================__/ /===================
+${AnsiColor.YELLOW}:: Timely ::${AnsiColor.DEFAULT}                    |___/  ${AnsiStyle.FAINT}${AnsiColor.WHITE}${application.formatted-version}${AnsiColor.DEFAULT}${AnsiStyle.NORMAL}

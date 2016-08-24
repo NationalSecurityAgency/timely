@@ -1,0 +1,48 @@
+timely:
+  ip:
+  port:
+    put:
+    query:
+    websocket:
+  instance-name:
+  zookeepers:
+  username:
+  password:
+  table: timely.metrics
+  meta: timely.meta
+  http:
+    host:
+    redirect-path: /secure-me
+    strict-transport-max-age: 608400
+  write:
+    latency: 5s
+    threads: 3
+    bufferSize: 52428800
+  metric-age-off-days: 7
+  metrics-report-ignored-tags:
+  cors:
+    allow-any-origin: false
+    allow-null-origin: false
+    allow-credentials: true
+    allowed-origins:
+    allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+    allowed-headers: content-type
+  scanner:
+    threads: 4
+  meta-cache:
+    expiration-minutes: 60
+    initial-capacity: 2000
+    max-capacity: 10000
+  ssl:
+    certificate-file:
+    key-file:
+    key-password:
+    use-generated-keypair: false
+    trust-store-file:
+    use-openssl: true
+#    use-ciphers:
+  session-max-age: 86400
+  allow-anonymous-access: false
+  websocket:
+    timeout: 60
+    subscription-lag: 120

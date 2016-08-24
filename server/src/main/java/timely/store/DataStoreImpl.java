@@ -1,6 +1,5 @@
 package timely.store;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getMemoryInBytes;
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -62,8 +61,8 @@ import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.Configuration;
 import timely.Server;
+import timely.Configuration;
 import timely.api.model.Meta;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
@@ -113,7 +112,6 @@ public class DataStoreImpl implements DataStore {
 
     }
 
-    Configuration conf;
     private final Connector connector;
     private MetaCache metaCache = null;
     private final AtomicLong lastCountTime = new AtomicLong(System.currentTimeMillis());
@@ -133,27 +131,26 @@ public class DataStoreImpl implements DataStore {
 
         try {
             final BaseConfiguration apacheConf = new BaseConfiguration();
-            apacheConf.setProperty("instance.name", conf.get(Configuration.INSTANCE_NAME));
-            apacheConf.setProperty("instance.zookeeper.host", conf.get(Configuration.ZOOKEEPERS));
+            apacheConf.setProperty("instance.name", conf.getInstanceName());
+            apacheConf.setProperty("instance.zookeeper.host", conf.getZookeepers());
             final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
             final Instance instance = new ZooKeeperInstance(aconf);
-            final byte[] passwd = conf.get(Configuration.PASSWORD).getBytes(UTF_8);
-            connector = instance.getConnector(conf.get(Configuration.USERNAME), new PasswordToken(passwd));
+            connector = instance.getConnector(conf.getUsername(), new PasswordToken(conf.getPassword()));
             bwConfig = new BatchWriterConfig();
-            bwConfig.setMaxLatency(getTimeInMillis(conf.get(Configuration.MAX_LATENCY)), TimeUnit.MILLISECONDS);
-            bwConfig.setMaxMemory(getMemoryInBytes(conf.get(Configuration.WRITE_BUFFER_SIZE)) / numWriteThreads);
-            bwConfig.setMaxWriteThreads(Integer.parseInt(conf.get(Configuration.WRITE_THREADS)));
-            scannerThreads = Integer.parseInt(conf.get(Configuration.SCANNER_THREADS));
-            anonAccessAllowed = conf.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
+            bwConfig.setMaxLatency(getTimeInMillis(conf.getWrite().getLatency()), TimeUnit.MILLISECONDS);
+            bwConfig.setMaxMemory(getMemoryInBytes(conf.getWrite().getBufferSize()) / numWriteThreads);
+            bwConfig.setMaxWriteThreads(conf.getWrite().getThreads());
+            scannerThreads = conf.getScanner().getThreads();
+            anonAccessAllowed = conf.isAllowAnonymousAccess();
 
-            String ageoff = Long.toString(Integer.parseInt(conf.get(Configuration.METRICS_AGEOFF_DAYS)) * 86400000L);
+            String ageoff = Long.toString(conf.getMetricAgeOffDays() * 86400000L);
             Map<String, String> ageOffOptions = new HashMap<>();
             ageOffOptions.put("ttl", ageoff);
             IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoff", AgeOffFilter.class,
                     ageOffOptions);
             EnumSet<IteratorScope> ageOffIteratorScope = EnumSet.allOf(IteratorScope.class);
 
-            metricsTable = conf.get(Configuration.METRICS_TABLE);
+            metricsTable = conf.getTable();
             if (metricsTable.contains(".")) {
                 final String[] parts = metricsTable.split("\\.", 2);
                 final String namespace = parts[0];
@@ -184,7 +181,7 @@ public class DataStoreImpl implements DataStore {
                     }
                 }
             }
-            metaTable = conf.get(Configuration.META_TABLE);
+            metaTable = conf.getMeta();
             if (!tableIdMap.containsKey(metaTable)) {
                 try {
                     LOG.info("Creating table " + metaTable);

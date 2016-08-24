@@ -6,15 +6,7 @@ import static org.junit.Assert.assertEquals;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.JdkSslClientContext;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.List;
@@ -22,27 +14,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.minicluster.MiniAccumuloCluster;
-import org.apache.accumulo.minicluster.MiniAccumuloConfig;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
 
-import timely.Configuration;
 import timely.Server;
 import timely.api.request.auth.BasicAuthLoginRequest;
 import timely.api.request.timeseries.QueryRequest;
@@ -50,7 +33,6 @@ import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
-import timely.test.TestConfiguration;
 import timely.util.JsonUtil;
 
 /**
@@ -64,36 +46,6 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
-    private static MiniAccumuloCluster mac = null;
-    private static File conf = null;
-
-    private static File clientTrustStoreFile = null;
-
-    protected SSLSocketFactory getSSLSocketFactory() throws Exception {
-        SslContextBuilder builder = SslContextBuilder.forClient();
-        builder.applicationProtocolConfig(ApplicationProtocolConfig.DISABLED);
-        builder.sslProvider(SslProvider.JDK);
-        builder.trustManager(clientTrustStoreFile); // Trust the server cert
-        SslContext ctx = builder.build();
-        Assert.assertEquals(JdkSslClientContext.class, ctx.getClass());
-        JdkSslContext jdk = (JdkSslContext) ctx;
-        SSLContext jdkSslContext = jdk.context();
-        return jdkSslContext.getSocketFactory();
-    }
-
-    protected static void setupSSL(TestConfiguration config) throws Exception {
-        SelfSignedCertificate serverCert = new SelfSignedCertificate();
-        config.put(Configuration.SSL_CERTIFICATE_FILE, serverCert.certificate().getAbsolutePath());
-        clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
-        config.put(Configuration.SSL_PRIVATE_KEY_FILE, serverCert.privateKey().getAbsolutePath());
-        config.put(Configuration.SSL_USE_OPENSSL, "false");
-        config.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "false");
-        config.put(Configuration.ALLOW_ANONYMOUS_ACCESS, "false");
-    }
-
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {
         // Username and password are set in src/test/resources/security.xml
         return getUrlConnection("test", "test1", url);
@@ -103,13 +55,7 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
         HttpsURLConnection.setDefaultSSLSocketFactory(getSSLSocketFactory());
         URL loginURL = new URL(url.getProtocol() + "://" + url.getHost() + ":" + url.getPort() + "/login");
         HttpsURLConnection con = (HttpsURLConnection) loginURL.openConnection();
-        con.setHostnameVerifier(new HostnameVerifier() {
-
-            @Override
-            public boolean verify(String arg0, SSLSession arg1) {
-                return true;
-            }
-        });
+        con.setHostnameVerifier((host, session) -> true);
         con.setRequestMethod("POST");
         con.setDoOutput(true);
         con.setRequestProperty("Content-Type", "application/json");
@@ -131,47 +77,25 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
         Assert.assertEquals(Constants.COOKIE_NAME, sessionCookie.name());
         con = (HttpsURLConnection) url.openConnection();
         con.setRequestProperty(Names.COOKIE, sessionCookie.name() + "=" + sessionCookie.value());
-        con.setHostnameVerifier(new HostnameVerifier() {
-
-            @Override
-            public boolean verify(String arg0, SSLSession arg1) {
-                return true;
-            }
-        });
+        con.setHostnameVerifier((host, session) -> true);
         return con;
     }
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        temp.create();
-        final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
-        mac = new MiniAccumuloCluster(macConfig);
-        mac.start();
-        conf = temp.newFile("config.properties");
-        TestConfiguration config = TestConfiguration.createMinimalConfigurationForTest();
-        config.put(Configuration.INSTANCE_NAME, mac.getInstanceName());
-        config.put(Configuration.ZOOKEEPERS, mac.getZooKeepers());
-        setupSSL(config);
-        config.toConfiguration(conf);
+        OneWaySSLBase.beforeClass();
     }
 
     @AfterClass
     public static void afterClass() throws Exception {
-        mac.stop();
+        OneWaySSLBase.afterClass();
     }
 
     @Before
     public void setup() throws Exception {
+        super.setup();
         Connector con = mac.getConnector("root", "secret");
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
-        con.tableOperations().list().forEach(t -> {
-            if (t.startsWith("timely")) {
-                try {
-                    con.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
-            }
-        });
     }
 
     @After

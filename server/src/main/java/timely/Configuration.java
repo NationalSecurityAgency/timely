@@ -1,196 +1,511 @@
 package timely;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-
+import com.google.common.collect.Lists;
 import org.apache.accumulo.core.client.BatchWriterConfig;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.hibernate.validator.constraints.NotEmpty;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.stereotype.Component;
+import timely.validator.NotEmptyIfFieldSet;
 
+import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Component
+@ConfigurationProperties(prefix = "timely")
+@NotEmptyIfFieldSet.List({
+        @NotEmptyIfFieldSet(fieldName = "ssl.useGeneratedKeypair", fieldValue = "false", notNullFieldName = "ssl.certificateFile", message = "must be set if timely.ssl.use-generated-keypair is false"),
+        @NotEmptyIfFieldSet(fieldName = "ssl.useGeneratedKeypair", fieldValue = "false", notNullFieldName = "ssl.keyFile", message = "must be set if timely.ssl.use-generated-keypair is false") })
 public class Configuration {
 
-    public static final String IP = "timely.ip";
-    public static final String PUT_PORT = "timely.port.put";
-    public static final String QUERY_PORT = "timely.port.query";
-    public static final String WEBSOCKET_PORT = "timely.port.websocket";
-    public static final String ZOOKEEPERS = "timely.zookeepers";
-    public static final String INSTANCE_NAME = "timely.instance_name";
-    public static final String USERNAME = "timely.username";
-    public static final String PASSWORD = "timely.password";
-    public static final String METRICS_TABLE = "timely.table";
-    private static final String METRICS_TABLE_DEFAULT = "timely.metrics";
-    public static final String META_TABLE = "timely.meta";
-    private static final String META_TABLE_DEFAULT = "timely.meta";
-    public static final String METRICS_AGEOFF_DAYS = "timely.metric.age.off.days";
-    private static final String METRICS_AGEOFF_DAYS_DEFAULT = "7";
+    @NotEmpty
+    private String ip;
+    @NotEmpty
+    private String zookeepers;
+    @NotEmpty
+    private String instanceName;
+    @NotEmpty
+    private String username;
+    @NotEmpty
+    private String password;
 
-    public static final String MAX_LATENCY = "timely.write.latency";
-    private static final String MAX_LATENCY_DEFAULT = "5s";
-    public static final String WRITE_THREADS = "timely.write.threads";
-    public static final String WRITE_BUFFER_SIZE = "timely.write.buffer.size";
-    public static final String SCANNER_THREADS = "timely.scanner.threads";
+    private String table = "timely.metrics";
+    private String meta = "timely.meta";
+    private int metricAgeOffDays = 7;
+    private List<String> metricsReportIgnoredTags = new ArrayList<>();
+    private boolean allowAnonymousAccess = false;
+    private int sessionMaxAge = 86400;
 
-    public static final String CORS_ALLOW_ANY_ORIGIN = "timely.cors.allow.any.origin";
-    private static final String CORS_ALLOW_ANY_ORIGIN_DEFAULT = "false";
-    public static final String CORS_ALLOW_NULL_ORIGIN = "timely.cors.allow.null.origin";
-    private static final String CORS_ALLOW_NULL_ORIGIN_DEFAULT = "false";
-    public static final String CORS_ALLOWED_ORIGINS = "timely.cors.allowed.origins";
-    private static final String CORS_ALLOWED_ORIGINS_DEFAULT = "";
-    public static final String CORS_ALLOWED_METHODS = "timely.cors.allowed.methods";
-    private static final String CORS_ALLOWED_METHODS_DEFAULT = "DELETE,GET,HEAD,OPTIONS,PUT,POST";
-    public static final String CORS_ALLOWED_HEADERS = "timely.cors.allowed.headers";
-    private static final String CORS_ALLOWED_HEADERS_DEFAULT = "content-type";
-    public static final String CORS_ALLOW_CREDENTIALS = "timely.cors.allow.credentials";
-    private static final String CORS_ALLOW_CREDENTIALS_DEFAULT = "true";
+    @NestedConfigurationProperty
+    private Port ports = new Port();
+    @NestedConfigurationProperty
+    private Http http = new Http();
+    @NestedConfigurationProperty
+    private Write write = new Write();
+    @NestedConfigurationProperty
+    private Scanner scanner = new Scanner();
+    @NestedConfigurationProperty
+    private Cors cors = new Cors();
+    @NestedConfigurationProperty
+    private MetaCache metaCache = new MetaCache();
+    @NestedConfigurationProperty
+    private VisibilityCache visibilityCache = new VisibilityCache();
+    @NestedConfigurationProperty
+    private WebSocket webSocket = new WebSocket();
+    @NestedConfigurationProperty
+    private Ssl ssl = new Ssl();
 
-    public static final String METRICS_IGNORED_TAGS = "timely.metrics.report.tags.ignored";
+    public String getIp() {
+        return ip;
+    }
 
-    public static final String META_CACHE_EXPIRATION = "timely.meta.cache.expiration.minutes";
-    public static final Long META_CACHE_EXPIRATION_DEFAULT = 60L;
-    public static final String META_CACHE_INITIAL_CAPACITY = "timely.meta.cache.initial.capacity";
-    public static final Integer META_CACHE_INITIAL_CAPACITY_DEFAULT = 2000;
-    public static final String META_CACHE_MAX_CAPACITY = "timely.meta.cache.max.capacity";
-    public static final Integer META_CACHE_MAX_CAPACITY_DEFAULT = 10000;
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
 
-    public static final String VISIBILITY_CACHE_EXPIRATION = "timely.visibility.cache.expiration.minutes";
-    public static final Long VISIBILITY_EXPIRATION_DEFAULT = 60L;
-    public static final String VISIBILITY_CACHE_INITIAL_CAPACITY = "timely.visibility.cache.initial.capacity";
-    public static final Integer VISIBILITY_CACHE_INITIAL_CAPACITY_DEFAULT = 2000;
-    public static final String VISIBILITY_CACHE_MAX_CAPACITY = "timely.visibility.cache.max.capacity";
-    public static final Integer VISIBILITY_CACHE_MAX_CAPACITY_DEFAULT = 10000;
+    public String getZookeepers() {
+        return zookeepers;
+    }
 
-    /** Security properties */
-    public static final String SSL_CERTIFICATE_FILE = "timely.ssl.certificate.file";
-    public static final String SSL_PRIVATE_KEY_FILE = "timely.ssl.key.file";
-    public static final String SSL_PRIVATE_KEY_PASS = "timely.ssl.key.pass";
-    public static final String SSL_USE_GENERATED_KEYPAIR = "timely.ssl.use.generated.keypair";
-    private static final String SSL_USE_GENERATED_KEYPAIR_DEFAULT = "false";
-    public static final String SSL_TRUST_STORE_FILE = "timely.ssl.trust.store.file";
-    public static final String SSL_USE_OPENSSL = "timely.ssl.use.openssl";
-    private static final String SSL_USE_OPENSSL_DEFAULT = "true";
-    public static final String SSL_USE_CIPHERS = "timely.ssl.use.ciphers";
-    private static final String SSL_USE_CIPHERS_DEFAULT = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:"
-            + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:TLS_RSA_WITH_AES_128_GCM_SHA256:"
-            + "TLS_RSA_WITH_AES_128_CBC_SHA:SSL_RSA_WITH_3DES_EDE_CBC_SHA";
+    public void setZookeepers(String zookeepers) {
+        this.zookeepers = zookeepers;
+    }
 
-    public static final String SESSION_MAX_AGE = "timely.session.max.age";
-    public static final long SESSION_MAX_AGE_DEFAULT = 86400;
-    public static final String TIMELY_HTTP_HOST = "timely.http.host";
-    public static final String ALLOW_ANONYMOUS_ACCESS = "timely.allow.anonymous.access";
-    private static final String ALLOW_ANONYMOUS_ACCESS_DEFAULT = "false";
+    public String getInstanceName() {
+        return instanceName;
+    }
 
-    public static final String WS_TIMEOUT_SECONDS = "timely.web.socket.timeout";
-    private static final String WS_TIMEOUT_SECONDS_DEFAULT = "60";
-    public static final String WS_SUBSCRIPTION_LAG = "timely.ws.subscription.lag";
-    private static final String WS_SUBSCRIPTION_LAG_DEFAULT = "120";
+    public void setInstanceName(String instanceName) {
+        this.instanceName = instanceName;
+    }
 
-    public static final String NON_SECURE_REDIRECT_PATH = "timely.http.redirect.path";
-    private static final String NON_SECURE_REDIRECT_PATH_DEFAULT = "/secure-me";
-    public static final String STRICT_TRANSPORT_MAX_AGE = "timely.hsts.max.age";
-    private static final String STRICT_TRANSPORT_MAX_AGE_DEFAULT = "604800";
+    public String getUsername() {
+        return username;
+    }
 
-    private static final List<String> REQUIRED_PROPERTIES = new ArrayList<>();
-    static {
-        REQUIRED_PROPERTIES.add(IP);
-        REQUIRED_PROPERTIES.add(PUT_PORT);
-        REQUIRED_PROPERTIES.add(QUERY_PORT);
-        REQUIRED_PROPERTIES.add(WEBSOCKET_PORT);
-        REQUIRED_PROPERTIES.add(ZOOKEEPERS);
-        REQUIRED_PROPERTIES.add(INSTANCE_NAME);
-        REQUIRED_PROPERTIES.add(USERNAME);
-        REQUIRED_PROPERTIES.add(PASSWORD);
-        REQUIRED_PROPERTIES.add(TIMELY_HTTP_HOST);
-    };
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-    private final Properties props = new Properties();
+    public String getPassword() {
+        return password;
+    }
 
-    public Configuration(Path path) throws IOException {
-        org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
-        try (FileSystem fs = FileSystem.get(hadoopConf)) {
-            try (InputStream inputStream = fs.open(path)) {
-                init(inputStream);
-            }
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getTable() {
+        return table;
+    }
+
+    public void setTable(String table) {
+        this.table = table;
+    }
+
+    public String getMeta() {
+        return meta;
+    }
+
+    public void setMeta(String meta) {
+        this.meta = meta;
+    }
+
+    public int getMetricAgeOffDays() {
+        return metricAgeOffDays;
+    }
+
+    public void setMetricAgeOffDays(int metricAgeOffDays) {
+        this.metricAgeOffDays = metricAgeOffDays;
+    }
+
+    public List<String> getMetricsReportIgnoredTags() {
+        return metricsReportIgnoredTags;
+    }
+
+    public void setMetricsReportIgnoredTags(List<String> metricsReportIgnoredTags) {
+        this.metricsReportIgnoredTags = metricsReportIgnoredTags;
+    }
+
+    public boolean isAllowAnonymousAccess() {
+        return allowAnonymousAccess;
+    }
+
+    public void setAllowAnonymousAccess(boolean allowAnonymousAccess) {
+        this.allowAnonymousAccess = allowAnonymousAccess;
+    }
+
+    public int getSessionMaxAge() {
+        return sessionMaxAge;
+    }
+
+    public void setSessionMaxAge(int sessionMaxAge) {
+        this.sessionMaxAge = sessionMaxAge;
+    }
+
+    public VisibilityCache getVisibilityCache() {
+        return visibilityCache;
+    }
+
+    public Port getPort() {
+        return ports;
+    }
+
+    public Http getHttp() {
+        return http;
+    }
+
+    public Write getWrite() {
+        return write;
+    }
+
+    public Scanner getScanner() {
+        return scanner;
+    }
+
+    public Cors getCors() {
+        return cors;
+    }
+
+    public MetaCache getMetaCache() {
+        return metaCache;
+    }
+
+    public WebSocket getWebSocket() {
+        return webSocket;
+    }
+
+    public Ssl getSsl() {
+        return ssl;
+    }
+
+    public static class Port {
+
+        @NotNull
+        private Integer put;
+        @NotNull
+        private Integer query;
+        @NotNull
+        private Integer websocket;
+
+        public int getPut() {
+            return put;
         }
 
-    }
+        public void setPut(int put) {
+            this.put = put;
+        }
 
-    public Configuration(File conf) throws IOException {
-        try (InputStream inputStream = new FileInputStream(conf)) {
-            init(inputStream);
+        public int getQuery() {
+            return query;
+        }
+
+        public void setQuery(int query) {
+            this.query = query;
+        }
+
+        public int getWebsocket() {
+            return websocket;
+        }
+
+        public void setWebsocket(int websocket) {
+            this.websocket = websocket;
         }
     }
 
-    private void init(InputStream configStream) throws IOException {
-        // Add defaults
-        props.setProperty(METRICS_TABLE, METRICS_TABLE_DEFAULT);
-        props.setProperty(META_TABLE, META_TABLE_DEFAULT);
-        props.setProperty(MAX_LATENCY, MAX_LATENCY_DEFAULT);
-        props.setProperty(METRICS_AGEOFF_DAYS, METRICS_AGEOFF_DAYS_DEFAULT);
-        final BatchWriterConfig defaults = new BatchWriterConfig();
-        props.setProperty(WRITE_BUFFER_SIZE, "" + defaults.getMaxMemory());
-        props.setProperty(WRITE_THREADS, "" + defaults.getMaxWriteThreads());
-        props.setProperty(SCANNER_THREADS, "" + 4);
-        props.setProperty(CORS_ALLOW_ANY_ORIGIN, CORS_ALLOW_ANY_ORIGIN_DEFAULT);
-        props.setProperty(CORS_ALLOW_NULL_ORIGIN, CORS_ALLOW_NULL_ORIGIN_DEFAULT);
-        props.setProperty(CORS_ALLOWED_ORIGINS, CORS_ALLOWED_ORIGINS_DEFAULT);
-        props.setProperty(CORS_ALLOWED_METHODS, CORS_ALLOWED_METHODS_DEFAULT);
-        props.setProperty(CORS_ALLOWED_HEADERS, CORS_ALLOWED_HEADERS_DEFAULT);
-        props.setProperty(CORS_ALLOW_CREDENTIALS, CORS_ALLOW_CREDENTIALS_DEFAULT);
-        props.setProperty(META_CACHE_EXPIRATION, "" + META_CACHE_EXPIRATION_DEFAULT);
-        props.setProperty(META_CACHE_INITIAL_CAPACITY, "" + META_CACHE_INITIAL_CAPACITY_DEFAULT);
-        props.setProperty(META_CACHE_MAX_CAPACITY, "" + META_CACHE_MAX_CAPACITY_DEFAULT);
-        props.setProperty(SSL_USE_GENERATED_KEYPAIR, SSL_USE_GENERATED_KEYPAIR_DEFAULT);
-        props.setProperty(SSL_USE_OPENSSL, SSL_USE_OPENSSL_DEFAULT);
-        props.setProperty(SSL_USE_CIPHERS, SSL_USE_CIPHERS_DEFAULT);
-        props.setProperty(ALLOW_ANONYMOUS_ACCESS, ALLOW_ANONYMOUS_ACCESS_DEFAULT);
-        props.setProperty(SESSION_MAX_AGE, SESSION_MAX_AGE_DEFAULT + "");
+    public static class Http {
 
-        props.setProperty(VISIBILITY_CACHE_EXPIRATION, VISIBILITY_EXPIRATION_DEFAULT + "");
-        props.setProperty(VISIBILITY_CACHE_INITIAL_CAPACITY, VISIBILITY_CACHE_INITIAL_CAPACITY_DEFAULT + "");
-        props.setProperty(VISIBILITY_CACHE_MAX_CAPACITY, VISIBILITY_CACHE_MAX_CAPACITY_DEFAULT + "");
+        @NotNull
+        private String host;
+        private String redirectPath = "/secure-me";
+        private long strictTransportMaxAge = 604800;
 
-        props.setProperty(WS_TIMEOUT_SECONDS, WS_TIMEOUT_SECONDS_DEFAULT);
-        props.setProperty(WS_SUBSCRIPTION_LAG, WS_SUBSCRIPTION_LAG_DEFAULT);
+        public String getHost() {
+            return host;
+        }
 
-        props.setProperty(NON_SECURE_REDIRECT_PATH, NON_SECURE_REDIRECT_PATH_DEFAULT);
-        props.setProperty(STRICT_TRANSPORT_MAX_AGE, STRICT_TRANSPORT_MAX_AGE_DEFAULT);
+        public void setHost(String host) {
+            this.host = host;
+        }
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(configStream, StandardCharsets.UTF_8))) {
-            props.load(reader);
-            validate();
+        public String getRedirectPath() {
+            return redirectPath;
+        }
+
+        public void setRedirectPath(String redirectPath) {
+            this.redirectPath = redirectPath;
+        }
+
+        public long getStrictTransportMaxAge() {
+            return strictTransportMaxAge;
+        }
+
+        public void setStrictTransportMaxAge(long strictTransportMaxAge) {
+            this.strictTransportMaxAge = strictTransportMaxAge;
         }
     }
 
-    protected void validate() {
-        REQUIRED_PROPERTIES.forEach(p -> {
-            if (!props.containsKey(p) || StringUtils.isEmpty(props.getProperty(p))) {
-                throw new IllegalArgumentException("Required property " + p + " must be specified.");
-            }
-        });
-        if (!getBoolean(Configuration.SSL_USE_GENERATED_KEYPAIR)) {
-            if (StringUtils.isEmpty(get(Configuration.SSL_CERTIFICATE_FILE))) {
-                throw new IllegalArgumentException(Configuration.SSL_CERTIFICATE_FILE + "must be specified.");
-            }
-            if (StringUtils.isEmpty(get(Configuration.SSL_PRIVATE_KEY_FILE))) {
-                throw new IllegalArgumentException(Configuration.SSL_PRIVATE_KEY_FILE + "must be specified.");
-            }
+    public static class Write {
+
+        private String latency = "5s";
+        private int threads;
+        private String bufferSize;
+
+        public Write() {
+            BatchWriterConfig config = new BatchWriterConfig();
+            threads = config.getMaxWriteThreads();
+            bufferSize = Long.toString(config.getMaxMemory());
+        }
+
+        public String getLatency() {
+            return latency;
+        }
+
+        public void setLatency(String latency) {
+            this.latency = latency;
+        }
+
+        public int getThreads() {
+            return threads;
+        }
+
+        public void setThreads(int threads) {
+            this.threads = threads;
+        }
+
+        public String getBufferSize() {
+            return bufferSize;
+        }
+
+        public void setBufferSize(String bufferSize) {
+            this.bufferSize = bufferSize;
         }
     }
 
-    public String get(String property) {
-        return props.getProperty(property);
+    public static class Scanner {
+
+        private int threads = 4;
+
+        public int getThreads() {
+            return threads;
+        }
+
+        public void setThreads(int threads) {
+            this.threads = threads;
+        }
     }
 
-    public boolean getBoolean(String property) {
-        return Boolean.parseBoolean(get(property));
+    public static class Cors {
+
+        private boolean allowAnyOrigin = false;
+        private boolean allowNullOrigin = false;
+        private Set<String> allowedOrigins = new HashSet<>();
+        private List<String> allowedMethods = Lists.newArrayList("DELETE", "GET", "HEAD", "OPTIONS", "PUT", "POST");
+        private List<String> allowedHeaders = Lists.newArrayList("content-type");
+        private boolean allowCredentials = true;
+
+        public boolean isAllowAnyOrigin() {
+            return allowAnyOrigin;
+        }
+
+        public void setAllowAnyOrigin(boolean allowAnyOrigin) {
+            this.allowAnyOrigin = allowAnyOrigin;
+        }
+
+        public boolean isAllowNullOrigin() {
+            return allowNullOrigin;
+        }
+
+        public void setAllowNullOrigin(boolean allowNullOrigin) {
+            this.allowNullOrigin = allowNullOrigin;
+        }
+
+        public Set<String> getAllowedOrigins() {
+            return allowedOrigins;
+        }
+
+        public void setAllowedOrigins(Set<String> allowedOrigins) {
+            this.allowedOrigins = allowedOrigins;
+        }
+
+        public List<String> getAllowedMethods() {
+            return allowedMethods;
+        }
+
+        public void setAllowedMethods(List<String> allowedMethods) {
+            this.allowedMethods = allowedMethods;
+        }
+
+        public List<String> getAllowedHeaders() {
+            return allowedHeaders;
+        }
+
+        public void setAllowedHeaders(List<String> allowedHeaders) {
+            this.allowedHeaders = allowedHeaders;
+        }
+
+        public boolean isAllowCredentials() {
+            return allowCredentials;
+        }
+
+        public void setAllowCredentials(boolean allowCredentials) {
+            this.allowCredentials = allowCredentials;
+        }
+    }
+
+    public static class MetaCache {
+
+        private long expirationMinutes = 60;
+        private int initialCapacity = 2000;
+        private long maxCapacity = 10000;
+
+        public long getExpirationMinutes() {
+            return expirationMinutes;
+        }
+
+        public void setExpirationMinutes(long expirationMinutes) {
+            this.expirationMinutes = expirationMinutes;
+        }
+
+        public int getInitialCapacity() {
+            return initialCapacity;
+        }
+
+        public void setInitialCapacity(int initialCapacity) {
+            this.initialCapacity = initialCapacity;
+        }
+
+        public long getMaxCapacity() {
+            return maxCapacity;
+        }
+
+        public void setMaxCapacity(long maxCapacity) {
+            this.maxCapacity = maxCapacity;
+        }
+    }
+
+    public static class Ssl {
+
+        private String certificateFile;
+        private String keyFile;
+        private String keyPassword;
+        private String trustStoreFile;
+        private boolean useGeneratedKeypair = false;
+        private boolean useOpenssl = true;
+        private List<String> useCiphers = Lists.newArrayList("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256",
+                "TLS_RSA_WITH_AES_128_CBC_SHA", "SSL_RSA_WITH_3DES_EDE_CBC_SHA");
+
+        public String getCertificateFile() {
+            return certificateFile;
+        }
+
+        public void setCertificateFile(String certificateFile) {
+            this.certificateFile = certificateFile;
+        }
+
+        public String getKeyFile() {
+            return keyFile;
+        }
+
+        public void setKeyFile(String keyFile) {
+            this.keyFile = keyFile;
+        }
+
+        public String getKeyPassword() {
+            return keyPassword;
+        }
+
+        public void setKeyPassword(String keyPassword) {
+            this.keyPassword = keyPassword;
+        }
+
+        public String getTrustStoreFile() {
+            return trustStoreFile;
+        }
+
+        public void setTrustStoreFile(String trustStoreFile) {
+            this.trustStoreFile = trustStoreFile;
+        }
+
+        public boolean isUseGeneratedKeypair() {
+            return useGeneratedKeypair;
+        }
+
+        public void setUseGeneratedKeypair(boolean useGeneratedKeypair) {
+            this.useGeneratedKeypair = useGeneratedKeypair;
+        }
+
+        public boolean isUseOpenssl() {
+            return useOpenssl;
+        }
+
+        public void setUseOpenssl(boolean useOpenssl) {
+            this.useOpenssl = useOpenssl;
+        }
+
+        public List<String> getUseCiphers() {
+            return useCiphers;
+        }
+
+        public void setUseCiphers(List<String> useCiphers) {
+            this.useCiphers = useCiphers;
+        }
+    }
+
+    public static class VisibilityCache {
+
+        private long expirationMinutes = 60;
+        private int initialCapacity = 2000;
+        private long maxCapacity = 10000;
+
+        public long getExpirationMinutes() {
+            return expirationMinutes;
+        }
+
+        public void setExpirationMinutes(long expirationMinutes) {
+            this.expirationMinutes = expirationMinutes;
+        }
+
+        public int getInitialCapacity() {
+            return initialCapacity;
+        }
+
+        public void setInitialCapacity(int initialCapacity) {
+            this.initialCapacity = initialCapacity;
+        }
+
+        public long getMaxCapacity() {
+            return maxCapacity;
+        }
+
+        public void setMaxCapacity(long maxCapacity) {
+            this.maxCapacity = maxCapacity;
+        }
+    }
+
+    public static class WebSocket {
+
+        public int timeout = 60;
+        public int subscriptionLag = 120;
+
+        public int getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(int timeout) {
+            this.timeout = timeout;
+        }
+
+        public int getSubscriptionLag() {
+            return subscriptionLag;
+        }
+
+        public void setSubscriptionLag(int subscriptionLag) {
+            this.subscriptionLag = subscriptionLag;
+        }
     }
 }

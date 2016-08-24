@@ -18,10 +18,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.accumulo.core.client.Connector;
@@ -38,8 +36,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TemporaryFolder;
 
-import timely.Configuration;
 import timely.Server;
+import timely.Configuration;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
@@ -64,7 +62,7 @@ public class TwoWaySSLIT extends QueryBase {
     public static final TemporaryFolder temp = new TemporaryFolder();
 
     private static MiniAccumuloCluster mac = null;
-    private static File conf = null;
+    private static Configuration conf = null;
 
     protected static SelfSignedCertificate serverCert = null;
     protected static File clientTrustStoreFile = null;
@@ -92,14 +90,14 @@ public class TwoWaySSLIT extends QueryBase {
         return jdkSslContext.getSocketFactory();
     }
 
-    protected static void setupSSL(TestConfiguration config) throws Exception {
-        config.put(Configuration.SSL_CERTIFICATE_FILE, serverCert.certificate().getAbsolutePath());
-        config.put(Configuration.SSL_PRIVATE_KEY_FILE, serverCert.privateKey().getAbsolutePath());
+    protected static void setupSSL(Configuration config) throws Exception {
+        config.getSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
+        config.getSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
         // Needed for 2way SSL
-        config.put(Configuration.SSL_TRUST_STORE_FILE, serverCert.certificate().getAbsolutePath());
-        config.put(Configuration.SSL_USE_OPENSSL, "false");
-        config.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "false");
-        config.put(Configuration.ALLOW_ANONYMOUS_ACCESS, "false");
+        config.getSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
+        config.getSsl().setUseOpenssl(false);
+        config.getSsl().setUseGeneratedKeypair(false);
+        config.setAllowAnonymousAccess(false);
     }
 
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {
@@ -111,13 +109,7 @@ public class TwoWaySSLIT extends QueryBase {
         HttpsURLConnection.setDefaultSSLSocketFactory(getSSLSocketFactory());
         URL loginURL = new URL(url.getProtocol() + "://" + url.getHost() + ":" + url.getPort() + "/login");
         HttpsURLConnection con = (HttpsURLConnection) loginURL.openConnection();
-        con.setHostnameVerifier(new HostnameVerifier() {
-
-            @Override
-            public boolean verify(String arg0, SSLSession arg1) {
-                return true;
-            }
-        });
+        con.setHostnameVerifier((host, session) -> true);
         con.setRequestMethod("GET");
         con.setDoOutput(true);
         con.setRequestProperty("Content-Type", "application/json");
@@ -133,28 +125,19 @@ public class TwoWaySSLIT extends QueryBase {
         Assert.assertEquals(Constants.COOKIE_NAME, sessionCookie.name());
         con = (HttpsURLConnection) url.openConnection();
         con.setRequestProperty(Names.COOKIE, sessionCookie.name() + "=" + sessionCookie.value());
-        con.setHostnameVerifier(new HostnameVerifier() {
-
-            @Override
-            public boolean verify(String arg0, SSLSession arg1) {
-                return true;
-            }
-        });
+        con.setHostnameVerifier((host, session) -> true);
         return con;
     }
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        temp.create();
         final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
         mac = new MiniAccumuloCluster(macConfig);
         mac.start();
-        conf = temp.newFile("config.properties");
-        TestConfiguration config = TestConfiguration.createMinimalConfigurationForTest();
-        config.put(Configuration.INSTANCE_NAME, mac.getInstanceName());
-        config.put(Configuration.ZOOKEEPERS, mac.getZooKeepers());
-        setupSSL(config);
-        config.toConfiguration(conf);
+        conf = TestConfiguration.createMinimalConfigurationForTest();
+        conf.setInstanceName(mac.getInstanceName());
+        conf.setZookeepers(mac.getZooKeepers());
+        setupSSL(conf);
     }
 
     @AfterClass

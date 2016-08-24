@@ -21,7 +21,7 @@ public class StandaloneServer extends Server {
 
     private static MiniAccumuloCluster mac = null;
 
-    public StandaloneServer(File conf) throws Exception {
+    public StandaloneServer(Configuration conf) throws Exception {
         super(conf);
     }
 
@@ -38,22 +38,21 @@ public class StandaloneServer extends Server {
     }
 
     private static String usage() {
-        return "StandaloneServer <configFile> <directory>";
+        return "StandaloneServer <directory>";
     }
 
     public static void main(String[] args) {
-        if (args.length != 2) {
+        if (args.length < 1) {
             System.err.println(usage());
         }
-        final File conf = new File(args[0]);
-        if (!conf.canRead()) {
-            throw new RuntimeException("Configuration file does not exist or cannot be read");
-        }
-        File tmp = new File(args[1]);
+        File tmp = new File(args[0]);
         if (!tmp.canWrite()) {
             System.err.println("Unable to write to directory: " + tmp);
             System.exit(1);
         }
+
+        Configuration conf = initializeConfiguration(args);
+
         File accumuloDir = new File(tmp, "accumulo");
         MiniAccumuloConfig macConfig = new MiniAccumuloConfig(accumuloDir, "secret");
         macConfig.setInstanceName("TimelyStandalone");
@@ -95,5 +94,4 @@ public class StandaloneServer extends Server {
             LOG.info("Server shutting down.");
         }
     }
-
 }
