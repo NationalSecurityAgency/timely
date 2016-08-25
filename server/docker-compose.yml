@@ -7,6 +7,7 @@ services:
      - "9804:9804" # standalone zookeeper
      - "54321:54321" # timely put
      - "54322:54322" # timely query
+     - "54323:54323" # timely ws
     volumes:
      - ${PWD}/:/timely-server-src
     command: /timely-server-src/bin/docker/deploy-startup-standalone.sh

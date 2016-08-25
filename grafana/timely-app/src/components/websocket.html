@@ -1,3 +1,67 @@
+<div class="page-header">
+    <h1>Websocket Test</h1>
+</div>
+
+<div ng-hide="ctrl.websocketSupported" >
+    <h4>WebSockets are not suppported in this browser.</h4>
+</div>
+
+<div class="gf-box" ng-show="ctrl.websocketSupported">
+
+    <div class="gf-box-header">
+        <div class="gf-form-inline">
+            <div class="gf-form max-width-30">
+                <span class="gf-label width-7 p-y-1 p-x-1">Metric</span>
+                <div class="gf-form-select-wrapper gf-form-select-wrapper--has-help-icon max-width-24">
+                    <input type="text" class="gf-form-input"
+                           spellcheck='false'
+                           data-min-length=0
+                           data-items=100
+                           ng-model="metricName"
+                           placeholder="sys.">
+
+                    <info-popover mode="right-absolute">
+                        Type a Metric name<br>
+                    </info-popover>
+
+                    <div ng-hide="ctrl.fetching" class="gf-row">
+                        <button type="submit" class="btn btn-success" ng-click="ctrl.start(metricName)">
+                            Start
+                        </button>
+                    </div>
+                    <div ng-show="ctrl.fetching" class="gf-row">
+                        <button type="submit" class="btn btn-warning" ng-click="ctrl.stop(metricName)">
+                            Stop
+                        </button>
+                    </div>
 
 
-This is not a websocket ... yet
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <div class="gf-box-body">
+        <div class="grafana-options-table">
+            <p>{{ctrl.metric_count}}</p>
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Tags</th>
+                    <th>Values</th>
+                </tr>
+                <tr>
+                    <td>{{ctrl.metric['metric']}}</td>
+                    <!--td class="p-x-1" ng-repeat="tag in ctrl.metric.tags">
+                        {{tag.key}} = {{tag.value}}
+                    </td -->
+                    <td>{{ctrl.metric.timestamp}} -> {{ctrl.metric.value}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+
+</div>
