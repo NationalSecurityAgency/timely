@@ -62,88 +62,99 @@ public class Configuration {
         return ip;
     }
 
-    public void setIp(String ip) {
+    public Configuration setIp(String ip) {
         this.ip = ip;
+        return this;
     }
 
     public String getZookeepers() {
         return zookeepers;
     }
 
-    public void setZookeepers(String zookeepers) {
+    public Configuration setZookeepers(String zookeepers) {
         this.zookeepers = zookeepers;
+        return this;
     }
 
     public String getInstanceName() {
         return instanceName;
     }
 
-    public void setInstanceName(String instanceName) {
+    public Configuration setInstanceName(String instanceName) {
         this.instanceName = instanceName;
+        return this;
     }
 
     public String getUsername() {
         return username;
     }
 
-    public void setUsername(String username) {
+    public Configuration setUsername(String username) {
         this.username = username;
+        return this;
     }
 
     public String getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
+    public Configuration setPassword(String password) {
         this.password = password;
+        return this;
     }
 
     public String getTable() {
         return table;
     }
 
-    public void setTable(String table) {
+    public Configuration setTable(String table) {
         this.table = table;
+        return this;
     }
 
     public String getMeta() {
         return meta;
     }
 
-    public void setMeta(String meta) {
+    public Configuration setMeta(String meta) {
         this.meta = meta;
+        return this;
     }
 
     public int getMetricAgeOffDays() {
         return metricAgeOffDays;
     }
 
-    public void setMetricAgeOffDays(int metricAgeOffDays) {
+    public Configuration setMetricAgeOffDays(int metricAgeOffDays) {
         this.metricAgeOffDays = metricAgeOffDays;
+        return this;
     }
 
     public List<String> getMetricsReportIgnoredTags() {
         return metricsReportIgnoredTags;
     }
 
-    public void setMetricsReportIgnoredTags(List<String> metricsReportIgnoredTags) {
+    public Configuration setMetricsReportIgnoredTags(List<String> metricsReportIgnoredTags) {
         this.metricsReportIgnoredTags = metricsReportIgnoredTags;
+        return this;
     }
 
     public boolean isAllowAnonymousAccess() {
         return allowAnonymousAccess;
     }
 
-    public void setAllowAnonymousAccess(boolean allowAnonymousAccess) {
+    public Configuration setAllowAnonymousAccess(boolean allowAnonymousAccess) {
         this.allowAnonymousAccess = allowAnonymousAccess;
+        return this;
     }
 
     public int getSessionMaxAge() {
         return sessionMaxAge;
     }
 
-    public void setSessionMaxAge(int sessionMaxAge) {
+    public Configuration setSessionMaxAge(int sessionMaxAge) {
         this.sessionMaxAge = sessionMaxAge;
+        return this;
     }
 
     public VisibilityCache getVisibilityCache() {
@@ -182,7 +193,7 @@ public class Configuration {
         return ssl;
     }
 
-    public static class Port {
+    public class Port {
 
         @NotNull
         private Integer put;
@@ -195,28 +206,31 @@ public class Configuration {
             return put;
         }
 
-        public void setPut(int put) {
+        public Configuration setPut(int put) {
             this.put = put;
+            return Configuration.this;
         }
 
         public int getQuery() {
             return query;
         }
 
-        public void setQuery(int query) {
+        public Configuration setQuery(int query) {
             this.query = query;
+            return Configuration.this;
         }
 
         public int getWebsocket() {
             return websocket;
         }
 
-        public void setWebsocket(int websocket) {
+        public Configuration setWebsocket(int websocket) {
             this.websocket = websocket;
+            return Configuration.this;
         }
     }
 
-    public static class Http {
+    public class Http {
 
         @NotNull
         private String host;
@@ -227,28 +241,31 @@ public class Configuration {
             return host;
         }
 
-        public void setHost(String host) {
+        public Configuration setHost(String host) {
             this.host = host;
+            return Configuration.this;
         }
 
         public String getRedirectPath() {
             return redirectPath;
         }
 
-        public void setRedirectPath(String redirectPath) {
+        public Configuration setRedirectPath(String redirectPath) {
             this.redirectPath = redirectPath;
+            return Configuration.this;
         }
 
         public long getStrictTransportMaxAge() {
             return strictTransportMaxAge;
         }
 
-        public void setStrictTransportMaxAge(long strictTransportMaxAge) {
+        public Configuration setStrictTransportMaxAge(long strictTransportMaxAge) {
             this.strictTransportMaxAge = strictTransportMaxAge;
+            return Configuration.this;
         }
     }
 
-    public static class Write {
+    public class Write {
 
         private String latency = "5s";
         private int threads;
@@ -264,28 +281,31 @@ public class Configuration {
             return latency;
         }
 
-        public void setLatency(String latency) {
+        public Configuration setLatency(String latency) {
             this.latency = latency;
+            return Configuration.this;
         }
 
         public int getThreads() {
             return threads;
         }
 
-        public void setThreads(int threads) {
+        public Configuration setThreads(int threads) {
             this.threads = threads;
+            return Configuration.this;
         }
 
         public String getBufferSize() {
             return bufferSize;
         }
 
-        public void setBufferSize(String bufferSize) {
+        public Configuration setBufferSize(String bufferSize) {
             this.bufferSize = bufferSize;
+            return Configuration.this;
         }
     }
 
-    public static class Scanner {
+    public class Scanner {
 
         private int threads = 4;
 
@@ -293,12 +313,13 @@ public class Configuration {
             return threads;
         }
 
-        public void setThreads(int threads) {
+        public Configuration setThreads(int threads) {
             this.threads = threads;
+            return Configuration.this;
         }
     }
 
-    public static class Cors {
+    public class Cors {
 
         private boolean allowAnyOrigin = false;
         private boolean allowNullOrigin = false;
@@ -311,52 +332,58 @@ public class Configuration {
             return allowAnyOrigin;
         }
 
-        public void setAllowAnyOrigin(boolean allowAnyOrigin) {
+        public Configuration setAllowAnyOrigin(boolean allowAnyOrigin) {
             this.allowAnyOrigin = allowAnyOrigin;
+            return Configuration.this;
         }
 
         public boolean isAllowNullOrigin() {
             return allowNullOrigin;
         }
 
-        public void setAllowNullOrigin(boolean allowNullOrigin) {
+        public Configuration setAllowNullOrigin(boolean allowNullOrigin) {
             this.allowNullOrigin = allowNullOrigin;
+            return Configuration.this;
         }
 
         public Set<String> getAllowedOrigins() {
             return allowedOrigins;
         }
 
-        public void setAllowedOrigins(Set<String> allowedOrigins) {
+        public Configuration setAllowedOrigins(Set<String> allowedOrigins) {
             this.allowedOrigins = allowedOrigins;
+            return Configuration.this;
         }
 
         public List<String> getAllowedMethods() {
             return allowedMethods;
         }
 
-        public void setAllowedMethods(List<String> allowedMethods) {
+        public Configuration setAllowedMethods(List<String> allowedMethods) {
             this.allowedMethods = allowedMethods;
+            return Configuration.this;
         }
 
         public List<String> getAllowedHeaders() {
             return allowedHeaders;
         }
 
-        public void setAllowedHeaders(List<String> allowedHeaders) {
+        public Configuration setAllowedHeaders(List<String> allowedHeaders) {
             this.allowedHeaders = allowedHeaders;
+            return Configuration.this;
         }
 
         public boolean isAllowCredentials() {
             return allowCredentials;
         }
 
-        public void setAllowCredentials(boolean allowCredentials) {
+        public Configuration setAllowCredentials(boolean allowCredentials) {
             this.allowCredentials = allowCredentials;
+            return Configuration.this;
         }
     }
 
-    public static class MetaCache {
+    public class MetaCache {
 
         private long expirationMinutes = 60;
         private int initialCapacity = 2000;
@@ -366,28 +393,31 @@ public class Configuration {
             return expirationMinutes;
         }
 
-        public void setExpirationMinutes(long expirationMinutes) {
+        public Configuration setExpirationMinutes(long expirationMinutes) {
             this.expirationMinutes = expirationMinutes;
+            return Configuration.this;
         }
 
         public int getInitialCapacity() {
             return initialCapacity;
         }
 
-        public void setInitialCapacity(int initialCapacity) {
+        public Configuration setInitialCapacity(int initialCapacity) {
             this.initialCapacity = initialCapacity;
+            return Configuration.this;
         }
 
         public long getMaxCapacity() {
             return maxCapacity;
         }
 
-        public void setMaxCapacity(long maxCapacity) {
+        public Configuration setMaxCapacity(long maxCapacity) {
             this.maxCapacity = maxCapacity;
+            return Configuration.this;
         }
     }
 
-    public static class Ssl {
+    public class Ssl {
 
         private String certificateFile;
         private String keyFile;
@@ -403,60 +433,67 @@ public class Configuration {
             return certificateFile;
         }
 
-        public void setCertificateFile(String certificateFile) {
+        public Configuration setCertificateFile(String certificateFile) {
             this.certificateFile = certificateFile;
+            return Configuration.this;
         }
 
         public String getKeyFile() {
             return keyFile;
         }
 
-        public void setKeyFile(String keyFile) {
+        public Configuration setKeyFile(String keyFile) {
             this.keyFile = keyFile;
+            return Configuration.this;
         }
 
         public String getKeyPassword() {
             return keyPassword;
         }
 
-        public void setKeyPassword(String keyPassword) {
+        public Configuration setKeyPassword(String keyPassword) {
             this.keyPassword = keyPassword;
+            return Configuration.this;
         }
 
         public String getTrustStoreFile() {
             return trustStoreFile;
         }
 
-        public void setTrustStoreFile(String trustStoreFile) {
+        public Configuration setTrustStoreFile(String trustStoreFile) {
             this.trustStoreFile = trustStoreFile;
+            return Configuration.this;
         }
 
         public boolean isUseGeneratedKeypair() {
             return useGeneratedKeypair;
         }
 
-        public void setUseGeneratedKeypair(boolean useGeneratedKeypair) {
+        public Configuration setUseGeneratedKeypair(boolean useGeneratedKeypair) {
             this.useGeneratedKeypair = useGeneratedKeypair;
+            return Configuration.this;
         }
 
         public boolean isUseOpenssl() {
             return useOpenssl;
         }
 
-        public void setUseOpenssl(boolean useOpenssl) {
+        public Configuration setUseOpenssl(boolean useOpenssl) {
             this.useOpenssl = useOpenssl;
+            return Configuration.this;
         }
 
         public List<String> getUseCiphers() {
             return useCiphers;
         }
 
-        public void setUseCiphers(List<String> useCiphers) {
+        public Configuration setUseCiphers(List<String> useCiphers) {
             this.useCiphers = useCiphers;
+            return Configuration.this;
         }
     }
 
-    public static class VisibilityCache {
+    public class VisibilityCache {
 
         private long expirationMinutes = 60;
         private int initialCapacity = 2000;
@@ -466,28 +503,31 @@ public class Configuration {
             return expirationMinutes;
         }
 
-        public void setExpirationMinutes(long expirationMinutes) {
+        public Configuration setExpirationMinutes(long expirationMinutes) {
             this.expirationMinutes = expirationMinutes;
+            return Configuration.this;
         }
 
         public int getInitialCapacity() {
             return initialCapacity;
         }
 
-        public void setInitialCapacity(int initialCapacity) {
+        public Configuration setInitialCapacity(int initialCapacity) {
             this.initialCapacity = initialCapacity;
+            return Configuration.this;
         }
 
         public long getMaxCapacity() {
             return maxCapacity;
         }
 
-        public void setMaxCapacity(long maxCapacity) {
+        public Configuration setMaxCapacity(long maxCapacity) {
             this.maxCapacity = maxCapacity;
+            return Configuration.this;
         }
     }
 
-    public static class WebSocket {
+    public class WebSocket {
 
         public int timeout = 60;
         public int subscriptionLag = 120;
@@ -496,16 +536,18 @@ public class Configuration {
             return timeout;
         }
 
-        public void setTimeout(int timeout) {
+        public Configuration setTimeout(int timeout) {
             this.timeout = timeout;
+            return Configuration.this;
         }
 
         public int getSubscriptionLag() {
             return subscriptionLag;
         }
 
-        public void setSubscriptionLag(int subscriptionLag) {
+        public Configuration setSubscriptionLag(int subscriptionLag) {
             this.subscriptionLag = subscriptionLag;
+            return Configuration.this;
         }
     }
 }
