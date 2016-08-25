@@ -8,7 +8,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 
-import java.io.File;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -21,9 +20,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import timely.Configuration;
@@ -61,9 +58,6 @@ public class HttpRequestDecoderTest {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
     private static Configuration config = null;
     private static Configuration anonConfig = null;
     private TestHttpQueryDecoder decoder = null;
@@ -72,17 +66,9 @@ public class HttpRequestDecoderTest {
 
     @BeforeClass
     public static void before() throws Exception {
-        File conf = temp.newFile("config.properties");
-        conf.deleteOnExit();
-        TestConfiguration cfg = TestConfiguration.createMinimalConfigurationForTest();
-        cfg.toConfiguration(conf);
-        config = new Configuration(conf);
-        File conf2 = temp.newFile("anon-config.properties");
-        conf2.deleteOnExit();
-        TestConfiguration cfg2 = TestConfiguration.createMinimalConfigurationForTest();
-        cfg2.put(Configuration.ALLOW_ANONYMOUS_ACCESS, "true");
-        cfg2.toConfiguration(conf2);
-        anonConfig = new Configuration(conf2);
+        config = TestConfiguration.createMinimalConfigurationForTest();
+        anonConfig = TestConfiguration.createMinimalConfigurationForTest();
+        anonConfig.getSecurity().setAllowAnonymousAccess(true);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
         AuthCache.setSessionMaxAge(config);
         AuthCache.getCache().put(cookie, new UsernamePasswordAuthenticationToken("test", "test1"));

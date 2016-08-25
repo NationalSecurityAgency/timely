@@ -18,10 +18,10 @@ public class MetaCacheImpl implements MetaCache {
 
     @Override
     public void init(Configuration config) {
-        long defaultExpiration = Long.parseLong(config.get(Configuration.META_CACHE_EXPIRATION));
-        int initialCapacity = Integer.parseInt(config.get(Configuration.META_CACHE_INITIAL_CAPACITY));
-        long maxCapacity = Long.parseLong(config.get(Configuration.META_CACHE_MAX_CAPACITY));
-        cache = Caffeine.newBuilder().expireAfterAccess(defaultExpiration, TimeUnit.MINUTES)
+        long expirationMinutes = config.getMetaCache().getExpirationMinutes();
+        int initialCapacity = config.getMetaCache().getInitialCapacity();
+        long maxCapacity = config.getMetaCache().getMaxCapacity();
+        cache = Caffeine.newBuilder().expireAfterAccess(expirationMinutes, TimeUnit.MINUTES)
                 .initialCapacity(initialCapacity).maximumSize(maxCapacity).build();
     }
 

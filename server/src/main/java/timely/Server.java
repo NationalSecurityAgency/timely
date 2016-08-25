@@ -40,16 +40,16 @@ import io.netty.util.internal.SystemPropertyUtil;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import rx.Observable;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
@@ -105,8 +105,9 @@ public class Server {
     private static final String WAMP_PATH = "/wamp";
 
     protected static final CountDownLatch LATCH = new CountDownLatch(1);
+    static ConfigurableApplicationContext applicationContext;
 
-    private Configuration config = null;
+    private final Configuration config;
     private EventLoopGroup tcpWorkerGroup = null;
     private EventLoopGroup tcpBossGroup = null;
     private EventLoopGroup httpWorkerGroup = null;
@@ -138,11 +139,7 @@ public class Server {
                     return true;
                 } else if (minor == EPOLL_MIN_MINOR_VERSION) {
                     final int patch = Integer.parseInt(version[2].substring(0, 2));
-                    if (patch >= EPOLL_MIN_PATCH_VERSION) {
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    return patch >= EPOLL_MIN_PATCH_VERSION;
                 } else {
                     return false;
                 }
@@ -154,11 +151,6 @@ public class Server {
         }
     }
 
-    private static String usage() {
-
-        return "Server <configFile>";
-    }
-
     public static void fatal(String msg, Throwable t) {
         LOG.error(msg, t);
         LATCH.countDown();
@@ -166,13 +158,8 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
 
-        if (args.length != 1) {
-            System.err.println(usage());
-        }
-        final File conf = new File(args[0]);
-        if (!conf.canRead()) {
-            throw new RuntimeException("Configuration file does not exist or cannot be read");
-        }
+        Configuration conf = initializeConfiguration(args);
+
         Server s = new Server(conf);
         try {
             LATCH.await();
@@ -183,15 +170,16 @@ public class Server {
         }
     }
 
+    protected static Configuration initializeConfiguration(String[] args) {
+        applicationContext = new SpringApplicationBuilder(SpringBootstrap.class).web(false).run(args);
+        return applicationContext.getBean(Configuration.class);
+    }
+
     private void shutdownHook() {
 
-        final Runnable shutdownRunner = new Runnable() {
-
-            @Override
-            public void run() {
-                if (!shutdown) {
-                    shutdown();
-                }
+        final Runnable shutdownRunner = () -> {
+            if (!shutdown) {
+                shutdown();
             }
         };
         final Thread hook = new Thread(shutdownRunner, "shutdown-hook-thread");
@@ -251,16 +239,21 @@ public class Server {
         }
         LOG.info("Shutting down WAMP Router");
         wampClient.close().toBlocking().last();
-        wampRouter.close().toBlocking().last(); // Blocks until router is fully shut down
+        wampRouter.close().toBlocking().last(); // Blocks until router is fully
+                                                // shut down
         MetaCacheFactory.close();
         WebSocketRequestDecoder.close();
+        if (applicationContext != null) {
+            applicationContext.close();
+        }
         this.shutdown = true;
         LOG.info("Server shut down.");
     }
 
-    public Server(File conf) throws Exception {
+    public Server(Configuration conf) throws Exception {
 
-        config = new Configuration(conf);
+        this.config = conf;
+
         int nettyThreads = Math.max(1,
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
         dataStore = DataStoreFactory.create(config, nettyThreads);
@@ -271,7 +264,7 @@ public class Server {
         // Initialize the VisibilityCache
         VisibilityCache.init(config);
         final boolean useEpoll = useEpoll();
-        Class<? extends ServerSocketChannel> channelClass = null;
+        Class<? extends ServerSocketChannel> channelClass;
         if (useEpoll) {
             tcpWorkerGroup = new EpollEventLoopGroup();
             tcpBossGroup = new EpollEventLoopGroup();
@@ -299,11 +292,11 @@ public class Server {
         putServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         putServer.option(ChannelOption.SO_BACKLOG, 128);
         putServer.option(ChannelOption.SO_KEEPALIVE, true);
-        final int putPort = Integer.parseInt(config.get(Configuration.PUT_PORT));
+        final int putPort = config.getServer().getTcpPort();
         putChannelHandle = putServer.bind(putPort).sync().channel();
         final String putAddress = ((InetSocketAddress) putChannelHandle.localAddress()).getAddress().getHostAddress();
 
-        final int queryPort = Integer.parseInt(config.get(Configuration.QUERY_PORT));
+        final int queryPort = config.getHttp().getPort();
         SslContext sslCtx = createSSLContext(config);
         if (sslCtx instanceof OpenSslServerContext) {
             OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
@@ -312,7 +305,7 @@ public class Server {
             opensslCtx.setSessionCacheEnabled(true);
             opensslCtx.setSessionCacheSize(128);
             opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
-            opensslCtx.setSessionTimeout(Integer.parseInt(config.get(Configuration.SESSION_MAX_AGE)));
+            opensslCtx.setSessionTimeout(config.getSecurity().getSessionMaxAge());
         }
         final ServerBootstrap queryServer = new ServerBootstrap();
         queryServer.group(httpBossGroup, httpWorkerGroup);
@@ -326,7 +319,7 @@ public class Server {
         final String queryAddress = ((InetSocketAddress) queryChannelHandle.localAddress()).getAddress()
                 .getHostAddress();
 
-        final int wsPort = Integer.parseInt(config.get(Configuration.WEBSOCKET_PORT));
+        final int wsPort = config.getWebsocket().getPort();
         final ServerBootstrap wsServer = new ServerBootstrap();
         setupWampRouter();
         wsServer.group(wsBossGroup, wsWorkerGroup);
@@ -350,8 +343,9 @@ public class Server {
 
     protected SslContext createSSLContext(Configuration config) throws Exception {
 
-        Boolean generate = config.getBoolean(Configuration.SSL_USE_GENERATED_KEYPAIR);
-        SslContextBuilder ssl = null;
+        Configuration.Ssl sslCfg = config.getSecurity().getSsl();
+        Boolean generate = sslCfg.isUseGeneratedKeypair();
+        SslContextBuilder ssl;
         if (generate) {
             LOG.warn("Using generated self signed server certificate");
             Date begin = new Date();
@@ -359,28 +353,27 @@ public class Server {
             SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", begin, end);
             ssl = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
         } else {
-            String cert = config.get(Configuration.SSL_CERTIFICATE_FILE);
-            String key = config.get(Configuration.SSL_PRIVATE_KEY_FILE);
-            String keyPass = config.get(Configuration.SSL_PRIVATE_KEY_PASS);
+            String cert = sslCfg.getCertificateFile();
+            String key = sslCfg.getKeyFile();
+            String keyPass = sslCfg.getKeyPassword();
             if (null == cert || null == key) {
                 throw new IllegalArgumentException("Check your SSL properties, something is wrong.");
             }
             ssl = SslContextBuilder.forServer(new File(cert), new File(key), keyPass);
         }
 
-        String ciphers = config.get(Configuration.SSL_USE_CIPHERS);
-        ssl.ciphers(Arrays.asList(ciphers.split(":")));
+        ssl.ciphers(sslCfg.getUseCiphers());
 
         // Can't set to REQUIRE because the CORS pre-flight requests will fail.
         ssl.clientAuth(ClientAuth.OPTIONAL);
 
-        Boolean useOpenSSL = config.getBoolean(Configuration.SSL_USE_OPENSSL);
+        Boolean useOpenSSL = sslCfg.isUseOpenssl();
         if (useOpenSSL) {
             ssl.sslProvider(SslProvider.OPENSSL);
         } else {
             ssl.sslProvider(SslProvider.JDK);
         }
-        String trustStore = config.get(Configuration.SSL_TRUST_STORE_FILE);
+        String trustStore = sslCfg.getTrustStoreFile();
         if (null != trustStore) {
             if (!trustStore.isEmpty()) {
                 ssl.trustManager(new File(trustStore));
@@ -404,30 +397,21 @@ public class Server {
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
+                final Configuration.Cors corsCfg = config.getHttp().getCors();
                 final CorsConfig.Builder ccb;
-                if (config.getBoolean(Configuration.CORS_ALLOW_ANY_ORIGIN)) {
+                if (corsCfg.isAllowAnyOrigin()) {
                     ccb = new CorsConfig.Builder();
                 } else {
-                    String origins = config.get(Configuration.CORS_ALLOWED_ORIGINS);
-                    ccb = new CorsConfig.Builder(origins.split(","));
+                    ccb = new CorsConfig.Builder(corsCfg.getAllowedOrigins().stream().toArray(String[]::new));
                 }
-                if (config.getBoolean(Configuration.CORS_ALLOW_NULL_ORIGIN)) {
+                if (corsCfg.isAllowNullOrigin()) {
                     ccb.allowNullOrigin();
                 }
-                if (config.getBoolean(Configuration.CORS_ALLOW_CREDENTIALS)) {
+                if (corsCfg.isAllowCredentials()) {
                     ccb.allowCredentials();
                 }
-                if (!StringUtils.isEmpty(config.get(Configuration.CORS_ALLOWED_METHODS))) {
-                    String[] methods = config.get(Configuration.CORS_ALLOWED_METHODS).split(",");
-                    HttpMethod[] m = new HttpMethod[methods.length];
-                    for (int i = 0; i < methods.length; i++) {
-                        m[i] = HttpMethod.valueOf(methods[i]);
-                    }
-                    ccb.allowedRequestMethods(m);
-                }
-                if (!StringUtils.isEmpty(config.get(Configuration.CORS_ALLOWED_HEADERS))) {
-                    ccb.allowedRequestHeaders(config.get(Configuration.CORS_ALLOWED_HEADERS).split(","));
-                }
+                corsCfg.getAllowedMethods().stream().map(HttpMethod::valueOf).forEach(ccb::allowedRequestMethods);
+                corsCfg.getAllowedHeaders().forEach(ccb::allowedRequestHeaders);
                 CorsConfig cors = ccb.build();
                 LOG.trace("Cors configuration: {}", cors);
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
@@ -471,8 +455,7 @@ public class Server {
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config));
-                ch.pipeline().addLast("idle-handler",
-                        new IdleStateHandler(Integer.parseInt(conf.get(Configuration.WS_TIMEOUT_SECONDS)), 0, 0));
+                ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
                 ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
@@ -498,17 +481,14 @@ public class Server {
 
     protected void setupWampClient(String wsAddress, int wsPort, SslContext sslContext) throws Exception {
         IWampConnectorProvider connectorProvider = new NettyWampClientConnectorProvider();
-        NettyWampConnectionConfig connectionConfiguration = new NettyWampConnectionConfig.Builder()
-            .withSslContext(sslContext).build();
+        NettyWampConnectionConfig connectionConfiguration = new NettyWampConnectionConfig.Builder().withSslContext(
+                sslContext).build();
 
         // Create a builder and configure the client
         WampClientBuilder builder = new WampClientBuilder();
-        builder.withConnectorProvider(connectorProvider)
-                .withConnectionConfiguration(connectionConfiguration)
-                .withUri(String.format("wss://{}:{}{}", wsAddress, wsPort, WAMP_PATH))
-                .withRealm("timely")
-                .withInfiniteReconnects()
-                .withReconnectInterval(5, TimeUnit.SECONDS);
+        builder.withConnectorProvider(connectorProvider).withConnectionConfiguration(connectionConfiguration)
+                .withUri(String.format("wss://{}:{}{}", wsAddress, wsPort, WAMP_PATH)).withRealm("timely")
+                .withInfiniteReconnects().withReconnectInterval(5, TimeUnit.SECONDS);
         // Create a client through the builder. This will not immediately start
         // a connection attempt
         wampClient = builder.build();

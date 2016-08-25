@@ -6,7 +6,7 @@ import rx.Observer;
 import ws.wamp.jawampa.WampClient;
 
 /**
- *  Timely Client state observer
+ * Timely Client state observer
  */
 public class StateObserver implements Observer<WampClient.State> {
 

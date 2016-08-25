@@ -27,15 +27,12 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyLoginRequestHandler.class);
 
-    private long maxAge = Configuration.SESSION_MAX_AGE_DEFAULT;
-    private String domain = null;
+    private final long maxAge;
+    private final String domain;
 
     public TimelyLoginRequestHandler(Configuration conf) {
-        String ma = conf.get(Configuration.SESSION_MAX_AGE);
-        if (null != ma) {
-            maxAge = Long.parseLong(ma);
-        }
-        domain = conf.get(Configuration.TIMELY_HTTP_HOST);
+        maxAge = conf.getSecurity().getSessionMaxAge();
+        domain = conf.getHttp().getHost();
     }
 
     @Override

@@ -18,7 +18,6 @@ NATIVE_DIR="${THIS_DIR}/META-INF/native"
 BASE_DIR=${THIS_DIR}/..
 TMP_DIR="${BASE_DIR}/tmp"
 CONF_DIR="${BASE_DIR}/conf"
-CONF_FILE="${CONF_DIR}/timely-standalone.properties"
 LIB_DIR="${BASE_DIR}/lib"
 NUM_SERVER_THREADS=4
 
@@ -43,6 +42,6 @@ JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
 # for debugging
 #JVM_ARGS="${JVM_ARGS} -agentlib:jdwp=transport=dt_socket,address=54323,server=y,suspend=y"
 
-echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${CONF_FILE}" "${TMP_DIR}""
-$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${CONF_FILE}" "${TMP_DIR}"
+echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${TMP_DIR}" --spring.config.name=timely --spring.profiles.active=standalone"
+$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${TMP_DIR}" --spring.config.name=timely --spring.profiles.active=standalone
 

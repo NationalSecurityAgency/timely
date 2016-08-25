@@ -40,8 +40,8 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
 
     public HttpRequestDecoder(Configuration config) {
         this.conf = config;
-        this.anonymousAccessAllowed = conf.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
-        this.nonSecureRedirectAddress = conf.get(Configuration.NON_SECURE_REDIRECT_PATH);
+        this.anonymousAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
+        this.nonSecureRedirectAddress = conf.getHttp().getRedirectPath();
     }
 
     public static String getSessionId(FullHttpRequest msg, boolean anonymousAccessAllowed) {
@@ -79,7 +79,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
         final String sessionId = getSessionId(msg, this.anonymousAccessAllowed);
         LOG.trace("SessionID: " + sessionId);
 
-        Request request = null;
+        Request request;
         try {
             if (msg.getMethod().equals(HttpMethod.GET)) {
                 HttpGetRequest get = AnnotationResolver.getClassForHttpGet(decoder.path());

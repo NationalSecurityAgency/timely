@@ -11,22 +11,11 @@ public class VisibilityCache {
 
     private static volatile Cache<String, ColumnVisibility> CACHE = null;
 
-    /** Used for testing */
-    public static synchronized void init() {
-        if (CACHE == null) {
-            long defaultExpiration = Configuration.VISIBILITY_EXPIRATION_DEFAULT;
-            int initialCapacity = Configuration.VISIBILITY_CACHE_INITIAL_CAPACITY_DEFAULT;
-            long maxCapacity = Configuration.VISIBILITY_CACHE_MAX_CAPACITY_DEFAULT;
-            CACHE = Caffeine.newBuilder().expireAfterAccess(defaultExpiration, TimeUnit.MINUTES)
-                    .initialCapacity(initialCapacity).maximumSize(maxCapacity).build();
-        }
-    }
-
     public static synchronized void init(Configuration config) {
         if (CACHE == null) {
-            long expireMinutes = Long.parseLong(config.get(Configuration.VISIBILITY_CACHE_EXPIRATION));
-            int initialCapacity = Integer.parseInt(config.get(Configuration.VISIBILITY_CACHE_INITIAL_CAPACITY));
-            long maxCapacity = Long.parseLong(config.get(Configuration.VISIBILITY_CACHE_MAX_CAPACITY));
+            long expireMinutes = config.getVisibilityCache().getExpirationMinutes();
+            int initialCapacity = config.getVisibilityCache().getInitialCapacity();
+            long maxCapacity = config.getVisibilityCache().getMaxCapacity();
             CACHE = Caffeine.newBuilder().expireAfterAccess(expireMinutes, TimeUnit.MINUTES)
                     .initialCapacity(initialCapacity).maximumSize(maxCapacity).build();
         }

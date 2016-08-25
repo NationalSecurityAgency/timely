@@ -8,6 +8,7 @@ import ws.wamp.jawampa.Request;
  * Handles timely.version requests
  */
 public class VersionObserver implements Observer<Request> {
+
     @Override
     public void onCompleted() {
 

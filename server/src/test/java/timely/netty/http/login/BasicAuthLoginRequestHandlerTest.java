@@ -11,7 +11,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -20,9 +19,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import timely.Configuration;
 import timely.api.request.auth.BasicAuthLoginRequest;
@@ -48,19 +45,11 @@ public class BasicAuthLoginRequestHandlerTest {
 
     }
 
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
     private List<Object> results = new ArrayList<>();
 
     @BeforeClass
     public static void before() throws Exception {
-        File conf = temp.newFile("pre-config.properties");
-        conf.deleteOnExit();
-        TestConfiguration cfg = TestConfiguration.createMinimalConfigurationForTest();
-        cfg.toConfiguration(conf);
-        Configuration config = new Configuration(conf);
-        AuthCache.setSessionMaxAge(config);
+        AuthCache.setSessionMaxAge(TestConfiguration.createMinimalConfigurationForTest());
     }
 
     @AfterClass
@@ -75,11 +64,7 @@ public class BasicAuthLoginRequestHandlerTest {
 
     @Test
     public void testBasicAuthentication() throws Exception {
-        File conf = temp.newFile("config.properties");
-        conf.deleteOnExit();
-        TestConfiguration cfg = TestConfiguration.createMinimalConfigurationForTest();
-        cfg.toConfiguration(conf);
-        Configuration config = new Configuration(conf);
+        Configuration config = TestConfiguration.createMinimalConfigurationForTest();
 
         // @formatter:off
 		String form = 
@@ -99,7 +84,7 @@ public class BasicAuthLoginRequestHandlerTest {
 
         BasicAuthLoginRequestHandler handler = new BasicAuthLoginRequestHandler(config);
         CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
-        handler.channelRead(ctx, (BasicAuthLoginRequest) result);
+        handler.channelRead(ctx, result);
         Assert.assertNotNull(ctx.msg);
         Assert.assertTrue(ctx.msg instanceof DefaultFullHttpResponse);
         DefaultFullHttpResponse response = (DefaultFullHttpResponse) ctx.msg;
@@ -118,11 +103,7 @@ public class BasicAuthLoginRequestHandlerTest {
 
     @Test
     public void testBasicAuthenticationFailure() throws Exception {
-        File conf = temp.newFile("config2.properties");
-        conf.deleteOnExit();
-        TestConfiguration cfg = TestConfiguration.createMinimalConfigurationForTest();
-        cfg.toConfiguration(conf);
-        Configuration config = new Configuration(conf);
+        Configuration config = TestConfiguration.createMinimalConfigurationForTest();
 
         // @formatter:off
 		String form = 
@@ -142,7 +123,7 @@ public class BasicAuthLoginRequestHandlerTest {
 
         BasicAuthLoginRequestHandler handler = new BasicAuthLoginRequestHandler(config);
         CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
-        handler.channelRead(ctx, (BasicAuthLoginRequest) result);
+        handler.channelRead(ctx, result);
         Assert.assertNotNull(ctx.msg);
         Assert.assertTrue(ctx.msg instanceof DefaultFullHttpResponse);
         DefaultFullHttpResponse response = (DefaultFullHttpResponse) ctx.msg;

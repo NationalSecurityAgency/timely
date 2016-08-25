@@ -11,6 +11,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import timely.Configuration;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
 import timely.api.request.VersionRequest;
@@ -22,7 +23,7 @@ public class TcpDecoderTest {
 
     @Before
     public void setup() {
-        VisibilityCache.init();
+        VisibilityCache.init(new Configuration());
     }
 
     @Test
