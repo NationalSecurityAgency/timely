@@ -3,7 +3,6 @@ package timely;
 import com.google.common.collect.Lists;
 import org.apache.accumulo.core.client.BatchWriterConfig;
 import org.hibernate.validator.constraints.NotBlank;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
@@ -113,13 +112,13 @@ public class Configuration {
 
     public class Accumulo {
 
-        @NotEmpty
+        @NotBlank
         private String zookeepers;
-        @NotEmpty
+        @NotBlank
         private String instanceName;
-        @NotEmpty
+        @NotBlank
         private String username;
-        @NotEmpty
+        @NotBlank
         private String password;
         @Valid
         @NestedConfigurationProperty
