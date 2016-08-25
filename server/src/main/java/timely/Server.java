@@ -43,11 +43,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import rx.Observable;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
@@ -83,6 +85,13 @@ import timely.netty.websocket.timeseries.WSSuggestRequestHandler;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
 import timely.store.MetaCacheFactory;
+import timely.wamp.StateObserver;
+import timely.wamp.VersionObserver;
+import ws.wamp.jawampa.*;
+import ws.wamp.jawampa.connection.IWampConnectorProvider;
+import ws.wamp.jawampa.transport.netty.NettyWampClientConnectorProvider;
+import ws.wamp.jawampa.transport.netty.NettyWampConnectionConfig;
+import ws.wamp.jawampa.transport.netty.WampServerWebsocketHandler;
 
 public class Server {
 
@@ -93,6 +102,7 @@ public class Server {
     private static final String OS_NAME = "os.name";
     private static final String OS_VERSION = "os.version";
     private static final String WS_PATH = "/websocket";
+    private static final String WAMP_PATH = "/wamp";
 
     protected static final CountDownLatch LATCH = new CountDownLatch(1);
 
@@ -108,6 +118,8 @@ public class Server {
     protected Channel wsChannelHandle = null;
     protected DataStore dataStore = null;
     protected volatile boolean shutdown = false;
+    private WampRouter wampRouter = null;
+    private WampClient wampClient;
 
     private static boolean useEpoll() {
 
@@ -237,6 +249,9 @@ public class Server {
         } catch (TimelyException e) {
             LOG.error("Error flushing to server during shutdown", e);
         }
+        LOG.info("Shutting down WAMP Router");
+        wampClient.close().toBlocking().last();
+        wampRouter.close().toBlocking().last(); // Blocks until router is fully shut down
         MetaCacheFactory.close();
         WebSocketRequestDecoder.close();
         this.shutdown = true;
@@ -313,6 +328,7 @@ public class Server {
 
         final int wsPort = Integer.parseInt(config.get(Configuration.WEBSOCKET_PORT));
         final ServerBootstrap wsServer = new ServerBootstrap();
+        setupWampRouter();
         wsServer.group(wsBossGroup, wsWorkerGroup);
         wsServer.channel(channelClass);
         wsServer.handler(new LoggingHandler());
@@ -324,6 +340,9 @@ public class Server {
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 
         shutdownHook();
+
+        setupWampClient(wsAddress, wsPort, sslCtx);
+
         LOG.info(
                 "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, and {}:{} for WebSocket traffic",
                 putAddress, putPort, queryAddress, queryPort, wsAddress, wsPort);
@@ -447,6 +466,7 @@ public class Server {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast("wamp", new WampServerWebsocketHandler(WAMP_PATH, wampRouter));
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
@@ -472,4 +492,33 @@ public class Server {
 
     }
 
+    protected void setupWampRouter() throws ApplicationError {
+        wampRouter = new WampRouterBuilder().addRealm("default").build();
+    }
+
+    protected void setupWampClient(String wsAddress, int wsPort, SslContext sslContext) throws Exception {
+        IWampConnectorProvider connectorProvider = new NettyWampClientConnectorProvider();
+        NettyWampConnectionConfig connectionConfiguration = new NettyWampConnectionConfig.Builder()
+            .withSslContext(sslContext).build();
+
+        // Create a builder and configure the client
+        WampClientBuilder builder = new WampClientBuilder();
+        builder.withConnectorProvider(connectorProvider)
+                .withConnectionConfiguration(connectionConfiguration)
+                .withUri(String.format("wss://{}:{}{}", wsAddress, wsPort, WAMP_PATH))
+                .withRealm("timely")
+                .withInfiniteReconnects()
+                .withReconnectInterval(5, TimeUnit.SECONDS);
+        // Create a client through the builder. This will not immediately start
+        // a connection attempt
+        wampClient = builder.build();
+        Observable<WampClient.State> stateObservable = wampClient.statusChanged();
+        stateObservable.subscribe(new StateObserver());
+
+        wampClient.open();
+
+        Observable<Request> request = wampClient.registerProcedure("timely.version");
+        request.subscribe(new VersionObserver());
+
+    }
 }
