@@ -23,7 +23,7 @@ public class NonSecureHttpHandler extends ChannelInboundHandlerAdapter implement
 
     public NonSecureHttpHandler(Configuration conf) {
         String timelyHost = conf.getHttp().getHost();
-        int timelyPort = conf.getPort().getQuery();
+        int timelyPort = conf.getHttp().getPort();
         String path = conf.getHttp().getRedirectPath();
         redirectAddress = "https://" + timelyHost + ":" + timelyPort + path;
     }

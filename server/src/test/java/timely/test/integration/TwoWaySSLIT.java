@@ -91,13 +91,13 @@ public class TwoWaySSLIT extends QueryBase {
     }
 
     protected static void setupSSL(Configuration config) throws Exception {
-        config.getSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
-        config.getSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
+        config.getSecurity().getSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
         // Needed for 2way SSL
-        config.getSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
-        config.getSsl().setUseOpenssl(false);
-        config.getSsl().setUseGeneratedKeypair(false);
-        config.setAllowAnonymousAccess(false);
+        config.getSecurity().getSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getSsl().setUseOpenssl(false);
+        config.getSecurity().getSsl().setUseGeneratedKeypair(false);
+        config.getSecurity().setAllowAnonymousAccess(false);
     }
 
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {
@@ -135,8 +135,8 @@ public class TwoWaySSLIT extends QueryBase {
         mac = new MiniAccumuloCluster(macConfig);
         mac.start();
         conf = TestConfiguration.createMinimalConfigurationForTest();
-        conf.setInstanceName(mac.getInstanceName());
-        conf.setZookeepers(mac.getZooKeepers());
+        conf.getAccumulo().setInstanceName(mac.getInstanceName());
+        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
         setupSSL(conf);
     }
 

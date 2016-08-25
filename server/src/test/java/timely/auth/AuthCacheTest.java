@@ -24,7 +24,7 @@ public class AuthCacheTest {
     @BeforeClass
     public static void before() throws Exception {
         config = TestConfiguration.createMinimalConfigurationForTest();
-        config.setSessionMaxAge(5000);
+        config.getSecurity().setSessionMaxAge(5000);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
     }
 

@@ -40,7 +40,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
 
     public HttpRequestDecoder(Configuration config) {
         this.conf = config;
-        this.anonymousAccessAllowed = conf.isAllowAnonymousAccess();
+        this.anonymousAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
         this.nonSecureRedirectAddress = conf.getHttp().getRedirectPath();
     }
 

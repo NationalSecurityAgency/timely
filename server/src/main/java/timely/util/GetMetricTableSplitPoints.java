@@ -29,12 +29,15 @@ public class GetMetricTableSplitPoints {
             Configuration conf = ctx.getBean(Configuration.class);
 
             final BaseConfiguration apacheConf = new BaseConfiguration();
-            apacheConf.setProperty("instance.name", conf.getInstanceName());
-            apacheConf.setProperty("instance.zookeeper.host", conf.getZookeepers());
+            Configuration.Accumulo accumuloConf = conf.getAccumulo();
+            apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
+            apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
             final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
             final Instance instance = new ZooKeeperInstance(aconf);
-            Connector con = instance.getConnector(conf.getUsername(), new PasswordToken(conf.getPassword()));
-            Scanner s = con.createScanner(conf.getMeta(), con.securityOperations().getUserAuthorizations(con.whoami()));
+            Connector con = instance.getConnector(accumuloConf.getUsername(),
+                    new PasswordToken(accumuloConf.getPassword()));
+            Scanner s = con.createScanner(conf.getMetaTable(),
+                    con.securityOperations().getUserAuthorizations(con.whoami()));
             try {
                 s.setRange(new Range(Meta.METRIC_PREFIX, true, Meta.TAG_PREFIX, false));
                 for (Entry<Key, Value> e : s) {

@@ -2,12 +2,14 @@ package timely;
 
 import com.google.common.collect.Lists;
 import org.apache.accumulo.core.client.BatchWriterConfig;
+import org.hibernate.validator.constraints.NotBlank;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
 import timely.validator.NotEmptyIfFieldSet;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,108 +18,50 @@ import java.util.Set;
 
 @Component
 @ConfigurationProperties(prefix = "timely")
-@NotEmptyIfFieldSet.List({
-        @NotEmptyIfFieldSet(fieldName = "ssl.useGeneratedKeypair", fieldValue = "false", notNullFieldName = "ssl.certificateFile", message = "must be set if timely.ssl.use-generated-keypair is false"),
-        @NotEmptyIfFieldSet(fieldName = "ssl.useGeneratedKeypair", fieldValue = "false", notNullFieldName = "ssl.keyFile", message = "must be set if timely.ssl.use-generated-keypair is false") })
 public class Configuration {
 
-    @NotEmpty
-    private String ip;
-    @NotEmpty
-    private String zookeepers;
-    @NotEmpty
-    private String instanceName;
-    @NotEmpty
-    private String username;
-    @NotEmpty
-    private String password;
-
-    private String table = "timely.metrics";
-    private String meta = "timely.meta";
+    private String metricsTable = "timely.metrics";
+    private String metaTable = "timely.meta";
     private int metricAgeOffDays = 7;
     private List<String> metricsReportIgnoredTags = new ArrayList<>();
-    private boolean allowAnonymousAccess = false;
-    private int sessionMaxAge = 86400;
 
+    @Valid
     @NestedConfigurationProperty
-    private Port ports = new Port();
+    private Accumulo accumulo = new Accumulo();
+    @Valid
+    @NestedConfigurationProperty
+    private Security security = new Security();
+    @Valid
+    @NestedConfigurationProperty
+    private Server server = new Server();
+    @Valid
     @NestedConfigurationProperty
     private Http http = new Http();
-    @NestedConfigurationProperty
-    private Write write = new Write();
-    @NestedConfigurationProperty
-    private Scanner scanner = new Scanner();
-    @NestedConfigurationProperty
-    private Cors cors = new Cors();
+    @Valid
     @NestedConfigurationProperty
     private MetaCache metaCache = new MetaCache();
+    @Valid
     @NestedConfigurationProperty
     private VisibilityCache visibilityCache = new VisibilityCache();
+    @Valid
     @NestedConfigurationProperty
-    private WebSocket webSocket = new WebSocket();
-    @NestedConfigurationProperty
-    private Ssl ssl = new Ssl();
+    private Websocket websocket = new Websocket();
 
-    public String getIp() {
-        return ip;
+    public String getMetricsTable() {
+        return metricsTable;
     }
 
-    public Configuration setIp(String ip) {
-        this.ip = ip;
+    public Configuration setMetricsTable(String metricsTable) {
+        this.metricsTable = metricsTable;
         return this;
     }
 
-    public String getZookeepers() {
-        return zookeepers;
+    public String getMetaTable() {
+        return metaTable;
     }
 
-    public Configuration setZookeepers(String zookeepers) {
-        this.zookeepers = zookeepers;
-        return this;
-    }
-
-    public String getInstanceName() {
-        return instanceName;
-    }
-
-    public Configuration setInstanceName(String instanceName) {
-        this.instanceName = instanceName;
-        return this;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public Configuration setUsername(String username) {
-        this.username = username;
-        return this;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public Configuration setPassword(String password) {
-        this.password = password;
-        return this;
-    }
-
-    public String getTable() {
-        return table;
-    }
-
-    public Configuration setTable(String table) {
-        this.table = table;
-        return this;
-    }
-
-    public String getMeta() {
-        return meta;
-    }
-
-    public Configuration setMeta(String meta) {
-        this.meta = meta;
+    public Configuration setMetaTable(String metaTable) {
+        this.metaTable = metaTable;
         return this;
     }
 
@@ -139,128 +83,92 @@ public class Configuration {
         return this;
     }
 
-    public boolean isAllowAnonymousAccess() {
-        return allowAnonymousAccess;
+    public Accumulo getAccumulo() {
+        return accumulo;
     }
 
-    public Configuration setAllowAnonymousAccess(boolean allowAnonymousAccess) {
-        this.allowAnonymousAccess = allowAnonymousAccess;
-        return this;
+    public Security getSecurity() {
+        return security;
     }
 
-    public int getSessionMaxAge() {
-        return sessionMaxAge;
-    }
-
-    public Configuration setSessionMaxAge(int sessionMaxAge) {
-        this.sessionMaxAge = sessionMaxAge;
-        return this;
-    }
-
-    public VisibilityCache getVisibilityCache() {
-        return visibilityCache;
-    }
-
-    public Port getPort() {
-        return ports;
+    public Server getServer() {
+        return server;
     }
 
     public Http getHttp() {
         return http;
     }
 
-    public Write getWrite() {
-        return write;
-    }
-
-    public Scanner getScanner() {
-        return scanner;
-    }
-
-    public Cors getCors() {
-        return cors;
+    public Websocket getWebsocket() {
+        return websocket;
     }
 
     public MetaCache getMetaCache() {
         return metaCache;
     }
 
-    public WebSocket getWebSocket() {
-        return webSocket;
+    public VisibilityCache getVisibilityCache() {
+        return visibilityCache;
     }
 
-    public Ssl getSsl() {
-        return ssl;
-    }
+    public class Accumulo {
 
-    public class Port {
+        @NotEmpty
+        private String zookeepers;
+        @NotEmpty
+        private String instanceName;
+        @NotEmpty
+        private String username;
+        @NotEmpty
+        private String password;
+        @Valid
+        @NestedConfigurationProperty
+        private Write write = new Write();
+        @Valid
+        @NestedConfigurationProperty
+        private Scan scan = new Scan();
 
-        @NotNull
-        private Integer put;
-        @NotNull
-        private Integer query;
-        @NotNull
-        private Integer websocket;
-
-        public int getPut() {
-            return put;
+        public String getInstanceName() {
+            return instanceName;
         }
 
-        public Configuration setPut(int put) {
-            this.put = put;
+        public String getZookeepers() {
+            return zookeepers;
+        }
+
+        public Configuration setZookeepers(String zookeepers) {
+            this.zookeepers = zookeepers;
             return Configuration.this;
         }
 
-        public int getQuery() {
-            return query;
+        public Write getWrite() {
+            return write;
         }
 
-        public Configuration setQuery(int query) {
-            this.query = query;
+        public Scan getScan() {
+            return scan;
+        }
+
+        public Configuration setInstanceName(String instanceName) {
+            this.instanceName = instanceName;
             return Configuration.this;
         }
 
-        public int getWebsocket() {
-            return websocket;
+        public String getUsername() {
+            return username;
         }
 
-        public Configuration setWebsocket(int websocket) {
-            this.websocket = websocket;
-            return Configuration.this;
-        }
-    }
-
-    public class Http {
-
-        @NotNull
-        private String host;
-        private String redirectPath = "/secure-me";
-        private long strictTransportMaxAge = 604800;
-
-        public String getHost() {
-            return host;
-        }
-
-        public Configuration setHost(String host) {
-            this.host = host;
+        public Configuration setUsername(String username) {
+            this.username = username;
             return Configuration.this;
         }
 
-        public String getRedirectPath() {
-            return redirectPath;
+        public String getPassword() {
+            return password;
         }
 
-        public Configuration setRedirectPath(String redirectPath) {
-            this.redirectPath = redirectPath;
-            return Configuration.this;
-        }
-
-        public long getStrictTransportMaxAge() {
-            return strictTransportMaxAge;
-        }
-
-        public Configuration setStrictTransportMaxAge(long strictTransportMaxAge) {
-            this.strictTransportMaxAge = strictTransportMaxAge;
+        public Configuration setPassword(String password) {
+            this.password = password;
             return Configuration.this;
         }
     }
@@ -305,7 +213,7 @@ public class Configuration {
         }
     }
 
-    public class Scanner {
+    public class Scan {
 
         private int threads = 4;
 
@@ -319,104 +227,40 @@ public class Configuration {
         }
     }
 
-    public class Cors {
+    public class Security {
 
-        private boolean allowAnyOrigin = false;
-        private boolean allowNullOrigin = false;
-        private Set<String> allowedOrigins = new HashSet<>();
-        private List<String> allowedMethods = Lists.newArrayList("DELETE", "GET", "HEAD", "OPTIONS", "PUT", "POST");
-        private List<String> allowedHeaders = Lists.newArrayList("content-type");
-        private boolean allowCredentials = true;
+        private boolean allowAnonymousAccess = false;
+        private int sessionMaxAge = 86400;
+        @Valid
+        @NestedConfigurationProperty
+        private Ssl ssl = new Ssl();
 
-        public boolean isAllowAnyOrigin() {
-            return allowAnyOrigin;
+        public boolean isAllowAnonymousAccess() {
+            return allowAnonymousAccess;
         }
 
-        public Configuration setAllowAnyOrigin(boolean allowAnyOrigin) {
-            this.allowAnyOrigin = allowAnyOrigin;
+        public Configuration setAllowAnonymousAccess(boolean allowAnonymousAccess) {
+            this.allowAnonymousAccess = allowAnonymousAccess;
             return Configuration.this;
         }
 
-        public boolean isAllowNullOrigin() {
-            return allowNullOrigin;
+        public int getSessionMaxAge() {
+            return sessionMaxAge;
         }
 
-        public Configuration setAllowNullOrigin(boolean allowNullOrigin) {
-            this.allowNullOrigin = allowNullOrigin;
+        public Configuration setSessionMaxAge(int sessionMaxAge) {
+            this.sessionMaxAge = sessionMaxAge;
             return Configuration.this;
         }
 
-        public Set<String> getAllowedOrigins() {
-            return allowedOrigins;
-        }
-
-        public Configuration setAllowedOrigins(Set<String> allowedOrigins) {
-            this.allowedOrigins = allowedOrigins;
-            return Configuration.this;
-        }
-
-        public List<String> getAllowedMethods() {
-            return allowedMethods;
-        }
-
-        public Configuration setAllowedMethods(List<String> allowedMethods) {
-            this.allowedMethods = allowedMethods;
-            return Configuration.this;
-        }
-
-        public List<String> getAllowedHeaders() {
-            return allowedHeaders;
-        }
-
-        public Configuration setAllowedHeaders(List<String> allowedHeaders) {
-            this.allowedHeaders = allowedHeaders;
-            return Configuration.this;
-        }
-
-        public boolean isAllowCredentials() {
-            return allowCredentials;
-        }
-
-        public Configuration setAllowCredentials(boolean allowCredentials) {
-            this.allowCredentials = allowCredentials;
-            return Configuration.this;
+        public Ssl getSsl() {
+            return ssl;
         }
     }
 
-    public class MetaCache {
-
-        private long expirationMinutes = 60;
-        private int initialCapacity = 2000;
-        private long maxCapacity = 10000;
-
-        public long getExpirationMinutes() {
-            return expirationMinutes;
-        }
-
-        public Configuration setExpirationMinutes(long expirationMinutes) {
-            this.expirationMinutes = expirationMinutes;
-            return Configuration.this;
-        }
-
-        public int getInitialCapacity() {
-            return initialCapacity;
-        }
-
-        public Configuration setInitialCapacity(int initialCapacity) {
-            this.initialCapacity = initialCapacity;
-            return Configuration.this;
-        }
-
-        public long getMaxCapacity() {
-            return maxCapacity;
-        }
-
-        public Configuration setMaxCapacity(long maxCapacity) {
-            this.maxCapacity = maxCapacity;
-            return Configuration.this;
-        }
-    }
-
+    @NotEmptyIfFieldSet.List({
+            @NotEmptyIfFieldSet(fieldName = "useGeneratedKeypair", fieldValue = "false", notNullFieldName = "certificateFile", message = "must be set if timely.security.ssl.use-generated-keypair is false"),
+            @NotEmptyIfFieldSet(fieldName = "useGeneratedKeypair", fieldValue = "false", notNullFieldName = "keyFile", message = "must be set if timely.security.ssl.use-generated-keypair is false") })
     public class Ssl {
 
         private String certificateFile;
@@ -493,7 +337,208 @@ public class Configuration {
         }
     }
 
-    public class VisibilityCache {
+    public class Server {
+
+        @NotBlank
+        private String ip;
+        @NotNull
+        private Integer tcpPort;
+
+        @NotNull
+        public String getIp() {
+            return ip;
+        }
+
+        public Configuration setIp(String ip) {
+            this.ip = ip;
+            return Configuration.this;
+        }
+
+        public int getTcpPort() {
+            return tcpPort;
+        }
+
+        public Configuration setTcpPort(int tcpPort) {
+            this.tcpPort = tcpPort;
+            return Configuration.this;
+        }
+    }
+
+    public class Http {
+
+        @NotBlank
+        private String ip;
+        @NotNull
+        private Integer port;
+        @NotNull
+        private String host;
+        private String redirectPath = "/secure-me";
+        private long strictTransportMaxAge = 604800;
+        @Valid
+        @NestedConfigurationProperty
+        private Cors cors = new Cors();
+
+        public String getIp() {
+            return ip;
+        }
+
+        public Configuration setIp(String ip) {
+            this.ip = ip;
+            return Configuration.this;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public Configuration setPort(int port) {
+            this.port = port;
+            return Configuration.this;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public Configuration setHost(String host) {
+            this.host = host;
+            return Configuration.this;
+        }
+
+        public String getRedirectPath() {
+            return redirectPath;
+        }
+
+        public Configuration setRedirectPath(String redirectPath) {
+            this.redirectPath = redirectPath;
+            return Configuration.this;
+        }
+
+        public long getStrictTransportMaxAge() {
+            return strictTransportMaxAge;
+        }
+
+        public Configuration setStrictTransportMaxAge(long strictTransportMaxAge) {
+            this.strictTransportMaxAge = strictTransportMaxAge;
+            return Configuration.this;
+        }
+
+        public Cors getCors() {
+            return cors;
+        }
+    }
+
+    public class Cors {
+
+        private boolean allowAnyOrigin = false;
+        private boolean allowNullOrigin = false;
+        private Set<String> allowedOrigins = new HashSet<>();
+        private List<String> allowedMethods = Lists.newArrayList("DELETE", "GET", "HEAD", "OPTIONS", "PUT", "POST");
+        private List<String> allowedHeaders = Lists.newArrayList("content-type");
+        private boolean allowCredentials = true;
+
+        public boolean isAllowAnyOrigin() {
+            return allowAnyOrigin;
+        }
+
+        public Configuration setAllowAnyOrigin(boolean allowAnyOrigin) {
+            this.allowAnyOrigin = allowAnyOrigin;
+            return Configuration.this;
+        }
+
+        public boolean isAllowNullOrigin() {
+            return allowNullOrigin;
+        }
+
+        public Configuration setAllowNullOrigin(boolean allowNullOrigin) {
+            this.allowNullOrigin = allowNullOrigin;
+            return Configuration.this;
+        }
+
+        public Set<String> getAllowedOrigins() {
+            return allowedOrigins;
+        }
+
+        public Configuration setAllowedOrigins(Set<String> allowedOrigins) {
+            this.allowedOrigins = allowedOrigins;
+            return Configuration.this;
+        }
+
+        public List<String> getAllowedMethods() {
+            return allowedMethods;
+        }
+
+        public Configuration setAllowedMethods(List<String> allowedMethods) {
+            this.allowedMethods = allowedMethods;
+            return Configuration.this;
+        }
+
+        public List<String> getAllowedHeaders() {
+            return allowedHeaders;
+        }
+
+        public Configuration setAllowedHeaders(List<String> allowedHeaders) {
+            this.allowedHeaders = allowedHeaders;
+            return Configuration.this;
+        }
+
+        public boolean isAllowCredentials() {
+            return allowCredentials;
+        }
+
+        public Configuration setAllowCredentials(boolean allowCredentials) {
+            this.allowCredentials = allowCredentials;
+            return Configuration.this;
+        }
+    }
+
+    public class Websocket {
+
+        @NotBlank
+        private String ip;
+        @NotNull
+        private Integer port;
+        public int timeout = 60;
+        public int subscriptionLag = 120;
+
+        public String getIp() {
+            return ip;
+        }
+
+        public Configuration setIp(String ip) {
+            this.ip = ip;
+            return Configuration.this;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public Configuration setPort(int port) {
+            this.port = port;
+            return Configuration.this;
+        }
+
+        public int getTimeout() {
+            return timeout;
+        }
+
+        public Configuration setTimeout(int timeout) {
+            this.timeout = timeout;
+            return Configuration.this;
+        }
+
+        public int getSubscriptionLag() {
+            return subscriptionLag;
+        }
+
+        public Configuration setSubscriptionLag(int subscriptionLag) {
+            this.subscriptionLag = subscriptionLag;
+            return Configuration.this;
+        }
+    }
+
+    public class MetaCache {
 
         private long expirationMinutes = 60;
         private int initialCapacity = 2000;
@@ -527,26 +572,36 @@ public class Configuration {
         }
     }
 
-    public class WebSocket {
+    public class VisibilityCache {
 
-        public int timeout = 60;
-        public int subscriptionLag = 120;
+        private long expirationMinutes = 60;
+        private int initialCapacity = 2000;
+        private long maxCapacity = 10000;
 
-        public int getTimeout() {
-            return timeout;
+        public long getExpirationMinutes() {
+            return expirationMinutes;
         }
 
-        public Configuration setTimeout(int timeout) {
-            this.timeout = timeout;
+        public Configuration setExpirationMinutes(long expirationMinutes) {
+            this.expirationMinutes = expirationMinutes;
             return Configuration.this;
         }
 
-        public int getSubscriptionLag() {
-            return subscriptionLag;
+        public int getInitialCapacity() {
+            return initialCapacity;
         }
 
-        public Configuration setSubscriptionLag(int subscriptionLag) {
-            this.subscriptionLag = subscriptionLag;
+        public Configuration setInitialCapacity(int initialCapacity) {
+            this.initialCapacity = initialCapacity;
+            return Configuration.this;
+        }
+
+        public long getMaxCapacity() {
+            return maxCapacity;
+        }
+
+        public Configuration setMaxCapacity(long maxCapacity) {
+            this.maxCapacity = maxCapacity;
             return Configuration.this;
         }
     }

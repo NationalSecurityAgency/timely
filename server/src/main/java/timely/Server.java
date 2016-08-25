@@ -276,11 +276,11 @@ public class Server {
         putServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         putServer.option(ChannelOption.SO_BACKLOG, 128);
         putServer.option(ChannelOption.SO_KEEPALIVE, true);
-        final int putPort = config.getPort().getPut();
+        final int putPort = config.getServer().getTcpPort();
         putChannelHandle = putServer.bind(putPort).sync().channel();
         final String putAddress = ((InetSocketAddress) putChannelHandle.localAddress()).getAddress().getHostAddress();
 
-        final int queryPort = config.getPort().getQuery();
+        final int queryPort = config.getHttp().getPort();
         SslContext sslCtx = createSSLContext(config);
         if (sslCtx instanceof OpenSslServerContext) {
             OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
@@ -289,7 +289,7 @@ public class Server {
             opensslCtx.setSessionCacheEnabled(true);
             opensslCtx.setSessionCacheSize(128);
             opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
-            opensslCtx.setSessionTimeout(config.getSessionMaxAge());
+            opensslCtx.setSessionTimeout(config.getSecurity().getSessionMaxAge());
         }
         final ServerBootstrap queryServer = new ServerBootstrap();
         queryServer.group(httpBossGroup, httpWorkerGroup);
@@ -303,7 +303,7 @@ public class Server {
         final String queryAddress = ((InetSocketAddress) queryChannelHandle.localAddress()).getAddress()
                 .getHostAddress();
 
-        final int wsPort = config.getPort().getWebsocket();
+        final int wsPort = config.getWebsocket().getPort();
         final ServerBootstrap wsServer = new ServerBootstrap();
         wsServer.group(wsBossGroup, wsWorkerGroup);
         wsServer.channel(channelClass);
@@ -323,7 +323,7 @@ public class Server {
 
     protected SslContext createSSLContext(Configuration config) throws Exception {
 
-        Configuration.Ssl sslCfg = config.getSsl();
+        Configuration.Ssl sslCfg = config.getSecurity().getSsl();
         Boolean generate = sslCfg.isUseGeneratedKeypair();
         SslContextBuilder ssl;
         if (generate) {
@@ -377,7 +377,7 @@ public class Server {
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
-                final Configuration.Cors corsCfg = config.getCors();
+                final Configuration.Cors corsCfg = config.getHttp().getCors();
                 final CorsConfig.Builder ccb;
                 if (corsCfg.isAllowAnyOrigin()) {
                     ccb = new CorsConfig.Builder();
@@ -434,7 +434,7 @@ public class Server {
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config));
-                ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebSocket().getTimeout(), 0, 0));
+                ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
                 ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());

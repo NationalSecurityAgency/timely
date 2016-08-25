@@ -33,9 +33,9 @@ public class Subscription {
         this.sessionId = sessionId;
         this.store = store;
         this.ctx = ctx;
-        this.lag = conf.getWebSocket().getSubscriptionLag();
+        this.lag = conf.getWebsocket().getSubscriptionLag();
         // send a websocket ping at half the timeout interval.
-        int rate = conf.getWebSocket().getTimeout() / 2;
+        int rate = conf.getWebsocket().getTimeout() / 2;
         this.ping = this.ctx.executor().scheduleAtFixedRate(() -> {
             LOG.trace("Sending ping on channel {}", ctx.channel());
             ctx.writeAndFlush(new PingWebSocketFrame());

@@ -31,7 +31,7 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
     private final String domain;
 
     public TimelyLoginRequestHandler(Configuration conf) {
-        maxAge = conf.getSessionMaxAge();
+        maxAge = conf.getSecurity().getSessionMaxAge();
         domain = conf.getHttp().getHost();
     }
 

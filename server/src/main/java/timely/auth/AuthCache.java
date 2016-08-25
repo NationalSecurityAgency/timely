@@ -36,7 +36,7 @@ public class AuthCache {
         if (-1 != sessionMaxAge) {
             throw new IllegalStateException("Cache session max age already configured.");
         }
-        sessionMaxAge = config.getSessionMaxAge();
+        sessionMaxAge = config.getSecurity().getSessionMaxAge();
     }
 
     public static Cache<String, Authentication> getCache() {
@@ -67,7 +67,7 @@ public class AuthCache {
     }
 
     public static void enforceAccess(Configuration conf, Request r) throws Exception {
-        if (!conf.isAllowAnonymousAccess() && (r instanceof AuthenticatedRequest)) {
+        if (!conf.getSecurity().isAllowAnonymousAccess() && (r instanceof AuthenticatedRequest)) {
             AuthenticatedRequest ar = (AuthenticatedRequest) r;
             if (StringUtils.isEmpty(ar.getSessionId())) {
                 throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",

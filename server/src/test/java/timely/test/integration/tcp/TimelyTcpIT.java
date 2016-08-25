@@ -69,10 +69,10 @@ public class TimelyTcpIT {
         mac = new MiniAccumuloCluster(macConfig);
         mac.start();
         conf = TestConfiguration.createMinimalConfigurationForTest();
-        conf.setInstanceName(mac.getInstanceName());
-        conf.setZookeepers(mac.getZooKeepers());
-        conf.getSsl().setUseOpenssl(false);
-        conf.getSsl().setUseGeneratedKeypair(true);
+        conf.getAccumulo().setInstanceName(mac.getInstanceName());
+        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
+        conf.getSecurity().getSsl().setUseOpenssl(false);
+        conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
     }
 
     @AfterClass

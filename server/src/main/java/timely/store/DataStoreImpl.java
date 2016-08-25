@@ -131,17 +131,19 @@ public class DataStoreImpl implements DataStore {
 
         try {
             final BaseConfiguration apacheConf = new BaseConfiguration();
-            apacheConf.setProperty("instance.name", conf.getInstanceName());
-            apacheConf.setProperty("instance.zookeeper.host", conf.getZookeepers());
+            Configuration.Accumulo accumuloConf = conf.getAccumulo();
+            apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
+            apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
             final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
             final Instance instance = new ZooKeeperInstance(aconf);
-            connector = instance.getConnector(conf.getUsername(), new PasswordToken(conf.getPassword()));
+            connector = instance
+                    .getConnector(accumuloConf.getUsername(), new PasswordToken(accumuloConf.getPassword()));
             bwConfig = new BatchWriterConfig();
-            bwConfig.setMaxLatency(getTimeInMillis(conf.getWrite().getLatency()), TimeUnit.MILLISECONDS);
-            bwConfig.setMaxMemory(getMemoryInBytes(conf.getWrite().getBufferSize()) / numWriteThreads);
-            bwConfig.setMaxWriteThreads(conf.getWrite().getThreads());
-            scannerThreads = conf.getScanner().getThreads();
-            anonAccessAllowed = conf.isAllowAnonymousAccess();
+            bwConfig.setMaxLatency(getTimeInMillis(accumuloConf.getWrite().getLatency()), TimeUnit.MILLISECONDS);
+            bwConfig.setMaxMemory(getMemoryInBytes(accumuloConf.getWrite().getBufferSize()) / numWriteThreads);
+            bwConfig.setMaxWriteThreads(accumuloConf.getWrite().getThreads());
+            scannerThreads = accumuloConf.getScan().getThreads();
+            anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
 
             String ageoff = Long.toString(conf.getMetricAgeOffDays() * 86400000L);
             Map<String, String> ageOffOptions = new HashMap<>();
@@ -150,7 +152,7 @@ public class DataStoreImpl implements DataStore {
                     ageOffOptions);
             EnumSet<IteratorScope> ageOffIteratorScope = EnumSet.allOf(IteratorScope.class);
 
-            metricsTable = conf.getTable();
+            metricsTable = conf.getMetricsTable();
             if (metricsTable.contains(".")) {
                 final String[] parts = metricsTable.split("\\.", 2);
                 final String namespace = parts[0];
@@ -181,7 +183,7 @@ public class DataStoreImpl implements DataStore {
                     }
                 }
             }
-            metaTable = conf.getMeta();
+            metaTable = conf.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
                 try {
                     LOG.info("Creating table " + metaTable);

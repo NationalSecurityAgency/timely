@@ -68,7 +68,7 @@ public class HttpRequestDecoderTest {
     public static void before() throws Exception {
         config = TestConfiguration.createMinimalConfigurationForTest();
         anonConfig = TestConfiguration.createMinimalConfigurationForTest();
-        anonConfig.setAllowAnonymousAccess(true);
+        anonConfig.getSecurity().setAllowAnonymousAccess(true);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
         AuthCache.setSessionMaxAge(config);
         AuthCache.getCache().put(cookie, new UsernamePasswordAuthenticationToken("test", "test1"));
