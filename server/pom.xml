@@ -425,7 +425,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>${version.maven-pmd}</version>
                 <configuration>
                     <targetJdk>1.8</targetJdk>
                 </configuration>
