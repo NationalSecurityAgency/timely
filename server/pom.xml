@@ -57,6 +57,12 @@
             <!-- Eclipse doesn't like this, but it works on the cmd line -->
         </dependency>
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
+            <version>${version.netty-tcnative}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>

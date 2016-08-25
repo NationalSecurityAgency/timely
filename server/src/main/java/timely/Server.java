@@ -334,7 +334,7 @@ public class Server {
 
         shutdownHook();
 
-        setupWampClient(wsAddress, wsPort, sslCtx);
+        setupWampClient(wsAddress, wsPort);
 
         LOG.info(
                 "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, and {}:{} for WebSocket traffic",
@@ -450,8 +450,8 @@ public class Server {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast("wamp", new WampServerWebsocketHandler(WAMP_PATH, wampRouter));
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
+                ch.pipeline().addLast("wamp", new WampServerWebsocketHandler(WAMP_PATH, wampRouter));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config));
@@ -479,16 +479,22 @@ public class Server {
         wampRouter = new WampRouterBuilder().addRealm("default").build();
     }
 
-    protected void setupWampClient(String wsAddress, int wsPort, SslContext sslContext) throws Exception {
+    protected void setupWampClient(String wsAddress, int wsPort) throws Exception {
         IWampConnectorProvider connectorProvider = new NettyWampClientConnectorProvider();
-        NettyWampConnectionConfig connectionConfiguration = new NettyWampConnectionConfig.Builder().withSslContext(
-                sslContext).build();
+        NettyWampConnectionConfig connectionConfiguration = new NettyWampConnectionConfig.Builder()
+                .withSslContext(SslContextBuilder.forClient().build())
+                .build();
 
         // Create a builder and configure the client
         WampClientBuilder builder = new WampClientBuilder();
-        builder.withConnectorProvider(connectorProvider).withConnectionConfiguration(connectionConfiguration)
-                .withUri(String.format("wss://{}:{}{}", wsAddress, wsPort, WAMP_PATH)).withRealm("timely")
-                .withInfiniteReconnects().withReconnectInterval(5, TimeUnit.SECONDS);
+        String wampUri = String.format("wss://0.0.0.0:%d%s", wsPort, WAMP_PATH);
+        System.out.println(wampUri);
+        builder.withConnectorProvider(connectorProvider)
+                .withConnectionConfiguration(connectionConfiguration)
+                .withUri(wampUri)
+                .withRealm("timely")
+                .withInfiniteReconnects()
+                .withReconnectInterval(5, TimeUnit.SECONDS);
         // Create a client through the builder. This will not immediately start
         // a connection attempt
         wampClient = builder.build();
