@@ -8,8 +8,6 @@ fi
 
 THIS_DIR="${THIS_SCRIPT%/*}"
 BASE_DIR=${THIS_DIR}/..
-CONF_DIR="${BASE_DIR}/conf"
-CONF_FILE="${CONF_DIR}/timely.properties"
 LIB_DIR="${BASE_DIR}/lib"
 NUM_SERVER_THREADS=4
 

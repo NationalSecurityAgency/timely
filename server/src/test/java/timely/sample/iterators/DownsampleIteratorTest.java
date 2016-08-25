@@ -23,6 +23,7 @@ import org.apache.accumulo.core.iterators.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
 
+import timely.Configuration;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
 import timely.auth.VisibilityCache;
@@ -37,7 +38,7 @@ public class DownsampleIteratorTest {
 
     @Before
     public void before() {
-        VisibilityCache.init();
+        VisibilityCache.init(new Configuration());
     }
 
     @Before

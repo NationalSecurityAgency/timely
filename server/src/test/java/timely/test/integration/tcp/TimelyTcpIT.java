@@ -6,7 +6,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -39,9 +38,9 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.Configuration;
 import timely.Server;
 import timely.TestServer;
+import timely.Configuration;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
 import timely.api.request.VersionRequest;
@@ -62,20 +61,18 @@ public class TimelyTcpIT {
     public static final TemporaryFolder temp = new TemporaryFolder();
 
     private static MiniAccumuloCluster mac = null;
-    private static File conf = null;
+    private static Configuration conf = null;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        temp.create();
         final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
         mac = new MiniAccumuloCluster(macConfig);
         mac.start();
-        conf = temp.newFile("config.properties");
-        TestConfiguration config = TestConfiguration.createMinimalConfigurationForTest();
-        config.put(Configuration.INSTANCE_NAME, mac.getInstanceName());
-        config.put(Configuration.ZOOKEEPERS, mac.getZooKeepers());
-        config.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "true");
-        config.toConfiguration(conf);
+        conf = TestConfiguration.createMinimalConfigurationForTest();
+        conf.getAccumulo().setInstanceName(mac.getInstanceName());
+        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
+        conf.getSecurity().getSsl().setUseOpenssl(false);
+        conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
     }
 
     @AfterClass

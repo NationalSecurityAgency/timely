@@ -20,7 +20,7 @@ public class WebSocketHttpCookieHandler extends MessageToMessageCodec<FullHttpRe
 
     public WebSocketHttpCookieHandler(Configuration config) {
         super();
-        this.anonymousAccessAllowed = config.getBoolean(Configuration.ALLOW_ANONYMOUS_ACCESS);
+        this.anonymousAccessAllowed = config.getSecurity().isAllowAnonymousAccess();
     }
 
     @Override

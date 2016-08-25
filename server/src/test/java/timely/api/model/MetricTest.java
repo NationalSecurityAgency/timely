@@ -15,6 +15,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import timely.Configuration;
 import timely.auth.VisibilityCache;
 import timely.util.JsonUtil;
 
@@ -22,7 +23,7 @@ public class MetricTest {
 
     @Before
     public void before() {
-        VisibilityCache.init();
+        VisibilityCache.init(new Configuration());
     }
 
     @Test
@@ -41,7 +42,7 @@ public class MetricTest {
 
         PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
         DoubleLexicoder valueCoder = new DoubleLexicoder();
-        byte[] row = rowCoder.encode(new ComparablePair<String, Long>("sys.cpu.user", ts));
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", ts));
         byte[] value = valueCoder.encode(2.0D);
         Assert.assertEquals(rowCoder.decode(row), rowCoder.decode(mut.getRow()));
         Assert.assertEquals(3, mut.getUpdates().size());

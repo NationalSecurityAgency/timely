@@ -18,7 +18,6 @@ NATIVE_DIR="${THIS_DIR}/META-INF/native"
 BASE_DIR=${THIS_DIR}/..
 TMP_DIR="${BASE_DIR}/tmp"
 CONF_DIR="${BASE_DIR}/conf"
-CONF_FILE="${CONF_DIR}/timely.properties"
 LIB_DIR="${BASE_DIR}/lib"
 NUM_SERVER_THREADS=4
 
@@ -41,6 +40,6 @@ JVM_ARGS="-Xmx256m -Xms256m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS} -D
 JVM_ARGS="${JVM_ARGS} -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
 JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}/libnetty-${TCNATIVE_SUFFIX}"
 
-echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.Server "${CONF_FILE}""
-$JAVA_HOME/bin/java ${JVM_ARGS} timely.Server "${CONF_FILE}"
+echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.Server --spring.config.name=timely"
+$JAVA_HOME/bin/java ${JVM_ARGS} timely.Server --spring.config.name=timely
 

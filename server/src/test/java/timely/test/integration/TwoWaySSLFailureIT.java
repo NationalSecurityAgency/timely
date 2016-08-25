@@ -33,8 +33,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import timely.Configuration;
 import timely.Server;
+import timely.Configuration;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.TestConfiguration;
@@ -46,7 +46,7 @@ public class TwoWaySSLFailureIT extends QueryBase {
     public static final TemporaryFolder temp = new TemporaryFolder();
 
     private static MiniAccumuloCluster mac = null;
-    private static File conf = null;
+    private static Configuration conf = null;
 
     private static SelfSignedCertificate serverCert = null;
     private static File clientTrustStoreFile = null;
@@ -75,14 +75,14 @@ public class TwoWaySSLFailureIT extends QueryBase {
         return jdkSslContext.getSocketFactory();
     }
 
-    protected static void setupSSL(TestConfiguration config) throws Exception {
-        config.put(Configuration.SSL_CERTIFICATE_FILE, serverCert.certificate().getAbsolutePath());
-        config.put(Configuration.SSL_PRIVATE_KEY_FILE, serverCert.privateKey().getAbsolutePath());
+    protected static void setupSSL(Configuration config) throws Exception {
+        config.getSecurity().getSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
         // Needed for 2way SSL
-        config.put(Configuration.SSL_TRUST_STORE_FILE, serverCert.certificate().getAbsolutePath());
-        config.put(Configuration.SSL_USE_OPENSSL, "false");
-        config.put(Configuration.SSL_USE_GENERATED_KEYPAIR, "false");
-        config.put(Configuration.ALLOW_ANONYMOUS_ACCESS, "false");
+        config.getSecurity().getSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getSsl().setUseOpenssl(false);
+        config.getSecurity().getSsl().setUseGeneratedKeypair(false);
+        config.getSecurity().setAllowAnonymousAccess(false);
     }
 
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {
@@ -132,12 +132,10 @@ public class TwoWaySSLFailureIT extends QueryBase {
         final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
         mac = new MiniAccumuloCluster(macConfig);
         mac.start();
-        conf = temp.newFile("config.properties");
-        TestConfiguration config = TestConfiguration.createMinimalConfigurationForTest();
-        config.put(Configuration.INSTANCE_NAME, mac.getInstanceName());
-        config.put(Configuration.ZOOKEEPERS, mac.getZooKeepers());
-        setupSSL(config);
-        config.toConfiguration(conf);
+        conf = TestConfiguration.createMinimalConfigurationForTest();
+        conf.getAccumulo().setInstanceName(mac.getInstanceName());
+        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
+        setupSSL(conf);
     }
 
     @AfterClass

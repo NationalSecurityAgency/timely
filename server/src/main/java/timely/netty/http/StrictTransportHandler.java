@@ -13,7 +13,7 @@ public class StrictTransportHandler extends SimpleChannelInboundHandler<StrictTr
     private String hstsMaxAge = "max-age=";
 
     public StrictTransportHandler(Configuration conf) {
-        String maxAge = conf.get(Configuration.STRICT_TRANSPORT_MAX_AGE);
+        long maxAge = conf.getHttp().getStrictTransportMaxAge();
         hstsMaxAge = "max-age=" + maxAge;
     }
 

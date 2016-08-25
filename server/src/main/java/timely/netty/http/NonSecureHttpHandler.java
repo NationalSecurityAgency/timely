@@ -22,9 +22,9 @@ public class NonSecureHttpHandler extends ChannelInboundHandlerAdapter implement
     private final String redirectAddress;
 
     public NonSecureHttpHandler(Configuration conf) {
-        String timelyHost = conf.get(Configuration.TIMELY_HTTP_HOST);
-        String timelyPort = conf.get(Configuration.QUERY_PORT);
-        String path = conf.get(Configuration.NON_SECURE_REDIRECT_PATH);
+        String timelyHost = conf.getHttp().getHost();
+        int timelyPort = conf.getHttp().getPort();
+        String path = conf.getHttp().getRedirectPath();
         redirectAddress = "https://" + timelyHost + ":" + timelyPort + path;
     }
 

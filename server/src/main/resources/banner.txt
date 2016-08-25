@@ -1,0 +1,8 @@
+${AnsiColor.RED}  ._____________                _
+${AnsiColor.RED} .. __(___   ___)              | |
+${AnsiColor.RED}   ..____ | |(_)_ __ ___  ____ | |_    _
+${AnsiColor.RED}       .._| || | '_ ' _ \/ /_\ \ | \  / /
+${AnsiColor.RED}    .  ._ | || | | | | | | ____/ |\ \/ /
+${AnsiColor.RED} .. ._ ___|_||_|_| |_| |_|_\___,_| \  /${AnsiColor.DEFAULT}
+=================================${AnsiColor.RED}__/ /${AnsiColor.DEFAULT}===================
+${AnsiColor.YELLOW}:: Timely ::${AnsiColor.DEFAULT}                    ${AnsiColor.RED}|___/${AnsiColor.DEFAULT}  ${AnsiStyle.FAINT}${AnsiColor.WHITE}${application.formatted-version}${AnsiColor.DEFAULT}${AnsiStyle.NORMAL}
