@@ -224,7 +224,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
-                    <argLine>${failsafeArgLine} -Djava.library.path=${project.build.dir}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
+                    <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
                     <includes>
                         <include>**/*.java</include>
                     </includes>
@@ -272,7 +272,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>${sureFireArgLine} -Djava.library.path=${project.build.dir}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
+                    <argLine>${sureFireArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
                     <excludedGroups>timely.test.IntegrationTest</excludedGroups>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                 </configuration>
@@ -417,7 +417,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>${version.maven-pmd}</version>
                 <configuration>
                     <targetJdk>1.8</targetJdk>
                 </configuration>
