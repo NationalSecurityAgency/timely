@@ -7,6 +7,7 @@ public class TestConfiguration {
     public static final String TIMELY_HTTP_ADDRESS_DEFAULT = "localhost";
 
     public static Configuration createMinimalConfigurationForTest() {
+        // @formatter:off
         Configuration cfg = new Configuration()
                 .getServer().setIp("127.0.0.1")
                 .getServer().setTcpPort(54321)
@@ -22,6 +23,7 @@ public class TestConfiguration {
                 .getAccumulo().setPassword("secret")
                 .getAccumulo().getWrite().setLatency("2s")
                 .getSecurity().getSsl().setUseGeneratedKeypair(true);
+        // @formatter:on
 
         return cfg;
     }
