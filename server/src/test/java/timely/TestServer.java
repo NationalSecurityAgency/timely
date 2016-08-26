@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.ssl.SslContext;
 
+import timely.netty.tcp.MetricsBufferDecoder;
 import timely.netty.tcp.TcpDecoder;
 import timely.test.TestCaptureRequestHandler;
 
@@ -44,6 +45,7 @@ public class TestServer extends Server {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new TcpDecoder());
                 ch.pipeline().addLast("capture", tcpRequests);

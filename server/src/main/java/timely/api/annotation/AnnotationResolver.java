@@ -66,6 +66,10 @@ public class AnnotationResolver {
         LOG.trace("Loaded web socket classes: {}", wsClasses);
     }
 
+    public static List<Class<?>> getTcpClasses() {
+        return tcpClasses;
+    }
+
     public static TcpRequest getClassForTcpOperation(String operation) throws Exception {
         for (Class<?> c : tcpClasses) {
             if (c.getAnnotation(Tcp.class).operation().equals(operation)) {
