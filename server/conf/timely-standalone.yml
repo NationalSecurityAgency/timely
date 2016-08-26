@@ -1,7 +1,8 @@
 timely:
   metrics-table: timely.metrics
   meta-table: timely.meta
-  metric-age-off-days: 7
+  metric-age-off:
+    default: 7
   metrics-report-ignored-tags:
   accumulo:
     instance-name: TimelyStandalone

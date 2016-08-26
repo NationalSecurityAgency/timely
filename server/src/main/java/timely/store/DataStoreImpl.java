@@ -61,22 +61,22 @@ import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.Server;
 import timely.Configuration;
+import timely.Server;
 import timely.api.model.Meta;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
-import timely.api.request.timeseries.SearchLookupRequest;
-import timely.api.request.timeseries.SuggestRequest;
 import timely.api.request.timeseries.QueryRequest.RateOption;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
+import timely.api.request.timeseries.SearchLookupRequest;
+import timely.api.request.timeseries.SuggestRequest;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.api.response.timeseries.SearchLookupResponse;
-import timely.api.response.timeseries.SuggestResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
+import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
@@ -145,13 +145,6 @@ public class DataStoreImpl implements DataStore {
             scannerThreads = accumuloConf.getScan().getThreads();
             anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
 
-            String ageoff = Long.toString(conf.getMetricAgeOffDays() * 86400000L);
-            Map<String, String> ageOffOptions = new HashMap<>();
-            ageOffOptions.put("ttl", ageoff);
-            IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoff", AgeOffFilter.class,
-                    ageOffOptions);
-            EnumSet<IteratorScope> ageOffIteratorScope = EnumSet.allOf(IteratorScope.class);
-
             metricsTable = conf.getMetricsTable();
             if (metricsTable.contains(".")) {
                 final String[] parts = metricsTable.split("\\.", 2);
@@ -170,36 +163,25 @@ public class DataStoreImpl implements DataStore {
                 try {
                     LOG.info("Creating table " + metricsTable);
                     connector.tableOperations().create(metricsTable);
-                    connector.tableOperations().attachIterator(metricsTable, ageOffIteratorSettings,
-                            ageOffIteratorScope);
                 } catch (final TableExistsException ex) {
                     // don't care
                 }
-            } else {
-                for (IteratorScope scope : IteratorScope.values()) {
-                    if (connector.tableOperations().getIteratorSetting(metricsTable, "ageoff", scope) == null) {
-                        connector.tableOperations().attachIterator(metricsTable, ageOffIteratorSettings,
-                                EnumSet.of(scope));
-                    }
-                }
             }
+            this.removeAgeOffIterators(connector, metricsTable);
+            this.applyAgeOffIterator(connector, metricsTable, conf);
+
             metaTable = conf.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
                 try {
                     LOG.info("Creating table " + metaTable);
                     connector.tableOperations().create(metaTable);
-                    connector.tableOperations().attachIterator(metaTable, ageOffIteratorSettings, ageOffIteratorScope);
                 } catch (final TableExistsException ex) {
                     // don't care
                 }
-            } else {
-                for (IteratorScope scope : IteratorScope.values()) {
-                    if (connector.tableOperations().getIteratorSetting(metaTable, "ageoff", scope) == null) {
-                        connector.tableOperations()
-                                .attachIterator(metaTable, ageOffIteratorSettings, EnumSet.of(scope));
-                    }
-                }
             }
+            this.removeAgeOffIterators(connector, metaTable);
+            this.applyAgeOffIterator(connector, metaTable, conf);
+
             internalMetricsTimer.schedule(new TimerTask() {
 
                 @Override
@@ -212,6 +194,48 @@ public class DataStoreImpl implements DataStore {
         } catch (Exception e) {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStoreImpl",
                     e.getMessage(), e);
+        }
+    }
+
+    private static final String DEFAULT_AGE_OFF_KEY = "default";
+    private static final String AGE_OFF_PREFIX = "ageoff-";
+    private static final EnumSet<IteratorScope> AGEOFF_SCOPES = EnumSet.allOf(IteratorScope.class);
+
+    private void removeAgeOffIterators(Connector con, String tableName) throws Exception {
+        Map<String, EnumSet<IteratorScope>> iters = con.tableOperations().listIterators(tableName);
+        iters.forEach((name, scopes) -> {
+            if (name.startsWith(AGE_OFF_PREFIX)) {
+                try {
+                    con.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
+                } catch (Exception e) {
+                    // do nothing
+                }
+            }
+        });
+    }
+
+    private void applyAgeOffIterator(Connector con, String tableName, Configuration config) throws Exception {
+        int priority = 100;
+        for (Entry<String, Integer> e : config.getMetricAgeOff().entrySet()) {
+            if (e.getKey().equals(DEFAULT_AGE_OFF_KEY)) {
+                continue;
+            }
+            String ageoff = Long.toString(e.getValue() * 86400000L);
+            Map<String, String> ageOffOptions = new HashMap<>();
+            ageOffOptions.put("ttl", ageoff);
+            ageOffOptions.put(MetricAgeOffFilter.METRIC, e.getKey());
+            IteratorSetting ageOffIteratorSettings = new IteratorSetting(priority++, AGE_OFF_PREFIX + e.getKey(),
+                    MetricAgeOffFilter.class, ageOffOptions);
+            connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+        }
+        // Apply the default age off filter last
+        if (config.getMetricAgeOff().containsKey(DEFAULT_AGE_OFF_KEY)) {
+            String ageoff = Long.toString(config.getMetricAgeOff().get(DEFAULT_AGE_OFF_KEY) * 86400000L);
+            Map<String, String> ageOffOptions = new HashMap<>();
+            ageOffOptions.put("ttl", ageoff);
+            IteratorSetting ageOffIteratorSettings = new IteratorSetting(priority, AGE_OFF_PREFIX + "default",
+                    AgeOffFilter.class, ageOffOptions);
+            connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
         }
     }
 
