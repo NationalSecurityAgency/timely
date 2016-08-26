@@ -277,10 +277,12 @@ public class Server {
         putServer.option(ChannelOption.SO_BACKLOG, 128);
         putServer.option(ChannelOption.SO_KEEPALIVE, true);
         final int putPort = config.getServer().getTcpPort();
-        putChannelHandle = putServer.bind(putPort).sync().channel();
+        final String putIp = config.getServer().getIp();
+        putChannelHandle = putServer.bind(putIp, putPort).sync().channel();
         final String putAddress = ((InetSocketAddress) putChannelHandle.localAddress()).getAddress().getHostAddress();
 
         final int queryPort = config.getHttp().getPort();
+        final String queryIp = config.getHttp().getIp();
         SslContext sslCtx = createSSLContext(config);
         if (sslCtx instanceof OpenSslServerContext) {
             OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
@@ -299,11 +301,12 @@ public class Server {
         queryServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         queryServer.option(ChannelOption.SO_BACKLOG, 128);
         queryServer.option(ChannelOption.SO_KEEPALIVE, true);
-        queryChannelHandle = queryServer.bind(queryPort).sync().channel();
+        queryChannelHandle = queryServer.bind(queryIp, queryPort).sync().channel();
         final String queryAddress = ((InetSocketAddress) queryChannelHandle.localAddress()).getAddress()
                 .getHostAddress();
 
         final int wsPort = config.getWebsocket().getPort();
+        final String wsIp = config.getWebsocket().getIp();
         final ServerBootstrap wsServer = new ServerBootstrap();
         wsServer.group(wsBossGroup, wsWorkerGroup);
         wsServer.channel(channelClass);
@@ -312,7 +315,7 @@ public class Server {
         wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         wsServer.option(ChannelOption.SO_BACKLOG, 128);
         wsServer.option(ChannelOption.SO_KEEPALIVE, true);
-        wsChannelHandle = wsServer.bind(wsPort).sync().channel();
+        wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 
         shutdownHook();
