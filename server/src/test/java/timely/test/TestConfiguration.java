@@ -1,5 +1,7 @@
 package timely.test;
 
+import java.util.HashMap;
+
 import timely.Configuration;
 
 public class TestConfiguration {
@@ -23,6 +25,9 @@ public class TestConfiguration {
                 .getAccumulo().setPassword("secret")
                 .getAccumulo().getWrite().setLatency("2s")
                 .getSecurity().getSsl().setUseGeneratedKeypair(true);
+        HashMap<String,Integer> ageoff = new HashMap<>();
+        ageoff.put("default", 10);
+        cfg.setMetricAgeOff(ageoff);
         // @formatter:on
 
         return cfg;

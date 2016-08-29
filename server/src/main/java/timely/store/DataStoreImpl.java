@@ -51,7 +51,6 @@ import org.apache.accumulo.core.data.PartialKey;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
-import org.apache.accumulo.core.iterators.user.AgeOffFilter;
 import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.util.Pair;
@@ -197,14 +196,12 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
-    private static final String DEFAULT_AGE_OFF_KEY = "default";
-    private static final String AGE_OFF_PREFIX = "ageoff-";
     private static final EnumSet<IteratorScope> AGEOFF_SCOPES = EnumSet.allOf(IteratorScope.class);
 
     private void removeAgeOffIterators(Connector con, String tableName) throws Exception {
         Map<String, EnumSet<IteratorScope>> iters = con.tableOperations().listIterators(tableName);
         iters.forEach((name, scopes) -> {
-            if (name.startsWith(AGE_OFF_PREFIX)) {
+            if (name.startsWith("ageoff")) {
                 try {
                     con.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
                 } catch (Exception e) {
@@ -216,27 +213,14 @@ public class DataStoreImpl implements DataStore {
 
     private void applyAgeOffIterator(Connector con, String tableName, Configuration config) throws Exception {
         int priority = 100;
+        Map<String, String> ageOffOptions = new HashMap<>();
         for (Entry<String, Integer> e : config.getMetricAgeOff().entrySet()) {
-            if (e.getKey().equals(DEFAULT_AGE_OFF_KEY)) {
-                continue;
-            }
             String ageoff = Long.toString(e.getValue() * 86400000L);
-            Map<String, String> ageOffOptions = new HashMap<>();
-            ageOffOptions.put("ttl", ageoff);
-            ageOffOptions.put(MetricAgeOffFilter.METRIC, e.getKey());
-            IteratorSetting ageOffIteratorSettings = new IteratorSetting(priority++, AGE_OFF_PREFIX + e.getKey(),
-                    MetricAgeOffFilter.class, ageOffOptions);
-            connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+            ageOffOptions.put(e.getKey(), ageoff);
         }
-        // Apply the default age off filter last
-        if (config.getMetricAgeOff().containsKey(DEFAULT_AGE_OFF_KEY)) {
-            String ageoff = Long.toString(config.getMetricAgeOff().get(DEFAULT_AGE_OFF_KEY) * 86400000L);
-            Map<String, String> ageOffOptions = new HashMap<>();
-            ageOffOptions.put("ttl", ageoff);
-            IteratorSetting ageOffIteratorSettings = new IteratorSetting(priority, AGE_OFF_PREFIX + "default",
-                    AgeOffFilter.class, ageOffOptions);
-            connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
-        }
+        IteratorSetting ageOffIteratorSettings = new IteratorSetting(priority, "ageoff", MetricAgeOffFilter.class,
+                ageOffOptions);
+        connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
 
     @Override
