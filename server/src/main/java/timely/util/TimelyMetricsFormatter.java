@@ -1,8 +1,8 @@
 package timely.util;
 
+import java.nio.ByteBuffer;
 import java.util.Map.Entry;
 
-import org.apache.accumulo.core.client.lexicoder.DoubleLexicoder;
 import org.apache.accumulo.core.client.lexicoder.LongLexicoder;
 import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
 import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
@@ -15,7 +15,6 @@ public class TimelyMetricsFormatter extends DefaultFormatter {
 
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());
-    private static final DoubleLexicoder valueCoder = new DoubleLexicoder();
 
     @Override
     public String next() {
@@ -34,7 +33,8 @@ public class TimelyMetricsFormatter extends DefaultFormatter {
             b.append(e.getKey().getTimestamp());
         }
         b.append(" ");
-        b.append(valueCoder.decode(e.getValue().get()));
+        ByteBuffer.wrap(e.getValue().get());
+        b.append(ByteBuffer.wrap(e.getValue().get()).getDouble());
         return b.toString();
     }
 

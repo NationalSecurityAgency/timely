@@ -1,11 +1,11 @@
 package timely.api.model;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.accumulo.core.client.lexicoder.DoubleLexicoder;
 import org.apache.accumulo.core.client.lexicoder.LongLexicoder;
 import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
 import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
@@ -36,7 +36,6 @@ public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest {
 
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());
-    private static final DoubleLexicoder valueCoder = new DoubleLexicoder();
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     private static final String VISIBILITY_TAG = "viz=";
@@ -109,7 +108,10 @@ public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest {
 
     public Mutation toMutation() {
         final byte[] row = rowCoder.encode(new ComparablePair<String, Long>(this.metric, this.timestamp));
-        final Value value = new Value(valueCoder.encode(this.value));
+        byte[] b = new byte[Double.BYTES];
+        ByteBuffer bb = ByteBuffer.wrap(b);
+        bb.putDouble(this.value);
+        final Value value = new Value(b);
         final Mutation m = new Mutation(row);
         Collections.sort(tags);
         for (final Tag entry : tags) {
@@ -129,7 +131,8 @@ public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest {
 
     public static Metric parse(Key k, Value v) {
         ComparablePair<String, Long> row = rowCoder.decode(k.getRow().getBytes());
-        Double value = valueCoder.decode(v.get());
+        ByteBuffer bb = ByteBuffer.wrap(v.get());
+        Double value = bb.getDouble();
         Metric m = new Metric();
         m.setMetric(row.getFirst());
         m.setTimestamp(row.getSecond());

@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -18,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.lexicoder.DoubleLexicoder;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
@@ -218,10 +218,9 @@ public class TimelyTcpIT {
         assertTrue(connector.tableOperations().exists("timely.metrics"));
         assertTrue(connector.tableOperations().exists("timely.meta"));
         int count = 0;
-        final DoubleLexicoder valueDecoder = new DoubleLexicoder();
         for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", Authorizations.EMPTY)) {
             LOG.info("Entry: " + entry);
-            final double value = valueDecoder.decode(entry.getValue().get());
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
             assertEquals(1.0, value, 1e-9);
             count++;
         }
@@ -261,10 +260,9 @@ public class TimelyTcpIT {
         connector.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
 
         int count = 0;
-        final DoubleLexicoder valueDecoder = new DoubleLexicoder();
         for (final Map.Entry<Key, Value> entry : connector.createScanner("timely.metrics", Authorizations.EMPTY)) {
             LOG.info("Entry: " + entry);
-            final double value = valueDecoder.decode(entry.getValue().get());
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
             assertEquals(1.0, value, 1e-9);
             count++;
         }
@@ -273,7 +271,7 @@ public class TimelyTcpIT {
         Authorizations auth1 = new Authorizations("a");
         for (final Map.Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth1)) {
             LOG.info("Entry: " + entry);
-            final double value = valueDecoder.decode(entry.getValue().get());
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
             assertEquals(1.0, value, 1e-9);
             count++;
         }
@@ -282,7 +280,7 @@ public class TimelyTcpIT {
         Authorizations auth2 = new Authorizations("b", "c");
         for (final Map.Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth2)) {
             LOG.info("Entry: " + entry);
-            final double value = valueDecoder.decode(entry.getValue().get());
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
             assertEquals(1.0, value, 1e-9);
             count++;
         }
