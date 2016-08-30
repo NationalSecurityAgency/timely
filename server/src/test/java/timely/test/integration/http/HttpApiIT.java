@@ -46,6 +46,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testSuggest() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -77,6 +78,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testMetrics() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -102,6 +104,7 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testMetricsJson() throws Exception {
         String expected = "{\"metrics\":[{\"metric\":\"sys.cpu.user\",\"tags\":[{\"key\":\"tag2\",\"value\":\"value2\"},{\"key\":\"tag1\",\"value\":\"value1\"}]},{\"metric\":\"sys.cpu.idle\",\"tags\":[{\"key\":\"tag4\",\"value\":\"value4\"},{\"key\":\"tag3\",\"value\":\"value3\"}]},{\"metric\":\"zzzz\",\"tags\":[{\"key\":\"host\",\"value\":\"localhost\"}]}]}";
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -121,6 +124,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testLookup() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
@@ -155,6 +159,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithMsResolution() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
@@ -195,6 +200,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithoutMsResolution() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
@@ -232,6 +238,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithNoTags() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
@@ -266,6 +273,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithNoTagsMultipleSeries() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + TEST_TIME
                     + " 2.0 tag1=value1 tag2=value2 host=h2", "sys.cpu.user " + (TEST_TIME + 1000)
@@ -306,6 +314,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test(expected = NotSuccessfulException.class)
     public void testQueryWithNoMatchingTags() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -329,6 +338,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagWildcard() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -377,6 +387,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagWildcard2() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -425,6 +436,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagOr() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -473,6 +485,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagRegex() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -528,6 +541,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagRegex2() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
@@ -583,6 +597,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testGetVersion() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             String response = query("https://127.0.0.1:54322/version", "application/json");
             assertNotNull(response);
@@ -595,6 +610,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testPutMetric() throws Exception {
         final Server s = new Server(conf);
+        s.run();
         try {
             Metric m = new Metric();
             m.setMetric("sys.cpu.user");

@@ -163,12 +163,13 @@ public class TwoWaySSLFailureIT extends QueryBase {
 
     @Test(expected = UnauthorizedUserException.class)
     public void testBasicAuthLoginFailure() throws Exception {
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             String metrics = "https://localhost:54322/api/metrics";
             query(metrics);
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 

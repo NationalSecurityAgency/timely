@@ -345,6 +345,8 @@ public class Configuration {
         private String ip;
         @NotNull
         private Integer tcpPort;
+        @NotNull
+        private Integer udpPort;
 
         @NotNull
         public String getIp() {
@@ -362,6 +364,15 @@ public class Configuration {
 
         public Configuration setTcpPort(int tcpPort) {
             this.tcpPort = tcpPort;
+            return Configuration.this;
+        }
+
+        public int getUdpPort() {
+            return udpPort;
+        }
+
+        public Configuration setUdpPort(Integer udpPort) {
+            this.udpPort = udpPort;
             return Configuration.this;
         }
     }

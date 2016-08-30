@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import timely.api.request.HttpGetRequest;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.TcpRequest;
+import timely.api.request.UdpRequest;
 import timely.api.request.WebSocketRequest;
 
 public class AnnotationResolver {
@@ -20,9 +21,11 @@ public class AnnotationResolver {
     private static List<String> tcpClassNames;
     private static List<String> httpClassNames;
     private static List<String> wsClassNames;
+    private static List<String> udpClassNames;
     private static List<Class<?>> tcpClasses = new ArrayList<>();
     private static List<Class<?>> httpClasses = new ArrayList<>();
     private static List<Class<?>> wsClasses = new ArrayList<>();
+    private static List<Class<?>> udpClasses = new ArrayList<>();
 
     private AnnotationResolver() {
     }
@@ -64,6 +67,18 @@ public class AnnotationResolver {
             }
         }
         LOG.trace("Loaded web socket classes: {}", wsClasses);
+        udpClassNames = scanner.getNamesOfClassesWithAnnotation(Udp.class);
+        LOG.trace("Found udp classes: {}", udpClassNames);
+        if (null != udpClassNames) {
+            for (String cls : udpClassNames) {
+                try {
+                    udpClasses.add(Class.forName(cls));
+                } catch (Exception e) {
+                    LOG.error("Error loading/creating class: " + cls, e);
+                }
+            }
+        }
+        LOG.trace("Loaded udp classes: {}", tcpClasses);
     }
 
     public static List<Class<?>> getTcpClasses() {
@@ -120,6 +135,19 @@ public class AnnotationResolver {
                 if (o instanceof WebSocketRequest) {
                     LOG.trace("Returning {} for WebSocket operation {}", c, operation);
                     return (WebSocketRequest) o;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static UdpRequest getClassForUdpOperation(String operation) throws Exception {
+        for (Class<?> c : udpClasses) {
+            if (c.getAnnotation(Udp.class).operation().equals(operation)) {
+                Object o = c.newInstance();
+                if (o instanceof UdpRequest) {
+                    LOG.trace("Returning {} for UDP operation {}", c, operation);
+                    return (UdpRequest) o;
                 }
             }
         }

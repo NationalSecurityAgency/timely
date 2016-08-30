@@ -29,6 +29,7 @@ timely:
   server:
     ip:
     tcp-port:
+    udp-port:
   http:
     host:
     ip:

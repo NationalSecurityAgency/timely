@@ -31,7 +31,8 @@ public class DataStoreIT extends OneWaySSLBase {
         ageOffSettings.put("default", 1);
         conf.setMetricAgeOff(ageOffSettings);
 
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + ONE_HOUR)
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + (ONE_HOUR * 2))
@@ -54,7 +55,7 @@ public class DataStoreIT extends OneWaySSLBase {
             Map<String, Object> dps = response.get(0).getDps();
             assertEquals(2, dps.size());
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 
@@ -65,7 +66,8 @@ public class DataStoreIT extends OneWaySSLBase {
         ageOffSettings.put("sys.cpu.user", 1);
         conf.setMetricAgeOff(ageOffSettings);
 
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.idle " + (TEST_TIME - ONE_DAY - (2 * ONE_HOUR)) + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME - ONE_DAY - ONE_HOUR) + " 3.0 tag1=value1 tag2=value2",
@@ -103,7 +105,7 @@ public class DataStoreIT extends OneWaySSLBase {
             assertEquals(0, response2.size());
 
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 

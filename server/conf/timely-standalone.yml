@@ -28,6 +28,7 @@ timely:
   server:
     ip: 0.0.0.0
     tcp-port: 54321
+    udp-port: 54325
   http:
     ip: 0.0.0.0
     port: 54322
