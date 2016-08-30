@@ -182,18 +182,20 @@ public class TwoWaySSLOpenSSLIT extends QueryBase {
 
     @Test
     public void testBasicAuthLogin() throws Exception {
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             String metrics = "https://localhost:54322/api/metrics";
             query(metrics);
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 
     @Test
     public void testQueryWithVisibility() throws Exception {
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
@@ -217,7 +219,7 @@ public class TwoWaySSLOpenSSLIT extends QueryBase {
             Map<String, Object> dps = response.get(0).getDps();
             assertEquals(3, dps.size());
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 }

@@ -19,9 +19,11 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import timely.api.annotation.Http;
 import timely.api.annotation.Tcp;
+import timely.api.annotation.Udp;
 import timely.api.annotation.WebSocket;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.TcpRequest;
+import timely.api.request.UdpRequest;
 import timely.api.request.WebSocketRequest;
 import timely.api.response.MetricResponse;
 import timely.auth.VisibilityCache;
@@ -30,9 +32,10 @@ import timely.util.JsonUtil;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Tcp(operation = "put")
+@Udp(operation = "put")
 @Http(path = "/api/put")
 @WebSocket(operation = "put")
-public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest {
+public class Metric implements TcpRequest, HttpPostRequest, WebSocketRequest, UdpRequest {
 
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());

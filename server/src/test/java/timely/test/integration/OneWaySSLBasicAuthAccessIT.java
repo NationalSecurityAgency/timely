@@ -104,29 +104,32 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
 
     @Test
     public void testBasicAuthLogin() throws Exception {
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             String metrics = "https://localhost:54322/api/metrics";
             query(metrics);
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 
     @Test(expected = UnauthorizedUserException.class)
     public void testBasicAuthLoginFailure() throws Exception {
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             String metrics = "https://localhost:54322/api/metrics";
             query("test", "test2", metrics);
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 
     @Test
     public void testQueryWithVisibility() throws Exception {
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
@@ -151,7 +154,7 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
             // test user only has authorities A,B,C. So it does not see D and G.
             assertEquals(3, dps.size());
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 }

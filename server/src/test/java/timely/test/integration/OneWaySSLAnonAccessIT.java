@@ -29,7 +29,8 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithVisibility() throws Exception {
-        final Server m = new Server(conf);
+        final Server s = new Server(conf);
+        s.run();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
@@ -50,7 +51,7 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
             Map<String, Object> dps = response.get(0).getDps();
             assertEquals(2, dps.size());
         } finally {
-            m.shutdown();
+            s.shutdown();
         }
     }
 

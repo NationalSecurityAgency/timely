@@ -11,6 +11,7 @@ public class TestConfiguration {
         Configuration cfg = new Configuration()
                 .getServer().setIp("127.0.0.1")
                 .getServer().setTcpPort(54321)
+                .getServer().setUdpPort(54325)
                 .getHttp().setIp("127.0.0.1")
                 .getHttp().setPort(54322)
                 .getHttp().setHost("localhost")

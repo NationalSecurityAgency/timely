@@ -26,6 +26,7 @@ public class HTTPStrictTransportSecurityIT extends OneWaySSLBase {
     @BeforeClass
     public static void before() throws Exception {
         s = new Server(conf);
+        s.run();
     }
 
     @AfterClass

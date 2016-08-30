@@ -1,14 +1,13 @@
-package timely.test.integration.tcp;
+package timely.test.integration.udp;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -39,12 +38,11 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import timely.Configuration;
 import timely.Server;
 import timely.TestServer;
-import timely.Configuration;
 import timely.api.model.Metric;
 import timely.api.model.Tag;
-import timely.api.request.VersionRequest;
 import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
@@ -52,12 +50,12 @@ import timely.test.TestConfiguration;
 import com.google.flatbuffers.FlatBufferBuilder;
 
 /**
- * Integration tests for the operations available over the TCP transport
+ * Integration tests for the operations available over the UDP transport
  */
 @Category(IntegrationTest.class)
-public class TimelyTcpIT {
+public class TimelyUdpIT {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimelyTcpIT.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TimelyUdpIT.class);
     private static final Long TEST_TIME = System.currentTimeMillis();
 
     @ClassRule
@@ -102,39 +100,20 @@ public class TimelyTcpIT {
     }
 
     @Test
-    public void testVersion() throws Exception {
-        final TestServer m = new TestServer(conf);
-        m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write("version\n");
-            writer.flush();
-            while (1 != m.getTcpRequests().getCount()) {
-                Thread.sleep(5);
-            }
-            Assert.assertEquals(1, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(VersionRequest.class, m.getTcpRequests().getResponses().get(0).getClass());
-            VersionRequest v = (VersionRequest) m.getTcpRequests().getResponses().get(0);
-            Assert.assertEquals(VersionRequest.VERSION, v.getVersion());
-        } finally {
-            m.shutdown();
-        }
-    }
-
-    @Test
     public void testPut() throws Exception {
         final TestServer m = new TestServer(conf);
         m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n");
-            writer.flush();
-            while (1 != m.getTcpRequests().getCount()) {
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        try (DatagramSocket sock = new DatagramSocket();) {
+            packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
+            sock.send(packet);
+            while (1 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
-            Assert.assertEquals(1, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getTcpRequests().getResponses().get(0).getClass());
-            final Metric actual = (Metric) m.getTcpRequests().getResponses().get(0);
+            Assert.assertEquals(1, m.getUdpRequests().getResponses().size());
+            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
+            final Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
             final Metric expected = new Metric();
             expected.setMetric("sys.cpu.user");
             expected.setTimestamp(TEST_TIME);
@@ -154,17 +133,18 @@ public class TimelyTcpIT {
 
         final TestServer m = new TestServer(conf);
         m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle "
-                    + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n");
-            writer.flush();
-            while (2 != m.getTcpRequests().getCount()) {
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        try (DatagramSocket sock = new DatagramSocket();) {
+            packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle "
+                    + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n").getBytes(UTF_8));
+            sock.send(packet);
+            while (2 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
-            Assert.assertEquals(2, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getTcpRequests().getResponses().get(0).getClass());
-            Metric actual = (Metric) m.getTcpRequests().getResponses().get(0);
+            Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
+            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
+            Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
             Metric expected = new Metric();
             expected.setMetric("sys.cpu.user");
             expected.setTimestamp(TEST_TIME);
@@ -175,8 +155,8 @@ public class TimelyTcpIT {
             expected.setTags(tags);
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(Metric.class, m.getTcpRequests().getResponses().get(1).getClass());
-            actual = (Metric) m.getTcpRequests().getResponses().get(1);
+            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(1).getClass());
+            actual = (Metric) m.getUdpRequests().getResponses().get(1);
             expected = new Metric();
             expected.setMetric("sys.cpu.idle");
             expected.setTimestamp(TEST_TIME + 1);
@@ -235,15 +215,17 @@ public class TimelyTcpIT {
 
         final TestServer m = new TestServer(conf);
         m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);) {
-            sock.getOutputStream().write(data);
-            sock.getOutputStream().flush();
-            while (2 != m.getTcpRequests().getCount()) {
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        try (DatagramSocket sock = new DatagramSocket();) {
+            packet.setData(data);
+            sock.send(packet);
+            while (2 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
-            Assert.assertEquals(2, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getTcpRequests().getResponses().get(0).getClass());
-            Metric actual = (Metric) m.getTcpRequests().getResponses().get(0);
+            Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
+            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
+            Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
             Metric expected = new Metric();
             expected.setMetric("sys.cpu.user");
             expected.setTimestamp(TEST_TIME);
@@ -254,8 +236,8 @@ public class TimelyTcpIT {
             expected.setTags(tags);
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(Metric.class, m.getTcpRequests().getResponses().get(1).getClass());
-            actual = (Metric) m.getTcpRequests().getResponses().get(1);
+            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(1).getClass());
+            actual = (Metric) m.getUdpRequests().getResponses().get(1);
             expected = new Metric();
             expected.setMetric("sys.cpu.idle");
             expected.setTimestamp(TEST_TIME + 1);
@@ -275,13 +257,13 @@ public class TimelyTcpIT {
     public void testPutInvalidTimestamp() throws Exception {
         final TestServer m = new TestServer(conf);
         m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));) {
-            writer.write("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n");
-            writer.flush();
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        try (DatagramSocket sock = new DatagramSocket();) {
+            packet.setData(("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
+            sock.send(packet);
             sleepUninterruptibly(1, TimeUnit.SECONDS);
-            Assert.assertEquals(0, m.getTcpRequests().getCount());
+            Assert.assertEquals(0, m.getUdpRequests().getCount());
         } finally {
             m.shutdown();
         }
@@ -382,10 +364,11 @@ public class TimelyTcpIT {
             format.append(line);
             format.append("\n");
         }
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write(format.toString());
-            writer.flush();
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        try (DatagramSocket sock = new DatagramSocket();) {
+            packet.setData(format.toString().getBytes(UTF_8));
+            sock.send(packet);
         }
     }
 

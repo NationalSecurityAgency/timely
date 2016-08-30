@@ -1,5 +1,6 @@
 package timely;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -7,11 +8,14 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -45,9 +49,9 @@ import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
@@ -68,6 +72,8 @@ import timely.netty.tcp.MetricsBufferDecoder;
 import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpPutHandler;
 import timely.netty.tcp.TcpVersionHandler;
+import timely.netty.udp.UdpDecoder;
+import timely.netty.udp.UdpPacketToByteBuf;
 import timely.netty.websocket.WSMetricPutHandler;
 import timely.netty.websocket.WSVersionRequestHandler;
 import timely.netty.websocket.WebSocketHttpCookieHandler;
@@ -105,9 +111,12 @@ public class Server {
     private EventLoopGroup httpBossGroup = null;
     private EventLoopGroup wsWorkerGroup = null;
     private EventLoopGroup wsBossGroup = null;
-    protected Channel putChannelHandle = null;
-    protected Channel queryChannelHandle = null;
+    private EventLoopGroup udpBossGroup = null;
+    private EventLoopGroup udpWorkerGroup = null;
+    protected Channel tcpChannelHandle = null;
+    protected Channel httpChannelHandle = null;
     protected Channel wsChannelHandle = null;
+    protected Channel udpChannelHandle = null;
     protected DataStore dataStore = null;
     protected volatile boolean shutdown = false;
 
@@ -150,6 +159,7 @@ public class Server {
         Configuration conf = initializeConfiguration(args);
 
         Server s = new Server(conf);
+        s.run();
         try {
             LATCH.await();
         } catch (final InterruptedException e) {
@@ -177,12 +187,12 @@ public class Server {
 
     public void shutdown() {
         try {
-            putChannelHandle.close().sync();
+            tcpChannelHandle.close().sync();
         } catch (final Exception e) {
             LOG.error("Error shutting down tcp channel", e);
         }
         try {
-            queryChannelHandle.close().sync();
+            httpChannelHandle.close().sync();
         } catch (final Exception e) {
             LOG.error("Error shutting down http channel", e);
         }
@@ -190,6 +200,11 @@ public class Server {
             wsChannelHandle.close().sync();
         } catch (final Exception e) {
             LOG.error("Error shutting down websocket channel", e);
+        }
+        try {
+            udpChannelHandle.close().sync();
+        } catch (final Exception e) {
+            LOG.error("Error shutting down udp channel", e);
         }
         try {
             tcpBossGroup.shutdownGracefully().sync();
@@ -222,6 +237,16 @@ public class Server {
             LOG.error("Error closing Netty websocket worker thread group", e);
         }
         try {
+            udpBossGroup.shutdownGracefully().sync();
+        } catch (final Exception e) {
+            LOG.error("Error closing Netty UDP boss thread group", e);
+        }
+        try {
+            udpWorkerGroup.shutdownGracefully().sync();
+        } catch (final Exception e) {
+            LOG.error("Error closing Netty UDP worker thread group", e);
+        }
+        try {
             dataStore.flush();
         } catch (TimelyException e) {
             LOG.error("Error flushing to server during shutdown", e);
@@ -238,6 +263,9 @@ public class Server {
     public Server(Configuration conf) throws Exception {
 
         this.config = conf;
+    }
+
+    public void run() throws Exception {
 
         int nettyThreads = Math.max(1,
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
@@ -250,6 +278,7 @@ public class Server {
         VisibilityCache.init(config);
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
+        Class<? extends Channel> datagramChannelClass;
         if (useEpoll) {
             tcpWorkerGroup = new EpollEventLoopGroup();
             tcpBossGroup = new EpollEventLoopGroup();
@@ -257,7 +286,10 @@ public class Server {
             httpBossGroup = new EpollEventLoopGroup();
             wsWorkerGroup = new EpollEventLoopGroup();
             wsBossGroup = new EpollEventLoopGroup();
+            udpWorkerGroup = new EpollEventLoopGroup();
+            udpBossGroup = new EpollEventLoopGroup();
             channelClass = EpollServerSocketChannel.class;
+            datagramChannelClass = EpollDatagramChannel.class;
         } else {
             tcpWorkerGroup = new NioEventLoopGroup();
             tcpBossGroup = new NioEventLoopGroup();
@@ -265,46 +297,48 @@ public class Server {
             httpBossGroup = new NioEventLoopGroup();
             wsWorkerGroup = new NioEventLoopGroup();
             wsBossGroup = new NioEventLoopGroup();
+            udpWorkerGroup = new NioEventLoopGroup();
+            udpBossGroup = new NioEventLoopGroup();
             channelClass = NioServerSocketChannel.class;
+            datagramChannelClass = NioDatagramChannel.class;
         }
         LOG.info("Using channel class {}", channelClass.getSimpleName());
 
-        final ServerBootstrap putServer = new ServerBootstrap();
-        putServer.group(tcpBossGroup, tcpWorkerGroup);
-        putServer.channel(channelClass);
-        putServer.handler(new LoggingHandler());
-        putServer.childHandler(setupTcpChannel());
-        putServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        putServer.option(ChannelOption.SO_BACKLOG, 128);
-        putServer.option(ChannelOption.SO_KEEPALIVE, true);
-        final int putPort = config.getServer().getTcpPort();
-        final String putIp = config.getServer().getIp();
-        putChannelHandle = putServer.bind(putIp, putPort).sync().channel();
-        final String putAddress = ((InetSocketAddress) putChannelHandle.localAddress()).getAddress().getHostAddress();
+        final ServerBootstrap tcpServer = new ServerBootstrap();
+        tcpServer.group(tcpBossGroup, tcpWorkerGroup);
+        tcpServer.channel(channelClass);
+        tcpServer.handler(new LoggingHandler());
+        tcpServer.childHandler(setupTcpChannel());
+        tcpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        tcpServer.option(ChannelOption.SO_BACKLOG, 128);
+        tcpServer.option(ChannelOption.SO_KEEPALIVE, true);
+        final int tcpPort = config.getServer().getTcpPort();
+        final String tcpIp = config.getServer().getIp();
+        tcpChannelHandle = tcpServer.bind(tcpIp, tcpPort).sync().channel();
+        final String tcpAddress = ((InetSocketAddress) tcpChannelHandle.localAddress()).getAddress().getHostAddress();
 
-        final int queryPort = config.getHttp().getPort();
-        final String queryIp = config.getHttp().getIp();
+        final int httpPort = config.getHttp().getPort();
+        final String httpIp = config.getHttp().getIp();
         SslContext sslCtx = createSSLContext(config);
         if (sslCtx instanceof OpenSslServerContext) {
             OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
-            String application = "Timely_" + queryPort;
+            String application = "Timely_" + httpPort;
             OpenSslServerSessionContext opensslCtx = openssl.sessionContext();
             opensslCtx.setSessionCacheEnabled(true);
             opensslCtx.setSessionCacheSize(128);
             opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
             opensslCtx.setSessionTimeout(config.getSecurity().getSessionMaxAge());
         }
-        final ServerBootstrap queryServer = new ServerBootstrap();
-        queryServer.group(httpBossGroup, httpWorkerGroup);
-        queryServer.channel(channelClass);
-        queryServer.handler(new LoggingHandler());
-        queryServer.childHandler(setupHttpChannel(config, sslCtx));
-        queryServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        queryServer.option(ChannelOption.SO_BACKLOG, 128);
-        queryServer.option(ChannelOption.SO_KEEPALIVE, true);
-        queryChannelHandle = queryServer.bind(queryIp, queryPort).sync().channel();
-        final String queryAddress = ((InetSocketAddress) queryChannelHandle.localAddress()).getAddress()
-                .getHostAddress();
+        final ServerBootstrap httpServer = new ServerBootstrap();
+        httpServer.group(httpBossGroup, httpWorkerGroup);
+        httpServer.channel(channelClass);
+        httpServer.handler(new LoggingHandler());
+        httpServer.childHandler(setupHttpChannel(config, sslCtx));
+        httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        httpServer.option(ChannelOption.SO_BACKLOG, 128);
+        httpServer.option(ChannelOption.SO_KEEPALIVE, true);
+        httpChannelHandle = httpServer.bind(httpIp, httpPort).sync().channel();
+        final String httpAddress = ((InetSocketAddress) httpChannelHandle.localAddress()).getAddress().getHostAddress();
 
         final int wsPort = config.getWebsocket().getPort();
         final String wsIp = config.getWebsocket().getIp();
@@ -319,10 +353,20 @@ public class Server {
         wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 
+        final int udpPort = config.getServer().getUdpPort();
+        final String udpIp = config.getServer().getIp();
+        final Bootstrap udpServer = new Bootstrap();
+        udpServer.group(udpBossGroup);
+        udpServer.channel(datagramChannelClass);
+        udpServer.handler(setupUdpChannel());
+        udpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        udpChannelHandle = udpServer.bind(udpIp, udpPort).sync().channel();
+        final String udpAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
+
         shutdownHook();
         LOG.info(
-                "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, and {}:{} for WebSocket traffic",
-                putAddress, putPort, queryAddress, queryPort, wsAddress, wsPort);
+                "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
+                tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, udpAddress, udpPort);
     }
 
     protected SslContext createSSLContext(Configuration config) throws Exception {
@@ -412,6 +456,21 @@ public class Server {
                 ch.pipeline().addLast("version", new HttpVersionRequestHandler());
                 ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler());
+            }
+        };
+    }
+
+    protected ChannelHandler setupUdpChannel() {
+        return new ChannelInitializer<DatagramChannel>() {
+
+            @Override
+            protected void initChannel(DatagramChannel ch) throws Exception {
+                ch.pipeline().addLast("logger", new LoggingHandler());
+                ch.pipeline().addLast("packetDecoder", new UdpPacketToByteBuf());
+                ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
+                ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
+                ch.pipeline().addLast("putDecoder", new UdpDecoder());
+                ch.pipeline().addLast(udpWorkerGroup, "putHandler", new TcpPutHandler(dataStore));
             }
         };
     }
