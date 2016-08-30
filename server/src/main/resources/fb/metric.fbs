@@ -1,0 +1,21 @@
+namespace timely.api.flatbuffer;
+
+file_identifier "TMFB";
+
+table Tag {
+  key:string;
+  value:string;
+}
+
+table Metric {
+  name:string;
+  timestamp:long;
+  value:double;
+  tags:[Tag];
+}
+
+table Metrics {
+  metrics:[Metric];
+}
+
+root_type Metrics;

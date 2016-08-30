@@ -64,6 +64,7 @@ import timely.netty.http.timeseries.HttpMetricsRequestHandler;
 import timely.netty.http.timeseries.HttpQueryRequestHandler;
 import timely.netty.http.timeseries.HttpSearchLookupRequestHandler;
 import timely.netty.http.timeseries.HttpSuggestRequestHandler;
+import timely.netty.tcp.MetricsBufferDecoder;
 import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpPutHandler;
 import timely.netty.tcp.TcpVersionHandler;
@@ -420,6 +421,7 @@ public class Server {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new TcpDecoder());
                 ch.pipeline().addLast("putHandler", new TcpPutHandler(dataStore));

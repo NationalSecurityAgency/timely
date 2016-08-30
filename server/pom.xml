@@ -29,6 +29,12 @@
             <artifactId>caffeine</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.google.flatbuffers</groupId>
+            <artifactId>flatbuffers-java</artifactId>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/flatbuffers-java-1.4.0.jar</systemPath>
+        </dependency>
+        <dependency>
             <groupId>commons-configuration</groupId>
             <artifactId>commons-configuration</artifactId>
         </dependency>
@@ -242,11 +248,30 @@
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+		        <executions>
+		            <execution>
+		                <id>add-source</id>
+		                <phase>generate-sources</phase>
+		                <goals>
+		                    <goal>add-source</goal>
+		                </goals>
+		                <configuration>
+		                    <sources>
+		                        <source>src/main/generated-java</source>
+		                    </sources>
+		                </configuration>
+		            </execution>
+		        </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
                 <artifactId>findbugs-maven-plugin</artifactId>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Medium</threshold>
                     <xmlOutput>true</xmlOutput>
+                    <excludeFilterFile>src/main/resources/findbugs-excludes.xml</excludeFilterFile>
                 </configuration>
                 <executions>
                     <execution>

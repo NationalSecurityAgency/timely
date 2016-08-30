@@ -6,8 +6,9 @@
     </Console>
   </Appenders>
   <Loggers>
-<!--     <Logger name="org.apache.accumulo" level="OFF" additivity="false" /> -->
-<!--     <Logger name="org.apache.zookeeper" level="OFF" additivity="false" /> -->
+    <Logger name="org.apache.accumulo.core.client.impl.ThriftTransportPool" level="OFF" additivity="false" />
+    <Logger name="org.apache.accumulo.fate.zookeeper.ZooCache" level="OFF" additivity="false" />
+    <Logger name="org.apache.zookeeper" level="OFF" additivity="false" />
 <!--     <Logger name="sun.net.www.protocol.http.HttpURLConnection" level="ALL" additivity="false" /> -->
     <Root level="TRACE">
       <AppenderRef ref="CONSOLE"/>

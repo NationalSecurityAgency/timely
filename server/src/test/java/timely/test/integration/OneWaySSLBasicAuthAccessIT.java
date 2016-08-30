@@ -40,7 +40,6 @@ import timely.util.JsonUtil;
  * Tests that OneWay SSL without anonymous access works.
  *
  */
-@SuppressWarnings("deprecation")
 @Category(IntegrationTest.class)
 public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
 
