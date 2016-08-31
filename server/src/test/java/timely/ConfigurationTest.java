@@ -35,7 +35,8 @@ public class ConfigurationTest {
                 "timely.accumulo.username:root",
                 "timely.accumulo.password:secret",
                 "timely.http.host:localhost",
-                "timely.security.ssl.use-generated-keypair:true");
+                "timely.security.ssl.use-generated-keypair:true",
+                "timely.metric-age-off-days[default]:7");
         // @formatter:on
         context.refresh();
         Configuration config = this.context.getBean(Configuration.class);
@@ -50,6 +51,9 @@ public class ConfigurationTest {
         assertEquals("secret", config.getAccumulo().getPassword());
         assertEquals("localhost", config.getHttp().getHost());
         assertTrue(config.getSecurity().getSsl().isUseGeneratedKeypair());
+        assertEquals(1, config.getMetricAgeOffDays().size());
+        assertTrue(config.getMetricAgeOffDays().containsKey("default"));
+        assertTrue(7 == config.getMetricAgeOffDays().get("default"));
     }
 
     @Test(expected = BeanCreationException.class)

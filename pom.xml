@@ -43,6 +43,7 @@
         <version.caffeine>2.2.0</version.caffeine>
         <version.collectd>5.5.1</version.collectd>
         <version.commons-configuration>1.10</version.commons-configuration>
+        <version.commons-collections4>4.1</version.commons-collections4>
         <version.commons-lang3>3.1</version.commons-lang3>
         <version.disruptor>3.3.2</version.disruptor>
         <version.fast-classpath-scanner>1.10.4</version.fast-classpath-scanner>
@@ -157,6 +158,11 @@
 	            <artifactId>jcip-annotations</artifactId>
 	            <version>${version.jcip-annotations}</version>
 	            <scope>test</scope>
+	        </dependency>
+	        <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${version.commons-collections4}</version>
 	        </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>

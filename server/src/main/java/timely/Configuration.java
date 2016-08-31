@@ -1,19 +1,23 @@
 package timely;
 
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+
 import org.apache.accumulo.core.client.BatchWriterConfig;
 import org.hibernate.validator.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
+
 import timely.validator.NotEmptyIfFieldSet;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.Lists;
 
 @Component
 @ConfigurationProperties(prefix = "timely")
@@ -21,7 +25,7 @@ public class Configuration {
 
     private String metricsTable = "timely.metrics";
     private String metaTable = "timely.meta";
-    private int metricAgeOffDays = 7;
+    private HashMap<String, Integer> metricAgeOffDays = new HashMap<>();
     private List<String> metricsReportIgnoredTags = new ArrayList<>();
 
     @Valid
@@ -64,13 +68,12 @@ public class Configuration {
         return this;
     }
 
-    public int getMetricAgeOffDays() {
+    public HashMap<String, Integer> getMetricAgeOffDays() {
         return metricAgeOffDays;
     }
 
-    public Configuration setMetricAgeOffDays(int metricAgeOffDays) {
+    public void setMetricAgeOffDays(HashMap<String, Integer> metricAgeOffDays) {
         this.metricAgeOffDays = metricAgeOffDays;
-        return this;
     }
 
     public List<String> getMetricsReportIgnoredTags() {
