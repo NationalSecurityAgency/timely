@@ -200,15 +200,11 @@ public class DataStoreImpl implements DataStore {
 
     private void removeAgeOffIterators(Connector con, String tableName) throws Exception {
         Map<String, EnumSet<IteratorScope>> iters = con.tableOperations().listIterators(tableName);
-        iters.forEach((name, scopes) -> {
+        for (String name : iters.keySet()) {
             if (name.startsWith("ageoff")) {
-                try {
-                    con.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
-                } catch (Exception e) {
-                    // do nothing
-                }
+                con.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
             }
-        });
+        }
     }
 
     private void applyAgeOffIterator(Connector con, String tableName, Configuration config) throws Exception {
