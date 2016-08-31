@@ -24,7 +24,7 @@ public class MetricAgeOffFilterTest {
     public void testDefault() throws Exception {
         MetricAgeOffFilter filter = new MetricAgeOffFilter();
         HashMap<String, String> options = new HashMap<>();
-        options.put("default", Integer.toString(1 * ONE_DAY));
+        options.put(MetricAgeOffFilter.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         filter.init(null, options, null);
         assertTrue(filter.accept(new Key(Metric.encodeRowKey("sys.cpu.user", TEST_TIME), new byte[0], new byte[0],
                 new byte[0], TEST_TIME), null));
@@ -44,7 +44,7 @@ public class MetricAgeOffFilterTest {
     public void testMixed() throws Exception {
         MetricAgeOffFilter filter = new MetricAgeOffFilter();
         HashMap<String, String> options = new HashMap<>();
-        options.put("default", Integer.toString(1 * ONE_DAY));
+        options.put(MetricAgeOffFilter.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         filter.init(null, options, null);
         assertTrue(filter.accept(new Key(Metric.encodeRowKey("sys.cpu.idle", TEST_TIME), new byte[0], new byte[0],
                 new byte[0], TEST_TIME), null));
@@ -76,8 +76,8 @@ public class MetricAgeOffFilterTest {
     public void testAgeoffMixed() throws Exception {
         MetricAgeOffFilter filter = new MetricAgeOffFilter();
         HashMap<String, String> options = new HashMap<>();
-        options.put("default", Integer.toString(1 * ONE_DAY));
-        options.put("sys.cpu.user", Integer.toString(2 * ONE_DAY));
+        options.put(MetricAgeOffFilter.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
+        options.put(MetricAgeOffFilter.AGE_OFF_PREFIX + "sys.cpu.user", Integer.toString(2 * ONE_DAY));
         filter.init(null, options, null);
         assertFalse(filter.accept(new Key(Metric.encodeRowKey("sys.cpu.idle", TEST_TIME - (3 * ONE_DAY)), new byte[0],
                 new byte[0], new byte[0], TEST_TIME - (3 * ONE_DAY)), null));

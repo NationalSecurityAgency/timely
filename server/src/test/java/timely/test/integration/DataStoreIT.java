@@ -29,7 +29,7 @@ public class DataStoreIT extends OneWaySSLBase {
     public void testDefaultAgeOff() throws Exception {
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
         ageOffSettings.put("default", 1);
-        conf.setMetricAgeOff(ageOffSettings);
+        conf.setMetricAgeOffDays(ageOffSettings);
 
         final Server s = new Server(conf);
         s.run();
@@ -64,7 +64,7 @@ public class DataStoreIT extends OneWaySSLBase {
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
         ageOffSettings.put("default", 1);
         ageOffSettings.put("sys.cpu.user", 1);
-        conf.setMetricAgeOff(ageOffSettings);
+        conf.setMetricAgeOffDays(ageOffSettings);
 
         final Server s = new Server(conf);
         s.run();

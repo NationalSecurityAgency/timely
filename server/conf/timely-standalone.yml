@@ -1,7 +1,7 @@
 timely:
   metrics-table: timely.metrics
   meta-table: timely.meta
-  metric-age-off:
+  metric-age-off-days:
     default: 7
   metrics-report-ignored-tags:
   accumulo:

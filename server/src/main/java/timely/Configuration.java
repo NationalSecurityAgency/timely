@@ -25,7 +25,7 @@ public class Configuration {
 
     private String metricsTable = "timely.metrics";
     private String metaTable = "timely.meta";
-    private HashMap<String, Integer> metricAgeOff = new HashMap<>();
+    private HashMap<String, Integer> metricAgeOffDays = new HashMap<>();
     private List<String> metricsReportIgnoredTags = new ArrayList<>();
 
     @Valid
@@ -68,12 +68,12 @@ public class Configuration {
         return this;
     }
 
-    public HashMap<String, Integer> getMetricAgeOff() {
-        return metricAgeOff;
+    public HashMap<String, Integer> getMetricAgeOffDays() {
+        return metricAgeOffDays;
     }
 
-    public void setMetricAgeOff(HashMap<String, Integer> metricAgeOff) {
-        this.metricAgeOff = metricAgeOff;
+    public void setMetricAgeOffDays(HashMap<String, Integer> metricAgeOffDays) {
+        this.metricAgeOffDays = metricAgeOffDays;
     }
 
     public List<String> getMetricsReportIgnoredTags() {

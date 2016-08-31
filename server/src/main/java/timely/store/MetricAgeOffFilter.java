@@ -3,7 +3,6 @@ package timely.store;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.apache.accumulo.core.data.ByteSequence;
@@ -19,13 +18,13 @@ import org.slf4j.LoggerFactory;
 public class MetricAgeOffFilter extends Filter {
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricAgeOffFilter.class);
+    public static final String AGE_OFF_PREFIX = "ageoff.";
     public static final String DEFAULT_AGEOFF_KEY = "default";
     private PatriciaTrie<Long> ageoffs = null;
     private Long currentTime = 0L;
     private Long defaultAgeOff = 0L;
     private Long minAgeOff = Long.MAX_VALUE;
     private Long maxAgeOff = Long.MIN_VALUE;
-    private ByteBuffer buf = ByteBuffer.allocate(256);
     private byte[] prevMetricBytes = null;
     private Long prevAgeOff = null;
 
@@ -46,6 +45,7 @@ public class MetricAgeOffFilter extends Filter {
         int rowStart = rowData.offset();
         int i = Integer.MIN_VALUE;
         if (null != prevMetricBytes && null != prevAgeOff
+                && (rowData.length() >= (rowStart + prevMetricBytes.length + 1))
                 && (rowData.byteAt(rowStart + prevMetricBytes.length + 1) == 0x00)) {
             // Double check metric name is the same
             boolean same = true;
@@ -68,27 +68,19 @@ public class MetricAgeOffFilter extends Filter {
         // not found the null byte up to that point. We can copy those bytes
         // into the ByteBuffer and then start looking for the null byte
         // from that point.
-        buf.clear();
-        if (i != Integer.MIN_VALUE && i != 0) {
-            for (int x = rowStart; x < i; x++) {
-                buf.put(rowData.byteAt(x));
-            }
-        }
         if (i < 0) {
             i = 0;
         }
         // Keep scanning for the null byte
-        for (int y = (rowStart + i); y < rowData.length(); y++) {
+        int y = rowStart + i;
+        for (; y < rowData.length(); y++) {
             byte b = rowData.byteAt(y);
             if (b == 0x00) {
                 break;
-            } else {
-                buf.put(b);
             }
         }
-        byte[] metricName = new byte[buf.position()];
-        buf.position(0);
-        buf.get(metricName);
+        byte[] metricName = new byte[(y - rowStart)];
+        System.arraycopy(rowData.getBackingArray(), rowStart, metricName, 0, (y - rowStart));
 
         prevMetricBytes = metricName;
         prevAgeOff = ageoffs.get(new String(prevMetricBytes, UTF_8));
@@ -110,12 +102,13 @@ public class MetricAgeOffFilter extends Filter {
         validateOptions(options);
         ageoffs = new PatriciaTrie<>();
         options.forEach((k, v) -> {
-            if (!k.equals(NEGATE)) {
-                LOG.trace("Adding {} to Trie with value", k, Long.parseLong(v));
+            if (k.startsWith(AGE_OFF_PREFIX)) {
+                String name = k.substring(AGE_OFF_PREFIX.length());
+                LOG.trace("Adding {} to Trie with value", name, Long.parseLong(v));
                 long ageoff = Long.parseLong(v);
                 this.minAgeOff = Math.min(this.minAgeOff, ageoff);
                 this.maxAgeOff = Math.max(this.maxAgeOff, ageoff);
-                ageoffs.put(k, ageoff);
+                ageoffs.put(name, ageoff);
             }
         });
         defaultAgeOff = ageoffs.get(DEFAULT_AGEOFF_KEY);
@@ -138,7 +131,7 @@ public class MetricAgeOffFilter extends Filter {
 
     @Override
     public boolean validateOptions(Map<String, String> options) {
-        if (null == options.get(DEFAULT_AGEOFF_KEY)) {
+        if (null == options.get(MetricAgeOffFilter.AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY)) {
             throw new IllegalArgumentException(DEFAULT_AGEOFF_KEY + " must be configured for MetricAgeOffFilter");
         }
         return super.validateOptions(options);

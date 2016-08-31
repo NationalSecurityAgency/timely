@@ -210,9 +210,9 @@ public class DataStoreImpl implements DataStore {
     private void applyAgeOffIterator(Connector con, String tableName, Configuration config) throws Exception {
         int priority = 100;
         Map<String, String> ageOffOptions = new HashMap<>();
-        for (Entry<String, Integer> e : config.getMetricAgeOff().entrySet()) {
+        for (Entry<String, Integer> e : config.getMetricAgeOffDays().entrySet()) {
             String ageoff = Long.toString(e.getValue() * 86400000L);
-            ageOffOptions.put(e.getKey(), ageoff);
+            ageOffOptions.put(MetricAgeOffFilter.AGE_OFF_PREFIX + e.getKey(), ageoff);
         }
         IteratorSetting ageOffIteratorSettings = new IteratorSetting(priority, "ageoff", MetricAgeOffFilter.class,
                 ageOffOptions);

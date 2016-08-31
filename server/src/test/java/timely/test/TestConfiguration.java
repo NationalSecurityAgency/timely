@@ -28,7 +28,7 @@ public class TestConfiguration {
                 .getSecurity().getSsl().setUseGeneratedKeypair(true);
         HashMap<String,Integer> ageoff = new HashMap<>();
         ageoff.put("default", 10);
-        cfg.setMetricAgeOff(ageoff);
+        cfg.setMetricAgeOffDays(ageoff);
         // @formatter:on
 
         return cfg;
