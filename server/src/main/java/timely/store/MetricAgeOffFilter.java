@@ -43,13 +43,12 @@ public class MetricAgeOffFilter extends Filter {
         // the same metric name as the last key.
         ByteSequence rowData = k.getRowData();
         int rowStart = rowData.offset();
-        int i = Integer.MIN_VALUE;
-        if (null != prevMetricBytes && null != prevAgeOff
-                && (rowData.length() >= (rowStart + prevMetricBytes.length + 1))
+        int i = 0;
+        if (null != prevMetricBytes && (rowData.length() >= (rowStart + prevMetricBytes.length + 1))
                 && (rowData.byteAt(rowStart + prevMetricBytes.length + 1) == 0x00)) {
             // Double check metric name is the same
             boolean same = true;
-            for (i = 0; i < prevMetricBytes.length; i++) {
+            for (; i < prevMetricBytes.length; i++) {
                 if (prevMetricBytes[i] != rowData.byteAt(rowStart + i)) {
                     same = false;
                     break;
@@ -64,13 +63,7 @@ public class MetricAgeOffFilter extends Filter {
 
         // Metric name is different or prev information is not set
 
-        // If i is not MIN_VALUE or zero, then we already know that we have
-        // not found the null byte up to that point. We can copy those bytes
-        // into the ByteBuffer and then start looking for the null byte
-        // from that point.
-        if (i < 0) {
-            i = 0;
-        }
+        // We have not found the null byte up to this point.
         // Keep scanning for the null byte
         int y = rowStart + i;
         for (; y < rowData.length(); y++) {
@@ -84,13 +77,12 @@ public class MetricAgeOffFilter extends Filter {
 
         prevMetricBytes = metricName;
         prevAgeOff = ageoffs.get(new String(prevMetricBytes, UTF_8));
-        Long ageoff = prevAgeOff;
-        if (null == ageoff) {
+
+        if (null == prevAgeOff) {
             // no specific ageoff for this metric name, use default
-            ageoff = defaultAgeOff;
-            prevAgeOff = ageoff;
+            prevAgeOff = defaultAgeOff;
         }
-        if (currentTime - k.getTimestamp() > ageoff)
+        if (currentTime - k.getTimestamp() > prevAgeOff)
             return false;
         return true;
     }
