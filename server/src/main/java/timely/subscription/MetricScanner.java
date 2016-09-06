@@ -1,5 +1,6 @@
 package timely.subscription;
 
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
@@ -7,12 +8,12 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.util.UtilWaitThread;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
@@ -89,14 +90,14 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     Range prevRange = this.scanner.getRange();
                     if (null == m) {
                         LOG.debug("No results found, waiting {}ms to retry.", delay);
-                        UtilWaitThread.sleep(delay);
+                        sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         this.scanner.setRange(new Range(prevRange.getStartKey().getRow(), prevRange
                                 .isStartKeyInclusive(), endRow, false));
                         this.iter = this.scanner.iterator();
                     } else {
                         // Reset the starting range to the last key returned
                         LOG.debug("Exhausted scanner, waiting {}ms to retry.", delay);
-                        UtilWaitThread.sleep(delay);
+                        sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         this.scanner.setRange(new Range(new Text(Metric.encodeRowKey(m.getMetric(), m.getTimestamp())),
                                 false, endRow, prevRange.isEndKeyInclusive()));
                         this.iter = this.scanner.iterator();
