@@ -13,9 +13,10 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.commons.configuration.BaseConfiguration;
-
+import org.springframework.boot.Banner.Mode;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+
 import timely.SpringBootstrap;
 import timely.Configuration;
 import timely.api.model.Meta;
@@ -24,8 +25,8 @@ public class GetMetricTableSplitPoints {
 
     public static void main(String[] args) throws Exception {
 
-        try (ConfigurableApplicationContext ctx = new SpringApplicationBuilder(SpringBootstrap.class).web(false).run(
-                args)) {
+        try (ConfigurableApplicationContext ctx = new SpringApplicationBuilder(SpringBootstrap.class)
+                .bannerMode(Mode.OFF).web(false).run(args)) {
             Configuration conf = ctx.getBean(Configuration.class);
 
             final BaseConfiguration apacheConf = new BaseConfiguration();
