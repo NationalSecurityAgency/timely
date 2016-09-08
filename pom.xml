@@ -23,6 +23,7 @@
         <url>https://github.com/NationalSecurityAgency/timely/issues</url>
     </issueManagement>
     <modules>
+        <module>core</module>
         <module>server</module>
         <module>collectd-timely-plugin</module>
         <module>collectd-nsq-plugin</module>
@@ -48,6 +49,7 @@
         <version.disruptor>3.3.2</version.disruptor>
         <version.fast-classpath-scanner>1.10.4</version.fast-classpath-scanner>
         <version.google-flatbuffers>1.4.0</version.google-flatbuffers>
+        <version.guava>19.0</version.guava>
         <version.hadoop>2.6.2</version.hadoop>
         <version.httpcomponents>4.5.1</version.httpcomponents>
         <version.jackson>2.6.1</version.jackson>
@@ -115,6 +117,11 @@
 	            <artifactId>flatbuffers-java</artifactId>
 	            <version>${version.google-flatbuffers}</version>
 	        </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${version.guava}</version>
+            </dependency>
 	        <dependency>
 	            <groupId>com.lmax</groupId>
 	            <artifactId>disruptor</artifactId>

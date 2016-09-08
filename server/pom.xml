@@ -9,6 +9,11 @@
     </parent>
     <dependencies>
         <dependency>
+            <groupId>timely</groupId>
+            <artifactId>timely-core</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
         </dependency>
