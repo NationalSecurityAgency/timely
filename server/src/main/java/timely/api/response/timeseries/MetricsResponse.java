@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 
 import timely.Configuration;
+import timely.adapter.accumulo.MetricAdapter;
 import timely.api.model.Meta;
 import timely.netty.Constants;
 import timely.store.MetaCache;
@@ -39,6 +40,7 @@ public class MetricsResponse {
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricsResponse.class);
 
+    // TODO get rid of this HTML monstronsity
     private static final String DOCTYPE = "<!DOCTYPE html>\n";
     private static final String META = "<meta charset=\"UTF-8\">\n";
     private static final String HTML_START = "<html>\n";
@@ -70,6 +72,7 @@ public class MetricsResponse {
     public MetricsResponse(Configuration conf) {
         this.conf = conf;
         ignoredTags = new HashSet<>(conf.getMetricsReportIgnoredTags());
+        ignoredTags.add(MetricAdapter.VISIBILITY_TAG);
     }
 
     public TextWebSocketFrame toWebSocketResponse(String acceptHeader) throws Exception {

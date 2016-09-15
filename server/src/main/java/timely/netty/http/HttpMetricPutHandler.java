@@ -12,12 +12,13 @@ import io.netty.handler.codec.http.HttpHeaders.Names;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.model.Metric;
+import timely.api.request.MetricRequest;
+import timely.model.Metric;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
 import timely.store.DataStore;
 
-public class HttpMetricPutHandler extends SimpleChannelInboundHandler<Metric> implements TimelyHttpHandler {
+public class HttpMetricPutHandler extends SimpleChannelInboundHandler<MetricRequest> implements TimelyHttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpMetricPutHandler.class);
     private final DataStore dataStore;
@@ -27,9 +28,9 @@ public class HttpMetricPutHandler extends SimpleChannelInboundHandler<Metric> im
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Metric m) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, MetricRequest m) throws Exception {
         try {
-            this.dataStore.store(m);
+            this.dataStore.store(m.getMetric());
         } catch (TimelyException e) {
             LOG.error(e.getMessage(), e);
             this.sendHttpError(ctx, e);

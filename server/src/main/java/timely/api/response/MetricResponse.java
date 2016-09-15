@@ -1,12 +1,15 @@
 package timely.api.response;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import timely.api.model.Tag;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.model.Metric;
+import timely.model.Tag;
 
 public class MetricResponse {
 
@@ -54,6 +57,16 @@ public class MetricResponse {
 
     public void setSubscriptionId(String subscriptionId) {
         this.subscriptionId = subscriptionId;
+    }
+
+    public static MetricResponse fromMetric(Metric metric, String subscriptionId) {
+        MetricResponse response = new MetricResponse();
+        response.setMetric(metric.getName());
+        response.setTimestamp(metric.getValue().getTimestamp());
+        response.setTags(metric.getTags());
+        response.setValue(metric.getValue().getMeasure());
+        response.setSubscriptionId(subscriptionId);
+        return response;
     }
 
     @Override

@@ -9,10 +9,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
@@ -41,8 +39,10 @@ import org.slf4j.LoggerFactory;
 import timely.Configuration;
 import timely.Server;
 import timely.TestServer;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.api.request.MetricRequest;
+import timely.api.response.MetricResponse;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.auth.AuthCache;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
@@ -105,24 +105,26 @@ public class TimelyUdpIT {
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
-        try (DatagramSocket sock = new DatagramSocket();) {
+        try (DatagramSocket sock = new DatagramSocket()) {
+            // @formatter:off
             packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
             sock.send(packet);
             while (1 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
             Assert.assertEquals(1, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
-            final Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
-            final Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            final List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
+            final MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            final MetricRequest expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.user")
+                            .value(TEST_TIME, 1.0D)
+                            .tag(new Tag("tag1", "value1"))
+                            .tag(new Tag("tag2", "value2"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
+            // @formatter:on
         } finally {
             m.shutdown();
         }
@@ -135,38 +137,39 @@ public class TimelyUdpIT {
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
-        try (DatagramSocket sock = new DatagramSocket();) {
-            packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle "
-                    + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n").getBytes(UTF_8));
+        // @formatter:off
+        try (DatagramSocket sock = new DatagramSocket()) {
+            packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n"
+                          + "put sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n").getBytes(UTF_8));
             sock.send(packet);
             while (2 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
             Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
-            Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
-            Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
+            MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            MetricRequest expected = new MetricRequest (
+                    Metric.newBuilder()
+                            .name("sys.cpu.user")
+                            .value(TEST_TIME, 1.0D)
+                            .tag(new Tag("tag1", "value1"))
+                            .tag(new Tag("tag2", "value2"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(1).getClass());
-            actual = (Metric) m.getUdpRequests().getResponses().get(1);
-            expected = new Metric();
-            expected.setMetric("sys.cpu.idle");
-            expected.setTimestamp(TEST_TIME + 1);
-            expected.setValue(1.0);
-            tags = new ArrayList<>();
-            tags.add(new Tag("tag3", "value3"));
-            tags.add(new Tag("tag4", "value4"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(1).getClass());
+            actual = (MetricRequest) m.getUdpRequests().getResponses().get(1);
+            expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.idle")
+                            .value(TEST_TIME + 1, 1.0D)
+                            .tag(new Tag("tag3", "value3"))
+                            .tag(new Tag("tag4", "value4"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
-
+            // @formatter:on
         } finally {
             m.shutdown();
         }
@@ -217,36 +220,38 @@ public class TimelyUdpIT {
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
-        try (DatagramSocket sock = new DatagramSocket();) {
+        try (DatagramSocket sock = new DatagramSocket()) {
             packet.setData(data);
             sock.send(packet);
             while (2 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
             Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
-            Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
-            Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
+            // @formatter:off
+            MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            MetricRequest expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.user")
+                            .value(TEST_TIME, 1.0D)
+                            .tag(new Tag("tag1", "value1"))
+                            .tag(new Tag("tag2", "value2"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(1).getClass());
-            actual = (Metric) m.getUdpRequests().getResponses().get(1);
-            expected = new Metric();
-            expected.setMetric("sys.cpu.idle");
-            expected.setTimestamp(TEST_TIME + 1);
-            expected.setValue(1.0);
-            tags = new ArrayList<>();
-            tags.add(new Tag("tag3", "value3"));
-            tags.add(new Tag("tag4", "value4"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(1).getClass());
+            actual = (MetricRequest) m.getUdpRequests().getResponses().get(1);
+            expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.idle")
+                            .value(TEST_TIME + 1, 1.0D)
+                            .tag(new Tag("tag3", "value3"))
+                            .tag(new Tag("tag4", "value4"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
+            // @formatter:on
 
         } finally {
             m.shutdown();

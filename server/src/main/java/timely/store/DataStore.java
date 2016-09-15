@@ -5,7 +5,7 @@ import java.util.Map;
 
 import org.apache.accumulo.core.client.Scanner;
 
-import timely.api.model.Metric;
+import timely.model.Metric;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;

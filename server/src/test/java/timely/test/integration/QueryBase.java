@@ -133,6 +133,7 @@ public abstract class QueryBase {
         con.setRequestProperty("Content-Type", "application/json");
         String requestJSON = JsonUtil.getObjectMapper().writeValueAsString(request);
         con.setRequestProperty("Content-Length", String.valueOf(requestJSON.length()));
+        LOG.debug("Request Body JSON: {}", requestJSON);
         OutputStream wr = con.getOutputStream();
         wr.write(requestJSON.getBytes(UTF_8));
         int responseCode = con.getResponseCode();

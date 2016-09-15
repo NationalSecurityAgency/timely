@@ -49,8 +49,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import timely.Server;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
@@ -247,27 +248,14 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
-            Metric first = new Metric();
-            first.setMetric("sys.cpu.user");
-            first.setTimestamp(TEST_TIME);
-            first.setValue(1.0D);
-            List<Tag> firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag1", "value1"));
-            firstTags.add(new Tag("tag2", "value2"));
-            first.setTags(firstTags);
-            Metric second = new Metric();
-            second.setMetric("sys.cpu.user");
-            second.setTimestamp(TEST_TIME);
-            second.setValue(1.0D);
-            List<Tag> secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            second.setTags(secondTags);
+            Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
+            Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
         } finally {
             ch.close().sync();
@@ -307,27 +295,14 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
-            Metric first = new Metric();
-            first.setMetric("sys.cpu.user");
-            first.setTimestamp(TEST_TIME);
-            first.setValue(1.0D);
-            List<Tag> firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag1", "value1"));
-            firstTags.add(new Tag("tag2", "value2"));
-            first.setTags(firstTags);
-            Metric second = new Metric();
-            second.setMetric("sys.cpu.user");
-            second.setTimestamp(TEST_TIME);
-            second.setValue(1.0D);
-            List<Tag> secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            second.setTags(secondTags);
+            Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
+            Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
 
             // Add some more data
@@ -347,27 +322,14 @@ public class WebSocketIT extends OneWaySSLBase {
             }
 
             // confirm data
-            first = new Metric();
-            first.setMetric("sys.cpu.user");
-            first.setTimestamp(TEST_TIME + 500);
-            first.setValue(6.0D);
-            firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag1", "value1"));
-            firstTags.add(new Tag("tag2", "value2"));
-            first.setTags(firstTags);
-            second = new Metric();
-            second.setMetric("sys.cpu.user");
-            second.setTimestamp(TEST_TIME + 500);
-            second.setValue(7.0D);
-            secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            second.setTags(secondTags);
+            first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME + 500, 6.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
+            second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME + 500, 7.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
 
             // Add subscription
@@ -387,48 +349,20 @@ public class WebSocketIT extends OneWaySSLBase {
                 sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
                 response = handler.getResponses();
             }
-            first = new Metric();
-            first.setMetric("sys.cpu.idle");
-            first.setTimestamp(TEST_TIME + 2);
-            first.setValue(1.0D);
-            firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag3", "value3"));
-            firstTags.add(new Tag("tag4", "value4"));
-            first.setTags(firstTags);
-            second = new Metric();
-            second.setMetric("sys.cpu.idle");
-            second.setTimestamp(TEST_TIME + 2);
-            second.setValue(3.0D);
-            secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            secondTags.add(new Tag("tag4", "value4"));
-            second.setTags(secondTags);
-            Metric third = new Metric();
-            third.setMetric("sys.cpu.idle");
-            third.setTimestamp(TEST_TIME + 1000);
-            third.setValue(1.0D);
-            List<Tag> thirdTags = new ArrayList<>();
-            thirdTags.add(new Tag("rack", "r1"));
-            thirdTags.add(new Tag("tag3", "value3"));
-            thirdTags.add(new Tag("tag4", "value4"));
-            third.setTags(thirdTags);
-            Metric fourth = new Metric();
-            fourth.setMetric("sys.cpu.idle");
-            fourth.setTimestamp(TEST_TIME + 1000);
-            fourth.setValue(3.0D);
-            List<Tag> fourthTags = new ArrayList<>();
-            fourthTags.add(new Tag("rack", "r2"));
-            fourthTags.add(new Tag("tag3", "value3"));
-            fourthTags.add(new Tag("tag4", "value4"));
-            fourth.setTags(fourthTags);
+            first = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 2, 1.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
+            second = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 2, 3.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
+            Metric third = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 1000, 1.0D)
+                    .tag(new Tag("rack", "r1")).tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
+            Metric fourth = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 1000, 3.0D)
+                    .tag(new Tag("rack", "r2")).tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId))
-                        || m.equals(third.toMetricResponse(subscriptionId))
-                        || m.equals(fourth.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(third, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(fourth, subscriptionId)));
             }
 
             // Remove subscriptions to metric
@@ -642,13 +576,8 @@ public class WebSocketIT extends OneWaySSLBase {
     @Test
     public void testPutMetric() throws Exception {
         try {
-            Metric m = new Metric();
-            m.setMetric("sys.cpu.user");
-            m.setTimestamp(TEST_TIME);
-            m.setValue(1.0D);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            m.setTags(tags);
+            Metric m = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1"))
+                    .build();
             String json = JsonUtil.getObjectMapper().writeValueAsString(m);
             ch.writeAndFlush(new TextWebSocketFrame(json));
         } finally {

@@ -11,7 +11,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import timely.api.annotation.Http;
 import timely.api.annotation.WebSocket;
-import timely.api.model.Tag;
+import timely.model.Tag;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpGetRequest;
 import timely.api.request.HttpPostRequest;
@@ -107,6 +107,7 @@ public class SearchLookupRequest extends AuthenticatedRequest implements HttpGet
         JsonNode operation = root.findValue("operation");
         if (null == operation) {
             StringBuilder buf = new StringBuilder(content.length() + 10);
+            // TODO building JSON by hand? ugh
             buf.append("{ \"operation\" : \"lookup\", ");
             int open = content.indexOf("{");
             buf.append(content.substring(open + 1));
@@ -122,6 +123,7 @@ public class SearchLookupRequest extends AuthenticatedRequest implements HttpGet
             throw new IllegalArgumentException("m parameter is required for lookup");
         }
         final String m = decoder.parameters().get("m").get(0);
+        // TODO are you parsing json yourself here? that's always a bad idea.
         final int tagIdx = m.indexOf("{");
         if (-1 == tagIdx) {
             search.setQuery(m);

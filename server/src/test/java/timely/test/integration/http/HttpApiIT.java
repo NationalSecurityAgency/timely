@@ -20,17 +20,22 @@ import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import timely.Server;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.api.request.VersionRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
+import timely.model.Value;
 import timely.test.IntegrationTest;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
@@ -80,21 +85,35 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)", "zzzz 1234567892 1.0 host=localhost");
+            // @formatter:off
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)",
+                "zzzz 1234567892 1.0 host=localhost");
+
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             String metrics = "https://localhost:54322/api/metrics";
             // Test prefix matching
             String result = query(metrics);
-            assertTrue(result.contains("<td>sys.cpu.user</td>"));
-            assertTrue(result.contains("<td>tag1=value1 tag2=value2 </td>"));
-            assertTrue(result.contains("<td>sys.cpu.idle</td>"));
-            assertTrue(result.contains("<td>tag3=value3 tag4=value4 </td>"));
-            assertTrue(result.contains("<td>zzzz</td>"));
-            assertTrue(result.contains("<td>host=localhost </td>"));
+            Document doc = Jsoup.parse(result);
+            Elements tableData = doc.select("td");
+
+            assertEquals(1, tableData.select(":contains(sys.cpu.user)").size());
+            assertEquals(1, tableData.select(":contains(tag1=value1 tag2=value2)").size());
+            assertEquals(1, tableData.select(":contains(sys.cpu.idle)").size());
+            assertEquals(1, tableData.select(":contains(tag3=value3 tag4=value4)").size());
+            assertEquals(1, tableData.select(":contains(zzzz)").size());
+            assertEquals(1, tableData.select(":contains(host=localhost)").size());
+
+            //assertTrue(result.contains("<td>sys.cpu.user</td>"));
+            //assertTrue(result.contains("<td>tag1=value1 tag2=value2 </td>"));
+            //assertTrue(result.contains("<td>sys.cpu.idle</td>"));
+            //assertTrue(result.contains("<td>tag3=value3 tag4=value4 </td>"));
+            //assertTrue(result.contains("<td>zzzz</td>"));
+            //assertTrue(result.contains("<td>host=localhost </td>"));
+            // @formatter:on
         } finally {
             s.shutdown();
         }
@@ -102,13 +121,16 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testMetricsJson() throws Exception {
+        // @formatter:off
+
         String expected = "{\"metrics\":[{\"metric\":\"sys.cpu.user\",\"tags\":[{\"key\":\"tag2\",\"value\":\"value2\"},{\"key\":\"tag1\",\"value\":\"value1\"}]},{\"metric\":\"sys.cpu.idle\",\"tags\":[{\"key\":\"tag4\",\"value\":\"value4\"},{\"key\":\"tag3\",\"value\":\"value3\"}]},{\"metric\":\"zzzz\",\"tags\":[{\"key\":\"host\",\"value\":\"localhost\"}]}]}";
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)", "zzzz 1234567892 1.0 host=localhost");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)",
+                    "zzzz 1234567892 1.0 host=localhost");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
 
@@ -119,6 +141,8 @@ public class HttpApiIT extends OneWaySSLBase {
         } finally {
             s.shutdown();
         }
+        // @formatter:on
+
     }
 
     @Test
@@ -339,11 +363,12 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testQueryWithTagWildcard() throws Exception {
         final Server s = new Server(conf);
         s.run();
+        // @formatter:off
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
-                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                    "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
@@ -354,45 +379,55 @@ public class HttpApiIT extends OneWaySSLBase {
             subQuery.setTags(Collections.singletonMap("rack", "r.*"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
+
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
-            QueryResponse response1 = response.get(0);
-            Map<String, String> tags = response1.getTags();
-            assertEquals(1, tags.size());
-            assertTrue(tags.containsKey("rack"));
-            assertTrue(tags.get("rack").equals("r2"));
-            Map<String, Object> dps = response1.getDps();
-            assertEquals(1, dps.size());
-            Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-            Entry<String, Object> entry = entries.next();
-            assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
-            assertEquals(3.0, entry.getValue());
 
-            QueryResponse response2 = response.get(1);
-            Map<String, String> tags2 = response2.getTags();
-            assertEquals(1, tags2.size());
-            assertTrue(tags2.containsKey("rack"));
-            assertTrue(tags2.get("rack").equals("r1"));
-            Map<String, Object> dps2 = response2.getDps();
-            assertEquals(1, dps2.size());
-            Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
-            Entry<String, Object> entry2 = entries2.next();
-            assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
-            assertEquals(1.0, entry2.getValue());
+            response.forEach(r -> {
+                Map<String, String> tags = r.getTags();
+                Map<String, Object> dps = r.getDps();
+                assertEquals(1, tags.size());
+                assertEquals(1, dps.size());
+                assertTrue(tags.containsKey("rack"));
+                Value value = parseDps(dps);
+                switch (tags.get("rack")) {
+                    case "r2":
+                        assertEquals((Long)((TEST_TIME / 1000L) + 1L), value.getTimestamp());
+                        assertEquals(3.0D, value.getMeasure(), 0.0);
+                        break;
+                    case "r1":
+                        assertEquals((Long)(TEST_TIME / 1000L ), value.getTimestamp());
+                        assertEquals(1.0D, value.getMeasure(), 0.0);
+                        break;
+                    default:
+                        assertTrue("Found invalid rack number: " + tags.get("rack"), false);
+                        break;
+                }
+
+            });
+            // @formatter:on
+
         } finally {
             s.shutdown();
         }
+    }
+
+    private Value parseDps(Map<String, Object> dps){
+        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
+        Entry<String, Object> entry = entries.next();
+        return new Value(Long.parseLong(entry.getKey()), (Double)entry.getValue());
     }
 
     @Test
     public void testQueryWithTagWildcard2() throws Exception {
         final Server s = new Server(conf);
         s.run();
+        // @formatter:off
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
-                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                    "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
@@ -403,34 +438,38 @@ public class HttpApiIT extends OneWaySSLBase {
             subQuery.setTags(Collections.singletonMap("rack", ".*"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
+
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
-            QueryResponse response1 = response.get(0);
-            Map<String, String> tags = response1.getTags();
-            assertEquals(1, tags.size());
-            assertTrue(tags.containsKey("rack"));
-            assertTrue(tags.get("rack").equals("r2"));
-            Map<String, Object> dps = response1.getDps();
-            assertEquals(1, dps.size());
-            Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-            Entry<String, Object> entry = entries.next();
-            assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
-            assertEquals(3.0, entry.getValue());
 
-            QueryResponse response2 = response.get(1);
-            Map<String, String> tags2 = response2.getTags();
-            assertEquals(1, tags2.size());
-            assertTrue(tags2.containsKey("rack"));
-            assertTrue(tags2.get("rack").equals("r1"));
-            Map<String, Object> dps2 = response2.getDps();
-            assertEquals(1, dps2.size());
-            Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
-            Entry<String, Object> entry2 = entries2.next();
-            assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
-            assertEquals(1.0, entry2.getValue());
+            response.forEach(r -> {
+                Map<String, String> tags = r.getTags();
+                Map<String, Object> dps = r.getDps();
+                assertEquals(1, tags.size());
+                assertEquals(1, dps.size());
+                assertTrue(tags.containsKey("rack"));
+                Value value = parseDps(dps);
+                switch (tags.get("rack")) {
+                    case "r2":
+                        assertEquals((Long)((TEST_TIME / 1000L) + 1L), value.getTimestamp());
+                        assertEquals(3.0D, value.getMeasure(), 0.0);
+                        break;
+                    case "r1":
+                        assertEquals((Long)(TEST_TIME / 1000L ), value.getTimestamp());
+                        assertEquals(1.0D, value.getMeasure(), 0.0);
+                        break;
+                    default:
+                        assertTrue("Found invalid rack number: " + tags.get("rack"), false);
+                        break;
+                }
+
+            });
+
         } finally {
             s.shutdown();
         }
+        // @formatter:on
+
     }
 
     @Test
@@ -438,45 +477,73 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
-                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            // @formater:off
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME + 1L) + " 1.0 tag3=value3 rack=r2",
+                    "sys.cpu.idle " + (TEST_TIME + 2L) + " 2.0 tag3=value3 tag4=value4 rack=r1",
+                    "sys.cpu.idle " + (TEST_TIME + 1000L) + " 3.0 tag3=value3 tag4=value4 rack=r2",
+                    "sys.cpu.idle " + (TEST_TIME + 2000L) + " 4.0 tag3=value3 tag4=value4 rack=r3");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
+
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
+            request.setMsResolution(true);
             SubQuery subQuery = new SubQuery();
             subQuery.setMetric("sys.cpu.idle");
             subQuery.setTags(Collections.singletonMap("rack", "r1|r2"));
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
-            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
-            assertEquals(2, response.size());
-            QueryResponse response1 = response.get(0);
-            Map<String, String> tags = response1.getTags();
-            assertEquals(1, tags.size());
-            assertTrue(tags.containsKey("rack"));
-            assertTrue(tags.get("rack").equals("r2"));
-            Map<String, Object> dps = response1.getDps();
-            assertEquals(1, dps.size());
-            Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-            Entry<String, Object> entry = entries.next();
-            assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
-            assertEquals(3.0, entry.getValue());
+            List<QueryResponse> responses = query("https://127.0.0.1:54322/api/query", request);
 
-            QueryResponse response2 = response.get(1);
-            Map<String, String> tags2 = response2.getTags();
-            assertEquals(1, tags2.size());
-            assertTrue(tags2.containsKey("rack"));
-            assertTrue(tags2.get("rack").equals("r1"));
-            Map<String, Object> dps2 = response2.getDps();
-            assertEquals(1, dps2.size());
-            Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
-            Entry<String, Object> entry2 = entries2.next();
-            assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
-            assertEquals(1.0, entry2.getValue());
+            assertEquals("Expected 2 responses for sys.cpu.idle rack=r1|r2", 2, responses.size());
+
+            for(QueryResponse response: responses){
+                assertTrue("Found incorrect metric", "sys.cpu.idle".equals(response.getMetric()));
+                response.getTags().forEach((tagk,tagv) -> {
+                   switch (tagk){
+                       case "rack":
+                           assertTrue(tagv.equals("r1") || tagv.equals("r2"));
+                           Map<String, Object> dps = response.getDps();
+                           assertEquals(1,dps.size());
+                           Entry<String, Object> dpsEntry = dps.entrySet().iterator().next();
+                           long ts = Long.parseLong(dpsEntry.getKey());
+                           double measure = (Double)dpsEntry.getValue();
+                           switch(tagv){
+                               case "r1":
+                                   assertEquals(2.0D, measure, 0.0);
+                                   // TODO re-evaluate this when #81 is resolved
+                                   // assertEquals("TEST_TIME: " + TEST_TIME, TEST_TIME + 2L, ts);
+                                   break;
+                               case "r2":
+                                   assertEquals(3.0D, measure, 0.0);
+                                   assertEquals("TEST_TIME: " + TEST_TIME, TEST_TIME + 1000L, ts);
+                                   break;
+                               default:
+                                   throw new IllegalArgumentException("Found incorrect rack tag value: " + tagv);
+                           }
+                           break;
+                       case "tag1":
+                           assertTrue("Found incorrect tag in results", false);
+                           break;
+                       case "tag2":
+                           assertTrue("Found incorrect tag in results", false);
+                           break;
+                       case "tag3":
+                           assertTrue("Found incorrect tag in results", tagv.equals("tag3"));
+                           break;
+                       case "tag4":
+                           assertTrue("Found incorrect tag in results", tagv.equals("tag4"));
+                           break;
+                       default:
+                           throw new IllegalArgumentException("Found incorrect tag key: " + tagk);
+                   }
+
+                });
+            }
+
+            // @formatter:on
         } finally {
             s.shutdown();
         }
@@ -612,13 +679,9 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            Metric m = new Metric();
-            m.setMetric("sys.cpu.user");
-            m.setTimestamp(TEST_TIME);
-            m.setValue(1.0D);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            m.setTags(tags);
+            Metric m = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1"))
+                    .build();
+            new Metric();
             URL url = new URL("https://127.0.0.1:54322/api/put");
             HttpsURLConnection con = getUrlConnection(url);
             con.setRequestMethod("POST");

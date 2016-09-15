@@ -8,8 +8,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.model.Metric;
+import timely.model.Tag;
 
 import com.google.common.util.concurrent.AtomicDouble;
 
