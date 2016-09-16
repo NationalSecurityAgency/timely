@@ -1,9 +1,29 @@
 package timely.test.integration.udp;
 
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.google.flatbuffers.FlatBufferBuilder;
+import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.ZooKeeperInstance;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
+import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
+import org.apache.accumulo.core.security.Authorizations;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import timely.Server;
+import timely.TestServer;
+import timely.api.request.MetricRequest;
+import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
+import timely.test.IntegrationTest;
+import timely.test.TestConfiguration;
+import timely.test.integration.MacITBase;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -15,40 +35,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
-import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.minicluster.MiniAccumuloCluster;
-import org.apache.accumulo.minicluster.MiniAccumuloConfig;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import timely.Configuration;
-import timely.Server;
-import timely.TestServer;
-import timely.api.request.MetricRequest;
-import timely.api.response.MetricResponse;
-import timely.model.Metric;
-import timely.model.Tag;
-import timely.auth.AuthCache;
-import timely.test.IntegrationTest;
-import timely.test.TestConfiguration;
-
-import com.google.flatbuffers.FlatBufferBuilder;
-import timely.test.integration.MacITBase;
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Integration tests for the operations available over the UDP transport
@@ -245,7 +235,7 @@ public class TimelyUdpIT extends MacITBase {
         try (DatagramSocket sock = new DatagramSocket();) {
             packet.setData(("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
             sock.send(packet);
-            sleepUninterruptibly(1, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             Assert.assertEquals(0, m.getUdpRequests().getCount());
         } finally {
             m.shutdown();
@@ -260,7 +250,7 @@ public class TimelyUdpIT extends MacITBase {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4");
-            sleepUninterruptibly(5, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         } finally {
             s.shutdown();
         }
@@ -287,7 +277,7 @@ public class TimelyUdpIT extends MacITBase {
         // for writing is working
         connector.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
         // wait for zookeeper propagation
-        sleepUninterruptibly(3, TimeUnit.SECONDS);
+        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         count = 0;
         for (final Entry<Key, Value> entry : connector.createScanner("timely.meta", Authorizations.EMPTY)) {
             LOG.info("Meta no vers iter: " + entry);
@@ -304,7 +294,7 @@ public class TimelyUdpIT extends MacITBase {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4 viz=(a|b)", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
-            sleepUninterruptibly(5, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         } finally {
             s.shutdown();
         }

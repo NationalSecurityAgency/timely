@@ -37,6 +37,7 @@ import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
 import timely.model.Value;
 import timely.test.IntegrationTest;
+import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
 
@@ -57,7 +58,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             String suggest = "https://localhost:54322/api/suggest?";
             // Test prefix matching
@@ -92,7 +93,7 @@ public class HttpApiIT extends OneWaySSLBase {
                 "zzzz 1234567892 1.0 host=localhost");
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             String metrics = "https://localhost:54322/api/metrics";
             // Test prefix matching
@@ -132,7 +133,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)",
                     "zzzz 1234567892 1.0 host=localhost");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             String metrics = "https://localhost:54322/api/metrics";
             // Test prefix matching
@@ -154,7 +155,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             String suggest = "https://localhost:54322/api/search/lookup?";
 
@@ -189,7 +190,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
@@ -230,7 +231,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
@@ -268,7 +269,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
@@ -306,7 +307,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 5.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + (TEST_TIME + 2000)
                     + " 6.0 tag1=value1 tag2=value2 host=h1");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 4000);
@@ -345,7 +346,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
@@ -370,7 +371,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
@@ -429,7 +430,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
@@ -484,7 +485,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     "sys.cpu.idle " + (TEST_TIME + 1000L) + " 3.0 tag3=value3 tag4=value4 rack=r2",
                     "sys.cpu.idle " + (TEST_TIME + 2000L) + " 4.0 tag3=value3 tag4=value4 rack=r3");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
 
             request.setStart(TEST_TIME);
@@ -559,7 +560,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);
@@ -615,7 +616,7 @@ public class HttpApiIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

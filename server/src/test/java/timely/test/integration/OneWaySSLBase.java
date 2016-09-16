@@ -1,34 +1,18 @@
 package timely.test.integration;
 
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.JdkSslClientContext;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.*;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-
-import java.io.File;
-import java.net.URL;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import timely.Configuration;
+import timely.auth.AuthCache;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
-
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.minicluster.MiniAccumuloCluster;
-import org.apache.accumulo.minicluster.MiniAccumuloConfig;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.rules.TemporaryFolder;
-
-import timely.Configuration;
-import timely.auth.AuthCache;
-import timely.test.TestConfiguration;
+import java.io.File;
+import java.net.URL;
 
 /**
  * Base test class for SSL with anonymous access
@@ -59,7 +43,6 @@ public class OneWaySSLBase extends QueryBase {
         config.getSecurity().getSsl().setUseGeneratedKeypair(false);
         config.getSecurity().setAllowAnonymousAccess(true);
     }
-
 
     @Before
     public void configureSSL() throws Exception {

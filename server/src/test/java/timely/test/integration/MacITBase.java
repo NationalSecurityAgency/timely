@@ -41,7 +41,7 @@ public class MacITBase {
 
     @BeforeClass
     public static void setupMiniAccumulo() throws Exception {
-        if( null == mac ) {
+        if (null == mac) {
             final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(tempDir, MAC_ROOT_PASSWORD);
             mac = new MiniAccumuloCluster(macConfig);
             mac.start();

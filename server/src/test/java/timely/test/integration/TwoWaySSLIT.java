@@ -187,7 +187,7 @@ public class TwoWaySSLIT extends QueryBase {
                 "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=A",
                 "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=D",
                 "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=G");
-            sleepUninterruptibly(5, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
                 request.setStart(TEST_TIME);
                 request.setEnd(TEST_TIME + 6000);

@@ -1,44 +1,18 @@
 package timely.test.integration.websocket;
 
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.fasterxml.jackson.databind.JavaType;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,11 +21,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
 import timely.Server;
-import timely.adapter.accumulo.MetricAdapter;
-import timely.model.Metric;
-import timely.model.Tag;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
@@ -66,12 +36,24 @@ import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
+import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
 
-import com.fasterxml.jackson.databind.JavaType;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @Category(IntegrationTest.class)
 public class WebSocketIT extends OneWaySSLBase {
@@ -232,7 +214,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
@@ -279,7 +261,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
@@ -312,7 +294,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             response = handler.getResponses();
             while (response.size() == 0 && handler.isConnected()) {
@@ -340,7 +322,7 @@ public class WebSocketIT extends OneWaySSLBase {
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add2)));
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Confirm receipt of all data sent to this point
             response = handler.getResponses();
@@ -392,7 +374,7 @@ public class WebSocketIT extends OneWaySSLBase {
             AggregatorsRequest request = new AggregatorsRequest();
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(request)));
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Confirm receipt of all data sent to this point
             List<String> response = handler.getResponses();
@@ -439,7 +421,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
                     + " 2.0 tag1=value1 tag3=value3 viz=secret");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
             String request =
@@ -499,7 +481,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
             String request = 
@@ -541,7 +523,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
         	String request = 
