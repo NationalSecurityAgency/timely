@@ -239,7 +239,7 @@ public class TimelyTcpIT {
             }
             Assert.assertEquals(2, m.getTcpRequests().getResponses().size());
             Assert.assertEquals(MetricRequest.class, m.getTcpRequests().getResponses().get(0).getClass());
-            // @ormatter:off
+            // @formatter:off
             MetricRequest actual = (MetricRequest) m.getTcpRequests().getResponses().get(0);
             MetricRequest expected = new MetricRequest(
                     Metric.newBuilder()

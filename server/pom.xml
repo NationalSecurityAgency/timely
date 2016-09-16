@@ -10,7 +10,7 @@
     <dependencies>
         <dependency>
             <groupId>timely</groupId>
-            <artifactId>timely-core</artifactId>
+            <artifactId>timely-client</artifactId>
             <version>${parent.version}</version>
         </dependency>
         <dependency>

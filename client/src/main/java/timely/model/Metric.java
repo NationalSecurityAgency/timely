@@ -82,10 +82,11 @@ public class Metric {
         this.name = name;
     }
 
-    @XmlElement(name="tags")
+    @XmlElement(name = "tags")
     public List<Tag> getTags() {
         return tags;
     }
+
     public void setTags(List<Tag> tags) {
         this.tags.addAll(tags);
     }

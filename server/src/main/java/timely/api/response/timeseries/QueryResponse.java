@@ -8,7 +8,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-public class  QueryResponse {
+public class QueryResponse {
 
     private String metric;
     private Map<String, String> tags = new HashMap<>();

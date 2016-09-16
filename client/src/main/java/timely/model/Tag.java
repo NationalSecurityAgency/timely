@@ -28,9 +28,10 @@ public class Tag implements Comparable<Tag>, Serializable {
         this.setValue(other.getValue());
     }
 
-    public Tag(String tag){
+    public Tag(String tag) {
         this(tagParser.parse(tag));
     }
+
     public Tag(String key, String value) {
         Preconditions.checkNotNull(key);
         Preconditions.checkNotNull(value);

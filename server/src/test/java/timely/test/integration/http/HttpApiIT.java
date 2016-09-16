@@ -412,10 +412,10 @@ public class HttpApiIT extends OneWaySSLBase {
         }
     }
 
-    private Value parseDps(Map<String, Object> dps){
+    private Value parseDps(Map<String, Object> dps) {
         Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
         Entry<String, Object> entry = entries.next();
-        return new Value(Long.parseLong(entry.getKey()), (Double)entry.getValue());
+        return new Value(Long.parseLong(entry.getKey()), (Double) entry.getValue());
     }
 
     @Test
@@ -477,7 +477,7 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            // @formater:off
+            // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME + 1L) + " 1.0 tag3=value3 rack=r2",
                     "sys.cpu.idle " + (TEST_TIME + 2L) + " 2.0 tag3=value3 tag4=value4 rack=r1",

@@ -23,7 +23,7 @@
         <url>https://github.com/NationalSecurityAgency/timely/issues</url>
     </issueManagement>
     <modules>
-        <module>core</module>
+        <module>client</module>
         <module>server</module>
         <module>collectd-timely-plugin</module>
         <module>collectd-nsq-plugin</module>

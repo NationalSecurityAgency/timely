@@ -40,7 +40,7 @@ public class MetricsBufferDecoder extends ByteToMessageDecoder {
                 Metrics metrics = Metrics.getRootAsMetrics(copy.nioBuffer());
                 int length = metrics.metricsLength();
                 for (int i = 0; i < length; i++) {
-                    MetricRequest m = new MetricRequest( parseFlatbuffer(metrics.metrics(i)));
+                    MetricRequest m = new MetricRequest(parseFlatbuffer(metrics.metrics(i)));
                     LOG.debug("Returning {}", m);
                     out.add(m);
                 }

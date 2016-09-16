@@ -319,6 +319,7 @@ public class DataStoreImpl implements DataStore {
     }
 
     private static final long FIVE_MINUTES_IN_MS = TimeUnit.MINUTES.toMillis(5);
+
     private void updateMetricCounts() {
         long now = System.currentTimeMillis();
         if (now - lastCountTime.get() > FIVE_MINUTES_IN_MS) {

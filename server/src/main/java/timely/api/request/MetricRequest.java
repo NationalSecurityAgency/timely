@@ -30,14 +30,20 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
 
     private static final MetricParser metricParser = new MetricParser();
 
-    public MetricRequest(){}
-    public MetricRequest(Metric metric){
+    public MetricRequest() {
+    }
+
+    public MetricRequest(Metric metric) {
         this.metric = metric;
     }
 
-    public Metric getMetric(){ return metric; }
-    public void setMetric(Metric metric){ this.metric = metric; }
+    public Metric getMetric() {
+        return metric;
+    }
 
+    public void setMetric(Metric metric) {
+        this.metric = metric;
+    }
 
     @Override
     public HttpPostRequest parseBody(String content) throws Exception {
@@ -58,8 +64,10 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         MetricRequest that = (MetricRequest) o;
 

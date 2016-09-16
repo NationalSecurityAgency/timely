@@ -49,7 +49,7 @@ public class TcpDecoderTest {
         // TODO check parse(Key, Value) implementation for empty visibility
         // expected.setVisibility(Metric.EMPTY_VISIBILITY);
         Assert.assertTrue(expected.equals(m));
-        //Assert.assertEquals(expected, m);
+        // Assert.assertEquals(expected, m);
     }
 
     @Test
@@ -73,7 +73,7 @@ public class TcpDecoderTest {
         // TODO check
         // ColumnVisibility cv = VisibilityCache.getColumnVisibility("a&b");
         Assert.assertTrue(expected.equals(m));
-        //Assert.assertEquals(expected, m);
+        // Assert.assertEquals(expected, m);
     }
 
     @Test

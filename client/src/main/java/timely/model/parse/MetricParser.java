@@ -24,9 +24,7 @@ public class MetricParser implements Parser<Metric> {
         // index 0 is put
         builder.name(parts.get(1)); // metric name
         builder.value(Long.parseLong(parts.get(2)), Double.parseDouble(parts.get(3)));
-        parts.stream()
-                .skip(4)
-                .forEach(builder::tag);
+        parts.stream().skip(4).forEach(builder::tag);
         return builder.build();
     }
 }

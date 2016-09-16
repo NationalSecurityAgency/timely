@@ -39,10 +39,10 @@ public class Value implements Comparator<Value>, Serializable {
     public void setTimestamp(final Long timestamp) {
         this.setTimestamp(timestamp, TimeUnit.MILLISECONDS);
     }
-    public void setTimestamp(final Long timestamp, TimeUnit timeUnit){
+
+    public void setTimestamp(final Long timestamp, TimeUnit timeUnit) {
         this.timestamp = timeUnit.toMillis(timestamp);
     }
-
 
     @XmlElement(name = "measure")
     public Double getMeasure() {
