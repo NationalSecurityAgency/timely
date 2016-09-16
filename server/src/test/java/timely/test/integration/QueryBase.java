@@ -23,7 +23,7 @@ import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.databind.JavaType;
 
-public abstract class QueryBase {
+public abstract class QueryBase extends MacITBase {
 
     public static class NotSuccessfulException extends Exception {
 

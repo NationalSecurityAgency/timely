@@ -8,9 +8,7 @@ import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 
 import timely.Server;
@@ -23,14 +21,14 @@ public class HTTPStrictTransportSecurityIT extends OneWaySSLBase {
 
     private static Server s = null;
 
-    @BeforeClass
-    public static void before() throws Exception {
+    @Before
+    public void before() throws Exception {
         s = new Server(conf);
         s.run();
     }
 
-    @AfterClass
-    public static void after() throws Exception {
+    @After
+    public void after() throws Exception {
         s.shutdown();
     }
 

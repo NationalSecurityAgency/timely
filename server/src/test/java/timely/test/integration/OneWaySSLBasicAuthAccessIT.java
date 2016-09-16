@@ -80,19 +80,8 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
         return con;
     }
 
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        OneWaySSLBase.beforeClass();
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        OneWaySSLBase.afterClass();
-    }
-
     @Before
     public void setup() throws Exception {
-        super.setup();
         Connector con = mac.getConnector("root", "secret");
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
     }

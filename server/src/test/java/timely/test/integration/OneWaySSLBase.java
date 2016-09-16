@@ -36,11 +36,6 @@ import timely.test.TestConfiguration;
 @SuppressWarnings("deprecation")
 public class OneWaySSLBase extends QueryBase {
 
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
-    protected static MiniAccumuloCluster mac = null;
-    protected static Configuration conf = null;
     protected static File clientTrustStoreFile = null;
 
     protected SSLSocketFactory getSSLSocketFactory() throws Exception {
@@ -65,6 +60,12 @@ public class OneWaySSLBase extends QueryBase {
         config.getSecurity().setAllowAnonymousAccess(true);
     }
 
+
+    @Before
+    public void configureSSL() throws Exception {
+        setupSSL(conf);
+    }
+
     @Override
     protected HttpsURLConnection getUrlConnection(String username, String password, URL url) throws Exception {
         // No username/password needed for anonymous access
@@ -76,35 +77,6 @@ public class OneWaySSLBase extends QueryBase {
         HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
         con.setHostnameVerifier((host, session) -> true);
         return con;
-    }
-
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
-        mac = new MiniAccumuloCluster(macConfig);
-        mac.start();
-        conf = TestConfiguration.createMinimalConfigurationForTest();
-        conf.getAccumulo().setInstanceName(mac.getInstanceName());
-        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
-        setupSSL(conf);
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        mac.stop();
-    }
-
-    @Before
-    public void setup() throws Exception {
-        Connector con = mac.getConnector("root", "secret");
-        con.tableOperations().list().forEach(t -> {
-            if (t.startsWith("timely")) {
-                try {
-                    con.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
-            }
-        });
     }
 
     @After

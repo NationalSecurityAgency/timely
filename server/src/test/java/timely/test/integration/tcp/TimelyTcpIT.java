@@ -24,7 +24,7 @@ import timely.auth.AuthCache;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.test.IntegrationTest;
-import timely.test.TestConfiguration;
+import timely.test.integration.MacITBase;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -41,51 +41,16 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static timely.test.TestConfiguration.WAIT_SECONDS;
 
 /**
  * Integration tests for the operations available over the TCP transport
  */
 @Category(IntegrationTest.class)
-public class TimelyTcpIT {
+public class TimelyTcpIT extends MacITBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyTcpIT.class);
     private static final Long TEST_TIME = System.currentTimeMillis();
-
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
-    private static MiniAccumuloCluster mac = null;
-    private static Configuration conf = null;
-
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
-        mac = new MiniAccumuloCluster(macConfig);
-        mac.start();
-        conf = TestConfiguration.createMinimalConfigurationForTest();
-        conf.getAccumulo().setInstanceName(mac.getInstanceName());
-        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
-        conf.getSecurity().getSsl().setUseOpenssl(false);
-        conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        mac.stop();
-    }
-
-    @Before
-    public void setup() throws Exception {
-        Connector con = mac.getConnector("root", "secret");
-        con.tableOperations().list().forEach(t -> {
-            if (t.startsWith("timely")) {
-                try {
-                    con.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
-            }
-        });
-    }
 
     @After
     public void tearDown() throws Exception {
@@ -278,7 +243,7 @@ public class TimelyTcpIT {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));) {
             writer.write("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n");
             writer.flush();
-            sleepUninterruptibly(1, TimeUnit.SECONDS);
+            sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
             Assert.assertEquals(0, m.getTcpRequests().getCount());
         } finally {
             m.shutdown();
@@ -293,7 +258,7 @@ public class TimelyTcpIT {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4");
-            sleepUninterruptibly(5, TimeUnit.SECONDS);
+            sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
         } finally {
             s.shutdown();
         }
@@ -320,7 +285,7 @@ public class TimelyTcpIT {
         // for writing is working
         connector.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
         // wait for zookeeper propagation
-        sleepUninterruptibly(3, TimeUnit.SECONDS);
+        sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
         count = 0;
         for (final Entry<Key, Value> entry : connector.createScanner("timely.meta", Authorizations.EMPTY)) {
             LOG.info("Meta no vers iter: " + entry);
@@ -337,7 +302,7 @@ public class TimelyTcpIT {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4 viz=(a|b)", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
-            sleepUninterruptibly(5, TimeUnit.SECONDS);
+            sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
         } finally {
             s.shutdown();
         }

@@ -48,38 +48,16 @@ import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import timely.test.integration.MacITBase;
 
 /**
  * Integration tests for the operations available over the UDP transport
  */
 @Category(IntegrationTest.class)
-public class TimelyUdpIT {
+public class TimelyUdpIT extends MacITBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyUdpIT.class);
     private static final Long TEST_TIME = System.currentTimeMillis();
-
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
-    private static MiniAccumuloCluster mac = null;
-    private static Configuration conf = null;
-
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
-        mac = new MiniAccumuloCluster(macConfig);
-        mac.start();
-        conf = TestConfiguration.createMinimalConfigurationForTest();
-        conf.getAccumulo().setInstanceName(mac.getInstanceName());
-        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
-        conf.getSecurity().getSsl().setUseOpenssl(false);
-        conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        mac.stop();
-    }
 
     @Before
     public void setup() throws Exception {
