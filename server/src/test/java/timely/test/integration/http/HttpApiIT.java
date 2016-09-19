@@ -107,13 +107,6 @@ public class HttpApiIT extends OneWaySSLBase {
             assertEquals(1, tableData.select(":contains(tag3=value3 tag4=value4)").size());
             assertEquals(1, tableData.select(":contains(zzzz)").size());
             assertEquals(1, tableData.select(":contains(host=localhost)").size());
-
-            //assertTrue(result.contains("<td>sys.cpu.user</td>"));
-            //assertTrue(result.contains("<td>tag1=value1 tag2=value2 </td>"));
-            //assertTrue(result.contains("<td>sys.cpu.idle</td>"));
-            //assertTrue(result.contains("<td>tag3=value3 tag4=value4 </td>"));
-            //assertTrue(result.contains("<td>zzzz</td>"));
-            //assertTrue(result.contains("<td>host=localhost </td>"));
             // @formatter:on
         } finally {
             s.shutdown();
