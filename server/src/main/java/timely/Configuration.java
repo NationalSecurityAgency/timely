@@ -347,6 +347,7 @@ public class Configuration {
         private Integer tcpPort;
         @NotNull
         private Integer udpPort;
+        private Integer shutdownQuietPeriod = 5;
 
         @NotNull
         public String getIp() {
@@ -373,6 +374,22 @@ public class Configuration {
 
         public Configuration setUdpPort(Integer udpPort) {
             this.udpPort = udpPort;
+            return Configuration.this;
+        }
+
+        /**
+         * Time to wait (in seconds) for connections to finish and to make sure
+         * no new connections happen before shutting down Netty event loop
+         * groups.
+         *
+         * @return
+         */
+        public int getShutdownQuietPeriod() {
+            return this.shutdownQuietPeriod;
+        }
+
+        public Configuration setShutdownQuietPeriod(Integer quietPeriod) {
+            this.shutdownQuietPeriod = quietPeriod;
             return Configuration.this;
         }
     }

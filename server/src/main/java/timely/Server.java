@@ -191,10 +191,13 @@ public class Server {
 
         LOG.info("Closing tcpChannelHandle");
         channelFutures.add(tcpChannelHandle.close());
+
         LOG.info("Closing httpChannelHandle");
         channelFutures.add(httpChannelHandle.close());
+
         LOG.info("Closing wsChannelHandle");
         channelFutures.add(wsChannelHandle.close());
+
         LOG.info("Closing udpChannelHandle");
         channelFutures.add(udpChannelHandle.close());
 
@@ -209,26 +212,33 @@ public class Server {
             }
         });
 
+        Integer quietPeriod = config.getServer().getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
-
         LOG.info("Shutting down tcpBossGroup");
-        groupFutures.add(tcpBossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
-        LOG.info("Shutting down tcpWorkerGroup");
-        groupFutures.add(tcpWorkerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
-        LOG.info("Shutting down httpBossGroup");
-        groupFutures.add(httpBossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
-        LOG.info("Shutting down httpWorkerGroup");
-        groupFutures.add(httpWorkerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
-        LOG.info("Shutting down wsBossGroup");
-        groupFutures.add(wsBossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
-        LOG.info("Shutting down wsWorkerGroup");
-        groupFutures.add(wsWorkerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
-        LOG.info("Shutting down udpBossGroup");
-        groupFutures.add(udpBossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
-        LOG.info("Shutting down udpWorkerGroup");
-        groupFutures.add(udpWorkerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS));
+        groupFutures.add(tcpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
 
-        groupFutures.forEach(f -> {
+        LOG.info("Shutting down tcpWorkerGroup");
+        groupFutures.add(tcpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down httpBossGroup");
+        groupFutures.add(httpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down httpWorkerGroup");
+        groupFutures.add(httpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down wsBossGroup");
+        groupFutures.add(wsBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down wsWorkerGroup");
+        groupFutures.add(wsWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down udpBossGroup");
+        groupFutures.add(udpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down udpWorkerGroup");
+        groupFutures.add(udpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        groupFutures.parallelStream().forEach(f -> {
             try {
                 f.get();
             } catch (final Exception e) {
@@ -244,8 +254,10 @@ public class Server {
         } catch (TimelyException e) {
             LOG.error("Error flushing to server during shutdown", e);
         }
+
         LOG.info("Closing MetaCacheFactory");
         MetaCacheFactory.close();
+
         LOG.info("Closing WebSocketRequestDecoder");
         WebSocketRequestDecoder.close();
         if (applicationContext != null) {
