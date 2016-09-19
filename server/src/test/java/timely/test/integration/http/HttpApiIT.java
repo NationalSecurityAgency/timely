@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -377,6 +378,8 @@ public class HttpApiIT extends OneWaySSLBase {
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
 
+            AtomicInteger rack1Count = new AtomicInteger(0);
+            AtomicInteger rack2Count = new AtomicInteger(0);
             response.forEach(r -> {
                 Map<String, String> tags = r.getTags();
                 Map<String, Object> dps = r.getDps();
@@ -388,10 +391,12 @@ public class HttpApiIT extends OneWaySSLBase {
                     case "r2":
                         assertEquals((Long)((TEST_TIME / 1000L) + 1L), value.getTimestamp());
                         assertEquals(3.0D, value.getMeasure(), 0.0);
+                        rack2Count.incrementAndGet();
                         break;
                     case "r1":
                         assertEquals((Long)(TEST_TIME / 1000L ), value.getTimestamp());
                         assertEquals(1.0D, value.getMeasure(), 0.0);
+                        rack1Count.incrementAndGet();
                         break;
                     default:
                         assertTrue("Found invalid rack number: " + tags.get("rack"), false);
@@ -399,6 +404,8 @@ public class HttpApiIT extends OneWaySSLBase {
                 }
 
             });
+            assertEquals("Did not find rack=r1", 1, rack1Count.get());
+            assertEquals("Did not find rack=r2", 1, rack2Count.get());
             // @formatter:on
 
         } finally {
@@ -436,6 +443,8 @@ public class HttpApiIT extends OneWaySSLBase {
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
             assertEquals(2, response.size());
 
+            AtomicInteger rack1Count = new AtomicInteger(0);
+            AtomicInteger rack2Count = new AtomicInteger(0);
             response.forEach(r -> {
                 Map<String, String> tags = r.getTags();
                 Map<String, Object> dps = r.getDps();
@@ -447,10 +456,12 @@ public class HttpApiIT extends OneWaySSLBase {
                     case "r2":
                         assertEquals((Long)((TEST_TIME / 1000L) + 1L), value.getTimestamp());
                         assertEquals(3.0D, value.getMeasure(), 0.0);
+                        rack2Count.incrementAndGet();
                         break;
                     case "r1":
                         assertEquals((Long)(TEST_TIME / 1000L ), value.getTimestamp());
                         assertEquals(1.0D, value.getMeasure(), 0.0);
+                        rack1Count.incrementAndGet();
                         break;
                     default:
                         assertTrue("Found invalid rack number: " + tags.get("rack"), false);
@@ -458,6 +469,8 @@ public class HttpApiIT extends OneWaySSLBase {
                 }
 
             });
+            assertEquals("Did not find rack=r1", 1, rack1Count.get());
+            assertEquals("Did not find rack=r2", 1, rack2Count.get());
 
         } finally {
             s.shutdown();
@@ -493,9 +506,11 @@ public class HttpApiIT extends OneWaySSLBase {
 
             assertEquals("Expected 2 responses for sys.cpu.idle rack=r1|r2", 2, responses.size());
 
+            AtomicInteger rack1Count = new AtomicInteger(0);
+            AtomicInteger rack2Count = new AtomicInteger(0);
             for(QueryResponse response: responses){
                 assertTrue("Found incorrect metric", "sys.cpu.idle".equals(response.getMetric()));
-                response.getTags().forEach((tagk,tagv) -> {
+                response.getTags().forEach((tagk, tagv) -> {
                    switch (tagk){
                        case "rack":
                            assertTrue(tagv.equals("r1") || tagv.equals("r2"));
@@ -509,10 +524,12 @@ public class HttpApiIT extends OneWaySSLBase {
                                    assertEquals(2.0D, measure, 0.0);
                                    // TODO re-evaluate this when #81 is resolved
                                    // assertEquals("TEST_TIME: " + TEST_TIME, TEST_TIME + 2L, ts);
+                                   rack1Count.getAndIncrement();
                                    break;
                                case "r2":
                                    assertEquals(3.0D, measure, 0.0);
                                    assertEquals("TEST_TIME: " + TEST_TIME, TEST_TIME + 1000L, ts);
+                                   rack2Count.getAndIncrement();
                                    break;
                                default:
                                    throw new IllegalArgumentException("Found incorrect rack tag value: " + tagv);
@@ -536,6 +553,8 @@ public class HttpApiIT extends OneWaySSLBase {
 
                 });
             }
+            assertEquals("Did not find rack=r1", 1, rack1Count.get());
+            assertEquals("Did not find rack=r2", 1, rack2Count.get());
 
             // @formatter:on
         } finally {
