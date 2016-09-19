@@ -37,7 +37,7 @@ public class MetricAdapter {
         final Mutation mutation = new Mutation(encodeRowKey(metric));
 
         List<Tag> tags = metric.getTags();
-        Collections.sort(tags); // TODO check that this works
+        Collections.sort(tags);
 
         for (final Tag entry : tags) {
             if (entry.getKey().equals(VISIBILITY_TAG))
