@@ -3,10 +3,9 @@ package timely.model;
 import com.fasterxml.jackson.annotation.*;
 import timely.model.parse.TagParser;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A Metric consists of a metric name, tags, and a Value

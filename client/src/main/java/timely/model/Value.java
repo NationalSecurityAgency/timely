@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 
-import javax.xml.bind.annotation.XmlElement;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +30,7 @@ public class Value implements Comparator<Value>, Serializable {
         this.setMeasure(measure);
     }
 
-    @XmlElement(name = "timestamp")
+    @JsonProperty("timestamp")
     public Long getTimestamp() {
         return timestamp;
     }
@@ -44,7 +43,7 @@ public class Value implements Comparator<Value>, Serializable {
         this.timestamp = timeUnit.toMillis(timestamp);
     }
 
-    @XmlElement(name = "measure")
+    @JsonProperty("measure")
     public Double getMeasure() {
         return measure;
     }

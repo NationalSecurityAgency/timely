@@ -3,14 +3,12 @@ package timely.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonRootName;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import timely.model.parse.TagParser;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -18,7 +16,7 @@ import java.util.stream.Stream;
 /**
  * Tag consists of key value pair
  */
-@XmlRootElement(name = "tag")
+@JsonRootName("tag")
 public class Tag implements Comparable<Tag>, Serializable {
 
     private static final Joiner equalJoiner = Joiner.on("=");
