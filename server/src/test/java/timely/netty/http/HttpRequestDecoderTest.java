@@ -304,8 +304,7 @@ public class HttpRequestDecoderTest {
         "    \"limit\": 3000,\n" +
         "    \"tags\":[\n" +
         "        {\n" +
-        "            \"key\": \"host\",\n" +
-        "            \"value\": \"*\"\n" +
+        "            \"host\":\"*\"\n" +
         "        }\n"+
         "    ]\n" +
         "}";

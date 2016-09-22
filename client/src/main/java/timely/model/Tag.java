@@ -45,12 +45,12 @@ public class Tag implements Comparable<Tag>, Serializable {
     }
 
     @JsonAnyGetter
-    public Map<String,String> get(){
+    public Map<String, String> get() {
         return Stream.of(this).collect(Collectors.toMap(Tag::getKey, Tag::getValue));
     }
 
     @JsonAnySetter
-    public void set(String key, String value){
+    public void set(String key, String value) {
         this.key = key;
         this.value = value;
     }

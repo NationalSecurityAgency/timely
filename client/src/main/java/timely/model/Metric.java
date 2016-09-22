@@ -10,12 +10,13 @@ import java.util.List;
 /**
  * A Metric consists of a metric name, tags, and a Value
  *
- * Json has been flattened to reduce overhead. Example: {"name":"m1","timestamp":1,"measure":1.0,"tags":[{"k1":"v1"}]}
+ * Json has been flattened to reduce overhead. Example:
+ * {"name":"m1","timestamp":1,"measure":1.0,"tags":[{"k1":"v1"}]}
  *
  */
 @JsonRootName("metric")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({"name"})
+@JsonPropertyOrder({ "name" })
 public class Metric {
 
     private String name;
@@ -105,8 +106,8 @@ public class Metric {
         if (name != null ? !name.equals(metric.name) : metric.name != null)
             return false;
 
-        if (tags != null ){
-            if( tags.size() != metric.tags.size()){
+        if (tags != null) {
+            if (tags.size() != metric.tags.size()) {
                 return false;
             } else if (!tags.containsAll(metric.tags)) {
                 return false;

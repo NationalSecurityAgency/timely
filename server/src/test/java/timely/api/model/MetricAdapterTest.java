@@ -76,7 +76,7 @@ public class MetricAdapterTest {
         Mutation mut = MetricAdapter.toMutation(m);
 
         PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
-        byte[] row = rowCoder.encode(new ComparablePair<String, Long>("sys.cpu.user", ts));
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", ts));
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
         Assert.assertEquals(rowCoder.decode(row), rowCoder.decode(mut.getRow()));
@@ -98,7 +98,7 @@ public class MetricAdapterTest {
         Metric m = Metric.newBuilder().name("sys.cpu.user").value(ts, 2.0D).tags(tags)
                 .tag(MetricAdapter.VISIBILITY_TAG, "(a&b)|(c&d)").build();
         String json = JsonUtil.getObjectMapper().writeValueAsString(MetricResponse.fromMetric(m, subscriptionId));
-        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"key\":\"tag1\",\"value\":\"value1\"},{\"key\":\"viz\",\"value\":\"(a&b)|(c&d)\"}],\"subscriptionId\":\"12345\"}";
+        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"tag1\":\"value1\"},{\"viz\":\"(a&b)|(c&d)\"}],\"subscriptionId\":\"12345\"}";
         Assert.assertEquals(expected, json);
     }
 }
