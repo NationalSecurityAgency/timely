@@ -1,5 +1,8 @@
 package timely.model;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import timely.model.parse.TagParser;
@@ -7,6 +10,10 @@ import timely.model.parse.TagParser;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Tag consists of key value pair
@@ -39,7 +46,18 @@ public class Tag implements Comparable<Tag>, Serializable {
         this.setValue(value);
     }
 
-    @XmlElement(name = "key")
+    @JsonAnyGetter
+    public Map<String,String> get(){
+        return Stream.of(this).collect(Collectors.toMap(Tag::getKey, Tag::getValue));
+    }
+
+    @JsonAnySetter
+    public void set(String key, String value){
+        this.key = key;
+        this.value = value;
+    }
+
+    @JsonIgnore
     public String getKey() {
         return key;
     }
@@ -48,7 +66,7 @@ public class Tag implements Comparable<Tag>, Serializable {
         this.key = key;
     }
 
-    @XmlElement(name = "value")
+    @JsonIgnore
     public String getValue() {
         return value;
     }

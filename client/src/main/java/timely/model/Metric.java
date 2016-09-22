@@ -5,18 +5,18 @@ import timely.model.parse.TagParser;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * A Metric consists of a metric name, tags, and a Value
+ *
+ * Json has been flattened to reduce overhead. Example: {"name":"m1","timestamp":1,"measure":1.0,"tags":[{"k1":"v1"}]}
+ *
  */
-@XmlRootElement(name = "metric")
+@JsonRootName("metric")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({ "name", "value" })
+@JsonPropertyOrder({"name"})
 public class Metric {
 
     private String name;
@@ -25,6 +25,7 @@ public class Metric {
 
     public Metric() {
         tags = new ArrayList<>();
+        value = new Value();
     }
 
     public Metric(Metric other) {
@@ -37,7 +38,8 @@ public class Metric {
     public Metric(String name, long timestamp, double measure) {
         this();
         this.name = name;
-        this.value = new Value(timestamp, measure);
+        this.value.setTimestamp(timestamp);
+        this.value.setMeasure(measure);
     }
 
     public Metric(String name, long timestamp, double measure, List<Tag> tags) {
@@ -48,7 +50,6 @@ public class Metric {
     public Metric(String name, List<Tag> tags) {
         this();
         this.name = name;
-        this.value = null;
         this.setTags(tags);
     }
 
@@ -56,24 +57,7 @@ public class Metric {
         return new Builder();
     }
 
-    @JsonAnyGetter
-    public Map<String, String> get() {
-        return tags.stream().collect(Collectors.toMap(Tag::getKey, Tag::getValue));
-    }
-
-    @JsonAnySetter
-    public void set(String key, String value) {
-        switch (key) {
-            case "timestamp":
-                break;
-            case "measure":
-                break;
-            default:
-                this.tags.add(new Tag(key, value));
-        }
-    }
-
-    @XmlElement(name = "name")
+    @JsonGetter("name")
     public String getName() {
         return name;
     }
@@ -82,7 +66,7 @@ public class Metric {
         this.name = name;
     }
 
-    @XmlElement(name = "tags")
+    @JsonGetter("tags")
     public List<Tag> getTags() {
         return tags;
     }
@@ -121,8 +105,15 @@ public class Metric {
 
         if (name != null ? !name.equals(metric.name) : metric.name != null)
             return false;
-        if (tags != null ? !tags.equals(metric.tags) : metric.tags != null)
-            return false;
+
+        if (tags != null ){
+            if( tags.size() != metric.tags.size()){
+                return false;
+            } else if (!tags.containsAll(metric.tags)) {
+                return false;
+            }
+        }
+
         return value != null ? value.equals(metric.value) : metric.value == null;
 
     }
