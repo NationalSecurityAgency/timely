@@ -19,7 +19,8 @@ import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import timely.Configuration;
-import timely.api.model.Metric;
+import timely.api.request.MetricRequest;
+import timely.model.Metric;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
@@ -99,9 +100,9 @@ public class WebSocketRequestDecoderTest {
         // @formatter:off
         String request = "{" + 
           "\"operation\" : \"put\",\n" + 
-          "\"metric\" : \"sys.cpu.user\",\n" + 
+          "\"name\" : \"sys.cpu.user\",\n" +
           "\"timestamp\":" + TEST_TIME + ",\n" + 
-          "\"value\":1.0,\n" + 
+          "\"measure\":1.0,\n" +
           "\"tags\":[ {\n" + 
               "\"key\":\"tag1\",\n" + 
               "\"value\":\"value1\"\n" + 
@@ -115,11 +116,11 @@ public class WebSocketRequestDecoderTest {
         frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));
         decoder.decode(ctx, frame, results);
         Assert.assertEquals(1, results.size());
-        Assert.assertEquals(Metric.class, results.get(0).getClass());
-        Metric metric = (Metric) results.iterator().next();
-        Assert.assertEquals("sys.cpu.user", metric.getMetric());
-        Assert.assertEquals(TEST_TIME, (Long) metric.getTimestamp());
-        Assert.assertEquals(1.0D, metric.getValue(), 0.0D);
+        Assert.assertEquals(MetricRequest.class, results.get(0).getClass());
+        Metric metric = ((MetricRequest) results.iterator().next()).getMetric();
+        Assert.assertEquals("sys.cpu.user", metric.getName());
+        Assert.assertEquals(TEST_TIME, metric.getValue().getTimestamp());
+        Assert.assertEquals(1.0D, metric.getValue().getMeasure(), 0.0D);
         Assert.assertEquals(2, metric.getTags().size());
     }
 

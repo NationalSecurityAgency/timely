@@ -23,6 +23,7 @@
         <url>https://github.com/NationalSecurityAgency/timely/issues</url>
     </issueManagement>
     <modules>
+        <module>client</module>
         <module>server</module>
         <module>collectd-timely-plugin</module>
         <module>collectd-nsq-plugin</module>
@@ -48,11 +49,13 @@
         <version.disruptor>3.3.2</version.disruptor>
         <version.fast-classpath-scanner>1.10.4</version.fast-classpath-scanner>
         <version.google-flatbuffers>1.4.0</version.google-flatbuffers>
+        <version.guava>19.0</version.guava>
         <version.hadoop>2.6.2</version.hadoop>
         <version.httpcomponents>4.5.1</version.httpcomponents>
         <version.jackson>2.6.1</version.jackson>
         <version.javassist>3.20.0-GA</version.javassist>
         <version.jcip-annotations>1.0</version.jcip-annotations>
+        <version.jsoup>1.9.2</version.jsoup>
         <version.junit>4.12</version.junit>
         <version.log4j>2.5</version.log4j>
         <version.netty>4.0.38.Final</version.netty>
@@ -115,6 +118,11 @@
 	            <artifactId>flatbuffers-java</artifactId>
 	            <version>${version.google-flatbuffers}</version>
 	        </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${version.guava}</version>
+            </dependency>
 	        <dependency>
 	            <groupId>com.lmax</groupId>
 	            <artifactId>disruptor</artifactId>
@@ -275,7 +283,12 @@
                 <version>${version.javassist}</version>
                 <scope>runtime</scope>
             </dependency>
-	        <dependency>
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>${version.jsoup}</version>
+            </dependency>
+            <dependency>
 	            <groupId>org.powermock</groupId>
 	            <artifactId>powermock-easymock-release-full</artifactId>
 	            <version>${version.powermock}</version>

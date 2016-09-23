@@ -23,7 +23,7 @@ import timely.util.JsonUtil;
 
 import com.fasterxml.jackson.databind.JavaType;
 
-public abstract class QueryBase {
+public abstract class QueryBase extends MacITBase {
 
     public static class NotSuccessfulException extends Exception {
 
@@ -133,6 +133,7 @@ public abstract class QueryBase {
         con.setRequestProperty("Content-Type", "application/json");
         String requestJSON = JsonUtil.getObjectMapper().writeValueAsString(request);
         con.setRequestProperty("Content-Length", String.valueOf(requestJSON.length()));
+        LOG.debug("Request Body JSON: {}", requestJSON);
         OutputStream wr = con.getOutputStream();
         wr.write(requestJSON.getBytes(UTF_8));
         int responseCode = con.getResponseCode();

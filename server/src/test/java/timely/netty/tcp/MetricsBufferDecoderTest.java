@@ -12,8 +12,9 @@ import java.util.Map.Entry;
 import org.junit.Assert;
 import org.junit.Test;
 
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.api.request.MetricRequest;
+import timely.model.Metric;
+import timely.model.Tag;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 
@@ -58,14 +59,17 @@ public class MetricsBufferDecoderTest {
         decoder.decode(null, buf, results);
 
         Assert.assertEquals(1, results.size());
-        Metric expected = new Metric();
-        expected.setMetric("sys.cpu.user");
-        expected.setTimestamp(TEST_TIME);
-        expected.setValue(1.0D);
-        final List<Tag> tags = new ArrayList<>();
-        tags.add(new Tag("tag1", "value1"));
-        tags.add(new Tag("tag2", "value2"));
-        expected.setTags(tags);
+        // @formatter:off
+        MetricRequest expected = new MetricRequest(
+                Metric.newBuilder()
+                    .name("sys.cpu.user")
+                    .value(TEST_TIME, 1.0D)
+                    .tag(new Tag("tag1", "value1"))
+                    .tag(new Tag("tag2", "value2"))
+                    .build()
+        );
+        // @formatter:on
+
         Assert.assertEquals(expected, results.get(0));
     }
 
@@ -95,25 +99,27 @@ public class MetricsBufferDecoderTest {
         MetricsBufferDecoder decoder = new MetricsBufferDecoder();
         List<Object> results = new ArrayList<Object>();
         decoder.decode(null, buf, results);
-
+        // @formatter:off
         Assert.assertEquals(2, results.size());
-        Metric expected = new Metric();
-        expected.setMetric("sys.cpu.user");
-        expected.setTimestamp(TEST_TIME);
-        expected.setValue(1.0D);
-        List<Tag> tags = new ArrayList<>();
-        tags.add(new Tag("tag1", "value1"));
-        tags.add(new Tag("tag2", "value2"));
-        expected.setTags(tags);
+        MetricRequest expected = new MetricRequest(
+                Metric.newBuilder()
+                        .name("sys.cpu.user")
+                        .value(TEST_TIME, 1.0D)
+                        .tag(new Tag("tag1", "value1"))
+                        .tag(new Tag("tag2", "value2"))
+                        .build()
+        );
         Assert.assertEquals(expected, results.get(0));
-        expected = new Metric();
-        expected.setMetric("sys.cpu.idle");
-        expected.setTimestamp(TEST_TIME);
-        expected.setValue(1.0D);
-        tags = new ArrayList<>();
-        tags.add(new Tag("tag3", "value3"));
-        tags.add(new Tag("tag4", "value4"));
-        expected.setTags(tags);
+
+        expected = new MetricRequest(
+                Metric.newBuilder()
+                        .name("sys.cpu.idle")
+                        .value(TEST_TIME, 1.0D)
+                        .tag(new Tag("tag3", "value3"))
+                        .tag(new Tag("tag4", "value4"))
+                        .build()
+        );
+        // @formatter:on
         Assert.assertEquals(expected, results.get(1));
     }
 

@@ -1,44 +1,18 @@
 package timely.test.integration.websocket;
 
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.fasterxml.jackson.databind.JavaType;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,10 +21,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
 import timely.Server;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
@@ -65,12 +36,24 @@ import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
+import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
 
-import com.fasterxml.jackson.databind.JavaType;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @Category(IntegrationTest.class)
 public class WebSocketIT extends OneWaySSLBase {
@@ -231,7 +214,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
@@ -247,27 +230,14 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
-            Metric first = new Metric();
-            first.setMetric("sys.cpu.user");
-            first.setTimestamp(TEST_TIME);
-            first.setValue(1.0D);
-            List<Tag> firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag1", "value1"));
-            firstTags.add(new Tag("tag2", "value2"));
-            first.setTags(firstTags);
-            Metric second = new Metric();
-            second.setMetric("sys.cpu.user");
-            second.setTimestamp(TEST_TIME);
-            second.setValue(1.0D);
-            List<Tag> secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            second.setTags(secondTags);
+            Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
+            Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
         } finally {
             ch.close().sync();
@@ -291,7 +261,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Add subscription, confirm data
             AddSubscription add = new AddSubscription();
@@ -307,27 +277,14 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
-            Metric first = new Metric();
-            first.setMetric("sys.cpu.user");
-            first.setTimestamp(TEST_TIME);
-            first.setValue(1.0D);
-            List<Tag> firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag1", "value1"));
-            firstTags.add(new Tag("tag2", "value2"));
-            first.setTags(firstTags);
-            Metric second = new Metric();
-            second.setMetric("sys.cpu.user");
-            second.setTimestamp(TEST_TIME);
-            second.setValue(1.0D);
-            List<Tag> secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            second.setTags(secondTags);
+            Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
+            Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
 
             // Add some more data
@@ -337,7 +294,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             response = handler.getResponses();
             while (response.size() == 0 && handler.isConnected()) {
@@ -347,27 +304,14 @@ public class WebSocketIT extends OneWaySSLBase {
             }
 
             // confirm data
-            first = new Metric();
-            first.setMetric("sys.cpu.user");
-            first.setTimestamp(TEST_TIME + 500);
-            first.setValue(6.0D);
-            firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag1", "value1"));
-            firstTags.add(new Tag("tag2", "value2"));
-            first.setTags(firstTags);
-            second = new Metric();
-            second.setMetric("sys.cpu.user");
-            second.setTimestamp(TEST_TIME + 500);
-            second.setValue(7.0D);
-            secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            second.setTags(secondTags);
+            first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME + 500, 6.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
+            second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME + 500, 7.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
 
             // Add subscription
@@ -378,7 +322,7 @@ public class WebSocketIT extends OneWaySSLBase {
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add2)));
 
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Confirm receipt of all data sent to this point
             response = handler.getResponses();
@@ -387,48 +331,20 @@ public class WebSocketIT extends OneWaySSLBase {
                 sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
                 response = handler.getResponses();
             }
-            first = new Metric();
-            first.setMetric("sys.cpu.idle");
-            first.setTimestamp(TEST_TIME + 2);
-            first.setValue(1.0D);
-            firstTags = new ArrayList<>();
-            firstTags.add(new Tag("rack", "r1"));
-            firstTags.add(new Tag("tag3", "value3"));
-            firstTags.add(new Tag("tag4", "value4"));
-            first.setTags(firstTags);
-            second = new Metric();
-            second.setMetric("sys.cpu.idle");
-            second.setTimestamp(TEST_TIME + 2);
-            second.setValue(3.0D);
-            secondTags = new ArrayList<>();
-            secondTags.add(new Tag("rack", "r2"));
-            secondTags.add(new Tag("tag3", "value3"));
-            secondTags.add(new Tag("tag4", "value4"));
-            second.setTags(secondTags);
-            Metric third = new Metric();
-            third.setMetric("sys.cpu.idle");
-            third.setTimestamp(TEST_TIME + 1000);
-            third.setValue(1.0D);
-            List<Tag> thirdTags = new ArrayList<>();
-            thirdTags.add(new Tag("rack", "r1"));
-            thirdTags.add(new Tag("tag3", "value3"));
-            thirdTags.add(new Tag("tag4", "value4"));
-            third.setTags(thirdTags);
-            Metric fourth = new Metric();
-            fourth.setMetric("sys.cpu.idle");
-            fourth.setTimestamp(TEST_TIME + 1000);
-            fourth.setValue(3.0D);
-            List<Tag> fourthTags = new ArrayList<>();
-            fourthTags.add(new Tag("rack", "r2"));
-            fourthTags.add(new Tag("tag3", "value3"));
-            fourthTags.add(new Tag("tag4", "value4"));
-            fourth.setTags(fourthTags);
+            first = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 2, 1.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
+            second = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 2, 3.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
+            Metric third = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 1000, 1.0D)
+                    .tag(new Tag("rack", "r1")).tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
+            Metric fourth = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 1000, 3.0D)
+                    .tag(new Tag("rack", "r2")).tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
-                Assert.assertTrue(m.equals(first.toMetricResponse(subscriptionId))
-                        || m.equals(second.toMetricResponse(subscriptionId))
-                        || m.equals(third.toMetricResponse(subscriptionId))
-                        || m.equals(fourth.toMetricResponse(subscriptionId)));
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(third, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(fourth, subscriptionId)));
             }
 
             // Remove subscriptions to metric
@@ -458,7 +374,7 @@ public class WebSocketIT extends OneWaySSLBase {
             AggregatorsRequest request = new AggregatorsRequest();
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(request)));
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // Confirm receipt of all data sent to this point
             List<String> response = handler.getResponses();
@@ -505,7 +421,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
                     + " 2.0 tag1=value1 tag3=value3 viz=secret");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
             String request =
@@ -565,7 +481,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
             String request = 
@@ -607,7 +523,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
         	String request = 
@@ -642,13 +558,8 @@ public class WebSocketIT extends OneWaySSLBase {
     @Test
     public void testPutMetric() throws Exception {
         try {
-            Metric m = new Metric();
-            m.setMetric("sys.cpu.user");
-            m.setTimestamp(TEST_TIME);
-            m.setValue(1.0D);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            m.setTags(tags);
+            Metric m = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1"))
+                    .build();
             String json = JsonUtil.getObjectMapper().writeValueAsString(m);
             ch.writeAndFlush(new TextWebSocketFrame(json));
         } finally {

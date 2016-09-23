@@ -10,7 +10,11 @@ import timely.api.annotation.WebSocket;
 @WebSocket(operation = "version")
 public class VersionRequest implements TcpRequest, HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
-    public static final String VERSION = VersionRequest.class.getPackage().getImplementationVersion();
+    public static final String VERSION;
+    static {
+        String ver = VersionRequest.class.getPackage().getImplementationVersion();
+        VERSION = (null == ver) ? "Unknown" : ver;
+    }
 
     public String getVersion() {
         return VERSION;

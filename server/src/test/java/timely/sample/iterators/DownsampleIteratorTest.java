@@ -24,8 +24,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import timely.Configuration;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.auth.VisibilityCache;
 import timely.sample.Downsample;
 import timely.sample.Sample;
@@ -48,11 +49,11 @@ public class DownsampleIteratorTest {
     }
 
     private void createTestData2() {
-        List<Tag> tags = Collections.singletonList(new Tag("host=host1"));
+        List<Tag> tags = Collections.singletonList(new Tag("host", "host1"));
 
         for (long i = 0; i < 1000; i += 100) {
             Metric m = new Metric("sys.loadAvg", i, .2, tags);
-            Mutation mutation = m.toMutation();
+            Mutation mutation = MetricAdapter.toMutation(m);
             for (ColumnUpdate cu : mutation.getUpdates()) {
                 Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(),
                         cu.getColumnVisibility(), cu.getTimestamp());
@@ -62,7 +63,7 @@ public class DownsampleIteratorTest {
     }
 
     void put(Map<Key, Value> testData, Metric m) {
-        Mutation mutation = m.toMutation();
+        Mutation mutation = MetricAdapter.toMutation(m);
         for (ColumnUpdate cu : mutation.getUpdates()) {
             Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(),
                     cu.getColumnVisibility(), cu.getTimestamp());
@@ -71,8 +72,8 @@ public class DownsampleIteratorTest {
     }
 
     private void createTestData1() {
-        List<Tag> tags = Collections.singletonList(new Tag("host=host1"));
-        List<Tag> tags2 = Collections.singletonList(new Tag("host=host2"));
+        List<Tag> tags = Collections.singletonList(new Tag("host", "host1"));
+        List<Tag> tags2 = Collections.singletonList(new Tag("host", "host2"));
 
         for (long i = 0; i < 1000; i += 100) {
             put(testData2, new Metric("sys.loadAvg", i, .2, tags));
@@ -89,7 +90,7 @@ public class DownsampleIteratorTest {
         for (Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
             Set<Tag> tags = entry.getKey();
             assertEquals(1, tags.size());
-            assertEquals(Collections.singleton(new Tag("host=host1")), tags);
+            assertEquals(Collections.singleton(new Tag("host", "host1")), tags);
             long ts = 0;
             for (Sample sample : entry.getValue()) {
                 assertEquals(ts, sample.timestamp);
@@ -105,7 +106,7 @@ public class DownsampleIteratorTest {
         DownsampleIterator iter = new DownsampleIterator();
         Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 100);
         assertEquals(2, samples.size());
-        for (Tag tag : new Tag[] { new Tag("host=host1"), new Tag("host=host2") }) {
+        for (Tag tag : new Tag[] { new Tag("host", "host1"), new Tag("host", "host2") }) {
             Downsample dsample = samples.get(Collections.singleton(tag));
             assertNotNull(dsample);
             long ts = 0;
@@ -129,7 +130,7 @@ public class DownsampleIteratorTest {
         DownsampleIterator iter = new DownsampleIterator();
         Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 200);
         assertEquals(2, samples.size());
-        for (Tag tag : new Tag[] { new Tag("host=host1"), new Tag("host=host2") }) {
+        for (Tag tag : new Tag[] { new Tag("host", "host1"), new Tag("host", "host2") }) {
             Downsample dsample = samples.get(Collections.singleton(tag));
             assertNotNull(dsample);
             long ts = 0;

@@ -30,7 +30,7 @@ public class HttpQueryRequestHandler extends SimpleChannelInboundHandler<QueryRe
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, QueryRequest msg) throws Exception {
-        byte[] buf = null;
+        byte[] buf;
         try {
             buf = JsonUtil.getObjectMapper().writeValueAsBytes(dataStore.query(msg));
         } catch (TimelyException e) {
