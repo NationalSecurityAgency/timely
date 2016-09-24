@@ -30,6 +30,7 @@ services:
     volumes:
      - ${PWD}/../grafana/timely-app:/var/lib/grafana/plugins/timely-app
      - ${PWD}/bin/docker/grafana:/etc/grafana
+     - ${PWD}/:/timely-server-src
     entrypoint:
      - gosu
      - grafana
