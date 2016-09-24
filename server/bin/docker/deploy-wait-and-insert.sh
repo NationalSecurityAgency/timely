@@ -1,9 +1,13 @@
 #!/bin/sh
 
-/timely-server-src/bin/docker/deploy-timely-build.sh
+WORKING="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+. ${WORKING}/deploy-env.sh
+
+${SRC_DIR}/bin/docker/deploy-timely-build.sh
 
 
-/timely-server-src/bin/docker/wait-for-it.sh timely:54322 -t 45
+${SRC_DIR}/bin/docker/wait-for-it.sh timely:54322 -t 45
 
 # create datasource in grafana
 #curl -X POST -u admin:admin -H "Content-Type: application/json" -d \
@@ -15,5 +19,5 @@
 #-d @/timely-server-src/bin/docker/standalone_test.json \
 #http://grafana:3000/api/dashboards/db
 
-/timely/bin/insert-test-data.sh
+${TIMELY_DIR}/bin/insert-test-data.sh
 

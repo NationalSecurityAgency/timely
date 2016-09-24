@@ -1,18 +1,16 @@
 #!/bin/bash
 
+WORKING="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+. ${WORKING}/deploy-env.sh
 
 PASSPREFIX=pass:
 KEYPASS=password
 PASSWORD=$PASSPREFIX$KEYPASS
 
-
-if [ ! -f bcprov-jdk15on-155.jar ];then
-	wget https://www.bouncycastle.org/download/bcprov-jdk15on-155.jar
-fi
-
-if [ ! -d ./pki ]; then
-	mkdir pki
-	pushd pki
+if [ ! -d ${SRC_DIR}/pki ]; then
+	mkdir ${SRC_DIR}/pki
+	pushd ${SRC_DIR}/pki
 
 	#Create a private key
 
@@ -56,5 +54,3 @@ if [ ! -d ./pki ]; then
 	popd
 fi
 
-docker-compose build
-docker-compose up

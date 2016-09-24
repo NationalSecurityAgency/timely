@@ -1,6 +1,11 @@
 #!/bin/sh
 
+WORKING="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+. ${WORKING}/deploy-env.sh
+
 set -e
-/timely-server-src/bin/docker/deploy-timely-build.sh
-/timely/bin/timely-standalone.sh
+${SRC_DIR}/bin/docker/genCerts.sh
+${SRC_DIR}/bin/docker/deploy-timely-build.sh
+${TIMELY_DIR}/bin/timely-standalone.sh
 
