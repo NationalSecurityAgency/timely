@@ -9,15 +9,48 @@ ${SRC_DIR}/bin/docker/deploy-timely-build.sh
 
 ${SRC_DIR}/bin/docker/wait-for-it.sh timely:54322 -t 45
 
-# create datasource in grafana
-#curl -X POST -u admin:admin -H "Content-Type: application/json" -d \
-#'{"name":"Timely","type":"opentsdb","url":"https://timely:54322","access":"proxy","jsonData":{"tsdbVersion":1,"tsdbResolution":1}}' \
-#http://grafana:3000/api/datasources
 
-# insert the dashboard
-#curl -X POST -u admin:admin -H "Content-Type: application/json" \
-#-d @/timely-server-src/bin/docker/standalone_test.json \
-#http://grafana:3000/api/dashboards/db
+# enable app
+curl -k -H "Content-Type: application/json" -d \
+'{
+  "enabled":true
+}' \
+ https://admin:admin@grafana:3000/api/plugins/timely-app/settings
+
+# create data source
+curl -k -H "Content-Type: application/json" -d \
+'{
+
+        "name":"Timely",
+        "type":"timely-datasource",
+        "Access":"direct",
+        "jsonData":
+        {
+                "timelyHost":"localhost",
+                "httpsPort":"54322",
+                "wsPort":"54323",
+                "basicAuths":true
+        }
+}' \
+ https://admin:admin@grafana:3000/api/datasources
+
+
+# import the dashboard
+curl -k -H "Content-Type: application/json" -d \
+'{
+        "pluginId":"timely-datasource",
+        "path":"dashboards/standalone_test.json",
+        "overwrite":false,
+        "inputs":[{
+                        "name":"*",
+                        "type":"datasource",
+                        "pluginId":"timely-datasource",
+                        "value":"Timely"
+                }]
+}' \
+ https://admin:admin@grafana:3000/api/dashboards/import
+
+
 
 ${TIMELY_DIR}/bin/insert-test-data.sh
 
