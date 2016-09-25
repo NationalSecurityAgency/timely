@@ -3,14 +3,25 @@ package timely.test.integration;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.JdkSslClientContext;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.*;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.security.Authorizations;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import timely.Configuration;
+import timely.Server;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.response.timeseries.QueryResponse;
+import timely.auth.AuthCache;
+import timely.netty.Constants;
+import timely.test.IntegrationTest;
+import timely.test.TestConfiguration;
 
+import javax.net.ssl.*;
 import java.io.File;
 import java.net.URL;
 import java.util.List;
@@ -18,34 +29,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
-
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.minicluster.MiniAccumuloCluster;
-import org.apache.accumulo.minicluster.MiniAccumuloConfig;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
-
-import timely.Server;
-import timely.Configuration;
-import timely.api.request.timeseries.QueryRequest;
-import timely.api.response.timeseries.QueryResponse;
-import timely.auth.AuthCache;
-import timely.netty.Constants;
-import timely.test.IntegrationTest;
-import timely.test.TestConfiguration;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.junit.Assert.assertEquals;
 
@@ -60,12 +43,6 @@ import static org.junit.Assert.assertEquals;
 public class TwoWaySSLOpenSSLIT extends QueryBase {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
-
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
-    private static MiniAccumuloCluster mac = null;
-    private static Configuration conf = null;
 
     protected static SelfSignedCertificate serverCert = null;
     protected static File clientTrustStoreFile = null;
@@ -101,6 +78,11 @@ public class TwoWaySSLOpenSSLIT extends QueryBase {
         config.getSecurity().getSsl().setUseOpenssl(false);
         config.getSecurity().getSsl().setUseGeneratedKeypair(false);
         config.getSecurity().setAllowAnonymousAccess(false);
+    }
+
+    @Before
+    public void configureSSL() throws Exception {
+        setupSSL(conf);
     }
 
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {
@@ -144,35 +126,10 @@ public class TwoWaySSLOpenSSLIT extends QueryBase {
         return con;
     }
 
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        temp.create();
-        final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
-        mac = new MiniAccumuloCluster(macConfig);
-        mac.start();
-        conf = TestConfiguration.createMinimalConfigurationForTest();
-        conf.getAccumulo().setInstanceName(mac.getInstanceName());
-        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
-        setupSSL(conf);
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        mac.stop();
-    }
-
     @Before
     public void setup() throws Exception {
         Connector con = mac.getConnector("root", "secret");
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
-        con.tableOperations().list().forEach(t -> {
-            if (t.startsWith("timely")) {
-                try {
-                    con.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
-            }
-        });
     }
 
     @After
@@ -203,7 +160,7 @@ public class TwoWaySSLOpenSSLIT extends QueryBase {
                     + " 2.0 tag1=value1 tag3=value3 viz=D", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=G");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

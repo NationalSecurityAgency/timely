@@ -8,12 +8,15 @@ public class TestConfiguration {
 
     public static final String TIMELY_HTTP_ADDRESS_DEFAULT = "localhost";
 
+    public static final int WAIT_SECONDS = 2;
+
     public static Configuration createMinimalConfigurationForTest() {
         // @formatter:off
         Configuration cfg = new Configuration()
                 .getServer().setIp("127.0.0.1")
                 .getServer().setTcpPort(54321)
                 .getServer().setUdpPort(54325)
+                .getServer().setShutdownQuietPeriod(0)
                 .getHttp().setIp("127.0.0.1")
                 .getHttp().setPort(54322)
                 .getHttp().setHost("localhost")
@@ -24,7 +27,7 @@ public class TestConfiguration {
                 .getAccumulo().setInstanceName("test")
                 .getAccumulo().setUsername("root")
                 .getAccumulo().setPassword("secret")
-                .getAccumulo().getWrite().setLatency("2s")
+                .getAccumulo().getWrite().setLatency("100ms")
                 .getSecurity().getSsl().setUseGeneratedKeypair(true);
         HashMap<String,Integer> ageoff = new HashMap<>();
         ageoff.put("default", 10);

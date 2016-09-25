@@ -3,11 +3,7 @@ package timely;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
@@ -44,8 +40,13 @@ import io.netty.util.internal.SystemPropertyUtil;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,74 +187,81 @@ public class Server {
     }
 
     public void shutdown() {
+        List<ChannelFuture> channelFutures = new ArrayList<>();
+
+        LOG.info("Closing tcpChannelHandle");
+        channelFutures.add(tcpChannelHandle.close());
+
+        LOG.info("Closing httpChannelHandle");
+        channelFutures.add(httpChannelHandle.close());
+
+        LOG.info("Closing wsChannelHandle");
+        channelFutures.add(wsChannelHandle.close());
+
+        LOG.info("Closing udpChannelHandle");
+        channelFutures.add(udpChannelHandle.close());
+
+        // wait for the channels to shutdown
+        channelFutures.forEach(f -> {
+            try {
+                f.get();
+            } catch (final Exception e) {
+                LOG.error("Error while shutting down channel: {}", f.channel().config());
+                LOG.error("{}", e.getMessage());
+                e.printStackTrace();
+            }
+        });
+
+        Integer quietPeriod = config.getServer().getShutdownQuietPeriod();
+        List<Future<?>> groupFutures = new ArrayList<>();
+        LOG.info("Shutting down tcpBossGroup");
+        groupFutures.add(tcpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down tcpWorkerGroup");
+        groupFutures.add(tcpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down httpBossGroup");
+        groupFutures.add(httpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down httpWorkerGroup");
+        groupFutures.add(httpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down wsBossGroup");
+        groupFutures.add(wsBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down wsWorkerGroup");
+        groupFutures.add(wsWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down udpBossGroup");
+        groupFutures.add(udpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        LOG.info("Shutting down udpWorkerGroup");
+        groupFutures.add(udpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+
+        groupFutures.parallelStream().forEach(f -> {
+            try {
+                f.get();
+            } catch (final Exception e) {
+                LOG.error("Error while shutting down group: {}", f.toString());
+                LOG.error("{}", e.getMessage());
+                e.printStackTrace();
+            }
+        });
+
         try {
-            tcpChannelHandle.close().sync();
-        } catch (final Exception e) {
-            LOG.error("Error shutting down tcp channel", e);
-        }
-        try {
-            httpChannelHandle.close().sync();
-        } catch (final Exception e) {
-            LOG.error("Error shutting down http channel", e);
-        }
-        try {
-            wsChannelHandle.close().sync();
-        } catch (final Exception e) {
-            LOG.error("Error shutting down websocket channel", e);
-        }
-        try {
-            udpChannelHandle.close().sync();
-        } catch (final Exception e) {
-            LOG.error("Error shutting down udp channel", e);
-        }
-        try {
-            tcpBossGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty TCP boss thread group", e);
-        }
-        try {
-            tcpWorkerGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty TCP worker thread group", e);
-        }
-        try {
-            httpBossGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty HTTP boss thread group", e);
-        }
-        try {
-            httpWorkerGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty HTTP worker thread group", e);
-        }
-        try {
-            wsBossGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty websocket boss thread group", e);
-        }
-        try {
-            wsWorkerGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty websocket worker thread group", e);
-        }
-        try {
-            udpBossGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty UDP boss thread group", e);
-        }
-        try {
-            udpWorkerGroup.shutdownGracefully().sync();
-        } catch (final Exception e) {
-            LOG.error("Error closing Netty UDP worker thread group", e);
-        }
-        try {
+            LOG.info("Flushing datastore.");
             dataStore.flush();
         } catch (TimelyException e) {
             LOG.error("Error flushing to server during shutdown", e);
         }
+
+        LOG.info("Closing MetaCacheFactory");
         MetaCacheFactory.close();
+
+        LOG.info("Closing WebSocketRequestDecoder");
         WebSocketRequestDecoder.close();
         if (applicationContext != null) {
+            LOG.info("Closing applicationContext");
             applicationContext.close();
         }
         this.shutdown = true;

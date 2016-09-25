@@ -1,22 +1,6 @@
 package timely.test.integration.udp;
 
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
-
+import com.google.flatbuffers.FlatBufferBuilder;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
@@ -24,62 +8,46 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.minicluster.MiniAccumuloCluster;
-import org.apache.accumulo.minicluster.MiniAccumuloConfig;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import timely.Configuration;
 import timely.Server;
 import timely.TestServer;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.api.request.MetricRequest;
 import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
+import timely.test.integration.MacITBase;
 
-import com.google.flatbuffers.FlatBufferBuilder;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Integration tests for the operations available over the UDP transport
  */
 @Category(IntegrationTest.class)
-public class TimelyUdpIT {
+public class TimelyUdpIT extends MacITBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyUdpIT.class);
     private static final Long TEST_TIME = System.currentTimeMillis();
-
-    @ClassRule
-    public static final TemporaryFolder temp = new TemporaryFolder();
-
-    private static MiniAccumuloCluster mac = null;
-    private static Configuration conf = null;
-
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(temp.newFolder("mac"), "secret");
-        mac = new MiniAccumuloCluster(macConfig);
-        mac.start();
-        conf = TestConfiguration.createMinimalConfigurationForTest();
-        conf.getAccumulo().setInstanceName(mac.getInstanceName());
-        conf.getAccumulo().setZookeepers(mac.getZooKeepers());
-        conf.getSecurity().getSsl().setUseOpenssl(false);
-        conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        mac.stop();
-    }
 
     @Before
     public void setup() throws Exception {
@@ -105,24 +73,26 @@ public class TimelyUdpIT {
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
-        try (DatagramSocket sock = new DatagramSocket();) {
+        try (DatagramSocket sock = new DatagramSocket()) {
+            // @formatter:off
             packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
             sock.send(packet);
             while (1 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
             Assert.assertEquals(1, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
-            final Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
-            final Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            final List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
+            final MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            final MetricRequest expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.user")
+                            .value(TEST_TIME, 1.0D)
+                            .tag(new Tag("tag1", "value1"))
+                            .tag(new Tag("tag2", "value2"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
+            // @formatter:on
         } finally {
             m.shutdown();
         }
@@ -135,38 +105,39 @@ public class TimelyUdpIT {
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
-        try (DatagramSocket sock = new DatagramSocket();) {
-            packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle "
-                    + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n").getBytes(UTF_8));
+        // @formatter:off
+        try (DatagramSocket sock = new DatagramSocket()) {
+            packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n"
+                          + "put sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n").getBytes(UTF_8));
             sock.send(packet);
             while (2 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
             Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
-            Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
-            Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
+            MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            MetricRequest expected = new MetricRequest (
+                    Metric.newBuilder()
+                            .name("sys.cpu.user")
+                            .value(TEST_TIME, 1.0D)
+                            .tag(new Tag("tag1", "value1"))
+                            .tag(new Tag("tag2", "value2"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(1).getClass());
-            actual = (Metric) m.getUdpRequests().getResponses().get(1);
-            expected = new Metric();
-            expected.setMetric("sys.cpu.idle");
-            expected.setTimestamp(TEST_TIME + 1);
-            expected.setValue(1.0);
-            tags = new ArrayList<>();
-            tags.add(new Tag("tag3", "value3"));
-            tags.add(new Tag("tag4", "value4"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(1).getClass());
+            actual = (MetricRequest) m.getUdpRequests().getResponses().get(1);
+            expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.idle")
+                            .value(TEST_TIME + 1, 1.0D)
+                            .tag(new Tag("tag3", "value3"))
+                            .tag(new Tag("tag4", "value4"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
-
+            // @formatter:on
         } finally {
             m.shutdown();
         }
@@ -217,36 +188,38 @@ public class TimelyUdpIT {
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
-        try (DatagramSocket sock = new DatagramSocket();) {
+        try (DatagramSocket sock = new DatagramSocket()) {
             packet.setData(data);
             sock.send(packet);
             while (2 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
             Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(0).getClass());
-            Metric actual = (Metric) m.getUdpRequests().getResponses().get(0);
-            Metric expected = new Metric();
-            expected.setMetric("sys.cpu.user");
-            expected.setTimestamp(TEST_TIME);
-            expected.setValue(1.0);
-            List<Tag> tags = new ArrayList<>();
-            tags.add(new Tag("tag1", "value1"));
-            tags.add(new Tag("tag2", "value2"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
+            // @formatter:off
+            MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            MetricRequest expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.user")
+                            .value(TEST_TIME, 1.0D)
+                            .tag(new Tag("tag1", "value1"))
+                            .tag(new Tag("tag2", "value2"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(Metric.class, m.getUdpRequests().getResponses().get(1).getClass());
-            actual = (Metric) m.getUdpRequests().getResponses().get(1);
-            expected = new Metric();
-            expected.setMetric("sys.cpu.idle");
-            expected.setTimestamp(TEST_TIME + 1);
-            expected.setValue(1.0);
-            tags = new ArrayList<>();
-            tags.add(new Tag("tag3", "value3"));
-            tags.add(new Tag("tag4", "value4"));
-            expected.setTags(tags);
+            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(1).getClass());
+            actual = (MetricRequest) m.getUdpRequests().getResponses().get(1);
+            expected = new MetricRequest(
+                    Metric.newBuilder()
+                            .name("sys.cpu.idle")
+                            .value(TEST_TIME + 1, 1.0D)
+                            .tag(new Tag("tag3", "value3"))
+                            .tag(new Tag("tag4", "value4"))
+                            .build()
+            );
             Assert.assertEquals(expected, actual);
+            // @formatter:on
 
         } finally {
             m.shutdown();
@@ -262,7 +235,7 @@ public class TimelyUdpIT {
         try (DatagramSocket sock = new DatagramSocket();) {
             packet.setData(("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
             sock.send(packet);
-            sleepUninterruptibly(1, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             Assert.assertEquals(0, m.getUdpRequests().getCount());
         } finally {
             m.shutdown();
@@ -277,7 +250,7 @@ public class TimelyUdpIT {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4");
-            sleepUninterruptibly(5, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         } finally {
             s.shutdown();
         }
@@ -304,7 +277,7 @@ public class TimelyUdpIT {
         // for writing is working
         connector.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
         // wait for zookeeper propagation
-        sleepUninterruptibly(3, TimeUnit.SECONDS);
+        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         count = 0;
         for (final Entry<Key, Value> entry : connector.createScanner("timely.meta", Authorizations.EMPTY)) {
             LOG.info("Meta no vers iter: " + entry);
@@ -321,7 +294,7 @@ public class TimelyUdpIT {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 tag4=value4 viz=(a|b)", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
-            sleepUninterruptibly(5, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         } finally {
             s.shutdown();
         }

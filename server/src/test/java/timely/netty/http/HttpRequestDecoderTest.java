@@ -24,8 +24,10 @@ import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import timely.Configuration;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.api.request.MetricRequest;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.api.request.timeseries.AggregatorsRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
@@ -302,8 +304,7 @@ public class HttpRequestDecoderTest {
         "    \"limit\": 3000,\n" +
         "    \"tags\":[\n" +
         "        {\n" +
-        "            \"key\": \"host\",\n" +
-        "            \"value\": \"*\"\n" +
+        "            \"host\":\"*\"\n" +
         "        }\n"+
         "    ]\n" +
         "}";
@@ -863,22 +864,21 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testPutMetricPost() throws Exception {
-        Metric m = new Metric();
-        m.setMetric("sys.cpu.user");
-        m.setTimestamp(TEST_TIME);
-        m.setValue(1.0D);
-        final List<Tag> tags = new ArrayList<>();
-        tags.add(new Tag("tag1", "value1"));
-        tags.add(new Tag("tag2", "value2"));
-        m.setTags(tags);
-        m.setVisibility(Metric.EMPTY_VISIBILITY);
+        // @formatter:off
+        Metric m = Metric.newBuilder()
+                .name("sys.cpu.user")
+                .value(TEST_TIME, 1.0D)
+                .tag(new Tag("tag1", "value1"))
+                .tag(new Tag("tag2", "value2"))
+                .build();
+        // @formatter:on
         byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(m);
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/put");
         request.content().writeBytes(buf);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
-        Assert.assertEquals(Metric.class, results.iterator().next().getClass());
+        Assert.assertEquals(MetricRequest.class, results.iterator().next().getClass());
     }
 
 }

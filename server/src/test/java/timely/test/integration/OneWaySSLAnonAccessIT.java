@@ -16,6 +16,7 @@ import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
 import timely.test.IntegrationTest;
+import timely.test.TestConfiguration;
 
 /**
  *
@@ -36,7 +37,7 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
                     + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
                     + " 2.0 tag1=value1 tag3=value3 viz=secret");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

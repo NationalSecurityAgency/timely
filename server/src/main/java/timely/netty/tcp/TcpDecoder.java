@@ -37,10 +37,10 @@ public class TcpDecoder extends ByteToMessageDecoder {
                 LOG.warn("Received no input");
                 return;
             }
-            LOG.trace("Received input {}", input);
+            LOG.trace("Received input: {}", input);
 
             String[] parts = input.split(" ");
-            String operation = null;
+            String operation;
             if (parts.length == 0 && !StringUtils.isEmpty(input)) {
                 operation = input;
             } else {
@@ -48,7 +48,7 @@ public class TcpDecoder extends ByteToMessageDecoder {
             }
             TcpRequest tcp = null;
             try {
-                tcp = (TcpRequest) AnnotationResolver.getClassForTcpOperation(operation);
+                tcp = AnnotationResolver.getClassForTcpOperation(operation);
             } catch (Exception e) {
                 LOG.error("Error getting class for operation: " + operation, e);
             }

@@ -9,17 +9,20 @@ import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
 import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
 import org.apache.accumulo.core.data.ColumnUpdate;
 import org.apache.accumulo.core.data.Mutation;
-import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import timely.Configuration;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.api.response.MetricResponse;
 import timely.auth.VisibilityCache;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.util.JsonUtil;
 
-public class MetricTest {
+public class MetricAdapterTest {
 
     @Before
     public void before() {
@@ -33,12 +36,8 @@ public class MetricTest {
         tags.add(new Tag("tag1", "value1"));
         tags.add(new Tag("tag2", "value2"));
         tags.add(new Tag("tag3", "value3"));
-        Metric m = new Metric();
-        m.setMetric("sys.cpu.user");
-        m.setTimestamp(ts);
-        m.setValue(2.0D);
-        m.setTags(tags);
-        Mutation mut = m.toMutation();
+        Metric m = Metric.newBuilder().name("sys.cpu.user").value(ts, 2.0D).tags(tags).build();
+        Mutation mut = MetricAdapter.toMutation(m);
 
         PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
         byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", ts));
@@ -71,16 +70,13 @@ public class MetricTest {
         long ts = System.currentTimeMillis();
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("tag1", "value1"));
-        Metric m = new Metric();
-        m.setMetric("sys.cpu.user");
-        m.setTimestamp(ts);
-        m.setValue(2.0D);
-        m.setTags(tags);
-        m.setVisibility(new ColumnVisibility("(a&b)|(c&d)"));
-        Mutation mut = m.toMutation();
+        Metric m = Metric.newBuilder().name("sys.cpu.user").value(ts, 2.0D).tags(tags)
+                .tag(MetricAdapter.VISIBILITY_TAG, "(a&b)|(c&d)").build();
+
+        Mutation mut = MetricAdapter.toMutation(m);
 
         PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
-        byte[] row = rowCoder.encode(new ComparablePair<String, Long>("sys.cpu.user", ts));
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", ts));
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
         Assert.assertEquals(rowCoder.decode(row), rowCoder.decode(mut.getRow()));
@@ -99,14 +95,10 @@ public class MetricTest {
         long ts = 1000L;
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("tag1", "value1"));
-        Metric m = new Metric();
-        m.setMetric("sys.cpu.user");
-        m.setTimestamp(ts);
-        m.setValue(2.0D);
-        m.setTags(tags);
-        m.setVisibility(new ColumnVisibility("(a&b)|(c&d)"));
-        String json = JsonUtil.getObjectMapper().writeValueAsString(m.toMetricResponse(subscriptionId));
-        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"key\":\"tag1\",\"value\":\"value1\"}],\"subscriptionId\":\"12345\"}";
+        Metric m = Metric.newBuilder().name("sys.cpu.user").value(ts, 2.0D).tags(tags)
+                .tag(MetricAdapter.VISIBILITY_TAG, "(a&b)|(c&d)").build();
+        String json = JsonUtil.getObjectMapper().writeValueAsString(MetricResponse.fromMetric(m, subscriptionId));
+        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"tag1\":\"value1\"},{\"viz\":\"(a&b)|(c&d)\"}],\"subscriptionId\":\"12345\"}";
         Assert.assertEquals(expected, json);
     }
 }

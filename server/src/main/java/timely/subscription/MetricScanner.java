@@ -19,7 +19,9 @@ import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.model.Metric;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.api.response.MetricResponse;
+import timely.model.Metric;
 import timely.api.response.TimelyException;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
@@ -74,9 +76,9 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
                 if (this.iter.hasNext()) {
                     Entry<Key, Value> e = this.iter.next();
-                    m = Metric.parse(e.getKey(), e.getValue());
+                    m = MetricAdapter.parse(e.getKey(), e.getValue());
                     try {
-                        String json = om.writeValueAsString(m.toMetricResponse(this.subscriptionId));
+                        String json = om.writeValueAsString(MetricResponse.fromMetric(m, this.subscriptionId));
                         LOG.trace("Returning {} for subscription", json);
                         this.ctx.writeAndFlush(new TextWebSocketFrame(json));
                     } catch (JsonProcessingException e1) {
@@ -84,7 +86,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     }
                 } else {
                     long endTime = (System.currentTimeMillis() - (lag * 1000));
-                    byte[] end = Metric.encodeRowKey(this.metric, endTime);
+                    byte[] end = MetricAdapter.encodeRowKey(this.metric, endTime);
                     Text endRow = new Text(end);
                     this.scanner.close();
                     Range prevRange = this.scanner.getRange();
@@ -98,8 +100,8 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         // Reset the starting range to the last key returned
                         LOG.debug("Exhausted scanner, waiting {}ms to retry.", delay);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
-                        this.scanner.setRange(new Range(new Text(Metric.encodeRowKey(m.getMetric(), m.getTimestamp())),
-                                false, endRow, prevRange.isEndKeyInclusive()));
+                        this.scanner.setRange(new Range(new Text(MetricAdapter.encodeRowKey(m)), false, endRow,
+                                prevRange.isEndKeyInclusive()));
                         this.iter = this.scanner.iterator();
                     }
                 }

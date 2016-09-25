@@ -33,6 +33,7 @@ import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
+import timely.test.TestConfiguration;
 import timely.util.JsonUtil;
 
 /**
@@ -80,19 +81,8 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
         return con;
     }
 
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        OneWaySSLBase.beforeClass();
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        OneWaySSLBase.afterClass();
-    }
-
     @Before
     public void setup() throws Exception {
-        super.setup();
         Connector con = mac.getConnector("root", "secret");
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
     }
@@ -137,7 +127,7 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
                     + " 2.0 tag1=value1 tag3=value3 viz=D", "sys.cpu.user " + (TEST_TIME + 3000)
                     + " 2.0 tag1=value1 tag3=value3 viz=G");
             // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
             request.setStart(TEST_TIME);
             request.setEnd(TEST_TIME + 6000);

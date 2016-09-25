@@ -9,6 +9,11 @@
     </parent>
     <dependencies>
         <dependency>
+            <groupId>timely</groupId>
+            <artifactId>timely-client</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
         </dependency>
@@ -126,6 +131,11 @@
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

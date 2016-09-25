@@ -62,9 +62,10 @@ import org.slf4j.LoggerFactory;
 
 import timely.Configuration;
 import timely.Server;
+import timely.adapter.accumulo.MetricAdapter;
 import timely.api.model.Meta;
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.RateOption;
@@ -221,6 +222,7 @@ public class DataStoreImpl implements DataStore {
 
     @Override
     public void store(Metric metric) {
+        LOG.trace("Received Store Request for: {}", metric);
         if (null == metaWriter.get()) {
             try {
                 BatchWriter w = connector.createBatchWriter(metaTable, bwConfig);
@@ -245,7 +247,7 @@ public class DataStoreImpl implements DataStore {
         internalMetrics.incrementMetricsReceived(1);
         List<Meta> toCache = new ArrayList<>(metric.getTags().size());
         for (final Tag tag : metric.getTags()) {
-            Meta key = new Meta(metric.getMetric(), tag.getKey(), tag.getValue());
+            Meta key = new Meta(metric.getName(), tag.getKey(), tag.getValue());
             if (!metaCache.contains(key)) {
                 toCache.add(key);
             }
@@ -293,7 +295,8 @@ public class DataStoreImpl implements DataStore {
             metaCache.addAll(toCache);
         }
         try {
-            batchWriter.get().addMutation(metric.toMutation());
+
+            batchWriter.get().addMutation(MetricAdapter.toMutation(metric));
             internalMetrics.incrementMetricKeysInserted(metric.getTags().size());
         } catch (MutationsRejectedException e) {
             LOG.error("Unable to write to metrics table", e);
@@ -315,15 +318,17 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
+    private static final long FIVE_MINUTES_IN_MS = TimeUnit.MINUTES.toMillis(5);
+
     private void updateMetricCounts() {
         long now = System.currentTimeMillis();
-        if (now - lastCountTime.get() > 5 * 60 * 1000) {
+        if (now - lastCountTime.get() > FIVE_MINUTES_IN_MS) {
             this.lastCountTime.set(now);
             SortedMap<MetricTagK, Integer> update = new TreeMap<>();
             for (Meta meta : this.metaCache) {
                 MetricTagK key = new MetricTagK(meta.getMetric(), meta.getTagKey());
-                Integer count = update.getOrDefault(key, Integer.valueOf(0));
-                update.put(key, Integer.valueOf(count.intValue() + 1));
+                Integer count = update.getOrDefault(key, 0);
+                update.put(key, count + 1);
             }
             this.metaCounts.set(update);
         }
@@ -712,9 +717,9 @@ public class DataStoreImpl implements DataStore {
     }
 
     private void setQueryRange(BatchScanner scanner, String metric, long start, long end) {
-        final byte[] start_row = Metric.encodeRowKey(metric, start);
+        final byte[] start_row = MetricAdapter.encodeRowKey(metric, start);
         LOG.trace("Start key for metric {} and time {} is {}", metric, start, start_row);
-        final byte[] end_row = Metric.encodeRowKey(metric, end);
+        final byte[] end_row = MetricAdapter.encodeRowKey(metric, end);
         LOG.trace("End key for metric {} and time {} is {}", metric, end, end_row);
         Range range = new Range(new Text(start_row), new Text(end_row));
         LOG.trace("Set query range to {}", range);
@@ -787,9 +792,9 @@ public class DataStoreImpl implements DataStore {
             if (null == metric) {
                 throw new IllegalArgumentException("metric name must be specified");
             }
-            byte[] start = Metric.encodeRowKey(metric, startTime);
+            byte[] start = MetricAdapter.encodeRowKey(metric, startTime);
             long endTime = (System.currentTimeMillis() - (lag * 1000));
-            byte[] end = Metric.encodeRowKey(metric, endTime);
+            byte[] end = MetricAdapter.encodeRowKey(metric, endTime);
             s.setRange(new Range(new Text(start), true, new Text(end), false));
             SubQuery query = new SubQuery();
             query.setMetric(metric);

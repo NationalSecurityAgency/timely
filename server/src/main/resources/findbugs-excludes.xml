@@ -3,4 +3,9 @@
   <Or>
     <Package name="timely.api.flatbuffer"/>
   </Or>
+  <Match>
+    <Class name="timely.Server" />
+    <Method name="shutdown" />
+    <Bug pattern="UC_USELESS_OBJECT" />
+  </Match>
 </FindBugsFilter>

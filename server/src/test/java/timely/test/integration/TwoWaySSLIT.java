@@ -181,19 +181,22 @@ public class TwoWaySSLIT extends QueryBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
-                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
-                    + " 2.0 tag1=value1 tag3=value3 viz=A", "sys.cpu.user " + (TEST_TIME + 3000)
-                    + " 2.0 tag1=value1 tag3=value3 viz=D", "sys.cpu.user " + (TEST_TIME + 3000)
-                    + " 2.0 tag1=value1 tag3=value3 viz=G");
-            sleepUninterruptibly(4, TimeUnit.SECONDS);
+            // @formatter:off
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
+                "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=A",
+                "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=D",
+                "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=G");
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
-            request.setStart(TEST_TIME);
-            request.setEnd(TEST_TIME + 6000);
+                request.setStart(TEST_TIME);
+                request.setEnd(TEST_TIME + 6000);
             QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
-            subQuery.setMetric("sys.cpu.user");
-            subQuery.setDownsample(Optional.of("1s-max"));
+                subQuery.setMetric("sys.cpu.user");
+                subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
+            // @formatter:on
+
             String metrics = "https://127.0.0.1:54322/api/query";
             List<QueryResponse> response = query(metrics, request);
             assertEquals(1, response.size());

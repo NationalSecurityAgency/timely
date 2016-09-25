@@ -17,8 +17,9 @@ import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
 
-import timely.api.model.Metric;
-import timely.api.model.Tag;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.api.response.TimelyException;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
@@ -57,7 +58,7 @@ public class DownsampleIterator extends WrappingIterator {
     public boolean hasTop() {
         while (super.hasTop()) {
             last = super.getTopKey();
-            Metric metric = Metric.parse(super.getTopKey(), super.getTopValue());
+            Metric metric = MetricAdapter.parse(super.getTopKey(), super.getTopValue());
             Set<Tag> tags = new HashSet<Tag>(metric.getTags());
             Downsample sample = value.get(tags);
             if (sample == null) {
@@ -67,7 +68,7 @@ public class DownsampleIterator extends WrappingIterator {
                     throw new RuntimeException(e);
                 }
             }
-            sample.add(metric.getTimestamp(), metric.getValue());
+            sample.add(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
             try {
                 super.next();
             } catch (IOException e) {
