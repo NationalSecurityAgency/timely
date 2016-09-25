@@ -50,7 +50,8 @@ curl -k -H "Content-Type: application/json" -d \
 }' \
  https://admin:admin@grafana:3000/api/dashboards/import
 
-
+# star the dashboard
+curl -k -X POST https://admin:admin@grafana:3000/api/user/stars/dashboard/1
 
 ${TIMELY_DIR}/bin/insert-test-data.sh
 
