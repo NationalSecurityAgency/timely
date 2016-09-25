@@ -2,29 +2,29 @@
 
 WORKING="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-. ${WORKING}/deploy-env.sh
+. "${WORKING}/deploy-env.sh"
 
 PASSPREFIX=pass:
 KEYPASS=password
-PASSWORD=$PASSPREFIX$KEYPASS
+export PASSWORD=$PASSPREFIX$KEYPASS
 
-if [ ! -d ${SRC_DIR}/pki ]; then
-	mkdir ${SRC_DIR}/pki
-	pushd ${SRC_DIR}/pki
+if [ ! -d "${SRC_DIR}/pki" ]; then
+	mkdir "${SRC_DIR}/pki"
+	pushd "${SRC_DIR}/pki"
 
 	#Create a private key
 
-	openssl genrsa -des3 -out CA.key -passout ${PASSWORD} 4096
+	openssl genrsa -aes256 -out CA.key -passout env:PASSWORD 4096
 
 	#Create a certificate request using the private key
 
-	openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem  -passin ${PASSWORD} -subj '/C=US/ST=Confusion/L=Here/O=Timely/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1'
+	openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem  -passin env:PASSWORD -subj '/C=US/ST=Confusion/L=Here/O=Timely/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1'
 	
 	#Create your SSL material for Grafana
 
 	#Create the private key for the Grafana server
 
-	openssl genrsa -out grafana.key -passout ${PASSWORD} 4096
+	openssl genrsa -out grafana.key -passout env:PASSWORD 4096
 
 	#Generate a certificate signing request (CSR) with our Grafana private key
 
@@ -32,7 +32,7 @@ if [ ! -d ${SRC_DIR}/pki ]; then
 	
 	#Use the CSR and the CA to create a certificate for the server (a reply to the CSR)
 
-	openssl x509 -req -in grafana.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out grafana.crt -days 365 -passin ${PASSWORD}
+	openssl x509 -req -in grafana.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out grafana.crt -days 365 -passin env:PASSWORD
 
 	#Create your SSL material for Timely
 
@@ -46,11 +46,11 @@ if [ ! -d ${SRC_DIR}/pki ]; then
 
 	#Use the CSR and the CA to create a certificate for the server (a reply to the CSR)
 
-	openssl x509 -req -in timely.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out timely.crt -days 365 -passin ${PASSWORD}
+	openssl x509 -req -in timely.csr -CA CA.pem -CAkey CA.key -CAcreateserial -out timely.crt -days 365 -passin env:PASSWORD
 	
 	#Convert the private key to pkcs#8 format
 
-	openssl pkcs8 -topk8 -inform PEM -outform PEM -in timely.key -out timely-pkcs8.key -passout ${PASSWORD}
+	openssl pkcs8 -topk8 -inform PEM -outform PEM -in timely.key -out timely-pkcs8.key -passout env:PASSWORD
 	popd
 fi
 

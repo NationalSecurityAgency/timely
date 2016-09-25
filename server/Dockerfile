@@ -11,7 +11,7 @@ RUN yum -y update && \
   wget -O /usr/lib/jvm/jre/lib/ext/bcprov-jdk15on-155.jar https://www.bouncycastle.org/download/bcprov-jdk15on-155.jar && \
   echo "security.provider.9=org.bouncycastle.jce.provider.BouncyCastleProvider" >> /usr/lib/jvm/jre/lib/security/java.security
 
-ENV JAVA_HOME /usr/lib/jvm/java
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk
 
 EXPOSE 9804 54321 54322
 

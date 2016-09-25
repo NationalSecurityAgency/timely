@@ -1,13 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 WORKING="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-. ${WORKING}/deploy-env.sh
+. "${WORKING}/deploy-env.sh"
 
-${SRC_DIR}/bin/docker/deploy-timely-build.sh
+"${SRC_DIR}/bin/docker/deploy-timely-build.sh"
 
 
-${SRC_DIR}/bin/docker/wait-for-it.sh timely:54322 -t 45
+"${SRC_DIR}/bin/docker/wait-for-it.sh" timely:54322 -t 45
 
 
 # enable app
@@ -53,5 +53,5 @@ curl -k -H "Content-Type: application/json" -d \
 # star the dashboard
 curl -k -X POST https://admin:admin@grafana:3000/api/user/stars/dashboard/1
 
-${TIMELY_DIR}/bin/insert-test-data.sh
+"${TIMELY_DIR}/bin/insert-test-data.sh"
 
