@@ -5,11 +5,15 @@ MAINTAINER Jim Klucar "klucar@gmail.com"
 VOLUME /timely-server-src
 VOLUME /timely
 
+
+
+
 RUN yum -y update && \
-  yum -y install java-1.8.0-openjdk-devel maven openssl apr wget && \
+  yum -y install java-1.8.0-openjdk-devel maven openssl apr wget epel-release && \
+  yum -y install bouncycastle && \
   mkdir -p /timely/bin && \
-  wget -O /usr/lib/jvm/jre/lib/ext/bcprov-jdk15on-155.jar https://www.bouncycastle.org/download/bcprov-jdk15on-155.jar && \
-  echo "security.provider.9=org.bouncycastle.jce.provider.BouncyCastleProvider" >> /usr/lib/jvm/jre/lib/security/java.security
+  echo "security.provider.9=org.bouncycastle.jce.provider.BouncyCastleProvider" >> /usr/lib/jvm/java-1.8.0-openjdk/jre/lib/security/java.security && \
+  ln -sf /usr/share/java/bcprov.jar /usr/lib/jvm/java-1.8.0-openjdk/jre/lib/ext/bcprov.jar
 
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk
 
