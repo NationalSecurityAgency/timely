@@ -7,6 +7,7 @@ import org.apache.accumulo.core.data.Mutation;
 import org.junit.Assert;
 import org.junit.Test;
 
+import timely.adapter.accumulo.MetaAdapter;
 import timely.api.model.Meta;
 
 public class MetaKeySetTest {
@@ -17,9 +18,9 @@ public class MetaKeySetTest {
         Meta two = new Meta("sys.cpu.user", "tag2", "value2");
         Meta three = new Meta("sys.cpu.user", "tag3", "value3");
         MetaKeySet mks = new MetaKeySet();
-        mks.addAll(one.toKeys());
-        mks.addAll(two.toKeys());
-        mks.addAll(three.toKeys());
+        mks.addAll(MetaAdapter.toKeys(one));
+        mks.addAll(MetaAdapter.toKeys(two));
+        mks.addAll(MetaAdapter.toKeys(three));
         Assert.assertEquals(7, mks.size());
         Assert.assertTrue(mks.contains(new Key("m:sys.cpu.user")));
         Assert.assertTrue(mks.contains(new Key("t:sys.cpu.user", "tag1")));
@@ -36,9 +37,9 @@ public class MetaKeySetTest {
         Meta two = new Meta("sys.cpu.user", "tag2", "value2");
         Meta three = new Meta("sys.cpu.user", "tag3", "value3");
         MetaKeySet mks = new MetaKeySet();
-        mks.addAll(one.toKeys());
-        mks.addAll(two.toKeys());
-        mks.addAll(three.toKeys());
+        mks.addAll(MetaAdapter.toKeys(one));
+        mks.addAll(MetaAdapter.toKeys(two));
+        mks.addAll(MetaAdapter.toKeys(three));
         List<Mutation> muts = mks.toMutations();
         Mutation e1 = new Mutation("m:sys.cpu.user");
         e1.put("", "", MetaKeySet.NULL_VALUE);
