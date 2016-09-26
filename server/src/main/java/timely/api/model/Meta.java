@@ -1,16 +1,8 @@
 package timely.api.model;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Value;
+import timely.model.Tag;
 
 public class Meta implements Comparable<Meta> {
-
-    public static final String METRIC_PREFIX = "m:";
-    public static final String TAG_PREFIX = "t:";
-    public static final String VALUE_PREFIX = "v:";
 
     private String metric;
     private String tagKey;
@@ -21,6 +13,13 @@ public class Meta implements Comparable<Meta> {
         this.metric = metric;
         this.tagKey = tagKey;
         this.tagValue = tagValue;
+    }
+
+    public Meta(String metric, Tag tag) {
+        super();
+        this.metric = metric;
+        this.tagKey = tag.getKey();
+        this.tagValue = tag.getValue();
     }
 
     public String getMetric() {
@@ -45,27 +44,6 @@ public class Meta implements Comparable<Meta> {
 
     public void setTagValue(String tagValue) {
         this.tagValue = tagValue;
-    }
-
-    public List<Key> toKeys() {
-        List<Key> keys = new ArrayList<>();
-        keys.add(new Key(METRIC_PREFIX + metric));
-        keys.add(new Key(TAG_PREFIX + metric, tagKey));
-        keys.add(new Key(VALUE_PREFIX + metric, tagKey, tagValue));
-        return keys;
-    }
-
-    public static Meta parse(Key k, Value v) {
-        if (k.getColumnQualifier().getLength() > 0) {
-            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), k.getColumnFamily().toString(), k
-                    .getColumnQualifier().toString());
-        } else if (k.getColumnFamily().getLength() > 0) {
-            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), k.getColumnFamily().toString(),
-                    null);
-
-        } else {
-            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), null, null);
-        }
     }
 
     @Override

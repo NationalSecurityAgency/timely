@@ -88,13 +88,17 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     long endTime = (System.currentTimeMillis() - (lag * 1000));
                     byte[] end = MetricAdapter.encodeRowKey(this.metric, endTime);
                     Text endRow = new Text(end);
+                    LOG.trace("end Row: {}", endRow);
                     this.scanner.close();
                     Range prevRange = this.scanner.getRange();
+                    LOG.trace("Previous Range: {}", prevRange);
                     if (null == m) {
                         LOG.debug("No results found, waiting {}ms to retry.", delay);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
-                        this.scanner.setRange(new Range(prevRange.getStartKey().getRow(), prevRange
-                                .isStartKeyInclusive(), endRow, false));
+                        Range newRange = new Range(prevRange.getStartKey().getRow(), prevRange.isStartKeyInclusive(),
+                                endRow, false);
+                        LOG.trace("New Range: {}", newRange);
+                        this.scanner.setRange(newRange);
                         this.iter = this.scanner.iterator();
                     } else {
                         // Reset the starting range to the last key returned

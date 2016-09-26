@@ -1,55 +1,10 @@
 package timely.store;
 
-import static org.apache.accumulo.core.conf.AccumuloConfiguration.getMemoryInBytes;
-import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
 import io.netty.handler.codec.http.HttpResponseStatus;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.accumulo.core.client.BatchScanner;
-import org.apache.accumulo.core.client.BatchWriter;
-import org.apache.accumulo.core.client.BatchWriterConfig;
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
-import org.apache.accumulo.core.client.IteratorSetting;
-import org.apache.accumulo.core.client.MutationsRejectedException;
-import org.apache.accumulo.core.client.NamespaceExistsException;
+import org.apache.accumulo.core.client.*;
 import org.apache.accumulo.core.client.Scanner;
-import org.apache.accumulo.core.client.ScannerBase;
-import org.apache.accumulo.core.client.TableExistsException;
-import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Mutation;
-import org.apache.accumulo.core.data.PartialKey;
-import org.apache.accumulo.core.data.Range;
-import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
 import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
@@ -59,13 +14,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.Configuration;
 import timely.Server;
+import timely.adapter.accumulo.MetaAdapter;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.model.Meta;
-import timely.model.Metric;
-import timely.model.Tag;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.RateOption;
@@ -78,11 +31,25 @@ import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.iterators.DownsampleIterator;
 import timely.util.MetaKeySet;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.apache.accumulo.core.conf.AccumuloConfiguration.getMemoryInBytes;
+import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
 
 public class DataStoreImpl implements DataStore {
 
@@ -269,7 +236,7 @@ public class DataStoreImpl implements DataStore {
                 }
             });
             MetaKeySet mks = new MetaKeySet();
-            toCache.forEach(m -> mks.addAll(m.toKeys()));
+            toCache.forEach(m -> mks.addAll(MetaAdapter.toKeys(m)));
             internalMetrics.incrementMetaKeysInserted(mks.size());
             muts.addAll(mks.toMutations());
             try {
@@ -341,26 +308,22 @@ public class DataStoreImpl implements DataStore {
             if (request.getType().equals("metrics")) {
                 Range range;
                 if (request.getQuery().isPresent()) {
-                    Text start = new Text(Meta.METRIC_PREFIX + request.getQuery().get());
+                    Text start = MetaAdapter.getMetricStart(request.getQuery().get());
                     Text endRow = new Text(start);
                     endRow.append(new byte[] { (byte) 0xff }, 0, 1);
                     range = new Range(start, endRow);
                 } else {
                     // kind of a hack, maybe someone wants a metric with >100
                     // 0xff bytes?
-                    Text start = new Text(Meta.METRIC_PREFIX);
-                    byte last = (byte) 0xff;
-                    byte[] lastBytes = new byte[100];
-                    Arrays.fill(lastBytes, last);
-                    Text end = new Text(Meta.METRIC_PREFIX);
-                    end.append(lastBytes, 0, lastBytes.length);
+                    Text start = MetaAdapter.getRawMetricStart();
+                    Text end = MetaAdapter.getRawMetricEnd();
                     range = new Range(start, end);
                 }
                 Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
                 scanner.setRange(range);
                 List<String> metrics = new ArrayList<>();
                 for (Entry<Key, Value> metric : scanner) {
-                    metrics.add(metric.getKey().getRow().toString().substring(Meta.METRIC_PREFIX.length()));
+                    metrics.add(MetaAdapter.parseMetricFromMetricRow(metric.getKey().getRow()));
                     if (metrics.size() >= request.getMax()) {
                         break;
                     }
@@ -407,14 +370,14 @@ public class DataStoreImpl implements DataStore {
         try {
             List<Result> resultField = new ArrayList<>();
             Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
-            Key start = new Key(Meta.VALUE_PREFIX + msg.getQuery());
+            Key start = new Key(MetaAdapter.getValueStart(msg.getQuery()));
             Key end = start.followingKey(PartialKey.ROW);
             Range range = new Range(start, end);
             scanner.setRange(range);
             tags.keySet().forEach(k -> scanner.fetchColumnFamily(new Text(k)));
             int total = 0;
             for (Entry<Key, Value> entry : scanner) {
-                Meta metaEntry = Meta.parse(entry.getKey(), entry.getValue());
+                Meta metaEntry = MetaAdapter.parse(entry.getKey(), entry.getValue());
                 if (matches(metaEntry.getTagKey(), metaEntry.getTagValue(), tagPatterns)) {
                     if (resultField.size() < msg.getLimit()) {
                         Result r = new Result();
@@ -460,6 +423,7 @@ public class DataStoreImpl implements DataStore {
                     setQueryRange(scanner, metric, startTs, endTs);
                     List<String> tagOrder = prioritizeTags(query);
                     Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
+                    LOG.trace("Ordered Tags: {}", orderedTags);
                     setQueryColumns(scanner, metric, orderedTags);
                     long downsample = getDownsamplePeriod(query);
                     if (((endTs - startTs) / downsample + 1) > Integer.MAX_VALUE) {
@@ -596,8 +560,8 @@ public class DataStoreImpl implements DataStore {
             throws TableNotFoundException, TimelyException {
         LOG.trace("Looking for requested tags: {}", tags);
         Scanner meta = connector.createScanner(metaTable, Authorizations.EMPTY);
-        Text start = new Text(Meta.VALUE_PREFIX + metric);
-        Text end = new Text(Meta.VALUE_PREFIX + metric + "\\x0000");
+        Text start = MetaAdapter.getValueStart(metric);
+        Text end = MetaAdapter.getValueEnd(metric);
         end.append(new byte[] { (byte) 0xff }, 0, 1);
         meta.setRange(new Range(start, end));
         // Only look for the meta entries that match our tags, if any
@@ -617,6 +581,7 @@ public class DataStoreImpl implements DataStore {
             }
         } else {
             // grab all of the values found for the first tag for the metric
+            LOG.trace("Only first row");
             onlyFirstRow = true;
         }
         final boolean ONLY_RETURN_FIRST_TAG = onlyFirstRow;
@@ -695,7 +660,7 @@ public class DataStoreImpl implements DataStore {
         while (knownKeyValues.hasNext()) {
             Pair<String, String> knownKeyValue = knownKeyValues.next();
             if (firstTag == null) {
-                LOG.trace("Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
+                LOG.trace("0 Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
                 result.add(new Tag(knownKeyValue.getFirst(), knownKeyValue.getSecond()));
             } else {
                 LOG.trace("Testing requested tag {}={}", firstTag.getKey(), firstTag.getValue());
@@ -703,11 +668,11 @@ public class DataStoreImpl implements DataStore {
                     if (null != matcher) {
                         matcher.reset(knownKeyValue.getSecond());
                         if (matcher.matches()) {
-                            LOG.trace("Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
+                            LOG.trace("1 Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
                             result.add(new Tag(knownKeyValue.getFirst(), knownKeyValue.getSecond()));
                         }
                     } else {
-                        LOG.trace("Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
+                        LOG.trace("2 Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
                         result.add(new Tag(knownKeyValue.getFirst(), knownKeyValue.getSecond()));
                     }
                 }
@@ -797,11 +762,14 @@ public class DataStoreImpl implements DataStore {
             byte[] end = MetricAdapter.encodeRowKey(metric, endTime);
             s.setRange(new Range(new Text(start), true, new Text(end), false));
             SubQuery query = new SubQuery();
+            LOG.trace("Setting metric query: {}", query);
             query.setMetric(metric);
+            LOG.trace("Setting metric: {}", metric);
             if (null == tags) {
                 tags = Collections.emptyMap();
             }
             query.setTags(tags);
+            LOG.trace("Setting tags: {}", tags);
             List<String> tagOrder = prioritizeTags(query);
             Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
             setQueryColumns(s, metric, orderedTags);

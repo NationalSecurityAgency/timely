@@ -45,7 +45,8 @@ public class MetricAdapter {
 
             final String cf = entry.join();
             // @formatter:off
-            String cq = tags.stream().filter(inner -> !inner.equals(entry))
+            String cq = tags.stream()
+                    .filter(inner -> !inner.equals(entry))
                     .filter(inner -> !inner.getKey().equals(VISIBILITY_TAG))
                     .map(Tag::join)
                     .collect(Collectors.joining(","));
@@ -92,4 +93,5 @@ public class MetricAdapter {
     public static byte[] encodeRowKey(Metric metric) {
         return encodeRowKey(metric.getName(), metric.getValue().getTimestamp());
     }
+
 }
