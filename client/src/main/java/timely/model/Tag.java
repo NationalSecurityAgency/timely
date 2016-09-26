@@ -79,7 +79,7 @@ public class Tag implements Comparable<Tag>, Serializable {
      * @return
      */
     public String join() {
-        return equalJoiner.join(key, value);
+        return (key.isEmpty() || value.isEmpty()) ? "" : equalJoiner.join(key, value);
     }
 
     @Override
