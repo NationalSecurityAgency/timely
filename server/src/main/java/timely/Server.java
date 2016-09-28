@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -160,13 +159,19 @@ public class Server {
         Configuration conf = initializeConfiguration(args);
 
         Server s = new Server(conf);
-        s.run();
         try {
+            s.run();
             LATCH.await();
         } catch (final InterruptedException e) {
             LOG.info("Server shutting down.");
+        } catch (Exception e) {
+            LOG.error("Error running server.", e);
         } finally {
-            s.shutdown();
+            try {
+                s.shutdown();
+            } catch (Exception e) {
+                System.exit(1);
+            }
         }
     }
 
@@ -189,17 +194,25 @@ public class Server {
     public void shutdown() {
         List<ChannelFuture> channelFutures = new ArrayList<>();
 
-        LOG.info("Closing tcpChannelHandle");
-        channelFutures.add(tcpChannelHandle.close());
+        if (tcpChannelHandle != null) {
+            LOG.info("Closing tcpChannelHandle");
+            channelFutures.add(tcpChannelHandle.close());
+        }
 
-        LOG.info("Closing httpChannelHandle");
-        channelFutures.add(httpChannelHandle.close());
+        if (httpChannelHandle != null) {
+            LOG.info("Closing httpChannelHandle");
+            channelFutures.add(httpChannelHandle.close());
+        }
 
-        LOG.info("Closing wsChannelHandle");
-        channelFutures.add(wsChannelHandle.close());
+        if (wsChannelHandle != null) {
+            LOG.info("Closing wsChannelHandle");
+            channelFutures.add(wsChannelHandle.close());
+        }
 
-        LOG.info("Closing udpChannelHandle");
-        channelFutures.add(udpChannelHandle.close());
+        if (udpChannelHandle != null) {
+            LOG.info("Closing udpChannelHandle");
+            channelFutures.add(udpChannelHandle.close());
+        }
 
         // wait for the channels to shutdown
         channelFutures.forEach(f -> {
@@ -214,29 +227,45 @@ public class Server {
 
         Integer quietPeriod = config.getServer().getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
-        LOG.info("Shutting down tcpBossGroup");
-        groupFutures.add(tcpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (tcpBossGroup != null) {
+            LOG.info("Shutting down tcpBossGroup");
+            groupFutures.add(tcpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
-        LOG.info("Shutting down tcpWorkerGroup");
-        groupFutures.add(tcpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (tcpWorkerGroup != null) {
+            LOG.info("Shutting down tcpWorkerGroup");
+            groupFutures.add(tcpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
-        LOG.info("Shutting down httpBossGroup");
-        groupFutures.add(httpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (httpBossGroup != null) {
+            LOG.info("Shutting down httpBossGroup");
+            groupFutures.add(httpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
-        LOG.info("Shutting down httpWorkerGroup");
-        groupFutures.add(httpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (httpWorkerGroup != null) {
+            LOG.info("Shutting down httpWorkerGroup");
+            groupFutures.add(httpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
-        LOG.info("Shutting down wsBossGroup");
-        groupFutures.add(wsBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (wsBossGroup != null) {
+            LOG.info("Shutting down wsBossGroup");
+            groupFutures.add(wsBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
-        LOG.info("Shutting down wsWorkerGroup");
-        groupFutures.add(wsWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (wsWorkerGroup != null) {
+            LOG.info("Shutting down wsWorkerGroup");
+            groupFutures.add(wsWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
-        LOG.info("Shutting down udpBossGroup");
-        groupFutures.add(udpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (udpBossGroup != null) {
+            LOG.info("Shutting down udpBossGroup");
+            groupFutures.add(udpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
-        LOG.info("Shutting down udpWorkerGroup");
-        groupFutures.add(udpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        if (udpWorkerGroup != null) {
+            LOG.info("Shutting down udpWorkerGroup");
+            groupFutures.add(udpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
+        }
 
         groupFutures.parallelStream().forEach(f -> {
             try {
@@ -255,11 +284,20 @@ public class Server {
             LOG.error("Error flushing to server during shutdown", e);
         }
 
-        LOG.info("Closing MetaCacheFactory");
-        MetaCacheFactory.close();
+        try {
+            LOG.info("Closing MetaCacheFactory");
+            MetaCacheFactory.close();
+        } catch (Exception e) {
+            LOG.error("Error closing MetaCacheFactory during shutdown", e);
+        }
 
-        LOG.info("Closing WebSocketRequestDecoder");
-        WebSocketRequestDecoder.close();
+        try {
+            LOG.info("Closing WebSocketRequestDecoder");
+            WebSocketRequestDecoder.close();
+        } catch (Exception e) {
+            LOG.error("Error closing WebSocketRequestDecoder during shutdown", e);
+        }
+
         if (applicationContext != null) {
             LOG.info("Closing applicationContext");
             applicationContext.close();
