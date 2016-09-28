@@ -57,11 +57,19 @@ public class MetricAdapter {
     }
 
     private static Value extractValue(Metric metric) {
+        return new Value(encodeValue(metric.getValue().getMeasure()));
+    }
+
+    public static byte[] encodeValue(Double d) {
         byte[] b = new byte[Double.BYTES];
         ByteBuffer bb = ByteBuffer.wrap(b);
-        bb.putDouble(metric.getValue().getMeasure());
+        bb.putDouble(d);
+        return b;
+    }
 
-        return new Value(b);
+    public static Double decodeValue(byte[] buf) {
+        ByteBuffer bb = ByteBuffer.wrap(buf);
+        return bb.getDouble();
     }
 
     private static ColumnVisibility extractVisibility(List<Tag> tags) {
