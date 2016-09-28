@@ -6,7 +6,6 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.accumulo.core.security.ColumnVisibility;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

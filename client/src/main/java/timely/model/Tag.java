@@ -19,6 +19,8 @@ import java.util.stream.Stream;
 @JsonRootName("tag")
 public class Tag implements Comparable<Tag>, Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Joiner equalJoiner = Joiner.on("=");
     private static final TagParser tagParser = new TagParser();
 

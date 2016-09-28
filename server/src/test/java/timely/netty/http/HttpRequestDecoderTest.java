@@ -24,7 +24,6 @@ import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import timely.Configuration;
-import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.MetricRequest;
 import timely.model.Metric;
 import timely.model.Tag;

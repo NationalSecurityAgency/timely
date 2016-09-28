@@ -13,6 +13,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class Value implements Comparator<Value>, Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private Long timestamp;
     private Double measure;
 

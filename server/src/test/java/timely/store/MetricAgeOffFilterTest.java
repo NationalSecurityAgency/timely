@@ -7,7 +7,6 @@ import org.apache.accumulo.core.data.Key;
 import org.junit.Test;
 
 import timely.adapter.accumulo.MetricAdapter;
-import timely.model.Metric;
 
 public class MetricAgeOffFilterTest {
 
