@@ -10,6 +10,7 @@ THIS_DIR="${THIS_SCRIPT%/*}"
 BASE_DIR=${THIS_DIR}/..
 LIB_DIR="${BASE_DIR}/lib"
 NUM_SERVER_THREADS=4
+CONF_DIR="${BASE_DIR}/conf"
 
 if [ -z ${TIMELY_HOST+x} ]; then
   echo "TIMELY_HOST is unset, using 127.0.0.1"
@@ -32,7 +33,7 @@ for j in ${LIB_DIR}/*.jar; do
   SEP=":"
 done
 
-JVM_ARGS="-Xmx128m -Xms128m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS} -Dlog4j.configurationFile=${THIS_DIR}/log4j2.xml"
+JVM_ARGS="-Xmx128m -Xms128m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS} -Dlog4j.configurationFile=${CONF_DIR}/log4j2-spring.xml"
 
 echo "$JAVA_HOME/bin/java -classpath ${CP} ${JVM_ARGS} timely.util.InsertTestData ${TIMELY_HOST} ${TIMELY_PORT} --fast"
 exec $JAVA_HOME/bin/java -classpath ${CP} ${JVM_ARGS} timely.util.InsertTestData ${TIMELY_HOST} ${TIMELY_PORT} --fast
