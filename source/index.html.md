@@ -24,6 +24,7 @@ includes:
   - developer
   - documentation
   - examples
+  - releasenotes
 
 search: true
 

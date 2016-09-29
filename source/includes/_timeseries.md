@@ -5,7 +5,8 @@ The Timeseries API contains operations for getting metadata about the time serie
 ## Put Operation
 
 ```plaintext
-echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc <host> <port>
+echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc <host> <tcp_port>
+echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc -u <host> <udp_port>
 ```
 
 ```http
@@ -55,6 +56,9 @@ timestamp | long | The timestamp in ms
 value | double | The value of this metric at this time
 tags | map | (Optional) Pairs of K,V strings to associate with this metric
 
+<aside class="notice">
+Timely accepts binary put requests over the UDP and TCP protocols using Google Flatbuffers encoding. The flatbuffer definition file is in the server source code in src/main/resources/fb
+</aside>
 ## Suggest Operation
 
 ```http

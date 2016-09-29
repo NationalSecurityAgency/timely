@@ -10,7 +10,7 @@ If you are just starting out with Timely and want to see what it can do, then st
 The standalone server will not save your metric data across restarts.
 </aside>
 
-To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.yml` file appropriately. Then copy the `lib/timely-server.jar` and `lib/commons-lang3-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
+To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.yml` file appropriately. Then copy the `lib/timely-server.jar`, `lib/commons-lang3-*.jar`, and `lib/commons-collections4-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
 
 ## SSL Setup
 
@@ -24,7 +24,7 @@ There are plenty of resources on the Internet for doing this. This example is ta
 
 Create a private key
 
-`openssl genrsa -des3 -out CA.key 4096`
+`openssl genrsa -aes256 -out CA.key 4096`
 
 Create a certificate request using the private key
 
