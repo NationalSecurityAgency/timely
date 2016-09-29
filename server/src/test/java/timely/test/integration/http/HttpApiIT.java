@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.OutputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -23,7 +22,6 @@ import javax.net.ssl.HttpsURLConnection;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
 import org.junit.Test;
@@ -669,6 +667,62 @@ public class HttpApiIT extends OneWaySSLBase {
             Entry<String, Object> entry2 = entries2.next();
             assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
             assertEquals(1.0, entry2.getValue());
+        } finally {
+            s.shutdown();
+        }
+    }
+
+    @Test
+    public void testRateQuery() throws Exception {
+        final Server s = new Server(conf);
+        s.run();
+        try {
+            // @formatter:off
+            put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1", 
+            	"sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+10) + " 11.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+11) + " 12.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+12) + " 13.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+13) + " 14.0 tag1=value1 tag2=value2 rack=r1",
+            	"sys.cpu.user " + (TEST_TIME+14) + " 15.0 tag1=value1 tag2=value2 rack=r1");
+    		// @formatter:on
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 15);
+            request.setMsResolution(true);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.user");
+            Map<String, String> t = new LinkedHashMap<>();
+            subQuery.setTags(t);
+            subQuery.setDownsample(Optional.of("1ms-max"));
+            subQuery.setRate(true);
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(1, response.size());
+            QueryResponse response1 = response.get(0);
+            Map<String, Object> dps = response1.getDps();
+            assertEquals(15, dps.size());
+            int i = 0;
+            for (Entry<String, Object> e : dps.entrySet()) {
+                assertEquals(Long.toString(TEST_TIME + i), e.getKey());
+                if (i == 0) {
+                    assertEquals(0.0, e.getValue());
+                } else {
+                    assertEquals(1.0, e.getValue());
+                }
+                i++;
+            }
+
         } finally {
             s.shutdown();
         }

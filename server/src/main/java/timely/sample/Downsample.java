@@ -189,6 +189,7 @@ public class Downsample implements Iterable<Sample>, Serializable {
                 lastPos = i;
             }
         }
+        LOG.debug("convertCountToRate: {}", result);
         return result;
     }
 }

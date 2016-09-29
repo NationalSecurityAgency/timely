@@ -27,7 +27,7 @@ public class SlidingWindowIterator extends WrappingIterator {
 
     private Key topKey = null;
     private Value topValue = null;
-    private Double[] seeds = null;
+    private Double[] filters = null;
     private LinkedList<Pair<Key, Value>> window = new LinkedList<>();
     private boolean seenLast = false;
 
@@ -46,17 +46,23 @@ public class SlidingWindowIterator extends WrappingIterator {
         if (seenLast) {
             return false;
         }
+        if (topKey != null && topValue != null) {
+            return true;
+        }
+        return false;
+    }
+
+    private void compute() {
         // compute result
         double result = 0D;
-        for (int i = 0; i < seeds.length; i++) {
+        for (int i = 0; i < filters.length; i++) {
             Double d = MetricAdapter.decodeValue(window.get(i).getSecond().get());
-            LOG.trace("hasTop - value: {}", d);
-            result += (seeds[i] * d);
+            LOG.trace("compute - value: {}", d);
+            result += (filters[i] * d);
         }
-        LOG.trace("hasTop - result: {}", result);
+        LOG.trace("compute - result: {}", result);
         topKey = window.getLast().getFirst();
         topValue = new Value(MetricAdapter.encodeValue(result));
-        return true;
     }
 
     @Override
@@ -68,11 +74,11 @@ public class SlidingWindowIterator extends WrappingIterator {
             throw new IllegalArgumentException("Window size must be specified.");
         }
         String[] split = size.split(",");
-        seeds = new Double[split.length];
+        filters = new Double[split.length];
         for (int i = 0; i < split.length; i++) {
-            seeds[i] = Double.parseDouble(split[i]);
+            filters[i] = Double.parseDouble(split[i]);
         }
-        LOG.trace("init - filter: {}, seenLast: {}", Arrays.toString(seeds), seenLast);
+        LOG.trace("init - filter: {}, seenLast: {}", Arrays.toString(filters), seenLast);
     }
 
     @Override
@@ -81,27 +87,34 @@ public class SlidingWindowIterator extends WrappingIterator {
         if (super.hasTop()) {
             window.pollFirst();
             window.add(new Pair<Key, Value>(super.getTopKey(), super.getTopValue()));
+            compute();
         } else {
             if (!seenLast) {
                 seenLast = true;
             }
             window.add(window.getLast());
+            compute();
         }
+        LOG.trace("next - seenLast: {}", seenLast);
     }
 
     @Override
     public void seek(Range range, Collection<ByteSequence> columnFamilies, boolean inclusive) throws IOException {
-        super.seek(range, columnFamilies, inclusive);
         topKey = null;
         topValue = null;
         window.clear();
+        seenLast = false;
+        super.seek(range, columnFamilies, inclusive);
         // Initialize the array with the first value N times
         if (super.hasTop()) {
-            for (int i = 0; i < seeds.length; i++) {
+            for (int i = 0; i < filters.length; i++) {
                 window.add(new Pair<Key, Value>(super.getTopKey(), super.getTopValue()));
             }
+            compute();
+        } else {
+            seenLast = true;
         }
-        LOG.trace("seek - window: {}", window);
+        LOG.trace("seek - window: {}, seenLast: {}", window, seenLast);
     }
 
 }

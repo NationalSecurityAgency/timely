@@ -64,8 +64,6 @@ import timely.Configuration;
 import timely.Server;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.model.Meta;
-import timely.model.Metric;
-import timely.model.Tag;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.RateOption;
@@ -78,10 +76,13 @@ import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.iterators.DownsampleIterator;
+import timely.store.iterators.SlidingWindowIterator;
 import timely.util.MetaKeySet;
 
 public class DataStoreImpl implements DataStore {
@@ -461,6 +462,13 @@ public class DataStoreImpl implements DataStore {
                     List<String> tagOrder = prioritizeTags(query);
                     Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
                     setQueryColumns(scanner, metric, orderedTags);
+
+                    if (query.isRate()) {
+                        LOG.trace("Adding rate iterator");
+                        IteratorSetting rate = new IteratorSetting(499, SlidingWindowIterator.class);
+                        rate.addOption(SlidingWindowIterator.FILTER, "-1.0,1.0");
+                        scanner.addScanIterator(rate);
+                    }
                     long downsample = getDownsamplePeriod(query);
                     if (((endTs - startTs) / downsample + 1) > Integer.MAX_VALUE) {
                         throw new IOException(
@@ -472,6 +480,7 @@ public class DataStoreImpl implements DataStore {
                     IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
                     DownsampleIterator.setDownsampleOptions(is, startTs, endTs, downsample, aggClass.getName());
                     scanner.addScanIterator(is);
+
                     // tag -> array of results by period starting at start
                     for (Entry<Key, Value> encoded : scanner) {
                         Map<Set<Tag>, Downsample> samples = DownsampleIterator.decodeValue(encoded.getValue());
