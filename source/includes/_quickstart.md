@@ -12,22 +12,22 @@
   1. set `JAVA_HOME` to point to a JDK 8 installation
   2. cd into the server directory and run `mvn clean package`
 5. Untar Timely server distribution (found in `target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz`)
-6. Modify `timely-standalone.properties`:
+6. Modify `timely-standalone.yml`:
   1. Use generated server side SSL certificates
-    1. `timely.ssl.use.generated.keypair=true`
+    1. `timely.security.ssl.use-generated-keypair=true`
   2. or, use your own SSL certificates - see [SSL] (#ssl-setup) Setup
-    1. `timely.ssl.use.generated.keypair=false`
-    2. `timely.ssl.certificate.file=<path to PEM encoded certificate file>`
-    3. `timely.ssl.key.file=<path to PKCS8 PEM encoded private key file>`
-    4. `timely.ssl.key.pass=<private key password>`
-    5. `timely.ssl.use.openssl=true` (if openssl installed locally, else false)
-    6. `timely.ssl.use.ciphers=<list of ciphers>` (comma-delimited list of ciphers to use if you do not want to use the default)
+    1. `timely.security.ssl.use-generated-keypair=false`
+    2. `timely.security.ssl.certificate-file=<path to PEM encoded certificate file>`
+    3. `timely.security.ssl.key-file=<path to PKCS8 PEM encoded private key file>`
+    4. `timely.security.ssl.key-password=<private key password>`
+    5. `timely.security.ssl.use-openssl=true` (if openssl installed locally, else false)
+    6. `timely.security.ssl.use-ciphers=<list of ciphers>` (comma-delimited list of ciphers to use if you do not want to use the default)
   3. Set Timely domain information, this is used for the HTTP Cookie
-    1. `timely.http.address=localhost`
+    1. `timely.http.host=localhost`
   4. Set Grafana login address, used for HTTP redirect after login
     1. `grafana.http.address=https://localhost:3000/login`
   5. Set Anonymous access for Timely
-    1. `timely.allow.anonymous.access=<true or false>`
+    1. `timely.security.allow-anonymous-access=<true or false>`
 7. Start the Timely standalone server
   1. `cd bin; ./timely-standalone.sh`
 8. Insert test data
@@ -63,6 +63,6 @@
 			}
     ```
     2. The default `conf/security.xml` specifies a user `test` with password `test1` that has the authorizations for `A`,`B`,`C`.
-4. The user specified in `timely.user` must have authorizations compatible with the visibility values on your data to be able to return that data to a client. Use `setauths` in the Accumulo shell to configure this.
+4. The user specified in `timely.accumulo.username` must have authorizations compatible with the visibility values on your data to be able to return that data to a client. Use `setauths` in the Accumulo shell to configure this.
 5. `insert-test-data.sh` will insert some data with visibilities, specifically `sys.eth0.rx.*` will have `A`,`B` or `C` and `sys.eth0.tx.*` will have `D`,`E` or `F`.
 

@@ -10,11 +10,11 @@ If you are just starting out with Timely and want to see what it can do, then st
 The standalone server will not save your metric data across restarts.
 </aside>
 
-To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.properties` file appropriately. Then copy the `lib/timely-server.jar` and `lib/commons-lang3-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
+To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.yml` file appropriately. Then copy the `lib/timely-server.jar` and `lib/commons-lang3-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
 
 ## SSL Setup
 
-To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the `timely.ssl.key.pass` property if there is no password for your private key.
+To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the `timely.security.ssl.key-password` property if there is no password for your private key.
 
 ### Creating your own SSL keys and certificates
 
@@ -64,58 +64,69 @@ Convert the private key to pkcs#8 format
 
 ## Configuration
 
+```yaml
+timely:
+   accumulo:
+       instance-name: MyInstanceName
+```
+The default configuration file type for Timely is a YAML. The configuration is read internally using Spring Boot, and therefore supports all of the configuration styles supported by Spring Boot. See [here](http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config) and [here](http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-yaml) for more details. In YAML, a property such as timely.accumulo.instance-name=MyInstanceName (which can also be timely.accumulo.instanceName) would look like the example on the right.
+
 The `NUM_SERVER_THREADS` variable in the `timely-server.sh` script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the `conf` directory supports the following properties:
 
-> Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the `timely.write.latency` and `timely.write.threads` configuration property, but the buffer size for each BatchWriter is `timely.write.buffer.size` divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.write.latency=30s, timely.write.threads=2 timely.write.buffer.size=1G
+> Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the `timely.accumulo.write.latency` and `timely.accumulo.write.threads` configuration property, but the buffer size for each BatchWriter is `timely.accumulo.write.buffer-size` divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.accumulo.write.latency=30s, timely.accumulo.write.threads=2 timely.accumulo.write.buffer-size=1G
 
-> Note: The `timely.scanner.threads` property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.
+> Note: The `timely.accumulo.scan.threads` property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.
 
-> Note: The Timely server contains an object called the meta cache, which is a cache of the keys that would be inserted into the meta table if they did not already exist. This cache is used to reduce the insert load of duplicate keys into the meta table and to serve up data to the `/api/metrics` endpoint. The meta cache is an object that supports eviction based on last access time and can be tuned with the `timely.meta.cache.*` properties.
+> Note: The Timely server contains an object called the meta cache, which is a cache of the keys that would be inserted into the meta table if they did not already exist. This cache is used to reduce the insert load of duplicate keys into the meta table and to serve up data to the `/api/metrics` endpoint. The meta cache is an object that supports eviction based on last access time and can be tuned with the `timely.meta-cache.*` properties.
 
 Property | Description | Default Value
 ---------|-------------|--------------
-timely.ip | The ip address where the Timely server is running |
-timely.port.put | The port that will be used for processing put requests |
-timely.port.query | The port that will be used for processing query requests |
-timely.port.websocket | The port that will be used for processing web socket requests |
-timely.instance\_name | The name of your Accumulo instance |
-timely.zookeepers |  The list of Zookeepers for your Accumulo instance |
-timely.username | The username that Timely will use to connect to Accumulo |
-timely.password | The password of the Accumulo user |
-timely.table | The name of the metrics table | timely.metrics
-timely.meta | The name of the meta table | timely.meta
-timely.write.latency | The Accumulo BatchWriter latency | 5s
-timely.write.threads | The Accumulo BatchWriter number of threads | [default](https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L49)
-timely.write.buffer.size | The Accumulo BatchWriter buffer size | [default](https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L40)
-timely.metric.age.off.days | The number of days to keep metrics | 7
-timely.cors.allow.any.origin | Allow any origin in cross origin requests (true/false) | false
-timely.cors.allow.null.origin | Allow null origins in cross origin requests (true/false) | false
-timely.cors.allowed.origins | List of allowed origins in cross origin requests (can be null or comma separated list)
-timely.cors.allowed.methods | List of allowed methods for cross origin requests | <ul><li>DELETE</li><li>GET</li><li>HEAD</li><li>OPTIONS</li><li>PUT</li><li>POST</li></ul>
-timely.cors.allowed.headers | Comma separated list of allowed HTTP headers for cross origin requests | content-type
-timely.cors.allow.credentials | Allow credentials to be passed in cross origin requests (true/false) | true
-timely.scanner.threads | Number of BatchScanner threads to be used in a query | 4
-timely.metrics.report.tags.ignored | Comma separated list of tags which will not be shown in the /api/metrics response |
-timely.meta.cache.expiration.minutes | Number of minutes after which unaccessed meta information will be purged from the meta cache | 60
-timely.meta.cache.initial.capacity | Initial capacity of the meta cache | 2000
-timely.meta.cache.max.capacity | Maximum capacity of the meta cache | 10000
-timely.ssl.certificate.file | Public certificate to use for the Timely server (x509 pem format) |
-timely.ssl.key.file | Private key to use for the Timely server (in pkcs8 format) |
-timely.ssl.key.pass | Password to the private key |
-timely.ssl.use.generated.keypair | Use a generated certificate/key pair - useful for testing | false
-timely.ssl.trust.store.file | Certificate trust store (a concatenated list of trusted CA x509 pem certificates) |
-timely.ssl.use.openssl | Use OpenSSL (vs JDK SSL) | true
-timely.ssl.use.ciphers | List of allowed SSL ciphers | see Configuration.java
-timely.session.max.age | Setting for max age of session cookie (in seconds) | 86400
+timely.metrics-table | The name of the metrics table | timely.metrics
+timely.meta-table | The name of the meta table | timely.meta
+timely.metric-age-off-days | A list of metric name prefix to age-off day pairs. The `default` prefix applies to every key that isn't matched by another ageoff rule. | default: 7
+timely.metrics-report-ignored-tags | Comma separated list of tags which will not be shown in the /api/metrics response |
+timely.accumulo.instance-name | The name of your Accumulo instance |
+timely.accumulo.zookeepers |  The list of Zookeepers for your Accumulo instance |
+timely.accumulo.username | The username that Timely will use to connect to Accumulo |
+timely.accumulo.password | The password of the Accumulo user |
+timely.accumulo.write.latency | The Accumulo BatchWriter latency | 5s
+timely.accumulo.write.threads | The Accumulo BatchWriter number of threads | [default](https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L49)
+timely.accumulo.write.buffer-size | The Accumulo BatchWriter buffer size | [default](https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L40)
+timely.accumulo.scan.threads | Number of BatchScanner threads to be used in a query | 4
+timely.security.session-max-age | Setting for max age of session cookie (in seconds) | 86400
+timely.security.allow-anonymous-access | Allow anonymous access | false
+timely.security.ssl.use-generated-keypair | Use a generated certificate/key pair - useful for testing | false
+timely.security.ssl.certificate.file | Public certificate to use for the Timely server (x509 pem format) |
+timely.security.ssl.key-file | Private key to use for the Timely server (in pkcs8 format) |
+timely.security.ssl.key-password | Password to the private key |
+timely.security.ssl.trust-store-file | Certificate trust store (a concatenated list of trusted CA x509 pem certificates) |
+timely.security.ssl.use-openssl | Use OpenSSL (vs JDK SSL) | true
+timely.security.ssl.use-ciphers | List of allowed SSL ciphers | see Configuration.java
+timely.server.ip | The IP address where the Timely server is running |
+timely.server.tcp-port | The port that will be used for processing TCP put requests |
+timely.server.udp-port | The port that will be used for processing UDP put requests |
+timely.server.shutdown-quiet-period | Time to wait (in seconds) during shutdown for existing connections to finish and ensure there are no new connections | 5
 timely.http.host | Address for the Timely server, used for the session cookie domain |
-timely.allow.anonymous.access | Allow anonymous access | false
-timely.visibility.cache.expiration.minutes | Column Visibility Cache Expiration (minutes) | 60
-timely.visibility.cache.initial.capacity | Column Visibility Cache Initial Capacity | 2000
-timely.visibility.cache.max.capacity | Column Visibility Cache Max Capacity | 10000
-timely.web.socket.timeout | Number of seconds with no client ping response before closing subscription | 60
-timely.ws.subscription.lag | Number of seconds that subscriptions should lag to account for latency | 120
-timely.http.redirect.path | Path to use for HTTP to HTTPS redirect | /secure-me
-timely.hsts.max.age | HTTP Strict Transport Security max age (in seconds) | 604800
+timely.http.ip | The IP address where the Timely server is listening for HTTP query requests |
+timely.http.port | The port that will be used for processing query requests |
+timely.http.redirect-path | Path to use for HTTP to HTTPS redirect | /secure-me
+timely.http.strict-transport-max-age | HTTP Strict Transport Security max age (in seconds) | 604800
+timely.http.cors.allow-any-origin | Allow any origin in cross origin requests (true/false) | false
+timely.http.cors.allow-null-origin | Allow null origins in cross origin requests (true/false) | false
+timely.http.cors.allowed-origins | List of allowed origins in cross origin requests (can be null or comma separated list)
+timely.http.cors.allowed-methods | List of allowed methods for cross origin requests | <ul><li>DELETE</li><li>GET</li><li>HEAD</li><li>OPTIONS</li><li>PUT</li><li>POST</li></ul>
+timely.http.cors.allowed-headers | Comma separated list of allowed HTTP headers for cross origin requests | content-type
+timely.http.cors.allow-credentials | Allow credentials to be passed in cross origin requests (true/false) | true
+timely.websocket.ip | The IP address where the Timely server is listening for web socket requests|
+timely.websocket.port | The port that will be used for processing web socket requests |
+timely.websocket.timeout | Number of seconds with no client ping response before closing subscription | 60
+timely.websocket.subscription-lag | Number of seconds that subscriptions should lag to account for latency | 120
+timely.meta-cache.expiration-minutes | Number of minutes after which unaccessed meta information will be purged from the meta cache | 60
+timely.meta-cache.initial-capacity | Initial capacity of the meta cache | 2000
+timely.meta-cache.max-capacity | Maximum capacity of the meta cache | 10000
+timely.visibility-cache.expiration-minutes | Column Visibility Cache Expiration (minutes) | 60
+timely.visibility-cache.initial-capacity | Column Visibility Cache Initial Capacity | 2000
+timely.visibility-cache.max-capacity | Column Visibility Cache Max Capacity | 10000
 
 <aside class="notice">
 If you comment out a property, then the default will be used. If a property is left uncommented with no value, then the property will have no value which may result in an error.
