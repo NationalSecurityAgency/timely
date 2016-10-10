@@ -179,7 +179,7 @@
               "downsampleAggregator": "max",
               "downsampleFillPolicy": "none",
               "downsampleInterval": "1s",
-              "metric": "sys.cpu0.user",
+              "metric": "sys.cpu.user",
               "refId": "A",
               "tags": {
                 "host": ".*"
@@ -265,7 +265,7 @@
               "downsampleAggregator": "max",
               "downsampleFillPolicy": "none",
               "downsampleInterval": "1s",
-              "metric": "sys.cpu0.user",
+              "metric": "sys.cpu.user",
               "refId": "A",
               "tags": {
                 "rack": ".*"
@@ -351,7 +351,7 @@
               "downsampleAggregator": "max",
               "downsampleFillPolicy": "none",
               "downsampleInterval": "1s",
-              "metric": "sys.cpu0.user",
+              "metric": "sys.cpu.user",
               "refId": "A",
               "tags": {}
             }
