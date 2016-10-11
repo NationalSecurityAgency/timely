@@ -290,7 +290,7 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
               return key.trim();
             });
             var key = keysArray[0];
-            var keysQuery = key + "=*";
+            var keysQuery = key + "=.*";
 
             if (keysArray.length > 1) {
               keysQuery += "," + keysArray.splice(1).join(",");
@@ -496,7 +496,7 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
                 } else {
                   return target.metric === metricData.metric && _.all(target.tags, function (tagV, tagK) {
                     interpolatedTagValue = this.templateSrv.replace(tagV, options.scopedVars, 'pipe');
-                    return metricData.tags[tagK] === interpolatedTagValue || interpolatedTagValue === "*";
+                    return metricData.tags[tagK] === interpolatedTagValue || interpolatedTagValue === ".*";
                   }.bind(this));
                 }
               }.bind(this));
