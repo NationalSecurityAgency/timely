@@ -5,14 +5,20 @@ MAINTAINER Jim Klucar "klucar@gmail.com"
 VOLUME /timely-server-src
 VOLUME /timely
 
-RUN yum -y update && \
-  yum -y install java-1.8.0-openjdk-devel maven openssl apr && \
-  mkdir -p /timely/bin
 
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.91-1.b14.el7_2.x86_64
+
+
+RUN yum -y update && \
+  yum -y install java-1.8.0-openjdk-devel maven openssl apr wget epel-release && \
+  yum -y install bouncycastle && \
+  yum clean all && \
+  mkdir -p /timely/bin && \
+  echo "security.provider.9=org.bouncycastle.jce.provider.BouncyCastleProvider" >> /usr/lib/jvm/java-1.8.0-openjdk/jre/lib/security/java.security && \
+  ln -sf /usr/share/java/bcprov.jar /usr/lib/jvm/java-1.8.0-openjdk/jre/lib/ext/bcprov.jar
+
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk
 
 EXPOSE 9804 54321 54322
 
 ENV TIMELY_VERSION 0.0.3-SNAPSHOT
 
-#CMD /timely/bin/timely-standalone.sh
