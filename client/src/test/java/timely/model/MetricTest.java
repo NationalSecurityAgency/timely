@@ -46,12 +46,8 @@ public class MetricTest {
         ObjectMapper mapper = new ObjectMapper();
 
         String expectedJson = "{\"name\":\"m1\",\"timestamp\":1,\"measure\":1.0,\"tags\":[{\"k1\":\"v1\"}]}";
-        System.out.println(expectedJson);
 
         Metric m1 = Metric.newBuilder().name("m1").tag("k1", "v1").value(1, 1.0).build();
-        System.out.println(mapper.writeValueAsString(m1)); // this will throw if
-                                                           // problem with
-                                                           // deserialization
 
         Metric expectedMetric = mapper.readValue(expectedJson, Metric.class);
 

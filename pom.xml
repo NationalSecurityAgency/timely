@@ -6,7 +6,7 @@
     <version>0.0.3-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Timely</name>
-    <description>A secure time series database based on Apache Accumulo</description>
+    <description>A secure and scalable time series database based on Apache Accumulo</description>
     <licenses>
         <license>
             <name>Apache License, Version 2.1</name>
@@ -23,6 +23,7 @@
         <url>https://github.com/NationalSecurityAgency/timely/issues</url>
     </issueManagement>
     <modules>
+        <module>common</module>
         <module>client</module>
         <module>server</module>
         <module>collectd-timely-plugin</module>
@@ -317,7 +318,19 @@
 	                <groupId>net.revelc.code</groupId>
 	                <artifactId>formatter-maven-plugin</artifactId>
 	                <version>${version.formatter}</version>
-				</plugin>            
+		            <configuration>
+		                  <configFile>${project.parent.basedir}/eclipse/Eclipse-Formatter.xml</configFile>
+		                  <lineEnding>LF</lineEnding>
+		                  <overrideConfigCompilerVersion>true</overrideConfigCompilerVersion>
+		            </configuration>
+		            <executions>
+		                <execution>
+		                    <goals>
+		                        <goal>format</goal>
+		                    </goals>
+		                </execution>
+		            </executions>
+		  		</plugin>            
 	            <plugin>
 	                <groupId>org.apache.maven.plugins</groupId>
 	                <artifactId>maven-assembly-plugin</artifactId>
@@ -341,11 +354,34 @@
 	                <groupId>org.apache.maven.plugins</groupId>
 	                <artifactId>maven-failsafe-plugin</artifactId>
 	                <version>${version.maven-surefire}</version>
+	                <configuration>
+	                    <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
+	                    <includes>
+	                        <include>**/*.java</include>
+	                    </includes>
+	                    <groups>timely.test.IntegrationTest</groups>
+	                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+	                </configuration>
+	                <executions>
+	                    <execution>
+	                        <goals>
+	                            <goal>integration-test</goal>
+	                            <goal>verify</goal>
+	                        </goals>
+	                    </execution>
+	                </executions>
 	            </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>${version.maven-jar}</version>
+	                <configuration>
+	                    <archive>
+	                        <manifest>
+	                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+	                        </manifest>
+	                    </archive>
+	                </configuration>
                 </plugin>
                 <plugin>
                 	<groupId>org.apache.maven.plugins</groupId>
@@ -356,6 +392,11 @@
 	                <groupId>org.apache.maven.plugins</groupId>
 	                <artifactId>maven-surefire-plugin</artifactId>
 	                <version>${version.maven-surefire}</version>
+	                <configuration>
+	                    <argLine>${sureFireArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty-tcnative.so -Dzookeeper.sasl.client=false</argLine>
+	                    <excludedGroups>timely.test.IntegrationTest</excludedGroups>
+	                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+	                </configuration>
 	            </plugin>
 	            <plugin>
 	                <groupId>org.codehaus.mojo</groupId>
@@ -370,6 +411,7 @@
                         <effort>Max</effort>
                         <threshold>Medium</threshold>
                         <xmlOutput>true</xmlOutput>
+	                    <excludeFilterFile>src/main/resources/findbugs-excludes.xml</excludeFilterFile>
                     </configuration>
                     <executions>
                         <execution>
@@ -384,6 +426,30 @@
 	                <groupId>org.jacoco</groupId>
 	                <artifactId>jacoco-maven-plugin</artifactId>
 	                <version>${version.jacoco}</version>
+					<executions>
+					    <execution>
+					        <id>jacoco-prepare-ut</id>
+					        <goals>
+					            <goal>prepare-agent</goal>
+					        </goals>
+					        <phase>process-test-classes</phase>
+					        <configuration>
+					            <destFile>${project.build.directory}/coverage/jacoco-ut.exec</destFile>
+					            <propertyName>sureFireArgLine</propertyName>
+					        </configuration>
+					    </execution>
+					    <execution>
+					        <id>jacoco-prepare-it</id>
+					        <goals>
+					            <goal>prepare-agent-integration</goal>
+					        </goals>
+					        <phase>pre-integration-test</phase>
+					        <configuration>
+					            <destFile>${project.build.directory}/coverage/jacoco-it.exec</destFile>
+					            <propertyName>failsafeArgLine</propertyName>
+					        </configuration>
+						</execution>
+					</executions>
 	            </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
