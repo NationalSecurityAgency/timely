@@ -417,9 +417,11 @@ public class WebSocketIT extends OneWaySSLBase {
     @Test
     public void testWSQuery() throws Exception {
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000)
-                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 2000)
-                    + " 2.0 tag1=value1 tag3=value3 viz=secret");
+            // @formatter:off
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+            		"sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
+            		"sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=secret");
+         // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
@@ -465,7 +467,9 @@ public class WebSocketIT extends OneWaySSLBase {
             assertEquals(1, query.getTags().size());
             assertTrue(query.getTags().containsKey("tag1"));
             assertEquals("value1", query.getTags().get("tag1"));
-            assertEquals(2, query.getDps().size());
+            assertEquals(1, query.getDps().size()); // this is a rate query and
+                                                    // we can only see 2 dps, we
+                                                    // will only get 1 response.
 
         } finally {
             ch.close().sync();

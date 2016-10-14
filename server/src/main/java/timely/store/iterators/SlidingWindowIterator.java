@@ -21,15 +21,15 @@ import timely.adapter.accumulo.MetricAdapter;
 
 public class SlidingWindowIterator extends WrappingIterator {
 
-    public static final Logger LOG = LoggerFactory.getLogger(SlidingWindowIterator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SlidingWindowIterator.class);
 
     public static final String FILTER = "sliding.window.filter";
 
-    private Key topKey = null;
-    private Value topValue = null;
-    private Double[] filters = null;
-    private LinkedList<Pair<Key, Value>> window = new LinkedList<>();
-    private boolean seenLast = false;
+    protected Key topKey = null;
+    protected Value topValue = null;
+    protected Double[] filters = null;
+    protected LinkedList<Pair<Key, Value>> window = new LinkedList<>();
+    protected boolean seenLast = false;
 
     @Override
     public Key getTopKey() {
@@ -52,7 +52,7 @@ public class SlidingWindowIterator extends WrappingIterator {
         return false;
     }
 
-    private void compute() {
+    protected void compute() {
         // compute result
         double result = 0D;
         for (int i = 0; i < filters.length; i++) {
@@ -109,6 +109,9 @@ public class SlidingWindowIterator extends WrappingIterator {
         if (super.hasTop()) {
             for (int i = 0; i < filters.length; i++) {
                 window.add(new Pair<Key, Value>(super.getTopKey(), super.getTopValue()));
+                if (i != (filters.length - 1)) {
+                    super.next();
+                }
             }
             compute();
         } else {

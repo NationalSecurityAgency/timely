@@ -711,15 +711,11 @@ public class HttpApiIT extends OneWaySSLBase {
             assertEquals(1, response.size());
             QueryResponse response1 = response.get(0);
             Map<String, Object> dps = response1.getDps();
-            assertEquals(15, dps.size());
-            int i = 0;
+            assertEquals(14, dps.size());
+            int i = 1;
             for (Entry<String, Object> e : dps.entrySet()) {
                 assertEquals(Long.toString(TEST_TIME + i), e.getKey());
-                if (i == 0) {
-                    assertEquals(0.0, e.getValue());
-                } else {
-                    assertEquals(1.0, e.getValue());
-                }
+                assertEquals(1.0, e.getValue());
                 i++;
             }
 

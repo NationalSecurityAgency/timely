@@ -82,7 +82,7 @@ import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.iterators.DownsampleIterator;
-import timely.store.iterators.SlidingWindowIterator;
+import timely.store.iterators.RateIterator;
 import timely.util.MetaKeySet;
 
 public class DataStoreImpl implements DataStore {
@@ -465,8 +465,7 @@ public class DataStoreImpl implements DataStore {
 
                     if (query.isRate()) {
                         LOG.trace("Adding rate iterator");
-                        IteratorSetting rate = new IteratorSetting(499, SlidingWindowIterator.class);
-                        rate.addOption(SlidingWindowIterator.FILTER, "-1.0,1.0");
+                        IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
                         scanner.addScanIterator(rate);
                     }
                     long downsample = getDownsamplePeriod(query);
