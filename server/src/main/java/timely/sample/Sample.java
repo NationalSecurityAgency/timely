@@ -10,6 +10,11 @@ public class Sample {
     public Sample() {
     }
 
+    public Sample(long timestamp, double value) {
+        this.timestamp = timestamp;
+        this.value = value;
+    }
+
     public void set(long timestamp, double value) {
         this.timestamp = timestamp;
         this.value = value;
