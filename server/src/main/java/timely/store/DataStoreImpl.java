@@ -469,10 +469,6 @@ public class DataStoreImpl implements DataStore {
                         scanner.addScanIterator(rate);
                     }
                     long downsample = getDownsamplePeriod(query);
-                    if (((endTs - startTs) / downsample + 1) > Integer.MAX_VALUE) {
-                        throw new IOException(
-                                "Downsample not large enough for time range. Decrease time range or increase downsample period.");
-                    }
                     LOG.trace("Downsample period {}", downsample);
                     Class<? extends Aggregator> aggClass = getAggregator(query);
                     LOG.trace("Aggregator type {}", aggClass.getSimpleName());
