@@ -6,11 +6,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.accumulo.core.data.ByteSequence;
@@ -31,6 +29,9 @@ import timely.model.Metric;
  * Iterator that groups time series so that a filter can be applied to the time
  * series. This iterator will ignore time series that do not have enough data
  * points at the start of the query.
+ * 
+ * NOTE: This iterator does not handle being re-seeked. It is currently designed
+ * to be used with the DownsampleIterator above it.
  *
  */
 public class TimeSeriesGroupingIterator extends WrappingIterator {
@@ -53,18 +54,16 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
         @Override
         public Double put(Key key, Double value) {
-            return this.put(key, value, true);
-        }
-
-        public Double put(Key key, Double value, boolean doCompute) {
             if (this.targetSize == super.size()) {
                 Entry<Key, Double> e = this.pollFirstEntry();
                 LOG.trace("Removing first entry {}", e.getKey());
             }
             Double result = super.put(key, value);
-            if (doCompute) {
-                recompute();
+            if (super.size() < this.targetSize) {
+                this.answer = null;
+                return null;
             }
+            recompute();
             return result;
         }
 
@@ -119,18 +118,39 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
             return new Iterator<Pair<Key, Double>>() {
 
+                private Pair<Key, Double> next = findNext();
+
                 @Override
                 public boolean hasNext() {
-                    return iter.hasNext();
+                    return next != null;
+                }
+
+                private Pair<Key, Double> findNext() {
+                    Entry<Metric, TimeSeries> e = null;
+                    while (iter.hasNext()) {
+                        e = iter.next();
+                        if (e.getValue().getAnswer() != null) {
+                            break;
+                        }
+                    }
+
+                    if (null != e && e.getValue().getAnswer() != null) {
+                        LOG.trace("Removing first entry from series {}", e.getValue());
+                        // remove first key, will re-fill later
+                        get(e.getKey()).pollFirstEntry();
+                        return new Pair<Key, Double>(e.getValue().lastKey(), e.getValue().getAnswer());
+                    } else {
+                        return null;
+                    }
                 }
 
                 @Override
                 public Pair<Key, Double> next() {
-                    Entry<Metric, TimeSeries> e = iter.next();
-                    LOG.trace("Removing first entry from series {}", e.getValue());
-                    get(e.getKey()).pollFirstEntry(); // remove first key, will
-                                                      // re-fill later
-                    return new Pair<Key, Double>(e.getValue().lastKey(), e.getValue().getAnswer());
+                    try {
+                        return next;
+                    } finally {
+                        next = findNext();
+                    }
                 }
 
             };
@@ -140,8 +160,9 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     private static final Logger LOG = LoggerFactory.getLogger(TimeSeriesGroupingIterator.class);
 
     public static final String FILTER = "sliding.window.filter";
+    private static final TimeSeriesMetricComparator metricComparator = new TimeSeriesMetricComparator();
 
-    private final TimeSeriesGroup series = new TimeSeriesGroup();
+    private TimeSeriesGroup series = new TimeSeriesGroup();
     protected Double[] filters = null;
     private Key topKey = null;
     private Value topValue = null;
@@ -172,33 +193,37 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     @Override
     public boolean hasTop() {
         LOG.trace("hasTop()");
-        if (seriesIterator.hasNext()) {
-            LOG.trace("seriesIterator - hasNext()");
+        return (null != topKey && null != topValue);
+    }
+
+    private void setTopKeyValue() {
+        if (!seriesIterator.hasNext()) {
+            do {
+                try {
+                    refillBuffer();
+                    seriesIterator = series.iterator();
+                } catch (IOException e) {
+                    throw new RuntimeException("Error filling buffer", e);
+                }
+            } while (!seriesIterator.hasNext() && super.hasTop());
+
+            if (series.size() == 0) {
+                seriesIterator = null;
+                topKey = null;
+                topValue = null;
+            }
+        }
+        if (null != seriesIterator && seriesIterator.hasNext()) {
             Pair<Key, Double> p = seriesIterator.next();
             topKey = p.getFirst();
             topValue = new Value(MetricAdapter.encodeValue(p.getSecond()));
-            return true;
-        } else {
-            try {
-                refillBuffer();
-                if (series.size() == 0) {
-                    return false;
-                } else {
-                    seriesIterator = series.iterator();
-                    Pair<Key, Double> p = seriesIterator.next();
-                    topKey = p.getFirst();
-                    topValue = new Value(MetricAdapter.encodeValue(p.getSecond()));
-                    return true;
-                }
-            } catch (IOException e) {
-                throw new RuntimeException("Error filling buffer", e);
-            }
         }
     }
 
     @Override
     public void next() throws IOException {
         LOG.trace("next()");
+        setTopKeyValue();
     }
 
     @Override
@@ -221,89 +246,37 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     public void seek(Range range, Collection<ByteSequence> columnFamilies, boolean inclusive) throws IOException {
         super.seek(range, columnFamilies, inclusive);
         series.clear();
-        fillBuffer();
+        // fillBuffer();
         seriesIterator = series.iterator();
+        setTopKeyValue();
     }
 
     private void refillBuffer() throws IOException {
         LOG.trace("refill()");
-        Metric top = null;
+        TimeSeriesGroup nextSeries = new TimeSeriesGroup();
+        Metric prev = null;
         while (super.hasTop()) {
             Key k = super.getTopKey();
             Metric m = MetricAdapter.parse(k, super.getTopValue());
             timely.model.Value v = m.getValue();
             m.setValue(null);
             Collections.sort(m.getTags());
-            if (top != null && top.equals(m)) {
-                // we have cycled back to the first series
+            if (prev != null && metricComparator.compare(prev, m) >= 0) {
+                // Only process metrics that sort after the previous one.
                 break;
             }
-            if (top == null) {
-                top = m;
-            }
+            prev = m;
             TimeSeries values = series.get(m);
-            // new time series found, ignore it
-            if (null != values) {
-                LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
-                values.put(k, v.getMeasure(), true);
-            } else {
-                LOG.trace("Ignoring new time series {}", m);
+            if (null == values) {
+                LOG.trace("Creating new time series {}", m);
+                values = new TimeSeries(this, filters.length);
             }
+            LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
+            values.put(k, v.getMeasure());
+            nextSeries.put(m, values);
             super.next();
         }
-        removeSeriesWithMissingValues();
-    }
-
-    private void fillBuffer() throws IOException {
-        // fill buffer
-        Metric top = null;
-        int seenTop = 0;
-        while (super.hasTop()) {
-            Key k = super.getTopKey();
-            Metric m = MetricAdapter.parse(k, super.getTopValue());
-            timely.model.Value v = m.getValue();
-            m.setValue(null);
-            Collections.sort(m.getTags());
-            if (null == top) {
-                top = m;
-            }
-            if (top.equals(m)) {
-                seenTop++;
-            }
-            if (seenTop == (filters.length + 1)) {
-                break;
-            }
-            TimeSeries values = series.getOrDefault(m, new TimeSeries(this, filters.length));
-            series.putIfAbsent(m, values);
-            if (values.size() < filters.length) {
-                LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
-                values.put(k, v.getMeasure(), false);
-            }
-            super.next();
-        }
-        removeSeriesWithMissingValues();
-        computeAllSeries();
-    }
-
-    private void computeAllSeries() {
-        series.values().forEach(v -> v.recompute());
-    }
-
-    private void removeSeriesWithMissingValues() {
-        // Remove series that don't have enough data points
-        Set<Metric> keysToRemove = new HashSet<>();
-        Iterator<Entry<Metric, TimeSeries>> e = series.entrySet().iterator();
-        while (e.hasNext()) {
-            Entry<Metric, TimeSeries> entry = e.next();
-            if (entry.getValue().size() != filters.length) {
-                keysToRemove.add(entry.getKey());
-            }
-        }
-        keysToRemove.forEach(k -> {
-            LOG.trace("Removing entry because not enough data points for filter: " + k);
-            series.remove(k);
-
-        });
+        this.series = nextSeries;
     }
 
 }

@@ -54,6 +54,7 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
 
         for (int i = 4; i < 100; i++) {
             assertTrue(iter.hasTop());
+            System.out.println(i);
             double expected = expectedMovingAverage(new double[] { i - 4, i - 3, i - 2, i - 1, i });
             assertEquals(expected, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
             iter.next();
