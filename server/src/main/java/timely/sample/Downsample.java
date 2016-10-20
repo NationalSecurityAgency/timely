@@ -45,6 +45,14 @@ public class Downsample implements Iterable<Sample>, Serializable {
             this.value = value;
         }
 
+        @Override
+        public String toString() {
+            StringBuilder buf = new StringBuilder();
+            buf.append("{count: ").append(this.count);
+            buf.append(" value: ").append(this.value).append("}");
+            return buf.toString();
+        }
+
     }
 
     private static final long serialVersionUID = 1L;
@@ -128,7 +136,11 @@ public class Downsample implements Iterable<Sample>, Serializable {
         tsb.append("aggregator", this.aggregatorClassname);
         tsb.append("period", this.period);
         tsb.append("start", this.start);
-        tsb.append("values", this.buckets);
+        tsb.append("values={");
+        for (Entry<Long, AggregatedValue> e : this.buckets.entrySet()) {
+            tsb.append(e.getKey()).append("=").append(e.getValue()).append(", ");
+        }
+        tsb.append("}");
         return tsb.toString();
     }
 
