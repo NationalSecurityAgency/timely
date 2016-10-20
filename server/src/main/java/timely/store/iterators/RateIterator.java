@@ -32,12 +32,12 @@ public class RateIterator extends TimeSeriesGroupingIterator {
         Entry<Key, Double> first = iter.next();
         Long firstTs = first.getKey().getTimestamp();
         Double firstVal = first.getValue() * -1;
-        LOG.debug("first ts:{}, value:{}", firstTs, firstVal);
+        LOG.trace("first ts:{}, value:{}", firstTs, firstVal);
 
         Entry<Key, Double> second = iter.next();
         Long secondTs = second.getKey().getTimestamp();
         Double secondVal = second.getValue();
-        LOG.debug("second ts:{}, value:{}", secondTs, secondVal);
+        LOG.trace("second ts:{}, value:{}", secondTs, secondVal);
 
         Double result = ((firstVal + secondVal) / (secondTs - firstTs));
         LOG.trace("compute - result: {}", result);
