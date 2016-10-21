@@ -3,6 +3,7 @@ package timely.store.iterators;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -10,6 +11,7 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
+import org.apache.accumulo.core.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,17 +28,17 @@ public class RateIterator extends TimeSeriesGroupingIterator {
     }
 
     @Override
-    protected Double compute(Map<Key, Double> values) {
+    protected Double compute(List<Pair<Key, Double>> values) {
 
-        Iterator<Entry<Key, Double>> iter = values.entrySet().iterator();
-        Entry<Key, Double> first = iter.next();
-        Long firstTs = first.getKey().getTimestamp();
-        Double firstVal = first.getValue() * -1;
+        Iterator<Pair<Key, Double>> iter = values.iterator();
+        Pair<Key, Double> first = iter.next();
+        Long firstTs = first.getFirst().getTimestamp();
+        Double firstVal = first.getSecond() * -1;
         LOG.trace("first ts:{}, value:{}", firstTs, firstVal);
 
-        Entry<Key, Double> second = iter.next();
-        Long secondTs = second.getKey().getTimestamp();
-        Double secondVal = second.getValue();
+        Pair<Key, Double> second = iter.next();
+        Long secondTs = second.getFirst().getTimestamp();
+        Double secondVal = second.getSecond();
         LOG.trace("second ts:{}, value:{}", secondTs, secondVal);
 
         Double result = ((firstVal + secondVal) / (secondTs - firstTs));

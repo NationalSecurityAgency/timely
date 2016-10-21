@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -40,7 +42,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
      * Object representing a single time series and its computed value
      *
      */
-    private static class TimeSeries extends TreeMap<Key, Double> implements Serializable {
+    private static class TimeSeries extends LinkedList<Pair<Key, Double>> implements Serializable {
 
         private static final long serialVersionUID = 1L;
         private int targetSize;
@@ -52,19 +54,17 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
             this.targetSize = size;
         }
 
-        @Override
-        public Double put(Key key, Double value) {
+        public void add(Key key, Double value) {
             if (this.targetSize == super.size()) {
-                Entry<Key, Double> e = this.pollFirstEntry();
-                LOG.trace("Removing first entry {}", e.getKey());
+                Pair<Key, Double> e = this.pollFirst();
+                LOG.trace("Removing first entry {}", e.getFirst());
             }
-            Double result = super.put(key, value);
+            super.add(new Pair<>(key, value));
             if (super.size() < this.targetSize) {
                 this.answer = null;
-                return null;
+            } else {
+                recompute();
             }
-            recompute();
-            return result;
         }
 
         public Double getAnswer() {
@@ -137,8 +137,8 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
                     if (null != e && e.getValue().getAnswer() != null) {
                         LOG.trace("Removing first entry from series {}", e.getValue());
                         // remove first key, will re-fill later
-                        get(e.getKey()).pollFirstEntry();
-                        return new Pair<Key, Double>(e.getValue().lastKey(), e.getValue().getAnswer());
+                        get(e.getKey()).pollFirst();
+                        return new Pair<Key, Double>(e.getValue().getLast().getFirst(), e.getValue().getAnswer());
                     } else {
                         return null;
                     }
@@ -147,6 +147,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
                 @Override
                 public Pair<Key, Double> next() {
                     try {
+                        LOG.trace("Returning {}", next);
                         return next;
                     } finally {
                         next = findNext();
@@ -168,12 +169,12 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     private Value topValue = null;
     private Iterator<Pair<Key, Double>> seriesIterator = null;
 
-    protected Double compute(Map<Key, Double> values) {
+    protected Double compute(List<Pair<Key, Double>> values) {
         double result = 0D;
         int i = 0;
-        for (Entry<Key, Double> e : values.entrySet()) {
-            LOG.trace("compute - key:{}, value: {}", e.getKey(), e.getValue());
-            result += (filters[i] * e.getValue());
+        for (Pair<Key, Double> e : values) {
+            LOG.trace("compute - key:{}, value: {}", e.getFirst(), e.getSecond());
+            result += (filters[i] * e.getSecond());
             i++;
         }
         LOG.trace("compute - result: {}", result);
@@ -246,7 +247,6 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     public void seek(Range range, Collection<ByteSequence> columnFamilies, boolean inclusive) throws IOException {
         super.seek(range, columnFamilies, inclusive);
         series.clear();
-        // fillBuffer();
         seriesIterator = series.iterator();
         setTopKeyValue();
     }
@@ -266,17 +266,26 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
                 break;
             }
             prev = m;
-            TimeSeries values = series.get(m);
+            TimeSeries values = series.remove(m);
             if (null == values) {
                 LOG.trace("Creating new time series {}", m);
                 values = new TimeSeries(this, filters.length);
             }
             LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
-            values.put(k, v.getMeasure());
+            values.add(k, v.getMeasure());
             nextSeries.put(m, values);
             super.next();
         }
+        if (!nextSeries.isEmpty()) {
+            this.series.forEach((m, v) -> {
+                Pair<Key, Double> last = v.getLast();
+                v.add(last.getFirst(), last.getSecond());
+                LOG.trace("Adding value {} to series {}", v, m);
+                nextSeries.put(m, v);
+            });
+        }
         this.series = nextSeries;
+        LOG.trace("New Buffer: {}", series);
     }
 
 }
