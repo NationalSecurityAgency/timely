@@ -10,7 +10,16 @@ If you are just starting out with Timely and want to see what it can do, then st
 The standalone server will not save your metric data across restarts.
 </aside>
 
-To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.yml` file appropriately. Then copy the `lib/timely-server.jar`, `lib/commons-lang3-*.jar`, and `lib/commons-collections4-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script.
+To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.yml` file appropriately. Then copy the `lib/timely-client.jar`, `lib/timely-server.jar`, `lib/commons-lang3-*.jar`, `lib/commons-collections4-*.jar`, and `lib/guava-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script. Because Timely uses a newer version of Guava, you will need to configure a classloader for the Timely context, set it to use post-delegation, and then configure your tables to use the Timely context classloader. This can be done in the shell or in the accumulo-site.xml file.
+
+> In accumulo-site.xml: <br>
+ &lt;name&gt;general.vfs.conext.classpath.timely.delegation=post&lt;/name&gt;<br>
+ &lt;value&gt;some location&lt;/value&gt;
+
+> In accumulo shell: <br>
+`general.vfs.conext.classpath.timely=<some location>`<br>
+`general.vfs.context.classpath.timely.delegation=post`
+
 
 ## SSL Setup
 
@@ -166,7 +175,7 @@ v:sys.cpu.user | rack | r001 |
 
 and in the following manner in the `metrics` table
 
-> Note: Not shown in the examples is the encoding of the row and value. You can apply the Timely formatter to your metrics table using the Accumulo shell command: `config -t timely.metrics -s table.formatter=timely.util.TimelyMetricsFormatter`
+> Note: Not shown in the examples is the encoding of the row. You can apply the Timely formatter to your metrics table using the Accumulo shell command: `config -t timely.metrics -s table.formatter=timely.util.TimelyMetricsFormatter`
 
 Row | ColumnFamily | ColumnQualifier | Value
 ----|--------------|-----------------|------
@@ -180,7 +189,7 @@ Timely stores your metric N times in the metrics table, where N is the number of
 
 ## Accumulo Configuration
 
-You can generate split points for the metrics table after sending data to Timely for a short amount of time. The `bin/get-metric-split-points.sh` script will print out a set of split points based on the metric names in the meta table. Yuo can use this output in the Accumulo `addsplits` command.
+You can generate split points for the metrics table after sending data to Timely for a short amount of time. The `bin/get-metric-split-points.sh` script will print out a set of split points based on the metric names in the meta table. You can use this output in the Accumulo `addsplits` command.
 
 You can lower the `table.scan.max.memory` property on your metrics table. This will send data back from the Tablet Servers to the Timely server at a faster rate.
 
