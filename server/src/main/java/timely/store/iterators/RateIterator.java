@@ -41,7 +41,11 @@ public class RateIterator extends TimeSeriesGroupingIterator {
         Double secondVal = second.getSecond();
         LOG.trace("second ts:{}, value:{}", secondTs, secondVal);
 
-        Double result = ((firstVal + secondVal) / (secondTs - firstTs));
+        long timeDiff = secondTs - firstTs;
+        if (timeDiff == 0) {
+            return 0.0D;
+        }
+        Double result = ((firstVal + secondVal) / timeDiff);
         LOG.trace("compute - result: {}", result);
         return result;
     }
