@@ -29,8 +29,26 @@ import timely.model.Metric;
 
 /**
  * Iterator that groups time series so that a filter can be applied to the time
- * series. This iterator will ignore time series that do not have enough data
- * points at the start of the query.
+ * series. Filters are specified as a comma separated list of doubles. For
+ * example, a five day moving average filter would be specified as:
+ * "0.20,0.20,0.20,0.20,0.20"
+ *
+ * Note that this iterator will consume at the start F keys where F is the
+ * number of elements in the filter. So, if you have a five day moving average
+ * filter and a time series as 100 data points, then you will receive 95
+ * results.
+ * 
+ * For multiple time series, K/V pairs will be reported in time order where time
+ * is taken from the key of the last element in the filter. For example, if you
+ * have series {A,B,C} and {A,C} are on the same time interval and B is lagging
+ * behind them, then this iterator will return K/V answers for the time series
+ * in the following manner:
+ * 
+ * A, C, B, A, C, B, ...
+ * 
+ * Also of note is that this iterator handles new time series appearing in the
+ * middle of the time range. Time series that disappear during the time range
+ * will stop reporting an answer.
  * 
  * NOTE: This iterator does not handle being re-seeked. It is currently designed
  * to be used with the DownsampleIterator above it.
@@ -39,7 +57,10 @@ import timely.model.Metric;
 public class TimeSeriesGroupingIterator extends WrappingIterator {
 
     /**
-     * Object representing a single time series and its computed value
+     * Object representing a single time series and its computed value. The
+     * value will be computed when the time series its values reach the target
+     * size. Calling getAndRemoveAnswer will return the answer and clear it's
+     * internal representation.
      *
      */
     private static class TimeSeries extends LinkedList<Pair<Key, Double>> implements Serializable {
@@ -67,8 +88,12 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
             }
         }
 
-        public Double getAnswer() {
-            return this.answer;
+        public Double getAndRemoveAnswer() {
+            try {
+                return this.answer;
+            } finally {
+                this.answer = null;
+            }
         }
 
         private void recompute() {
@@ -127,18 +152,20 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
                 private Pair<Key, Double> findNext() {
                     Entry<Metric, TimeSeries> e = null;
+                    Double answer = null;
                     while (iter.hasNext()) {
                         e = iter.next();
-                        if (e.getValue().getAnswer() != null) {
+                        answer = e.getValue().getAndRemoveAnswer();
+                        if (answer != null) {
                             break;
                         }
                     }
 
-                    if (null != e && e.getValue().getAnswer() != null) {
+                    if (null != e && answer != null) {
                         LOG.trace("Removing first entry from series {}", e.getValue());
                         // remove first key, will re-fill later
                         get(e.getKey()).pollFirst();
-                        return new Pair<Key, Double>(e.getValue().getLast().getFirst(), e.getValue().getAnswer());
+                        return new Pair<Key, Double>(e.getValue().getLast().getFirst(), answer);
                     } else {
                         return null;
                     }
@@ -198,6 +225,8 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     }
 
     private void setTopKeyValue() {
+        topKey = null;
+        topValue = null;
         if (!seriesIterator.hasNext()) {
             do {
                 try {
@@ -210,8 +239,6 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
             if (series.size() == 0) {
                 seriesIterator = null;
-                topKey = null;
-                topValue = null;
             }
         }
         if (null != seriesIterator && seriesIterator.hasNext()) {
@@ -253,7 +280,6 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
     private void refillBuffer() throws IOException {
         LOG.trace("refill()");
-        TimeSeriesGroup nextSeries = new TimeSeriesGroup();
         Metric prev = null;
         while (super.hasTop()) {
             Key k = super.getTopKey();
@@ -266,26 +292,17 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
                 break;
             }
             prev = m;
-            TimeSeries values = series.remove(m);
+            TimeSeries values = series.get(m);
             if (null == values) {
                 LOG.trace("Creating new time series {}", m);
                 values = new TimeSeries(this, filters.length);
+                series.put(m, values);
             }
             LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
             values.add(k, v.getMeasure());
-            nextSeries.put(m, values);
             super.next();
         }
-        if (!nextSeries.isEmpty()) {
-            this.series.forEach((m, v) -> {
-                Pair<Key, Double> last = v.getLast();
-                v.add(last.getFirst(), last.getSecond());
-                LOG.trace("Adding value {} to series {}", v, m);
-                nextSeries.put(m, v);
-            });
-        }
-        this.series = nextSeries;
-        LOG.trace("New Buffer: {}", series);
+        LOG.trace("Buffer contents: {}", series);
     }
 
 }

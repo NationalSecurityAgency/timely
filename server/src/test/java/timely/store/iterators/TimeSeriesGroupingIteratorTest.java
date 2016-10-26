@@ -153,14 +153,6 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             checkNextResult(iter, new double[] { i - 4, i - 3, i - 2, i - 1, i });
             if (i < 50) {
                 checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, i * 2 });
-            } else if (i == 50) {
-                checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, (i - 1) * 2 });
-            } else if (i == 51) {
-                checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 2) * 2, (i - 2) * 2 });
-            } else if (i == 52) {
-                checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 3) * 2, (i - 3) * 2, (i - 3) * 2 });
-            } else if (i >= 53) {
-                checkNextResult(iter, new double[] { 98, 98, 98, 98, 98 });
             }
         }
         assertFalse(iter.hasTop());
@@ -247,54 +239,39 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
 
         LinkedList<Double> first = new LinkedList<>();
         first.add(0D);
-        first.add(0D);
-        first.add(1D);
         first.add(1D);
         first.add(2D);
+        first.add(3D);
+        first.add(4D);
         LinkedList<Double> second = new LinkedList<>();
         second.add(0D);
-        second.add(0D);
-        second.add(2D);
         second.add(2D);
         second.add(4D);
+        second.add(6D);
+        second.add(8D);
         LinkedList<Double> third = new LinkedList<>();
         third.add(0D);
-        third.add(0D);
-        third.add(3D);
         third.add(3D);
         third.add(6D);
+        third.add(9D);
+        third.add(12D);
 
-        for (int i = 4; i < 200; i++) {
+        for (int i = 4; i < 196; i++) {
+            System.out.println(i);
             if (i == 4) {
                 checkNextResult(iter, first);
                 checkNextResult(iter, third);
             } else if (i == 5) {
-                shift(first);
-                checkNextResult(iter, first);
-
                 checkNextResult(iter, second);
-
-                shift(third);
-                checkNextResult(iter, third);
-
             } else if (i % 2 == 0) {
                 shiftAndAdd(first, 1);
                 checkNextResult(iter, first);
 
-                shift(second);
-                checkNextResult(iter, second);
-
                 shiftAndAdd(third, 3);
                 checkNextResult(iter, third);
             } else if (i % 2 != 0) {
-                shift(first);
-                checkNextResult(iter, first);
-
                 shiftAndAdd(second, 2);
                 checkNextResult(iter, second);
-
-                shift(third);
-                checkNextResult(iter, third);
             }
         }
         assertFalse(iter.hasTop());
@@ -316,11 +293,6 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
         double expected = expectedMovingAverage(expectedValues.toArray(new Double[5]));
         assertEquals(expected, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
         iter.next();
-    }
-
-    private void shift(LinkedList<Double> d) {
-        d.pollFirst();
-        d.add(d.getLast());
     }
 
     private void shiftAndAdd(LinkedList<Double> d, int n) {
