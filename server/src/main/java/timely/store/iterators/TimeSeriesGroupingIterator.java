@@ -1,18 +1,5 @@
 package timely.store.iterators;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
-
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
@@ -21,11 +8,17 @@ import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
 import org.apache.accumulo.core.util.Pair;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
+import timely.model.Tag;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Iterator that groups time series so that a filter can be applied to the time
@@ -76,15 +69,13 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         }
 
         public void add(Key key, Double value) {
-            if (this.targetSize == super.size()) {
+            super.add(new Pair<>(key, value));
+            if (super.size() == this.targetSize) {
+                recompute();
+                // remove first key as it is no longer needed for any
+                // computations
                 Pair<Key, Double> e = this.pollFirst();
                 LOG.trace("Removing first entry {}", e.getFirst());
-            }
-            super.add(new Pair<>(key, value));
-            if (super.size() < this.targetSize) {
-                this.answer = null;
-            } else {
-                recompute();
             }
         }
 
@@ -111,7 +102,15 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         public int compare(Metric m1, Metric m2) {
             int result = m1.getName().compareTo(m2.getName());
             if (result == 0) {
-                result = m1.getTags().toString().compareTo(m2.getTags().toString());
+                List<Tag> m1Tags = m1.getTags();
+                List<Tag> m2Tags = m2.getTags();
+                int size = Math.min(m1Tags.size(), m2Tags.size());
+                for (int i = 0; result == 0 && i < size; i++) {
+                    result = m1Tags.get(i).compareTo(m2Tags.get(i));
+                }
+                if (result == 0) {
+                    result = Integer.compare(m1Tags.size(), m2Tags.size());
+                }
             }
             return result;
         }
@@ -161,10 +160,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
                         }
                     }
 
-                    if (null != e && answer != null) {
-                        LOG.trace("Removing first entry from series {}", e.getValue());
-                        // remove first key, will re-fill later
-                        get(e.getKey()).pollFirst();
+                    if (answer != null) {
                         return new Pair<Key, Double>(e.getValue().getLast().getFirst(), answer);
                     } else {
                         return null;
@@ -225,26 +221,22 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     }
 
     private void setTopKeyValue() {
-        topKey = null;
-        topValue = null;
-        if (!seriesIterator.hasNext()) {
-            do {
-                try {
-                    refillBuffer();
-                    seriesIterator = series.iterator();
-                } catch (IOException e) {
-                    throw new RuntimeException("Error filling buffer", e);
-                }
-            } while (!seriesIterator.hasNext() && super.hasTop());
-
-            if (series.size() == 0) {
-                seriesIterator = null;
+        while (!seriesIterator.hasNext() && super.hasTop()) {
+            try {
+                refillBuffer();
+                seriesIterator = series.iterator();
+            } catch (IOException e) {
+                throw new RuntimeException("Error filling buffer", e);
             }
         }
-        if (null != seriesIterator && seriesIterator.hasNext()) {
+
+        if (seriesIterator.hasNext()) {
             Pair<Key, Double> p = seriesIterator.next();
             topKey = p.getFirst();
             topValue = new Value(MetricAdapter.encodeValue(p.getSecond()));
+        } else {
+            topKey = null;
+            topValue = null;
         }
     }
 
@@ -262,7 +254,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         if (null == filterOption) {
             throw new IllegalArgumentException("Window size must be specified.");
         }
-        String[] split = filterOption.split(",");
+        String[] split = StringUtils.split(filterOption, ',');
         filters = new Double[split.length];
         for (int i = 0; i < split.length; i++) {
             filters[i] = Double.parseDouble(split[i]);
@@ -287,6 +279,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
             timely.model.Value v = m.getValue();
             m.setValue(null);
             Collections.sort(m.getTags());
+
             if (prev != null && metricComparator.compare(prev, m) >= 0) {
                 // Only process metrics that sort after the previous one.
                 break;
