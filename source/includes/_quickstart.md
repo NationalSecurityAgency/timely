@@ -40,7 +40,7 @@
     2. Type: `Timely`
     3. Hostname: localhost
     4. HTTPS Port: 54322
-    5. WS Port: 4323
+    5. WS Port: 54323
     6. Basic Auths: check
     7. Click `Browser Cert Check` and accept the certificate
     8. Click `Save & Test`.

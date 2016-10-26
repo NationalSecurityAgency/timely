@@ -28,3 +28,5 @@
 
 Additionally, the Accumulo classloader has to be configured for post-delegation given that the version of Guava that we depend on is
 newer than what Accumulo and Hadoop uses.
+
+2. The counter checkbox in the Grafana U/I does nothing. We are looking to fix this up in the next release.
