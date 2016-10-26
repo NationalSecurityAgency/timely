@@ -14,7 +14,7 @@ LIB_DIR="${BASE_DIR}/lib"
 export CLASSPATH="${CONF_DIR}:${LIB_DIR}/*"
 JVM_ARGS="-Xmx256m -Xms128m"
 JVM_ARGS="${JVM_ARGS} -Dlogging.config=${CONF_DIR}/log4j2-error-console.xml"
-JVM_ARGS="${JVM_ARGS} -Dlog4j.configurationFile=${THIS_DIR}/log4j2-error-console.xml"
+JVM_ARGS="${JVM_ARGS} -Dlog4j.configurationFile=${CONF_DIR}/log4j2-error-console.xml"
 JVM_ARGS="${JVM_ARGS} -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
 
 echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.util.GetMetricTableSplitPoints --spring.config.name=timely"
