@@ -8,6 +8,7 @@ import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.util.ComparablePair;
+import org.apache.accumulo.core.util.Pair;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.parse.TagListParser;
@@ -99,5 +100,9 @@ public class MetricAdapter {
 
     public static byte[] encodeRowKey(Metric metric) {
         return encodeRowKey(metric.getName(), metric.getValue().getTimestamp());
+    }
+
+    public static Pair<String, Long> decodeRowKey(Key k) {
+        return rowCoder.decode(k.getRow().getBytes());
     }
 }

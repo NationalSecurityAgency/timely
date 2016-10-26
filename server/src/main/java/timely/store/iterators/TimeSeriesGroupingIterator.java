@@ -13,12 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
-import timely.model.Tag;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
-import java.util.Map.Entry;
 
 /**
  * Iterator that groups time series so that a filter can be applied to the time
@@ -94,41 +92,29 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
     }
 
-    private static class TimeSeriesMetricComparator implements Comparator<Metric>, Serializable {
-
-        private static final long serialVersionUID = 1L;
-
-        @Override
-        public int compare(Metric m1, Metric m2) {
-            int result = m1.getName().compareTo(m2.getName());
-            if (result == 0) {
-                List<Tag> m1Tags = m1.getTags();
-                List<Tag> m2Tags = m2.getTags();
-                int size = Math.min(m1Tags.size(), m2Tags.size());
-                for (int i = 0; result == 0 && i < size; i++) {
-                    result = m1Tags.get(i).compareTo(m2Tags.get(i));
-                }
-                if (result == 0) {
-                    result = Integer.compare(m1Tags.size(), m2Tags.size());
-                }
-            }
-            return result;
-        }
-
-    }
-
     /**
      *
      * Object representing a group of time series, where uniqueness is defined
      * by the name of the metric and a unique tag set.
      *
      */
-    private static class TimeSeriesGroup extends TreeMap<Metric, TimeSeries> implements Iterable<Pair<Key, Double>> {
+    private static class TimeSeriesGroup extends HashMap<Metric, TimeSeries> implements Iterable<Pair<Key, Double>> {
 
         private static final long serialVersionUID = 1L;
+        private transient List<Pair<Key, Double>> answers;
 
         public TimeSeriesGroup() {
-            super(new TimeSeriesMetricComparator());
+            this.answers = new ArrayList<>();
+        }
+
+        @Override
+        public TimeSeries put(Metric key, TimeSeries value) {
+            TimeSeries old = super.put(key, value);
+            Double answer = value.getAndRemoveAnswer();
+            if (answer != null) {
+                answers.add(new Pair<>(value.getLast().getFirst(), answer));
+            }
+            return old;
         }
 
         /**
@@ -137,54 +123,17 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
          */
         @Override
         public Iterator<Pair<Key, Double>> iterator() {
-
-            final Iterator<Entry<Metric, TimeSeries>> iter = this.entrySet().iterator();
-
-            return new Iterator<Pair<Key, Double>>() {
-
-                private Pair<Key, Double> next = findNext();
-
-                @Override
-                public boolean hasNext() {
-                    return next != null;
-                }
-
-                private Pair<Key, Double> findNext() {
-                    Entry<Metric, TimeSeries> e = null;
-                    Double answer = null;
-                    while (iter.hasNext()) {
-                        e = iter.next();
-                        answer = e.getValue().getAndRemoveAnswer();
-                        if (answer != null) {
-                            break;
-                        }
-                    }
-
-                    if (answer != null) {
-                        return new Pair<Key, Double>(e.getValue().getLast().getFirst(), answer);
-                    } else {
-                        return null;
-                    }
-                }
-
-                @Override
-                public Pair<Key, Double> next() {
-                    try {
-                        LOG.trace("Returning {}", next);
-                        return next;
-                    } finally {
-                        next = findNext();
-                    }
-                }
-
-            };
+            try {
+                return answers.iterator();
+            } finally {
+                answers = new ArrayList<>();
+            }
         }
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(TimeSeriesGroupingIterator.class);
 
     public static final String FILTER = "sliding.window.filter";
-    private static final TimeSeriesMetricComparator metricComparator = new TimeSeriesMetricComparator();
 
     private TimeSeriesGroup series = new TimeSeriesGroup();
     protected Double[] filters = null;
@@ -270,30 +219,45 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         setTopKeyValue();
     }
 
+    /**
+     * This will parse the next set of keys with the same timestamp (encoded in
+     * the row) from the underlying source.
+     * 
+     * @throws IOException
+     */
     private void refillBuffer() throws IOException {
         LOG.trace("refill()");
-        Metric prev = null;
+        Long time = null;
         while (super.hasTop()) {
             Key k = super.getTopKey();
-            Metric m = MetricAdapter.parse(k, super.getTopValue());
-            timely.model.Value v = m.getValue();
-            m.setValue(null);
-            Collections.sort(m.getTags());
 
-            if (prev != null && metricComparator.compare(prev, m) >= 0) {
-                // Only process metrics that sort after the previous one.
+            Long newTime = MetricAdapter.decodeRowKey(k).getSecond();
+            if (time == null) {
+                time = newTime;
+            }
+            if (time.equals(newTime)) {
+
+                Metric m = MetricAdapter.parse(k, super.getTopValue());
+                timely.model.Value v = m.getValue();
+                m.setValue(null);
+
+                TimeSeries values = series.get(m);
+                if (null == values) {
+                    LOG.trace("Creating new time series {}", m);
+                    values = new TimeSeries(this, filters.length);
+                }
+
+                LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
+                values.add(k, v.getMeasure());
+
+                // always re-put the metric back into the TimeSeriesGroup as it
+                // maintains a list of prepared answers
+                series.put(m, values);
+
+                super.next();
+            } else {
                 break;
             }
-            prev = m;
-            TimeSeries values = series.get(m);
-            if (null == values) {
-                LOG.trace("Creating new time series {}", m);
-                values = new TimeSeries(this, filters.length);
-                series.put(m, values);
-            }
-            LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
-            values.add(k, v.getMeasure());
-            super.next();
         }
         LOG.trace("Buffer contents: {}", series);
     }
