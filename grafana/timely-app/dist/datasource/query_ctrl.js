@@ -66,7 +66,7 @@ System.register(['lodash', 'app/plugins/sdk'], function (_export, _context) {
         function TimelyQueryCtrl($scope, $injector, uiSegmentSrv) {
           _classCallCheck(this, TimelyQueryCtrl);
 
-          var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(TimelyQueryCtrl).call(this, $scope, $injector));
+          var _this = _possibleConstructorReturn(this, (TimelyQueryCtrl.__proto__ || Object.getPrototypeOf(TimelyQueryCtrl)).call(this, $scope, $injector));
 
           _this.errors = _this.validateTarget();
           _this.aggregators = ['avg', 'sum', 'min', 'max', 'dev', 'zimsum', 'mimmin', 'mimmax'];

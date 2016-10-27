@@ -241,7 +241,7 @@ export class TimelyDatasource {
       return key.trim();
     });
     var key = keysArray[0];
-    var keysQuery = key + "=*";
+    var keysQuery = key + "=.*";
 
     if (keysArray.length > 1) {
       keysQuery += "," + keysArray.splice(1).join(",");

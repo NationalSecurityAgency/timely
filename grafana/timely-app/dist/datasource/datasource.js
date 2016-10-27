@@ -41,7 +41,6 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
       _export('TimelyDatasource', TimelyDatasource = function () {
 
         // arguments injected by angular
-
         function TimelyDatasource(instanceSettings, $q, backendSrv, templateSrv, contextSrv) {
           _classCallCheck(this, TimelyDatasource);
 
@@ -496,7 +495,7 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
                 } else {
                   return target.metric === metricData.metric && _.all(target.tags, function (tagV, tagK) {
                     interpolatedTagValue = this.templateSrv.replace(tagV, options.scopedVars, 'pipe');
-                    return metricData.tags[tagK] === interpolatedTagValue || interpolatedTagValue === ".*";
+                    return metricData.tags[tagK] === interpolatedTagValue || interpolatedTagValue === "*";
                   }.bind(this));
                 }
               }.bind(this));
