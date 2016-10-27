@@ -1,6 +1,7 @@
 package timely.api.annotation;
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
+import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +18,7 @@ import timely.api.request.WebSocketRequest;
 public class AnnotationResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(AnnotationResolver.class);
-    private static final FastClasspathScanner scanner = new FastClasspathScanner("timely.api").scan();
+    private static final ScanResult result = new FastClasspathScanner("timely.api").scan();
     private static List<String> tcpClassNames;
     private static List<String> httpClassNames;
     private static List<String> wsClassNames;
@@ -31,7 +32,7 @@ public class AnnotationResolver {
     }
 
     static {
-        tcpClassNames = scanner.getNamesOfClassesWithAnnotation(Tcp.class);
+        tcpClassNames = result.getNamesOfClassesWithAnnotation(Tcp.class);
         LOG.trace("Found tcp classes: {}", tcpClassNames);
         if (null != tcpClassNames) {
             for (String cls : tcpClassNames) {
@@ -43,7 +44,7 @@ public class AnnotationResolver {
             }
         }
         LOG.trace("Loaded tcp classes: {}", tcpClasses);
-        httpClassNames = scanner.getNamesOfClassesWithAnnotation(Http.class);
+        httpClassNames = result.getNamesOfClassesWithAnnotation(Http.class);
         LOG.trace("Found http class names: {}", httpClassNames);
         if (null != httpClassNames) {
             for (String cls : httpClassNames) {
@@ -55,7 +56,7 @@ public class AnnotationResolver {
             }
         }
         LOG.trace("Loaded http classes: {}", httpClasses);
-        wsClassNames = scanner.getNamesOfClassesWithAnnotation(WebSocket.class);
+        wsClassNames = result.getNamesOfClassesWithAnnotation(WebSocket.class);
         LOG.trace("Found web socket class names: {}", wsClassNames);
         if (null != wsClassNames) {
             for (String cls : wsClassNames) {
@@ -67,7 +68,7 @@ public class AnnotationResolver {
             }
         }
         LOG.trace("Loaded web socket classes: {}", wsClasses);
-        udpClassNames = scanner.getNamesOfClassesWithAnnotation(Udp.class);
+        udpClassNames = result.getNamesOfClassesWithAnnotation(Udp.class);
         LOG.trace("Found udp classes: {}", udpClassNames);
         if (null != udpClassNames) {
             for (String cls : udpClassNames) {

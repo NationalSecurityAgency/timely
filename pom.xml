@@ -41,29 +41,28 @@
         <collectd-api-jar>/usr/share/collectd/java/collectd-api.jar</collectd-api-jar>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <version.accumulo>1.7.0</version.accumulo>
-        <version.caffeine>2.2.0</version.caffeine>
+        <version.accumulo>1.7.2</version.accumulo>
+        <version.caffeine>2.3.3</version.caffeine>
         <version.collectd>5.5.1</version.collectd>
-        <version.commons-configuration>1.10</version.commons-configuration>
         <version.commons-collections4>4.1</version.commons-collections4>
-        <version.commons-lang3>3.1</version.commons-lang3>
-        <version.disruptor>3.3.2</version.disruptor>
-        <version.fast-classpath-scanner>1.10.4</version.fast-classpath-scanner>
+        <version.commons-lang3>3.5</version.commons-lang3>
+        <version.disruptor>3.3.6</version.disruptor>
+        <version.fast-classpath-scanner>2.0.5</version.fast-classpath-scanner>
         <version.google-flatbuffers>1.4.0</version.google-flatbuffers>
         <version.guava>19.0</version.guava>
-        <version.hadoop>2.6.2</version.hadoop>
-        <version.httpcomponents>4.5.1</version.httpcomponents>
-        <version.jackson>2.6.1</version.jackson>
-        <version.javassist>3.20.0-GA</version.javassist>
+        <version.hadoop>2.7.3</version.hadoop>
+        <version.httpcomponents>4.5.2</version.httpcomponents>
+        <version.jackson>2.8.4</version.jackson>
+        <version.javassist>3.21.0-GA</version.javassist>
         <version.jcip-annotations>1.0</version.jcip-annotations>
         <version.jsoup>1.9.2</version.jsoup>
         <version.junit>4.12</version.junit>
-        <version.log4j>2.5</version.log4j>
+        <version.log4j>2.7</version.log4j>
         <version.netty>4.0.38.Final</version.netty>
         <version.netty-tcnative>1.1.33.Fork18</version.netty-tcnative>
         <version.powermock>1.6.4</version.powermock>
-        <version.slf4j>1.7.12</version.slf4j>
-        <version.spring-boot>1.4.0.RELEASE</version.spring-boot>
+        <version.slf4j>1.7.21</version.slf4j>
+        <version.spring-boot>1.4.1.RELEASE</version.spring-boot>
         <!-- plugin versions -->
         <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
         <version.findbugs-maven>3.0.3</version.findbugs-maven>
@@ -136,21 +135,10 @@
                 <version>LATEST</version>
             </dependency>
             <dependency>
-                <groupId>commons-configuration</groupId>
-                <artifactId>commons-configuration</artifactId>
-                <version>${version.commons-configuration}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>*</groupId>
-                        <artifactId>*</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-	        <dependency>
-	            <groupId>io.github.lukehutch</groupId>
-	            <artifactId>fast-classpath-scanner</artifactId>
-	            <version>${version.fast-classpath-scanner}</version>
-	        </dependency>
+	        <groupId>io.github.lukehutch</groupId>
+	        <artifactId>fast-classpath-scanner</artifactId>
+	        <version>${version.fast-classpath-scanner}</version>
+	    </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
