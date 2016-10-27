@@ -158,11 +158,21 @@
 The standalone server will not save your metric data across restarts.
 </aside>
 
-<p>To deploy Timely with a running Accumulo instance you will need to modify the <code class="prettyprint">conf/timely.properties</code> file appropriately. Then copy the <code class="prettyprint">lib/timely-server.jar</code> and <code class="prettyprint">lib/commons-lang3-*.jar</code> files to your Accumulo tablet servers. Finally, launch Timely using the <code class="prettyprint">bin/timely-server.sh</code> script.</p>
+<p>To deploy Timely with a running Accumulo instance you will need to modify the <code class="prettyprint">conf/timely.yml</code> file appropriately. Then copy the <code class="prettyprint">lib/timely-client.jar</code>, <code class="prettyprint">lib/timely-server.jar</code>, <code class="prettyprint">lib/commons-lang3-*.jar</code>, <code class="prettyprint">lib/commons-collections4-*.jar</code>, and <code class="prettyprint">lib/guava-*.jar</code> files to your Accumulo tablet servers. Finally, launch Timely using the <code class="prettyprint">bin/timely-server.sh</code> script. Because Timely uses a newer version of Guava, you will need to configure a classloader for the Timely context, set it to use post-delegation, and then configure your tables to use the Timely context classloader. This can be done in the shell or in the accumulo-site.xml file.</p>
+
+<blockquote>
+<p>In accumulo-site.xml: <br>
+ &lt;name&gt;general.vfs.conext.classpath.timely.delegation=post&lt;/name&gt;<br>
+ &lt;value&gt;some location&lt;/value&gt;</p>
+
+<p>In accumulo shell: <br>
+<code class="prettyprint">general.vfs.conext.classpath.timely=&lt;some location&gt;</code><br>
+<code class="prettyprint">general.vfs.context.classpath.timely.delegation=post</code></p>
+</blockquote>
 
 <h2 id="ssl-setup">SSL Setup</h2>
 
-<p>To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the <code class="prettyprint">timely.ssl.key.pass</code> property if there is no password for your private key.</p>
+<p>To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the <code class="prettyprint">timely.security.ssl.key-password</code> property if there is no password for your private key.</p>
 
 <h3 id="creating-your-own-ssl-keys-and-certificates">Creating your own SSL keys and certificates</h3>
 
@@ -172,7 +182,7 @@ The standalone server will not save your metric data across restarts.
 
 <p>Create a private key</p>
 
-<p><code class="prettyprint">openssl genrsa -des3 -out CA.key 4096</code></p>
+<p><code class="prettyprint">openssl genrsa -aes256 -out CA.key 4096</code></p>
 
 <p>Create a certificate request using the private key</p>
 
@@ -211,15 +221,21 @@ The standalone server will not save your metric data across restarts.
 <p><code class="prettyprint">openssl pkcs8 -topk8 -inform PEM -outform PEM -in timely.key -out timely-pkcs8.key</code></p>
 
 <h2 id="configuration">Configuration</h2>
+<pre class="highlight yaml"><code><span class="s">timely</span><span class="pi">:</span>
+   <span class="s">accumulo</span><span class="pi">:</span>
+       <span class="s">instance-name</span><span class="pi">:</span> <span class="s">MyInstanceName</span>
+</code></pre>
+
+<p>The default configuration file type for Timely is a YAML. The configuration is read internally using Spring Boot, and therefore supports all of the configuration styles supported by Spring Boot. See <a href="http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config">here</a> and <a href="http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-yaml">here</a> for more details. In YAML, a property such as timely.accumulo.instance-name=MyInstanceName (which can also be timely.accumulo.instanceName) would look like the example on the right.</p>
 
 <p>The <code class="prettyprint">NUM_SERVER_THREADS</code> variable in the <code class="prettyprint">timely-server.sh</code> script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the <code class="prettyprint">conf</code> directory supports the following properties:</p>
 
 <blockquote>
-<p>Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the <code class="prettyprint">timely.write.latency</code> and <code class="prettyprint">timely.write.threads</code> configuration property, but the buffer size for each BatchWriter is <code class="prettyprint">timely.write.buffer.size</code> divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.write.latency=30s, timely.write.threads=2 timely.write.buffer.size=1G</p>
+<p>Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the <code class="prettyprint">timely.accumulo.write.latency</code> and <code class="prettyprint">timely.accumulo.write.threads</code> configuration property, but the buffer size for each BatchWriter is <code class="prettyprint">timely.accumulo.write.buffer-size</code> divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.accumulo.write.latency=30s, timely.accumulo.write.threads=2 timely.accumulo.write.buffer-size=1G</p>
 
-<p>Note: The <code class="prettyprint">timely.scanner.threads</code> property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.</p>
+<p>Note: The <code class="prettyprint">timely.accumulo.scan.threads</code> property is used for BatchScanners on a per query basis. If you set this to 32 and have 8 threads processing HTTP operations, then you might have 256 threads concurrently querying your tablet servers. Be sure to set your ulimits appropriately.</p>
 
-<p>Note: The Timely server contains an object called the meta cache, which is a cache of the keys that would be inserted into the meta table if they did not already exist. This cache is used to reduce the insert load of duplicate keys into the meta table and to serve up data to the <code class="prettyprint">/api/metrics</code> endpoint. The meta cache is an object that supports eviction based on last access time and can be tuned with the <code class="prettyprint">timely.meta.cache.*</code> properties.</p>
+<p>Note: The Timely server contains an object called the meta cache, which is a cache of the keys that would be inserted into the meta table if they did not already exist. This cache is used to reduce the insert load of duplicate keys into the meta table and to serve up data to the <code class="prettyprint">/api/metrics</code> endpoint. The meta cache is an object that supports eviction based on last access time and can be tuned with the <code class="prettyprint">timely.meta-cache.*</code> properties.</p>
 </blockquote>
 
 <table><thead>
@@ -230,169 +246,129 @@ The standalone server will not save your metric data across restarts.
 </tr>
 </thead><tbody>
 <tr>
-<td>timely.ip</td>
-<td>The ip address where the Timely server is running</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.port.put</td>
-<td>The port that will be used for processing put requests</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.port.query</td>
-<td>The port that will be used for processing query requests</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.port.websocket</td>
-<td>The port that will be used for processing web socket requests</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.instance_name</td>
-<td>The name of your Accumulo instance</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.zookeepers</td>
-<td>The list of Zookeepers for your Accumulo instance</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.username</td>
-<td>The username that Timely will use to connect to Accumulo</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.password</td>
-<td>The password of the Accumulo user</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.table</td>
+<td>timely.metrics-table</td>
 <td>The name of the metrics table</td>
 <td>timely.metrics</td>
 </tr>
 <tr>
-<td>timely.meta</td>
+<td>timely.meta-table</td>
 <td>The name of the meta table</td>
 <td>timely.meta</td>
 </tr>
 <tr>
-<td>timely.write.latency</td>
-<td>The Accumulo BatchWriter latency</td>
-<td>5s</td>
+<td>timely.metric-age-off-days</td>
+<td>A list of metric name prefix to age-off day pairs. The <code class="prettyprint">default</code> prefix applies to every key that isn&rsquo;t matched by another ageoff rule.</td>
+<td>default: 7</td>
 </tr>
 <tr>
-<td>timely.write.threads</td>
-<td>The Accumulo BatchWriter number of threads</td>
-<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L49">default</a></td>
-</tr>
-<tr>
-<td>timely.write.buffer.size</td>
-<td>The Accumulo BatchWriter buffer size</td>
-<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L40">default</a></td>
-</tr>
-<tr>
-<td>timely.metric.age.off.days</td>
-<td>The number of days to keep metrics</td>
-<td>7</td>
-</tr>
-<tr>
-<td>timely.cors.allow.any.origin</td>
-<td>Allow any origin in cross origin requests (true/false)</td>
-<td>false</td>
-</tr>
-<tr>
-<td>timely.cors.allow.null.origin</td>
-<td>Allow null origins in cross origin requests (true/false)</td>
-<td>false</td>
-</tr>
-<tr>
-<td>timely.cors.allowed.origins</td>
-<td>List of allowed origins in cross origin requests (can be null or comma separated list)</td>
-<td></td>
-</tr>
-<tr>
-<td>timely.cors.allowed.methods</td>
-<td>List of allowed methods for cross origin requests</td>
-<td><ul><li>DELETE</li><li>GET</li><li>HEAD</li><li>OPTIONS</li><li>PUT</li><li>POST</li></ul></td>
-</tr>
-<tr>
-<td>timely.cors.allowed.headers</td>
-<td>Comma separated list of allowed HTTP headers for cross origin requests</td>
-<td>content-type</td>
-</tr>
-<tr>
-<td>timely.cors.allow.credentials</td>
-<td>Allow credentials to be passed in cross origin requests (true/false)</td>
-<td>true</td>
-</tr>
-<tr>
-<td>timely.scanner.threads</td>
-<td>Number of BatchScanner threads to be used in a query</td>
-<td>4</td>
-</tr>
-<tr>
-<td>timely.metrics.report.tags.ignored</td>
+<td>timely.metrics-report-ignored-tags</td>
 <td>Comma separated list of tags which will not be shown in the /api/metrics response</td>
 <td></td>
 </tr>
 <tr>
-<td>timely.meta.cache.expiration.minutes</td>
-<td>Number of minutes after which unaccessed meta information will be purged from the meta cache</td>
-<td>60</td>
-</tr>
-<tr>
-<td>timely.meta.cache.initial.capacity</td>
-<td>Initial capacity of the meta cache</td>
-<td>2000</td>
-</tr>
-<tr>
-<td>timely.meta.cache.max.capacity</td>
-<td>Maximum capacity of the meta cache</td>
-<td>10000</td>
-</tr>
-<tr>
-<td>timely.ssl.certificate.file</td>
-<td>Public certificate to use for the Timely server (x509 pem format)</td>
+<td>timely.accumulo.instance-name</td>
+<td>The name of your Accumulo instance</td>
 <td></td>
 </tr>
 <tr>
-<td>timely.ssl.key.file</td>
-<td>Private key to use for the Timely server (in pkcs8 format)</td>
+<td>timely.accumulo.zookeepers</td>
+<td>The list of Zookeepers for your Accumulo instance</td>
 <td></td>
 </tr>
 <tr>
-<td>timely.ssl.key.pass</td>
-<td>Password to the private key</td>
+<td>timely.accumulo.username</td>
+<td>The username that Timely will use to connect to Accumulo</td>
 <td></td>
 </tr>
 <tr>
-<td>timely.ssl.use.generated.keypair</td>
+<td>timely.accumulo.password</td>
+<td>The password of the Accumulo user</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.accumulo.write.latency</td>
+<td>The Accumulo BatchWriter latency</td>
+<td>5s</td>
+</tr>
+<tr>
+<td>timely.accumulo.write.threads</td>
+<td>The Accumulo BatchWriter number of threads</td>
+<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L49">default</a></td>
+</tr>
+<tr>
+<td>timely.accumulo.write.buffer-size</td>
+<td>The Accumulo BatchWriter buffer size</td>
+<td><a href="https://github.com/apache/accumulo/blob/master/core/src/main/java/org/apache/accumulo/core/client/BatchWriterConfig.java#L40">default</a></td>
+</tr>
+<tr>
+<td>timely.accumulo.scan.threads</td>
+<td>Number of BatchScanner threads to be used in a query</td>
+<td>4</td>
+</tr>
+<tr>
+<td>timely.security.session-max-age</td>
+<td>Setting for max age of session cookie (in seconds)</td>
+<td>86400</td>
+</tr>
+<tr>
+<td>timely.security.allow-anonymous-access</td>
+<td>Allow anonymous access</td>
+<td>false</td>
+</tr>
+<tr>
+<td>timely.security.ssl.use-generated-keypair</td>
 <td>Use a generated certificate/key pair - useful for testing</td>
 <td>false</td>
 </tr>
 <tr>
-<td>timely.ssl.trust.store.file</td>
+<td>timely.security.ssl.certificate.file</td>
+<td>Public certificate to use for the Timely server (x509 pem format)</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.security.ssl.key-file</td>
+<td>Private key to use for the Timely server (in pkcs8 format)</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.security.ssl.key-password</td>
+<td>Password to the private key</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.security.ssl.trust-store-file</td>
 <td>Certificate trust store (a concatenated list of trusted CA x509 pem certificates)</td>
 <td></td>
 </tr>
 <tr>
-<td>timely.ssl.use.openssl</td>
+<td>timely.security.ssl.use-openssl</td>
 <td>Use OpenSSL (vs JDK SSL)</td>
 <td>true</td>
 </tr>
 <tr>
-<td>timely.ssl.use.ciphers</td>
+<td>timely.security.ssl.use-ciphers</td>
 <td>List of allowed SSL ciphers</td>
 <td>see Configuration.java</td>
 </tr>
 <tr>
-<td>timely.session.max.age</td>
-<td>Setting for max age of session cookie (in seconds)</td>
-<td>86400</td>
+<td>timely.server.ip</td>
+<td>The IP address where the Timely server is running</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.server.tcp-port</td>
+<td>The port that will be used for processing TCP put requests</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.server.udp-port</td>
+<td>The port that will be used for processing UDP put requests</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.server.shutdown-quiet-period</td>
+<td>Time to wait (in seconds) during shutdown for existing connections to finish and ensure there are no new connections</td>
+<td>5</td>
 </tr>
 <tr>
 <td>timely.http.host</td>
@@ -400,44 +376,104 @@ The standalone server will not save your metric data across restarts.
 <td></td>
 </tr>
 <tr>
-<td>timely.allow.anonymous.access</td>
-<td>Allow anonymous access</td>
-<td>false</td>
+<td>timely.http.ip</td>
+<td>The IP address where the Timely server is listening for HTTP query requests</td>
+<td></td>
 </tr>
 <tr>
-<td>timely.visibility.cache.expiration.minutes</td>
-<td>Column Visibility Cache Expiration (minutes)</td>
-<td>60</td>
+<td>timely.http.port</td>
+<td>The port that will be used for processing query requests</td>
+<td></td>
 </tr>
 <tr>
-<td>timely.visibility.cache.initial.capacity</td>
-<td>Column Visibility Cache Initial Capacity</td>
-<td>2000</td>
-</tr>
-<tr>
-<td>timely.visibility.cache.max.capacity</td>
-<td>Column Visibility Cache Max Capacity</td>
-<td>10000</td>
-</tr>
-<tr>
-<td>timely.web.socket.timeout</td>
-<td>Number of seconds with no client ping response before closing subscription</td>
-<td>60</td>
-</tr>
-<tr>
-<td>timely.ws.subscription.lag</td>
-<td>Number of seconds that subscriptions should lag to account for latency</td>
-<td>120</td>
-</tr>
-<tr>
-<td>timely.http.redirect.path</td>
+<td>timely.http.redirect-path</td>
 <td>Path to use for HTTP to HTTPS redirect</td>
 <td>/secure-me</td>
 </tr>
 <tr>
-<td>timely.hsts.max.age</td>
+<td>timely.http.strict-transport-max-age</td>
 <td>HTTP Strict Transport Security max age (in seconds)</td>
 <td>604800</td>
+</tr>
+<tr>
+<td>timely.http.cors.allow-any-origin</td>
+<td>Allow any origin in cross origin requests (true/false)</td>
+<td>false</td>
+</tr>
+<tr>
+<td>timely.http.cors.allow-null-origin</td>
+<td>Allow null origins in cross origin requests (true/false)</td>
+<td>false</td>
+</tr>
+<tr>
+<td>timely.http.cors.allowed-origins</td>
+<td>List of allowed origins in cross origin requests (can be null or comma separated list)</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.http.cors.allowed-methods</td>
+<td>List of allowed methods for cross origin requests</td>
+<td><ul><li>DELETE</li><li>GET</li><li>HEAD</li><li>OPTIONS</li><li>PUT</li><li>POST</li></ul></td>
+</tr>
+<tr>
+<td>timely.http.cors.allowed-headers</td>
+<td>Comma separated list of allowed HTTP headers for cross origin requests</td>
+<td>content-type</td>
+</tr>
+<tr>
+<td>timely.http.cors.allow-credentials</td>
+<td>Allow credentials to be passed in cross origin requests (true/false)</td>
+<td>true</td>
+</tr>
+<tr>
+<td>timely.websocket.ip</td>
+<td>The IP address where the Timely server is listening for web socket requests</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.websocket.port</td>
+<td>The port that will be used for processing web socket requests</td>
+<td></td>
+</tr>
+<tr>
+<td>timely.websocket.timeout</td>
+<td>Number of seconds with no client ping response before closing subscription</td>
+<td>60</td>
+</tr>
+<tr>
+<td>timely.websocket.subscription-lag</td>
+<td>Number of seconds that subscriptions should lag to account for latency</td>
+<td>120</td>
+</tr>
+<tr>
+<td>timely.meta-cache.expiration-minutes</td>
+<td>Number of minutes after which unaccessed meta information will be purged from the meta cache</td>
+<td>60</td>
+</tr>
+<tr>
+<td>timely.meta-cache.initial-capacity</td>
+<td>Initial capacity of the meta cache</td>
+<td>2000</td>
+</tr>
+<tr>
+<td>timely.meta-cache.max-capacity</td>
+<td>Maximum capacity of the meta cache</td>
+<td>10000</td>
+</tr>
+<tr>
+<td>timely.visibility-cache.expiration-minutes</td>
+<td>Column Visibility Cache Expiration (minutes)</td>
+<td>60</td>
+</tr>
+<tr>
+<td>timely.visibility-cache.initial-capacity</td>
+<td>Column Visibility Cache Initial Capacity</td>
+<td>2000</td>
+</tr>
+<tr>
+<td>timely.visibility-cache.max-capacity</td>
+<td>Column Visibility Cache Max Capacity</td>
+<td>10000</td>
 </tr>
 </tbody></table>
 
@@ -556,7 +592,7 @@ If you comment out a property, then the default will be used. If a property is l
 <p>and in the following manner in the <code class="prettyprint">metrics</code> table</p>
 
 <blockquote>
-<p>Note: Not shown in the examples is the encoding of the row and value. You can apply the Timely formatter to your metrics table using the Accumulo shell command: <code class="prettyprint">config -t timely.metrics -s table.formatter=timely.util.TimelyMetricsFormatter</code></p>
+<p>Note: Not shown in the examples is the encoding of the row. You can apply the Timely formatter to your metrics table using the Accumulo shell command: <code class="prettyprint">config -t timely.metrics -s table.formatter=timely.util.TimelyMetricsFormatter</code></p>
 </blockquote>
 
 <table><thead>
@@ -593,7 +629,7 @@ Timely stores your metric N times in the metrics table, where N is the number of
 
 <h2 id="accumulo-configuration">Accumulo Configuration</h2>
 
-<p>You can generate split points for the metrics table after sending data to Timely for a short amount of time. The <code class="prettyprint">bin/get-metric-split-points.sh</code> script will print out a set of split points based on the metric names in the meta table. Yuo can use this output in the Accumulo <code class="prettyprint">addsplits</code> command.</p>
+<p>You can generate split points for the metrics table after sending data to Timely for a short amount of time. The <code class="prettyprint">bin/get-metric-split-points.sh</code> script will print out a set of split points based on the metric names in the meta table. You can use this output in the Accumulo <code class="prettyprint">addsplits</code> command.</p>
 
 <p>You can lower the <code class="prettyprint">table.scan.max.memory</code> property on your metrics table. This will send data back from the Tablet Servers to the Timely server at a faster rate.</p>
 
@@ -643,24 +679,24 @@ Timely stores your metric N times in the metrics table, where N is the number of
 <li>cd into the server directory and run <code class="prettyprint">mvn clean package</code></li>
 </ol></li>
 <li>Untar Timely server distribution (found in <code class="prettyprint">target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz</code>)</li>
-<li>Modify <code class="prettyprint">timely-standalone.properties</code>:
+<li>Modify <code class="prettyprint">timely-standalone.yml</code>:
 
 <ol>
 <li>Use generated server side SSL certificates</li>
-<li><code class="prettyprint">timely.ssl.use.generated.keypair=true</code></li>
+<li><code class="prettyprint">timely.security.ssl.use-generated-keypair=true</code></li>
 <li>or, use your own SSL certificates - see <a href="#ssl-setup">SSL</a> Setup</li>
-<li><code class="prettyprint">timely.ssl.use.generated.keypair=false</code></li>
-<li><code class="prettyprint">timely.ssl.certificate.file=&lt;path to PEM encoded certificate file&gt;</code></li>
-<li><code class="prettyprint">timely.ssl.key.file=&lt;path to PKCS8 PEM encoded private key file&gt;</code></li>
-<li><code class="prettyprint">timely.ssl.key.pass=&lt;private key password&gt;</code></li>
-<li><code class="prettyprint">timely.ssl.use.openssl=true</code> (if openssl installed locally, else false)</li>
-<li><code class="prettyprint">timely.ssl.use.ciphers=&lt;list of ciphers&gt;</code> (comma-delimited list of ciphers to use if you do not want to use the default)</li>
+<li><code class="prettyprint">timely.security.ssl.use-generated-keypair=false</code></li>
+<li><code class="prettyprint">timely.security.ssl.certificate-file=&lt;path to PEM encoded certificate file&gt;</code></li>
+<li><code class="prettyprint">timely.security.ssl.key-file=&lt;path to PKCS8 PEM encoded private key file&gt;</code></li>
+<li><code class="prettyprint">timely.security.ssl.key-password=&lt;private key password&gt;</code></li>
+<li><code class="prettyprint">timely.security.ssl.use-openssl=true</code> (if openssl installed locally, else false)</li>
+<li><code class="prettyprint">timely.security.ssl.use-ciphers=&lt;list of ciphers&gt;</code> (comma-delimited list of ciphers to use if you do not want to use the default)</li>
 <li>Set Timely domain information, this is used for the HTTP Cookie</li>
-<li><code class="prettyprint">timely.http.address=localhost</code></li>
+<li><code class="prettyprint">timely.http.host=localhost</code></li>
 <li>Set Grafana login address, used for HTTP redirect after login</li>
 <li><code class="prettyprint">grafana.http.address=https://localhost:3000/login</code></li>
 <li>Set Anonymous access for Timely</li>
-<li><code class="prettyprint">timely.allow.anonymous.access=&lt;true or false&gt;</code></li>
+<li><code class="prettyprint">timely.security.allow-anonymous-access=&lt;true or false&gt;</code></li>
 </ol></li>
 <li>Start the Timely standalone server
 
@@ -675,18 +711,17 @@ Timely stores your metric N times in the metrics table, where N is the number of
 <li>Add the Timely datasource to Grafana
 
 <ol>
-<li>Go to <code class="prettyprint">https://localhost:54322/api/metrics</code> in your browser and accept the certificate</li>
 <li>Login to Grafana, go to &lsquo;DataSources&rsquo;</li>
 <li>Click &#39;Add data source&rsquo;</li>
 <li>Enter the following information:</li>
 <li>Name: <code class="prettyprint">Timely Standalone</code></li>
-<li>Type: <code class="prettyprint">OpenTSDB</code></li>
-<li>Url: <code class="prettyprint">https://localhost:54322</code></li>
-<li>Access: <code class="prettyprint">direct</code></li>
-<li>With Credentials: <code class="prettyprint">checked</code></li>
-<li>Version: <code class="prettyprint">&lt;=2.1</code></li>
-<li>Resolution: <code class="prettyprint">millisecond</code></li>
-<li>Click <code class="prettyprint">Save &amp; Test</code>. Note that you will get an error, but it will save.</li>
+<li>Type: <code class="prettyprint">Timely</code></li>
+<li>Hostname: localhost</li>
+<li>HTTPS Port: 54322</li>
+<li>WS Port: 54323</li>
+<li>Basic Auths: check</li>
+<li>Click <code class="prettyprint">Browser Cert Check</code> and accept the certificate</li>
+<li>Click <code class="prettyprint">Save &amp; Test</code>.</li>
 </ol></li>
 <li>Import Standalone Test dashboard into Grafana.</li>
 </ol>
@@ -710,7 +745,7 @@ Timely stores your metric N times in the metrics table, where N is the number of
 </code></li>
 <li>The default <code class="prettyprint">conf/security.xml</code> specifies a user <code class="prettyprint">test</code> with password <code class="prettyprint">test1</code> that has the authorizations for <code class="prettyprint">A</code>,<code class="prettyprint">B</code>,<code class="prettyprint">C</code>.</li>
 </ol></li>
-<li>The user specified in <code class="prettyprint">timely.user</code> must have authorizations compatible with the visibility values on your data to be able to return that data to a client. Use <code class="prettyprint">setauths</code> in the Accumulo shell to configure this.</li>
+<li>The user specified in <code class="prettyprint">timely.accumulo.username</code> must have authorizations compatible with the visibility values on your data to be able to return that data to a client. Use <code class="prettyprint">setauths</code> in the Accumulo shell to configure this.</li>
 <li><code class="prettyprint">insert-test-data.sh</code> will insert some data with visibilities, specifically <code class="prettyprint">sys.eth0.rx.*</code> will have <code class="prettyprint">A</code>,<code class="prettyprint">B</code> or <code class="prettyprint">C</code> and <code class="prettyprint">sys.eth0.tx.*</code> will have <code class="prettyprint">D</code>,<code class="prettyprint">E</code> or <code class="prettyprint">F</code>.</li>
 </ol>
 
@@ -732,6 +767,8 @@ the dependencies with <code class="prettyprint">npm</code> and run <code class="
 <p><code class="prettyprint">npm install</code></p>
 
 <p><code class="prettyprint">grunt</code></p>
+
+<p>Note: for the <code class="prettyprint">grunt</code> command to work, you must have the grunt-cli application installed on your system: <code class="prettyprint">npm install -g grunt-cli</code></p>
 
 <h2 id="packaging">Packaging</h2>
 
@@ -912,7 +949,7 @@ View dashboard - this should now be working</p>
 <p>The Timely server supports clients sending requests over different protocols. Not all operations are supported over all protocols. The table below summarizes the protocols supported for each operation. The API documention is organized into sections that describe the general, time series, and subscription operations.</p>
 
 <blockquote>
-<p>The TCP, HTTPS, and WebSocket ports can be specified in the Timely configuration properties.</p>
+<p>The TCP, UDP, HTTPS, and WebSocket ports can be specified in the Timely configuration properties.</p>
 
 <p>The endpoint for the WebSocket protocol is <code class="prettyprint">/websocket</code> </p>
 </blockquote>
@@ -920,6 +957,7 @@ View dashboard - this should now be working</p>
 <table><thead>
 <tr>
 <th>Operation</th>
+<th>UDP</th>
 <th>TCP</th>
 <th>HTTPS</th>
 <th>WebSocket</th>
@@ -927,12 +965,14 @@ View dashboard - this should now be working</p>
 </thead><tbody>
 <tr>
 <td>Version</td>
+<td></td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
 </tr>
 <tr>
 <td>Login</td>
+<td></td>
 <td></td>
 <td>X</td>
 <td></td>
@@ -942,9 +982,11 @@ View dashboard - this should now be working</p>
 <td>X</td>
 <td>X</td>
 <td>X</td>
+<td>X</td>
 </tr>
 <tr>
 <td>Suggest</td>
+<td></td>
 <td></td>
 <td>X</td>
 <td>X</td>
@@ -952,11 +994,13 @@ View dashboard - this should now be working</p>
 <tr>
 <td>Lookup</td>
 <td></td>
+<td></td>
 <td>X</td>
 <td>X</td>
 </tr>
 <tr>
 <td>Query</td>
+<td></td>
 <td></td>
 <td>X</td>
 <td>X</td>
@@ -964,11 +1008,13 @@ View dashboard - this should now be working</p>
 <tr>
 <td>Aggregators</td>
 <td></td>
+<td></td>
 <td>X</td>
 <td>X</td>
 </tr>
 <tr>
 <td>Metrics</td>
+<td></td>
 <td></td>
 <td>X</td>
 <td>X</td>
@@ -977,10 +1023,12 @@ View dashboard - this should now be working</p>
 <td>Create</td>
 <td></td>
 <td></td>
+<td></td>
 <td>X</td>
 </tr>
 <tr>
 <td>Add</td>
+<td></td>
 <td></td>
 <td></td>
 <td>X</td>
@@ -989,10 +1037,12 @@ View dashboard - this should now be working</p>
 <td>Remove</td>
 <td></td>
 <td></td>
+<td></td>
 <td>X</td>
 </tr>
 <tr>
 <td>Close</td>
+<td></td>
 <td></td>
 <td></td>
 <td>X</td>
@@ -1054,7 +1104,8 @@ View dashboard - this should now be working</p>
 <p>The Timeseries API contains operations for getting metadata about the time series, and retrieving the data points.</p>
 
 <h2 id="put-operation">Put Operation</h2>
-<pre class="highlight plaintext"><code>echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc &lt;host&gt; &lt;port&gt;
+<pre class="highlight plaintext"><code>echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc &lt;host&gt; &lt;tcp_port&gt;
+echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc -u &lt;host&gt; &lt;udp_port&gt;
 </code></pre>
 <pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/put</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="s">{</span>
@@ -1121,6 +1172,10 @@ View dashboard - this should now be working</p>
 <td>(Optional) Pairs of K,V strings to associate with this metric</td>
 </tr>
 </tbody></table>
+
+<aside class="notice">
+Timely accepts binary put requests over the UDP and TCP protocols using Google Flatbuffers encoding. The flatbuffer definition file is in the server source code in src/main/resources/fb
+</aside>
 
 <h2 id="suggest-operation">Suggest Operation</h2>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/suggest?type=metrics&amp;q=sys.cpu.u&amp;max=30</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
@@ -1575,7 +1630,7 @@ View dashboard - this should now be working</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<p>Subscribe to metrics that match the metric name and optional tag set. Only one subscription per <code class="prettyprint">metric</code> is supported. The Timely server will return <a href="#metric-response">Metric</a> responses over the WebSocket channel that match the <code class="prettyprint">metric</code> and <code class="prettyprint">tags</code> in the request. The Timely server will return metrics that are older than the <code class="prettyprint">startTime</code>, which can be zero to return all currently stored data. When all data has been returned, the Timely server will wait <code class="prettyprint">delayTime</code> ms before looking for new data. The Timely server maintains a pointer to the last metric returned, so it will not return data that is newly inserted but older than the last returned metric. Use the <code class="prettyprint">timely.ws.subscription.lag</code> server configuration property to determine how close to current time the subscriptions will be. This will depend on your deployment. For example, if the <code class="prettyprint">timely.write.latency</code> configuration property is 30s, then you may want to set the lag to greater than 30s to ensure that all data has arrived.</p>
+<p>Subscribe to metrics that match the metric name and optional tag set. Only one subscription per <code class="prettyprint">metric</code> is supported. The Timely server will return <a href="#metric-response">Metric</a> responses over the WebSocket channel that match the <code class="prettyprint">metric</code> and <code class="prettyprint">tags</code> in the request. The Timely server will return metrics that are older than the <code class="prettyprint">startTime</code>, which can be zero to return all currently stored data. When all data has been returned, the Timely server will wait <code class="prettyprint">delayTime</code> ms before looking for new data. The Timely server maintains a pointer to the last metric returned, so it will not return data that is newly inserted but older than the last returned metric. Use the <code class="prettyprint">timely.websocket.subscription-lag</code> server configuration property to determine how close to current time the subscriptions will be. This will depend on your deployment. For example, if the <code class="prettyprint">timely.accumulo.write.latency</code> configuration property is 30s, then you may want to set the lag to greater than 30s to ensure that all data has arrived.</p>
 
 <table><thead>
 <tr>
@@ -1769,6 +1824,51 @@ openssl pkcs12 -export -out timely-user.p12 -inkey timely-user.key -in timely-us
 <aside class="success">
 You should see metrics show up after a minute or two. If you do not, check for an error using developer tools.
 </aside>
+
+          <h1 id="release-notes">Release Notes</h1>
+
+<h2 id="0-0-3">0.0.3</h2>
+
+<h3 id="features">FEATURES</h3>
+
+<ul>
+<li>Configuration file format changed to YAML due to use of Spring Configuration and Spring Boot</li>
+<li>Removed Double Lexicoder in Accumulo Value, requires removal of old data</li>
+<li>Added support for put operations in binary form using Google FlatBuffers</li>
+<li>Updated docker image</li>
+<li>Ageoff (in days) for individual metrics now possible, default value supported. Ageoff iterators are removed and re-applied during startup.</li>
+<li>Timely works with Accumulo 1.7 and 1.8</li>
+<li>Added support for PUT in text and binary form over UDP</li>
+</ul>
+
+<h3 id="performance">PERFORMANCE</h3>
+
+<ul>
+<li>Modified code to use one ageoff iterator instead of a stack of them</li>
+<li>Removed interpolation code and code that handles counters in a special manner. This should be done in the client.</li>
+<li>Moved rate calculation to the tablet server by using an iterator that groups time series together and then applies a filter</li>
+</ul>
+
+<h3 id="notes">NOTES</h3>
+
+<ol>
+<li>This list of jars that are needed on the tablet server has increased and now includes:</li>
+</ol>
+
+<ul>
+<li>commons-lang3</li>
+<li>commons-collections4</li>
+<li>guava</li>
+<li>timely-client</li>
+<li>timely-server</li>
+</ul>
+
+<p>Additionally, the Accumulo classloader has to be configured for post-delegation given that the version of Guava that we depend on is
+newer than what Accumulo and Hadoop uses.</p>
+
+<ol>
+<li>The counter checkbox in the Grafana U/I does nothing. We are looking to fix this up in the next release.</li>
+</ol>
 
       </div>
       <div class="dark-box">
