@@ -253,9 +253,10 @@ public class PluginParentTest {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("haproxy");
+        vl.setPluginInstance("[proxy_name=proxy1,service_name=server1]");
         vl.setTime(TIME);
         vl.setType("gauge");
-        vl.setTypeInstance("server1.proxy1.queue_current");
+        vl.setTypeInstance("queue_current");
         vl.setValues(Collections.singletonList((Number) 0.0D));
         DataSet ds = new DataSet("GAUGE");
         ds.addDataSource(new DataSource("value", 1, 0.0D, 100.0D));
@@ -264,7 +265,7 @@ public class PluginParentTest {
         TestPlugin test = new TestPlugin();
         test.process(vl);
         assertEquals(
-                "put sys.haproxy.queue_current 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo proxy=proxy1 server=server1 sample=value sampleType=GAUGE\n",
+                "put sys.haproxy.queue_current 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo proxy_name=proxy1 service_name=server1 sample=value sampleType=GAUGE\n",
                 result);
     }
 

@@ -32,7 +32,7 @@ public abstract class CollectDPluginParent {
     private static final Pattern ETHSTAT_PATTERN = Pattern.compile("([\\w-_]+)_queue_([\\w-_]+)_([\\w-_]+)");
     private static final String STATSD_PREFIX = "statsd";
     private static final String NSQ_PREFIX = STATSD_PREFIX + ".nsq.";
-    private static final Pattern HAPROXY_PATTERN = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
+    private static final Pattern HAPROXY_PATTERN = Pattern.compile("\\[([\\w-_=]+),([\\w-_=]+)\\]");
 
     private final SMARTCodeMapping smart = new SMARTCodeMapping();
 
@@ -158,13 +158,11 @@ public abstract class CollectDPluginParent {
             metric.append("sys.sensors.").append(vl.getType()).append(PERIOD).append(vl.getPluginInstance());
             tags.append(INSTANCE).append(instance);
         } else if (vl.getPlugin().equals("haproxy")) {
-            Matcher m = HAPROXY_PATTERN.matcher(vl.getTypeInstance());
+            metric.append("sys.haproxy.").append(vl.getTypeInstance());
+            Matcher m = HAPROXY_PATTERN.matcher(vl.getPluginInstance());
             if (m.matches()) {
-                metric.append("sys.haproxy.").append(m.group(3));
-                tags.append(" proxy=").append(m.group(2));
-                tags.append(" server=").append(m.group(1));
-            } else {
-                metric.append("sys.haproxy.").append(vl.getTypeInstance());
+                tags.append(" ").append(m.group(1));
+                tags.append(" ").append(m.group(2));
             }
         } else if (vl.getPlugin().equals("ipmi")) {
             metric.append("sys.ipmi.").append(vl.getType());
