@@ -466,6 +466,7 @@ public class DataStoreImpl implements DataStore {
                     if (query.isRate()) {
                         LOG.trace("Adding rate iterator");
                         IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
+                        RateIterator.setRateOptions(rate, query.getRateOptions());
                         scanner.addScanIterator(rate);
                     }
                     long downsample = getDownsamplePeriod(query);

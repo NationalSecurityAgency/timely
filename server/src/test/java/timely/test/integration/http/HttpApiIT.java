@@ -725,6 +725,116 @@ public class HttpApiIT extends OneWaySSLBase {
     }
 
     @Test
+    public void testRateCounterQuery() throws Exception {
+        final Server s = new Server(conf);
+        s.run();
+        try {
+            // @formatter:off
+            put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+10) + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+11) + " 2.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+12) + " 3.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+13) + " 4.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+14) + " 5.0 tag1=value1 tag2=value2 rack=r1");
+            // @formatter:on
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 15);
+            request.setMsResolution(true);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.user");
+            Map<String, String> t = new LinkedHashMap<>();
+            subQuery.setTags(t);
+            subQuery.setDownsample(Optional.of("1ms-max"));
+            subQuery.setRate(true);
+            subQuery.setRateOptions(new QueryRequest.RateOption());
+            subQuery.getRateOptions().setCounter(true);
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(1, response.size());
+            QueryResponse response1 = response.get(0);
+            Map<String, Object> dps = response1.getDps();
+            assertEquals(14, dps.size());
+            int i = 1;
+            for (Entry<String, Object> e : dps.entrySet()) {
+                assertEquals(Long.toString(TEST_TIME + i), e.getKey());
+                assertEquals(1.0, e.getValue());
+                i++;
+            }
+
+        } finally {
+            s.shutdown();
+        }
+    }
+
+    @Test
+    public void testRateCounterWithOptions() throws Exception {
+        final Server s = new Server(conf);
+        s.run();
+        try {
+            // @formatter:off
+            put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+10) + " 0.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+11) + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+12) + " 2.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+13) + " 3.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME+14) + " 4.0 tag1=value1 tag2=value2 rack=r1");
+            // @formatter:on
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+            QueryRequest request = new QueryRequest();
+            request.setStart(TEST_TIME);
+            request.setEnd(TEST_TIME + 15);
+            request.setMsResolution(true);
+            SubQuery subQuery = new SubQuery();
+            subQuery.setMetric("sys.cpu.user");
+            Map<String, String> t = new LinkedHashMap<>();
+            subQuery.setTags(t);
+            subQuery.setDownsample(Optional.of("1ms-max"));
+            subQuery.setRate(true);
+            subQuery.setRateOptions(new QueryRequest.RateOption());
+            subQuery.getRateOptions().setCounter(true);
+            subQuery.getRateOptions().setCounterMax(Long.MAX_VALUE);
+            subQuery.getRateOptions().setResetValue(2);
+            request.addQuery(subQuery);
+            List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+            assertEquals(1, response.size());
+            QueryResponse response1 = response.get(0);
+            Map<String, Object> dps = response1.getDps();
+            assertEquals(14, dps.size());
+            int i = 1;
+            for (Entry<String, Object> e : dps.entrySet()) {
+                assertEquals(Long.toString(TEST_TIME + i), e.getKey());
+                assertEquals((i == 10 ? 0.0 : 1.0), e.getValue());
+                i++;
+            }
+
+        } finally {
+            s.shutdown();
+        }
+    }
+
+    @Test
     public void testGetVersion() throws Exception {
         final Server s = new Server(conf);
         s.run();

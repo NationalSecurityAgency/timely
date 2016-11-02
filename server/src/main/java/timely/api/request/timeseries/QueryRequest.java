@@ -30,7 +30,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
     public static class RateOption {
 
         private boolean counter = false;
-        private long counterMax = Long.MAX_VALUE;
+        private long counterMax = 0;
         private long resetValue = 0;
 
         public RateOption() {
