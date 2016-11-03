@@ -1,11 +1,17 @@
 package timely.model;
 
-import com.fasterxml.jackson.annotation.*;
-import timely.model.parse.TagParser;
-
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import timely.model.parse.TagParser;
+
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 /**
  * A Metric consists of a metric name, tags, and a Value
@@ -17,7 +23,9 @@ import java.util.List;
 @JsonRootName("metric")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({ "name" })
-public class Metric {
+public class Metric implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private String name;
     private List<Tag> tags;
