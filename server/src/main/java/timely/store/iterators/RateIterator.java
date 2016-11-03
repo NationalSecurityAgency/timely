@@ -30,6 +30,7 @@ public class RateIterator extends TimeSeriesGroupingIterator {
 
     public static void setRateOptions(IteratorSetting is, QueryRequest.RateOption options) {
         if (options != null && options.isCounter()) {
+            LOG.trace("Setting rate counter options cm:{}, rv:{}", options.getCounterMax(), options.getResetValue());
             is.addOption(COUNTER_MAX, Long.toString(options.getCounterMax()));
             is.addOption(RATE_RESET_VALUE, Long.toString(options.getResetValue()));
         }
@@ -42,6 +43,7 @@ public class RateIterator extends TimeSeriesGroupingIterator {
             this.isCounter = true;
             this.maxCounter = Long.parseLong(options.get(COUNTER_MAX));
             this.resetValue = Long.parseLong(options.get(RATE_RESET_VALUE));
+            LOG.trace("Setting rate counter options cm:{}, rv:{}", this.maxCounter, this.resetValue);
         }
         Map<String, String> opts = new HashMap<>(options);
         opts.put(TimeSeriesGroupingIterator.FILTER, "-1,1");
