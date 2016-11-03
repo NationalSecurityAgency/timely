@@ -11,6 +11,7 @@ public class AddSubscription extends SubscriptionRequest {
     private String metric = null;
     private Optional<Map<String, String>> tags = Optional.empty();
     private Optional<Long> startTime = Optional.empty();
+    private Optional<Long> endTime = Optional.empty();
     private Optional<Long> delayTime = Optional.empty();
 
     public String getMetric() {
@@ -35,6 +36,14 @@ public class AddSubscription extends SubscriptionRequest {
 
     public void setStartTime(long startTime) {
         this.startTime = Optional.ofNullable(startTime);
+    }
+
+    public Optional<Long> getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(long endTime) {
+        this.endTime = Optional.ofNullable(endTime);
     }
 
     public Optional<Long> getDelayTime() {

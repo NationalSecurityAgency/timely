@@ -108,7 +108,8 @@ public class WebSocketRequestDeserializationTest {
 					       "\"tag2\" : \"value2\"," +
 					       "\"tag1\" : \"value1\"" +
 					    "}," +
-						"\"startTime\" : \"1000\"" +
+						"\"startTime\" : \"1000\"," +
+					    "\"endTime\" : \"2000\""+
 					  "}";
 		// @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
@@ -123,8 +124,11 @@ public class WebSocketRequestDeserializationTest {
         Assert.assertTrue(tags.containsKey("tag2"));
         Assert.assertEquals("value2", tags.get("tag2"));
         Assert.assertEquals(true, ((AddSubscription) request).getStartTime().isPresent());
-        long time = ((AddSubscription) request).getStartTime().get();
-        Assert.assertEquals(1000L, time);
+        long start = ((AddSubscription) request).getStartTime().get();
+        Assert.assertEquals(1000L, start);
+        Assert.assertEquals(true, ((AddSubscription) request).getEndTime().isPresent());
+        long end = ((AddSubscription) request).getEndTime().get();
+        Assert.assertEquals(2000L, end);
     }
 
     @Test

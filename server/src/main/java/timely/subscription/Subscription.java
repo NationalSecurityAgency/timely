@@ -42,10 +42,11 @@ public class Subscription {
         }, rate, rate, TimeUnit.SECONDS);
     }
 
-    public void addMetric(String metric, Map<String, String> tags, long startTime, long delay) throws TimelyException {
+    public void addMetric(String metric, Map<String, String> tags, long startTime, long endTime, long delay)
+            throws TimelyException {
         LOG.debug("Adding metric scanner for subscription {}", this.subscriptionId);
-        MetricScanner m = new MetricScanner(this.subscriptionId, this.sessionId, store, metric, tags, startTime, delay,
-                lag, ctx);
+        MetricScanner m = new MetricScanner(this.subscriptionId, this.sessionId, store, metric, tags, startTime,
+                endTime, delay, lag, ctx);
         METRICS.put(metric, m);
         m.start();
     }

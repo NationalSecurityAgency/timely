@@ -28,6 +28,7 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
             }
             Map<String, String> tags = null;
             Long startTime = 0L;
+            Long endTime = 0L;
             Long delayTime = 5000L;
             if (add.getTags().isPresent()) {
                 tags = add.getTags().get();
@@ -35,10 +36,13 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
             if (add.getStartTime().isPresent()) {
                 startTime = add.getStartTime().get();
             }
+            if (add.getEndTime().isPresent()) {
+                endTime = add.getEndTime().get();
+            }
             if (add.getDelayTime().isPresent()) {
                 delayTime = add.getDelayTime().get();
             }
-            s.addMetric(metric, tags, startTime, delayTime);
+            s.addMetric(metric, tags, startTime, endTime, delayTime);
         } else {
             LOG.error("Unknown subscription id, create subscription first");
             ctx.writeAndFlush(new CloseWebSocketFrame(1003, "Unknown subscription id, create subscription first"));

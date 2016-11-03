@@ -777,15 +777,14 @@ public class DataStoreImpl implements DataStore {
     }
 
     public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
-            int lag) throws TimelyException {
+            long endTime, int lag) throws TimelyException {
         try {
             Authorizations auths = null;
             try {
                 auths = getSessionAuthorizations(sessionId);
             } catch (NullPointerException npe) {
                 // Session id being used for metric scanner, but session Id does
-                // not
-                // exist in Auth Cache. Use Empty auths if anonymous access
+                // not exist in Auth Cache. Use Empty auths if anonymous access
                 // allowed
                 if (anonAccessAllowed) {
                     auths = Authorizations.EMPTY;
@@ -798,8 +797,8 @@ public class DataStoreImpl implements DataStore {
                 throw new IllegalArgumentException("metric name must be specified");
             }
             byte[] start = MetricAdapter.encodeRowKey(metric, startTime);
-            long endTime = (System.currentTimeMillis() - (lag * 1000));
-            byte[] end = MetricAdapter.encodeRowKey(metric, endTime);
+            long endTimeStamp = (endTime == 0) ? (System.currentTimeMillis() - (lag * 1000)) : endTime;
+            byte[] end = MetricAdapter.encodeRowKey(metric, endTimeStamp);
             s.setRange(new Range(new Text(start), true, new Text(end), false));
             SubQuery query = new SubQuery();
             query.setMetric(metric);

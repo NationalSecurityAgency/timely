@@ -369,6 +369,84 @@ public class WebSocketIT extends OneWaySSLBase {
     }
 
     @Test
+    public void testSubscriptionWorkflowWithEndTime() throws Exception {
+        try {
+            final String subscriptionId = "1234";
+            CreateSubscription c = new CreateSubscription();
+            c.setSubscriptionId(subscriptionId);
+            ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(c)));
+
+            // Add some data
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + TEST_TIME
+                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 2)
+                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+
+            // Add subscription, confirm data
+            AddSubscription add = new AddSubscription();
+            add.setSubscriptionId(subscriptionId);
+            add.setMetric("sys.cpu.user");
+            add.setEndTime(TEST_TIME + 1000);
+            add.setDelayTime(1000L);
+            ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add)));
+
+            List<String> response = handler.getResponses();
+            while (response.size() == 0 && handler.isConnected()) {
+                LOG.info("Waiting for web socket response");
+                sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
+                response = handler.getResponses();
+            }
+
+            Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
+                    .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
+            Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
+                    .tag(new Tag("tag3", "value3")).build();
+            for (String metrics : response) {
+                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+                Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
+            }
+
+            // Add some more data
+            put("sys.cpu.user " + (TEST_TIME + 500) + " 6.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user "
+                    + (TEST_TIME + 500) + " 7.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 1000)
+                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
+                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+
+            // Delay time on the metric scanner is 1 second, the metric
+            // scanner should be exhausted on the backend due to the presence
+            // of the end time. Wait 2 seconds then exit.
+            LOG.info("Waiting for web socket response");
+            sleepUninterruptibly(2, TimeUnit.SECONDS);
+            response = handler.getResponses();
+
+            // confirm no data - the metric scanner ran once on the back end
+            Assert.assertEquals(0, response.size());
+
+            // Remove subscriptions to metric
+            RemoveSubscription remove1 = new RemoveSubscription();
+            remove1.setSubscriptionId(subscriptionId);
+            remove1.setMetric("sys.cpu.user");
+            ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(remove1)));
+
+            // Close subscription
+            CloseSubscription close = new CloseSubscription();
+            close.setSubscriptionId(subscriptionId);
+            ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(close)));
+        } finally {
+            ch.close().sync();
+            s.shutdown();
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
     public void testWSAggregators() throws Exception {
         try {
             AggregatorsRequest request = new AggregatorsRequest();

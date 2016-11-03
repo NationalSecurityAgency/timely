@@ -41,16 +41,18 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final int lag;
     private final String subscriptionId;
     private final String metric;
+    private final long endTime;
 
     public MetricScanner(String subscriptionId, String sessionId, DataStore store, String metric,
-            Map<String, String> tags, long startTime, long delay, int lag, ChannelHandlerContext ctx)
+            Map<String, String> tags, long startTime, long endTime, long delay, int lag, ChannelHandlerContext ctx)
             throws TimelyException {
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(this);
         this.ctx = ctx;
         this.lag = lag;
         this.metric = metric;
-        this.scanner = store.createScannerForMetric(sessionId, metric, tags, startTime, lag);
+        this.endTime = endTime;
+        this.scanner = store.createScannerForMetric(sessionId, metric, tags, startTime, endTime, lag);
         this.iter = scanner.iterator();
         this.delay = delay;
         this.subscriptionId = subscriptionId;
@@ -58,6 +60,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
         buf.append("sessionId", sessionId);
         buf.append("metric", metric);
         buf.append("startTime", startTime);
+        buf.append("endTime", endTime);
         buf.append("delayTime", delay);
         if (null != tags) {
             buf.append("tags", tags.toString());
@@ -84,30 +87,34 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     } catch (JsonProcessingException e1) {
                         LOG.error("Error serializing metric: " + m, e1);
                     }
-                } else {
-                    long endTime = (System.currentTimeMillis() - (lag * 1000));
-                    byte[] end = MetricAdapter.encodeRowKey(this.metric, endTime);
+                } else if (this.endTime == 0) {
+                    long endTimeStamp = (System.currentTimeMillis() - (lag * 1000));
+                    byte[] end = MetricAdapter.encodeRowKey(this.metric, endTimeStamp);
                     Text endRow = new Text(end);
                     this.scanner.close();
                     Range prevRange = this.scanner.getRange();
                     if (null == m) {
-                        LOG.debug("No results found, waiting {}ms to retry.", delay);
+                        LOG.debug("No results found, waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         this.scanner.setRange(new Range(prevRange.getStartKey().getRow(), prevRange
                                 .isStartKeyInclusive(), endRow, false));
                         this.iter = this.scanner.iterator();
                     } else {
                         // Reset the starting range to the last key returned
-                        LOG.debug("Exhausted scanner, waiting {}ms to retry.", delay);
+                        LOG.debug("Exhausted scanner, waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         this.scanner.setRange(new Range(new Text(MetricAdapter.encodeRowKey(m)), false, endRow,
                                 prevRange.isEndKeyInclusive()));
                         this.iter = this.scanner.iterator();
                     }
+                } else {
+                    LOG.debug("Exhausted scanner and closing");
+                    break;
                 }
             }
         } finally {
             this.scanner.close();
+            close();
         }
     }
 
