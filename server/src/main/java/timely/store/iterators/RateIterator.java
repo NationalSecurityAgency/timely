@@ -16,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.request.timeseries.QueryRequest;
 
-import static org.apache.accumulo.core.iterators.user.TimestampFilter.START;
-
 public class RateIterator extends TimeSeriesGroupingIterator {
 
     public static final Logger LOG = LoggerFactory.getLogger(RateIterator.class);
