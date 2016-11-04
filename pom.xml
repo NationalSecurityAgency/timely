@@ -57,7 +57,7 @@
         <version.jcip-annotations>1.0</version.jcip-annotations>
         <version.jsoup>1.9.2</version.jsoup>
         <version.junit>4.12</version.junit>
-        <version.log4j>2.7</version.log4j>
+        <version.log4j>2.6.2</version.log4j>
         <version.netty>4.0.38.Final</version.netty>
         <version.netty-tcnative>1.1.33.Fork18</version.netty-tcnative>
         <version.powermock>1.6.4</version.powermock>
