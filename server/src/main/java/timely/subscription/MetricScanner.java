@@ -79,7 +79,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
                 if (this.iter.hasNext()) {
                     Entry<Key, Value> e = this.iter.next();
-                    m = MetricAdapter.parse(e.getKey(), e.getValue());
+                    m = MetricAdapter.parse(e.getKey(), e.getValue(), true);
                     try {
                         String json = om.writeValueAsString(MetricResponse.fromMetric(m, this.subscriptionId));
                         LOG.trace("Returning {} for subscription", json);

@@ -82,7 +82,7 @@ public class MetricAdapter {
         // @formatter:on
     }
 
-    public static Metric parse(Key k, Value v) {
+    public static Metric parse(Key k, Value v, boolean includeVizTag) {
         ComparablePair<String, Long> row = rowCoder.decode(k.getRow().getBytes());
         // @formatter:off
         Metric.Builder builder = Metric.newBuilder()
@@ -91,7 +91,14 @@ public class MetricAdapter {
                 .tag(tagParser.parse(k.getColumnFamily().toString()));
         // @formatter:on
         tagListParser.parse(k.getColumnQualifier().toString()).forEach(builder::tag);
+        if (includeVizTag && k.getColumnVisibility().getLength() > 0) {
+            tagListParser.parse("viz=" + k.getColumnVisibility().toString()).forEach(builder::tag);
+        }
         return builder.build();
+    }
+
+    public static Metric parse(Key k, Value v) {
+        return parse(k, v, false);
     }
 
     public static byte[] encodeRowKey(String metricName, Long timestamp) {

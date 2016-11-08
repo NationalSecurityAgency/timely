@@ -8,7 +8,9 @@ import org.apache.accumulo.core.client.lexicoder.LongLexicoder;
 import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
 import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
 import org.apache.accumulo.core.data.ColumnUpdate;
+import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
+import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.junit.Assert;
 import org.junit.Before;
@@ -101,4 +103,46 @@ public class MetricAdapterTest {
         String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"tag1\":\"value1\"},{\"viz\":\"(a&b)|(c&d)\"}],\"subscriptionId\":\"12345\"}";
         Assert.assertEquals(expected, json);
     }
+
+    @Test
+    public void testParse() throws Exception {
+        PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", 1000L));
+        byte[] value = new byte[Double.BYTES];
+        ByteBuffer.wrap(value).putDouble(2.0D);
+        Key k = new Key(row, "tag1=value1".getBytes(), "tag2=value2,tag3=value3".getBytes(), "(a&b)|(c&d)".getBytes(),
+                1000);
+        Value v = new Value(value);
+        Metric m = MetricAdapter.parse(k, v);
+        Assert.assertEquals("sys.cpu.user", m.getName());
+        List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("tag1=value1"));
+        tags.add(new Tag("tag2=value2"));
+        tags.add(new Tag("tag3=value3"));
+        Assert.assertEquals(tags, m.getTags());
+        Assert.assertEquals(new Long(1000), m.getValue().getTimestamp());
+        Assert.assertEquals(2.0D, m.getValue().getMeasure(), 0.0D);
+    }
+
+    @Test
+    public void testParseWithViz() throws Exception {
+        PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", 1000L));
+        byte[] value = new byte[Double.BYTES];
+        ByteBuffer.wrap(value).putDouble(2.0D);
+        Key k = new Key(row, "tag1=value1".getBytes(), "tag2=value2,tag3=value3".getBytes(), "(a&b)|(c&d)".getBytes(),
+                1000);
+        Value v = new Value(value);
+        Metric m = MetricAdapter.parse(k, v, true);
+        Assert.assertEquals("sys.cpu.user", m.getName());
+        List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("tag1=value1"));
+        tags.add(new Tag("tag2=value2"));
+        tags.add(new Tag("tag3=value3"));
+        tags.add(new Tag("viz=(a&b)|(c&d)"));
+        Assert.assertEquals(tags, m.getTags());
+        Assert.assertEquals(new Long(1000), m.getValue().getTimestamp());
+        Assert.assertEquals(2.0D, m.getValue().getMeasure(), 0.0D);
+    }
+
 }

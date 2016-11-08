@@ -792,6 +792,7 @@ public class DataStoreImpl implements DataStore {
                     throw npe;
                 }
             }
+            LOG.debug("Creating metric scanner for session: {} with auths: {}", sessionId, auths);
             Scanner s = connector.createScanner(this.metricsTable, auths);
             if (null == metric) {
                 throw new IllegalArgumentException("metric name must be specified");
