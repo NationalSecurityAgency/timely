@@ -3,7 +3,12 @@ package timely;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
@@ -82,6 +87,7 @@ import timely.netty.websocket.subscription.WSAddSubscriptionRequestHandler;
 import timely.netty.websocket.subscription.WSCloseSubscriptionRequestHandler;
 import timely.netty.websocket.subscription.WSCreateSubscriptionRequestHandler;
 import timely.netty.websocket.subscription.WSRemoveSubscriptionRequestHandler;
+import timely.netty.websocket.subscription.WSTimelyExceptionHandler;
 import timely.netty.websocket.timeseries.WSAggregatorsRequestHandler;
 import timely.netty.websocket.timeseries.WSMetricsRequestHandler;
 import timely.netty.websocket.timeseries.WSQueryRequestHandler;
@@ -558,7 +564,7 @@ public class Server {
                 ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
                 ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());
                 ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());
-
+                ch.pipeline().addLast("error", new WSTimelyExceptionHandler());
             }
         };
 

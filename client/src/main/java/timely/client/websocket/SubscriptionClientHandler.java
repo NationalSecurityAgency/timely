@@ -15,24 +15,24 @@ public class SubscriptionClientHandler extends Endpoint {
 
     @Override
     public void onOpen(Session session, EndpointConfig config) {
-        LOG.debug("Websocket session {} opened.", session.getId());
+        LOG.info("Websocket session {} opened.", session.getId());
         session.addMessageHandler(new MessageHandler.Whole<String>() {
 
             @Override
             public void onMessage(String message) {
-                LOG.debug("Message received on Websocket session {}: {}", session.getId(), message);
+                LOG.info("Message received on Websocket session {}: {}", session.getId(), message);
             }
         });
     }
 
     @Override
     public void onClose(Session session, CloseReason reason) {
-        LOG.debug("Websocket session {} closed.", session.getId());
+        LOG.info("Websocket session {} closed.", session.getId());
     }
 
     @Override
     public void onError(Session session, Throwable error) {
-        LOG.error("Error occurred on Websocket session" + session.getId(), error);
+        LOG.info("Error occurred on Websocket session" + session.getId(), error);
     }
 
 }

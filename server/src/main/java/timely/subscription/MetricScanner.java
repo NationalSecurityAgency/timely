@@ -2,6 +2,7 @@ package timely.subscription;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -21,8 +22,8 @@ import org.slf4j.LoggerFactory;
 
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.response.MetricResponse;
-import timely.model.Metric;
 import timely.api.response.TimelyException;
+import timely.model.Metric;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
 
@@ -73,8 +74,8 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     @Override
     public void run() {
         Metric m = null;
+        ObjectMapper om = JsonUtil.getObjectMapper();
         try {
-            ObjectMapper om = JsonUtil.getObjectMapper();
             while (!closed) {
 
                 if (this.iter.hasNext()) {
@@ -113,6 +114,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 }
             }
         } finally {
+            ctx.writeAndFlush(new CloseWebSocketFrame(1000, "End of subscription."));
             this.scanner.close();
             close();
         }

@@ -59,6 +59,7 @@ public class WebSocketClient implements AutoCloseable {
     private ClientManager webSocketClient = null;
     private Session session = null;
     private final String subscriptionId;
+    private volatile boolean closed = true;
 
     public WebSocketClient(SSLContext ssl, String timelyHostname, int timelyHttpsPort, int timelyWssPort,
             boolean doLogin, String timelyUsername, String timelyPassword, boolean hostVerificationEnabled,
@@ -159,15 +160,23 @@ public class WebSocketClient implements AutoCloseable {
         CreateSubscription create = new CreateSubscription();
         create.setSubscriptionId(subscriptionId);
         session.getBasicRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(create));
+        closed = false;
     }
 
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
+        if (closed) {
+            return;
+        }
         try {
             if (null != session) {
                 CloseSubscription close = new CloseSubscription();
                 close.setSubscriptionId(subscriptionId);
-                session.getBasicRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(close));
-                session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Client called close."));
+                try {
+                    session.getBasicRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(close));
+                    session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Client called close."));
+                } catch (Exception e) {
+                    LOG.info("Unable to send close message to server: {}", e.getMessage());
+                }
             }
             if (null != webSocketClient) {
                 webSocketClient.shutdown();
@@ -175,6 +184,7 @@ public class WebSocketClient implements AutoCloseable {
         } finally {
             session = null;
             webSocketClient = null;
+            closed = true;
         }
     }
 
@@ -195,6 +205,10 @@ public class WebSocketClient implements AutoCloseable {
         remove.setSubscriptionId(subscriptionId);
         remove.setMetric(metric);
         return session.getAsyncRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(remove));
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
 
 }

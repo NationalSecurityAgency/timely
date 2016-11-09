@@ -2,6 +2,7 @@ package timely.netty.websocket.subscription;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import timely.api.request.subscription.CloseSubscription;
 import timely.subscription.Subscription;
 import timely.subscription.SubscriptionRegistry;
@@ -14,6 +15,7 @@ public class WSCloseSubscriptionRequestHandler extends SimpleChannelInboundHandl
         if (null != s) {
             s.close();
         }
+        ctx.writeAndFlush(new CloseWebSocketFrame(1000, "Client requested close."));
     }
 
 }
