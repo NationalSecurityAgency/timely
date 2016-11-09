@@ -103,7 +103,7 @@ public class WebSocketClientIT extends OneWaySSLBase {
             }
         };
         client.open(handler);
-        client.addSubscription("sys.cpu.user", null, TEST_TIME, 5000);
+        client.addSubscription("sys.cpu.user", null, TEST_TIME, 0, 5000);
         sleepUninterruptibly(10, TimeUnit.SECONDS);
 
         Assert.assertEquals(2, messages.size());

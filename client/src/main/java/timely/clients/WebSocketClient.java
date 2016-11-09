@@ -178,13 +178,14 @@ public class WebSocketClient implements AutoCloseable {
         }
     }
 
-    public Future<Void> addSubscription(String metric, Map<String, String> tags, long startTime, long delayTime)
-            throws IOException {
+    public Future<Void> addSubscription(String metric, Map<String, String> tags, long startTime, long endTime,
+            long delayTime) throws IOException {
         AddSubscription add = new AddSubscription();
         add.setSubscriptionId(subscriptionId);
         add.setMetric(metric);
         add.setTags(Optional.ofNullable(tags));
         add.setStartTime(Optional.ofNullable(startTime));
+        add.setEndTime(Optional.ofNullable(endTime));
         add.setDelayTime(Optional.ofNullable(delayTime));
         return session.getAsyncRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(add));
     }

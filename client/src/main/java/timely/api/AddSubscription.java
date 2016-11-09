@@ -9,6 +9,7 @@ public class AddSubscription extends SubscriptionRequest {
     private String metric = null;
     private Optional<Map<String, String>> tags = Optional.empty();
     private Optional<Long> startTime = Optional.empty();
+    private Optional<Long> endTime = Optional.empty();
     private Optional<Long> delayTime = Optional.empty();
 
     public String getOperation() {
@@ -47,9 +48,17 @@ public class AddSubscription extends SubscriptionRequest {
         this.delayTime = delayTime;
     }
 
+    public Optional<Long> getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(Optional<Long> endTime) {
+        this.endTime = endTime;
+    }
+
     @Override
     public int hashCode() {
-        return (operation + subscriptionId + metric + tags + startTime + delayTime).hashCode();
+        return (operation + subscriptionId + metric + tags + startTime + endTime + delayTime).hashCode();
     }
 
     @Override
@@ -63,8 +72,8 @@ public class AddSubscription extends SubscriptionRequest {
         if (obj instanceof AddSubscription) {
             AddSubscription other = (AddSubscription) obj;
             return (this.subscriptionId.equals(other.subscriptionId) && this.metric.equals(other.metric)
-                    && this.tags.equals(other.tags) && this.startTime.equals(other.startTime) && this.delayTime
-                        .equals(other.delayTime));
+                    && this.tags.equals(other.tags) && this.startTime.equals(other.startTime)
+                    && this.endTime.equals(other.endTime) && this.delayTime.equals(other.delayTime));
         } else {
             return false;
         }
