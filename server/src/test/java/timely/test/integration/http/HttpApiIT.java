@@ -204,14 +204,20 @@ public class HttpApiIT extends OneWaySSLBase {
             Entry<String, Object> entry = entries.next();
             // We are downsampling to 1 second by default, which is why the
             // times in the results end with ms of the start parameter.
-            assertEquals(TEST_TIME.toString(), entry.getKey());
+            assertEquals(getBaselineStart(TEST_TIME), entry.getKey());
             assertEquals(1.0, entry.getValue());
             entry = entries.next();
-            assertEquals(Long.toString(TEST_TIME + 1000), entry.getKey());
+            assertEquals(getBaselineStart(TEST_TIME + 1000), entry.getKey());
             assertEquals(3.0, entry.getValue());
         } finally {
             s.shutdown();
         }
+    }
+
+    private String getBaselineStart(Long time) {
+        String timeString = time.toString();
+        return timeString.substring(0, timeString.length() - 3) + "000";
+
     }
 
     @Test
@@ -515,18 +521,19 @@ public class HttpApiIT extends OneWaySSLBase {
                            Map<String, Object> dps = response.getDps();
                            assertEquals(1,dps.size());
                            Entry<String, Object> dpsEntry = dps.entrySet().iterator().next();
-                           long ts = Long.parseLong(dpsEntry.getKey());
+                           Long ts = Long.parseLong(dpsEntry.getKey());
                            double measure = (Double)dpsEntry.getValue();
                            switch(tagv){
                                case "r1":
                                    assertEquals(2.0D, measure, 0.0);
-                                   // TODO re-evaluate this when #81 is resolved
-                                   // assertEquals("TEST_TIME: " + TEST_TIME, TEST_TIME + 2L, ts);
+                                   assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 2), 
+                                		   getBaselineStart(TEST_TIME + 2), ts.toString());
                                    rack1Count.getAndIncrement();
                                    break;
                                case "r2":
                                    assertEquals(3.0D, measure, 0.0);
-                                   assertEquals("TEST_TIME: " + TEST_TIME, TEST_TIME + 1000L, ts);
+                                   assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 1000), 
+                                		   getBaselineStart(TEST_TIME + 1000), ts.toString());
                                    rack2Count.getAndIncrement();
                                    break;
                                default:

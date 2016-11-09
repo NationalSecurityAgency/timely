@@ -458,7 +458,14 @@ public class DataStoreImpl implements DataStore {
                 BatchScanner scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
                         scannerThreads);
                 try {
-                    setQueryRange(scanner, metric, startTs, endTs);
+
+                    // Reset the start timestamp for the query to the
+                    // beginning of the downsample period based on the epoch
+                    long downsample = getDownsamplePeriod(query);
+                    LOG.trace("Downsample period {}", downsample);
+                    long startOfPeriod = startTs - (startTs % downsample);
+
+                    setQueryRange(scanner, metric, startOfPeriod, endTs);
                     List<String> tagOrder = prioritizeTags(query);
                     Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
                     setQueryColumns(scanner, metric, orderedTags);
@@ -469,12 +476,10 @@ public class DataStoreImpl implements DataStore {
                         RateIterator.setRateOptions(rate, query.getRateOptions());
                         scanner.addScanIterator(rate);
                     }
-                    long downsample = getDownsamplePeriod(query);
-                    LOG.trace("Downsample period {}", downsample);
                     Class<? extends Aggregator> aggClass = getAggregator(query);
                     LOG.trace("Aggregator type {}", aggClass.getSimpleName());
                     IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
-                    DownsampleIterator.setDownsampleOptions(is, startTs, endTs, downsample, aggClass.getName());
+                    DownsampleIterator.setDownsampleOptions(is, startOfPeriod, endTs, downsample, aggClass.getName());
                     scanner.addScanIterator(is);
 
                     // tag -> array of results by period starting at start
