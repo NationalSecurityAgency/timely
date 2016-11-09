@@ -463,9 +463,13 @@ public class DataStoreImpl implements DataStore {
                     // beginning of the downsample period based on the epoch
                     long downsample = getDownsamplePeriod(query);
                     LOG.trace("Downsample period {}", downsample);
-                    long startOfPeriod = startTs - (startTs % downsample);
+                    long startOfFirstPeriod = startTs - (startTs % downsample);
+                    long endOfLastPeriod = endTs;
+                    if ((endOfLastPeriod % downsample) > 0) {
+                        endOfLastPeriod = endOfLastPeriod + downsample - ((endOfLastPeriod + downsample) % downsample);
+                    }
 
-                    setQueryRange(scanner, metric, startOfPeriod, endTs);
+                    setQueryRange(scanner, metric, startOfFirstPeriod, endOfLastPeriod);
                     List<String> tagOrder = prioritizeTags(query);
                     Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
                     setQueryColumns(scanner, metric, orderedTags);
@@ -479,7 +483,8 @@ public class DataStoreImpl implements DataStore {
                     Class<? extends Aggregator> aggClass = getAggregator(query);
                     LOG.trace("Aggregator type {}", aggClass.getSimpleName());
                     IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
-                    DownsampleIterator.setDownsampleOptions(is, startOfPeriod, endTs, downsample, aggClass.getName());
+                    DownsampleIterator.setDownsampleOptions(is, startOfFirstPeriod, endOfLastPeriod, downsample,
+                            aggClass.getName());
                     scanner.addScanIterator(is);
 
                     // tag -> array of results by period starting at start
