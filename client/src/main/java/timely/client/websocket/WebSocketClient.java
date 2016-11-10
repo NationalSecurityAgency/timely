@@ -1,15 +1,10 @@
-package timely.clients;
+package timely.client.websocket;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.Future;
 
 import javax.net.ssl.SSLContext;
-import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
 import javax.websocket.Session;
 
@@ -31,13 +26,8 @@ import org.glassfish.tyrus.client.SslEngineConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.AddSubscription;
 import timely.api.BasicAuthLogin;
-import timely.api.CloseSubscription;
-import timely.api.CreateSubscription;
-import timely.api.RemoveSubscription;
-import timely.client.websocket.SubscriptionClientHandler;
-import timely.client.websocket.TimelyEndpointConfig;
+import timely.client.http.HttpClient;
 import timely.serialize.JsonSerializer;
 
 import com.google.common.base.Preconditions;
@@ -57,11 +47,10 @@ public class WebSocketClient implements AutoCloseable {
     private final SSLContext ssl;
 
     private ClientManager webSocketClient = null;
-    private Session session = null;
-    private final String subscriptionId;
-    private volatile boolean closed = true;
+    protected Session session = null;
+    protected volatile boolean closed = true;
 
-    public WebSocketClient(SSLContext ssl, String timelyHostname, int timelyHttpsPort, int timelyWssPort,
+    protected WebSocketClient(SSLContext ssl, String timelyHostname, int timelyHttpsPort, int timelyWssPort,
             boolean doLogin, String timelyUsername, String timelyPassword, boolean hostVerificationEnabled,
             int bufferSize) {
         this.ssl = ssl;
@@ -84,11 +73,9 @@ public class WebSocketClient implements AutoCloseable {
             throw new IllegalArgumentException("Both Timely username and password must be empty or non-empty");
         }
 
-        subscriptionId = UUID.randomUUID().toString();
-        LOG.trace("Created WebSocketClient with subscriptionId {}", this.subscriptionId);
     }
 
-    public WebSocketClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean doLogin,
+    protected WebSocketClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean doLogin,
             String timelyUsername, String timelyPassword, String keyStoreFile, String keyStoreType,
             String keyStorePass, String trustStoreFile, String trustStoreType, String trustStorePass,
             boolean hostVerificationEnabled, int bufferSize) {
@@ -97,8 +84,7 @@ public class WebSocketClient implements AutoCloseable {
                 hostVerificationEnabled, bufferSize);
     }
 
-    public void open(SubscriptionClientHandler clientEndpoint) throws IOException, DeploymentException,
-            URISyntaxException {
+    public void open(ClientHandler clientEndpoint) throws IOException, DeploymentException, URISyntaxException {
 
         Cookie sessionCookie = null;
         if (doLogin) {
@@ -157,9 +143,6 @@ public class WebSocketClient implements AutoCloseable {
         String wssPath = "wss://" + timelyHostname + ":" + timelyWssPort + "/websocket";
         session = webSocketClient.connectToServer(clientEndpoint, new TimelyEndpointConfig(sessionCookie), new URI(
                 wssPath));
-        CreateSubscription create = new CreateSubscription();
-        create.setSubscriptionId(subscriptionId);
-        session.getBasicRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(create));
         closed = false;
     }
 
@@ -168,16 +151,6 @@ public class WebSocketClient implements AutoCloseable {
             return;
         }
         try {
-            if (null != session) {
-                CloseSubscription close = new CloseSubscription();
-                close.setSubscriptionId(subscriptionId);
-                try {
-                    session.getBasicRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(close));
-                    session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Client called close."));
-                } catch (Exception e) {
-                    LOG.info("Unable to send close message to server: {}", e.getMessage());
-                }
-            }
             if (null != webSocketClient) {
                 webSocketClient.shutdown();
             }
@@ -186,25 +159,6 @@ public class WebSocketClient implements AutoCloseable {
             webSocketClient = null;
             closed = true;
         }
-    }
-
-    public Future<Void> addSubscription(String metric, Map<String, String> tags, long startTime, long endTime,
-            long delayTime) throws IOException {
-        AddSubscription add = new AddSubscription();
-        add.setSubscriptionId(subscriptionId);
-        add.setMetric(metric);
-        add.setTags(Optional.ofNullable(tags));
-        add.setStartTime(Optional.ofNullable(startTime));
-        add.setEndTime(Optional.ofNullable(endTime));
-        add.setDelayTime(Optional.ofNullable(delayTime));
-        return session.getAsyncRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(add));
-    }
-
-    public Future<Void> removeSubscription(String metric) throws Exception {
-        RemoveSubscription remove = new RemoveSubscription();
-        remove.setSubscriptionId(subscriptionId);
-        remove.setMetric(metric);
-        return session.getAsyncRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(remove));
     }
 
     public boolean isClosed() {

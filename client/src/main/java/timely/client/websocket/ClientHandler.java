@@ -9,9 +9,9 @@ import javax.websocket.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SubscriptionClientHandler extends Endpoint {
+public abstract class ClientHandler extends Endpoint {
 
-    private final static Logger LOG = LoggerFactory.getLogger(SubscriptionClientHandler.class);
+    private final static Logger LOG = LoggerFactory.getLogger(ClientHandler.class);
 
     @Override
     public void onOpen(Session session, EndpointConfig config) {

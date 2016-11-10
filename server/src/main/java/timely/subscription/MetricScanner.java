@@ -110,7 +110,15 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         this.iter = this.scanner.iterator();
                     }
                 } else {
-                    LOG.debug("Exhausted scanner and closing");
+                    LOG.debug("Exhausted scanner, sending completed message for subscription {}", this.subscriptionId);
+                    try {
+                        MetricResponse last = new MetricResponse();
+                        last.setSubscriptionId(this.subscriptionId);
+                        last.setComplete(true);
+                        this.ctx.writeAndFlush(new TextWebSocketFrame(om.writeValueAsString(last)));
+                    } catch (JsonProcessingException e1) {
+                        LOG.error("Error serializing metric: " + m, e1);
+                    }
                     break;
                 }
             }

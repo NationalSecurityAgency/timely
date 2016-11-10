@@ -16,6 +16,7 @@ public class MetricResponse {
     private double value;
     private List<Tag> tags;
     private String subscriptionId;
+    private boolean complete = false;
 
     public String getMetric() {
         return metric;
@@ -31,6 +32,10 @@ public class MetricResponse {
 
     public List<Tag> getTags() {
         return tags;
+    }
+
+    public boolean isComplete() {
+        return complete;
     }
 
     public void setMetric(String metric) {
@@ -57,6 +62,10 @@ public class MetricResponse {
         this.subscriptionId = subscriptionId;
     }
 
+    public void setComplete(boolean closed) {
+        this.complete = closed;
+    }
+
     public static MetricResponse fromMetric(Metric metric, String subscriptionId) {
         MetricResponse response = new MetricResponse();
         response.setMetric(metric.getName());
@@ -64,6 +73,7 @@ public class MetricResponse {
         response.setTags(metric.getTags());
         response.setValue(metric.getValue().getMeasure());
         response.setSubscriptionId(subscriptionId);
+        response.setComplete(false);
         return response;
     }
 
@@ -75,6 +85,7 @@ public class MetricResponse {
         hash.append(this.value);
         hash.append(this.tags);
         hash.append(this.subscriptionId);
+        hash.append(this.complete);
         return hash.hashCode();
     }
 
@@ -96,6 +107,7 @@ public class MetricResponse {
         equals.append(this.value, other.value);
         equals.append(this.tags, other.tags);
         equals.append(this.subscriptionId, other.subscriptionId);
+        equals.append(this.complete, other.complete);
         return equals.isEquals();
     }
 
@@ -107,6 +119,7 @@ public class MetricResponse {
         tsb.append("value", this.value);
         tsb.append("tags", this.tags);
         tsb.append("subscriptionId", this.subscriptionId);
+        tsb.append("complete", this.complete);
         return tsb.toString();
     }
 

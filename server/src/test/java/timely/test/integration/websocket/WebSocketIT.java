@@ -416,6 +416,7 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
+            Assert.assertEquals(3, response.size());
             Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
                     .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
             Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
@@ -423,7 +424,7 @@ public class WebSocketIT extends OneWaySSLBase {
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
-                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)) || m.isComplete());
             }
 
             // Add some more data
@@ -490,6 +491,8 @@ public class WebSocketIT extends OneWaySSLBase {
             add.setSubscriptionId(subscriptionId);
             add.setMetric("sys.cpu.user");
             add.setDelayTime(1000L);
+            add.setEndTime(TEST_TIME + 1000);
+
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(add)));
 
             List<String> response = handler.getResponses();
@@ -499,6 +502,7 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
+            Assert.assertEquals(3, response.size());
             Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
                     .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).tag(new Tag("viz", "A")).build();
             Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
@@ -506,7 +510,7 @@ public class WebSocketIT extends OneWaySSLBase {
             for (String metrics : response) {
                 MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
-                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
+                        || m.equals(MetricResponse.fromMetric(second, subscriptionId)) || m.isComplete());
             }
 
             // Add some more data

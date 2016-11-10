@@ -100,7 +100,7 @@ public class MetricAdapterTest {
         Metric m = Metric.newBuilder().name("sys.cpu.user").value(ts, 2.0D).tags(tags)
                 .tag(MetricAdapter.VISIBILITY_TAG, "(a&b)|(c&d)").build();
         String json = JsonUtil.getObjectMapper().writeValueAsString(MetricResponse.fromMetric(m, subscriptionId));
-        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"tag1\":\"value1\"},{\"viz\":\"(a&b)|(c&d)\"}],\"subscriptionId\":\"12345\"}";
+        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"tag1\":\"value1\"},{\"viz\":\"(a&b)|(c&d)\"}],\"subscriptionId\":\"12345\",\"complete\":false}";
         Assert.assertEquals(expected, json);
     }
 

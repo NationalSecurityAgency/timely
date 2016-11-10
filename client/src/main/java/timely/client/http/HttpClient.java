@@ -1,4 +1,4 @@
-package timely.clients;
+package timely.client.http;
 
 import javax.net.ssl.SSLContext;
 

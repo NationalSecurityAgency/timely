@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 import timely.Server;
 import timely.api.response.MetricResponse;
 import timely.auth.AuthCache;
-import timely.client.websocket.SubscriptionClientHandler;
-import timely.clients.WebSocketClient;
+import timely.client.websocket.ClientHandler;
+import timely.client.websocket.subscription.WebSocketSubscriptionClient;
 import timely.serialize.JsonSerializer;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
@@ -77,7 +77,7 @@ public class WebSocketClientIT extends OneWaySSLBase {
         AuthCache.resetSessionMaxAge();
     }
 
-    public void testWorkflow(WebSocketClient client) throws Exception {
+    public void testWorkflow(WebSocketSubscriptionClient client) throws Exception {
         // Add some data
         // @formatter:off
         put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
@@ -90,7 +90,7 @@ public class WebSocketClientIT extends OneWaySSLBase {
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
         List<String> messages = new ArrayList<>();
-        SubscriptionClientHandler handler = new SubscriptionClientHandler() {
+        ClientHandler handler = new ClientHandler() {
 
             @Override
             public void onOpen(Session session, EndpointConfig config) {
@@ -127,14 +127,14 @@ public class WebSocketClientIT extends OneWaySSLBase {
 
         try {
             client.open(handler);
-            client.addSubscription("sys.cpu.user", null, TEST_TIME, 0, 5000);
-            sleepUninterruptibly(10, TimeUnit.SECONDS);
+            client.addSubscription("sys.cpu.user", null, TEST_TIME, TEST_TIME + 1000, 5000);
+            sleepUninterruptibly(2, TimeUnit.SECONDS);
 
-            Assert.assertEquals(2, messages.size());
+            Assert.assertEquals(3, messages.size());
             messages.forEach(m -> {
                 try {
                     MetricResponse metric = JsonSerializer.getObjectMapper().readValue(m, MetricResponse.class);
-                    Assert.assertEquals("sys.cpu.user", metric.getMetric());
+                    Assert.assertTrue("sys.cpu.user".equals(metric.getMetric()) || metric.isComplete());
                 } catch (Exception e) {
                     Assert.fail(e.getMessage());
                 }
@@ -146,28 +146,29 @@ public class WebSocketClientIT extends OneWaySSLBase {
 
     @Test
     public void testClientAnonymousAccess() throws Exception {
-        WebSocketClient client = new WebSocketClient(sslCtx, "localhost", 54322, 54323, false, null, null, false, 65536);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, false,
+                null, null, false, 65536);
         testWorkflow(client);
     }
 
     @Test
     public void testClientBasicAuthAccess() throws Exception {
-        WebSocketClient client = new WebSocketClient(sslCtx, "localhost", 54322, 54323, true, "test", "test1", false,
-                65536);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, true,
+                "test", "test1", false, 65536);
         testWorkflow(client);
     }
 
     @Test(expected = HttpResponseException.class)
     public void testClientBasicAuthAccessFailure() throws Exception {
-        WebSocketClient client = new WebSocketClient(sslCtx, "localhost", 54322, 54323, true, "test", "test2", false,
-                65536);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, true,
+                "test", "test2", false, 65536);
         testWorkflow(client);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testClientBasicAuthParameterMismatch() throws Exception {
-        WebSocketClient client = new WebSocketClient(sslCtx, "localhost", 54322, 54323, true, "test", null, false,
-                65536);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, true,
+                "test", null, false, 65536);
         testWorkflow(client);
     }
 
