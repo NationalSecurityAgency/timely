@@ -464,10 +464,9 @@ public class DataStoreImpl implements DataStore {
                     long downsample = getDownsamplePeriod(query);
                     LOG.trace("Downsample period {}", downsample);
                     long startOfFirstPeriod = startTs - (startTs % downsample);
-                    long endOfLastPeriod = endTs;
-                    if ((endOfLastPeriod % downsample) > 0) {
-                        endOfLastPeriod = endOfLastPeriod + downsample - ((endOfLastPeriod + downsample) % downsample);
-                    }
+                    long endDistanceFromDownSample = endTs % downsample;
+                    long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsample
+                            - endDistanceFromDownSample : endTs);
 
                     setQueryRange(scanner, metric, startOfFirstPeriod, endOfLastPeriod);
                     List<String> tagOrder = prioritizeTags(query);
