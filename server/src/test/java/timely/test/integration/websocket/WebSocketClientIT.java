@@ -8,11 +8,13 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
+import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
@@ -101,20 +103,45 @@ public class WebSocketClientIT extends OneWaySSLBase {
                     }
                 });
             }
-        };
-        client.open(handler);
-        client.addSubscription("sys.cpu.user", null, TEST_TIME, 0, 5000);
-        sleepUninterruptibly(10, TimeUnit.SECONDS);
 
-        Assert.assertEquals(2, messages.size());
-        messages.forEach(m -> {
-            try {
-                MetricResponse metric = JsonSerializer.getObjectMapper().readValue(m, MetricResponse.class);
-                Assert.assertEquals("sys.cpu.user", metric.getMetric());
-            } catch (Exception e) {
-                Assert.fail(e.getMessage());
+            @Override
+            public void onClose(Session session, CloseReason reason) {
+                super.onClose(session, reason);
+                try {
+                    client.close();
+                } catch (IOException e) {
+                    Assert.fail("Error calling close on client: " + e.getMessage());
+                }
             }
-        });
+
+            @Override
+            public void onError(Session session, Throwable error) {
+                super.onError(session, error);
+                try {
+                    client.close();
+                } catch (IOException e) {
+                    Assert.fail("Error calling close on client: " + e.getMessage());
+                }
+            }
+        };
+
+        try {
+            client.open(handler);
+            client.addSubscription("sys.cpu.user", null, TEST_TIME, 0, 5000);
+            sleepUninterruptibly(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(2, messages.size());
+            messages.forEach(m -> {
+                try {
+                    MetricResponse metric = JsonSerializer.getObjectMapper().readValue(m, MetricResponse.class);
+                    Assert.assertEquals("sys.cpu.user", metric.getMetric());
+                } catch (Exception e) {
+                    Assert.fail(e.getMessage());
+                }
+            });
+        } finally {
+            client.close();
+        }
     }
 
     @Test

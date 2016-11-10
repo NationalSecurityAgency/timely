@@ -2,7 +2,6 @@ package timely.subscription;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -43,12 +42,14 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final String subscriptionId;
     private final String metric;
     private final long endTime;
+    private final Subscription subscription;
 
-    public MetricScanner(String subscriptionId, String sessionId, DataStore store, String metric,
+    public MetricScanner(Subscription sub, String subscriptionId, String sessionId, DataStore store, String metric,
             Map<String, String> tags, long startTime, long endTime, long delay, int lag, ChannelHandlerContext ctx)
             throws TimelyException {
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(this);
+        this.subscription = sub;
         this.ctx = ctx;
         this.lag = lag;
         this.metric = metric;
@@ -114,9 +115,9 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 }
             }
         } finally {
-            ctx.writeAndFlush(new CloseWebSocketFrame(1000, "End of subscription."));
-            this.scanner.close();
             close();
+            this.scanner.close();
+            subscription.scannerComplete(metric);
         }
     }
 

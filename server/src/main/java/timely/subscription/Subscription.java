@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ public class Subscription {
     private final ScheduledFuture<?> ping;
     private final Integer lag;
     private final String subscriptionId;
+    private LinkedList<String> deadMetricScannerQueue = new LinkedList<>();
 
     public Subscription(String subscriptionId, String sessionId, DataStore store, ChannelHandlerContext ctx,
             Configuration conf) {
@@ -39,16 +41,29 @@ public class Subscription {
         this.ping = this.ctx.executor().scheduleAtFixedRate(() -> {
             LOG.trace("Sending ping on channel {}", ctx.channel());
             ctx.writeAndFlush(new PingWebSocketFrame());
+            cleanupCompletedMetrics();
         }, rate, rate, TimeUnit.SECONDS);
     }
 
     public void addMetric(String metric, Map<String, String> tags, long startTime, long endTime, long delay)
             throws TimelyException {
         LOG.debug("Adding metric scanner for subscription {}", this.subscriptionId);
-        MetricScanner m = new MetricScanner(this.subscriptionId, this.sessionId, store, metric, tags, startTime,
+        MetricScanner m = new MetricScanner(this, this.subscriptionId, this.sessionId, store, metric, tags, startTime,
                 endTime, delay, lag, ctx);
         METRICS.put(metric, m);
         m.start();
+    }
+
+    void scannerComplete(String metric) {
+        deadMetricScannerQueue.add(metric);
+    }
+
+    private void cleanupCompletedMetrics() {
+        String metric = this.deadMetricScannerQueue.poll();
+        while (null != metric) {
+            this.removeMetric(metric);
+            metric = this.deadMetricScannerQueue.poll();
+        }
     }
 
     public void removeMetric(String metric) {
