@@ -3,6 +3,8 @@ package timely.client.websocket;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
 import javax.websocket.DeploymentException;
@@ -143,6 +145,15 @@ public class WebSocketClient implements AutoCloseable {
         String wssPath = "wss://" + timelyHostname + ":" + timelyWssPort + "/websocket";
         session = webSocketClient.connectToServer(clientEndpoint, new TimelyEndpointConfig(sessionCookie), new URI(
                 wssPath));
+
+        final ByteBuffer pingData = ByteBuffer.allocate(0);
+        webSocketClient.getScheduledExecutorService().scheduleAtFixedRate(() -> {
+            try {
+                session.getBasicRemote().sendPing(pingData);
+            } catch (Exception e) {
+                LOG.error("Error sending ping", e);
+            }
+        }, 30, 60, TimeUnit.SECONDS);
         closed = false;
     }
 
