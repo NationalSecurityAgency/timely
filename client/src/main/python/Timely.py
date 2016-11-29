@@ -1,4 +1,8 @@
 import time
+import pytz
+from datetime import datetime
+from TimeDateRange import TimeDateRange
+from TimeDateRange import TimeDateError
 import json
 import pandas
 import getopt
@@ -6,6 +10,7 @@ import sys
 import seaborn
 import matplotlib.dates as mdates
 import matplotlib.ticker as tkr
+import random
 
 from WebSocketClient import WebSocketClient
 from tornado import ioloop
@@ -13,26 +18,19 @@ from tornado import ioloop
 
 class TimelyWebSocketClient(WebSocketClient):
 
-    def __init__(self, hostport, subscriptionId, metric, startTime, endTime, connect_timeout=WebSocketClient.DEFAULT_CONNECT_TIMEOUT,
+    def __init__(self, hostport, metric, tags, startTime, endTime, connect_timeout=WebSocketClient.DEFAULT_CONNECT_TIMEOUT,
                  request_timeout=WebSocketClient.DEFAULT_REQUEST_TIMEOUT):
 
         self.metric = metric
+        self.tags = tags
         self.startTime = startTime
         self.endTime = endTime
-        self.subscriptionId = subscriptionId
+        self.subscriptionId = random.randint(1000000000, 9999999999)
         WebSocketClient.__init__(self, hostport, connect_timeout, request_timeout)
 
     def _on_message(self, msg):
-        # self._on_message_callback(self, msg)
-
-        obj = json.loads(msg)
-        print(str(obj.get("timestamp")) + " -- " + str(self.endTime))
-
-        timestamp = int(obj.get("timestamp"));
-
-        if (timestamp >= self.endTime or (self.endTime - timestamp) < 60000):
-            print("exiting")
-            self._on_connection_close()
+        # implement in subclass
+        pass
 
     def _on_connection_success(self):
         print('Connected.')
@@ -51,6 +49,14 @@ class TimelyWebSocketClient(WebSocketClient):
             "startTime": self.startTime,
             "endTime" : self.endTime
         }
+
+        if self.tags != None:
+            t = self.tags.strip().split(',')
+            for pair in t:
+                k = pair.split('=')[0].strip()
+                v = pair.split('=')[1].strip()
+                m1 = dict(m1.items + dict({k : v}).items())
+
         self.send(m1)
 
     def _on_connection_close(self):
@@ -68,14 +74,18 @@ class TimelyMetric(TimelyWebSocketClient):
     client = None
     endtime = None
 
-    def __init__(self, hostport, subscriptionId, metric, startTime, endTime, sample):
+    def __init__(self, hostport, metric, tags, beginStr, endStr, hours, sample):
         self.series = pandas.Series()
         self.metric = metric
+        self.tags = tags
         self.sample = sample
         self.timestamps = []
         self.debug = False
         self.dataFrame = None
-        TimelyWebSocketClient.__init__(self, hostport, subscriptionId, metric, startTime, endTime)
+
+        timeDateRange = TimeDateRange(beginStr, endStr, hours)
+
+        TimelyWebSocketClient.__init__(self, hostport, metric, tags, timeDateRange.getBeginMs(), timeDateRange.getEndMs())
 
     def debugOn(self):
         self.debug = True
@@ -106,7 +116,7 @@ class TimelyMetric(TimelyWebSocketClient):
             if not date in self.timestamps:
 
                 self.timestamps += [date];
-                dt = pandas.datetime.fromtimestamp(date)
+                dt = pandas.datetime.utcfromtimestamp(date)
                 metricName = str(obj.get("metric"))
                 metricValue = obj.get("value")
 
@@ -138,56 +148,56 @@ class TimelyMetric(TimelyWebSocketClient):
 
     def graph(self):
 
-        if self.dataFrame is not None:
+        graph(self.dataFrame, self.metric, self.sample, self.how)
 
-            self.print_debug()
 
-            if not self.sample is None:
-                try:
-                    self.dataFrame = self.dataFrame.resample(self.sample).mean()
-                    self.dataFrame['date'] = self.dataFrame.index.values
-                except IOError as e:
-                    print "I/O error({0}): {1}".format(e.errno, e.strerror)
-                except:
-                    print "Unexpected error:", sys.exc_info()[0]
-                    raise
 
-            self.print_debug()
 
-            plotDataFrame = self.dataFrame.set_index(self.dataFrame['date'].apply(lambda x: datetime2graphdays(x)))
+def resample(dataFrame, metric, sample, how):
 
-            self.print_debug()
+    newDataFrame = dataFrame
+    if not sample is None:
+        newDataFrame = newDataFrame.resample(sample, how=how)
+        newDataFrame['date'] = newDataFrame.index.values
+    return newDataFrame
 
-            seaborn.set(style="darkgrid", palette="Set2")
 
-            # build the figure
-            fig, ax = seaborn.plt.subplots()
+def graph(dataFrame, metric, sample):
 
-            seaborn.tsplot(plotDataFrame[self.metric], time=plotDataFrame.index, unit=None, interpolate=True, ax=ax, scalex=False,
-                           scaley=False, err_style="ci_bars", n_boot=1)
+    if dataFrame is not None:
 
-            # assign locator and formatter for the xaxis ticks.
-            ax.xaxis_date();
+        plotDataFrame = dataFrame.set_index(dataFrame['date'].apply(lambda x: datetime2graphdays(x)))
 
-            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d %H:%M:%S'))
+        seaborn.set(style="darkgrid", palette="Set2")
 
-            formatter = tkr.ScalarFormatter(useMathText=False)
-            formatter.set_scientific(False)
-            ax.yaxis.set_major_formatter(formatter)
+        # build the figure
+        fig, ax = seaborn.plt.subplots()
 
-            if self.sample is None:
-                seaborn.plt.title(self.metric, fontsize='large')
-            else:
-                seaborn.plt.title(self.metric + ' sample ' + self.sample, fontsize='large')
+        seaborn.tsplot(plotDataFrame[metric], time=plotDataFrame.index, unit=None, interpolate=True, ax=ax, scalex=False,
+                       scaley=False, err_style="ci_bars", n_boot=1)
 
-            seaborn.plt.xlabel('date/time')
-            seaborn.plt.ylabel(self.metric)
+        # assign locator and formatter for the xaxis ticks.
+        ax.xaxis_date();
 
-            # rotate the x-labels since they tend to be too long
-            fig.autofmt_xdate(rotation=45)
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d %H:%M:%S'))
 
-            seaborn.plt.show()
+        formatter = tkr.ScalarFormatter(useMathText=False)
+        formatter.set_scientific(False)
+        ax.yaxis.set_major_formatter(formatter)
+
+        if sample is None:
+            seaborn.plt.title(metric, fontsize='large')
+        else:
+            seaborn.plt.title(metric + ' sample ' + sample, fontsize='large')
+
+        seaborn.plt.xlabel('date/time')
+        seaborn.plt.ylabel(metric)
+
+        # rotate the x-labels since they tend to be too long
+        fig.autofmt_xdate(rotation=45)
+
+        seaborn.plt.show()
 
 
 def datetime2graphdays(dt):
@@ -197,43 +207,50 @@ def datetime2graphdays(dt):
 
 def main():
 
-    hours = 1
+    hours = None
+    beginStr = None
+    endStr = None
+
     metric = "timely.metrics.received"
     sample = None
+    how = None
+    tags = None
     try:
         argv = sys.argv
-        options, remainder = getopt.getopt(argv[1:], 'h', ['metric=', 'time=', 'sample=', 'hostport='])
+        options, remainder = getopt.getopt(argv[1:], 'h', ['metric=', 'tags=', 'hours=', 'begin=', 'end=', 'sample=', 'how=', 'hostport='])
     except getopt.GetoptError:
-        print 'TimelyMetric.py ---hostport=<host:port> --metric=<metric> --time=<hours>, --sample=<sample_period>'
+        print 'TimelyMetric.py ---hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --sample=<sample_period> --how=<mean|min|max>'
         sys.exit(2)
     for opt, arg in options:
         if opt == '-h':
-            print 'TimelyMetric.py --hostport=<host:port> --metric=<metric> --time=<hours>, --sample=<sample_period>'
+            print 'TimelyMetric.py --hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --sample=<sample_period> --how=<mean|min|max>'
             sys.exit()
         elif opt in ("--metric"):
             metric = arg
-        elif opt in ("--time"):
+        elif opt in ("--hours"):
             hours = int(arg)
+        elif opt in ("--begin"):
+            beginStr = arg
+        elif opt in ("--end"):
+            endStr = arg
         elif opt in ("--sample"):
             sample = arg
+        elif opt in ("--how"):
+            how = arg
         elif opt in ("--hostport"):
             hostport = arg
+    try:
 
-    # print("Metric " + metric)
-    # print("Hours " + str(hours))
-    # if not sample is None:
-    #     print("Sample " + sample)
+        metric = TimelyMetric(hostport, metric, tags, beginStr, endStr, hours, sample).fetch()
+        dataFrame = metric.getDataFrame()
 
-    now = int(time.time() * 1000)
-    rangeInSec = hours * 3600
+        if (dataFrame != None):
+            dataFrame = resample(dataFrame, metric, sample, how)
+            print(dataFrame)
+            graph(dataFrame, metric, sample)
 
-    startTime = int(now - (rangeInSec * 1000))
-    endTime = now
-
-    metric = TimelyMetric(hostport, "12345", metric, startTime, endTime, sample).fetch()
-    print(metric.getDataFrame())
-    metric.graph()
-
+    except TimeDateError as e:
+        print(e.message)
 
 if __name__ == '__main__':
     main()
