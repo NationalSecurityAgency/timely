@@ -27,6 +27,6 @@ public interface DataStore {
     void flush() throws TimelyException;
 
     Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
-            long endTime, int lag) throws TimelyException;
+            long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException;
 
 }

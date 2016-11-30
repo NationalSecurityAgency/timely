@@ -49,6 +49,7 @@ public class MacITBase {
             conf.getAccumulo().setZookeepers(mac.getZooKeepers());
             conf.getSecurity().getSsl().setUseOpenssl(false);
             conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
+            conf.getWebsocket().setFlushIntervalSeconds(TestConfiguration.WAIT_SECONDS);
         } else {
             LOG.info("Mini Accumulo already running.");
         }

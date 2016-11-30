@@ -13,11 +13,22 @@
       </Policies>
       <DefaultRolloverStrategy max="10" />
     </RollingRandomAccessFile>
+    <RollingRandomAccessFile name="Subscription" fileName="logs/timely-subscriptions.log"
+    						 filePattern="logs/$${date:yyyy-MM}/timely-subscriptions-%d{MM-dd-yyyy}-%i.log.gz">
+      <PatternLayout pattern="${LOG_PATTERN}"/>
+      <Policies>
+      	<SizeBasedTriggeringPolicy size="1024 MB" />
+      </Policies>
+      <DefaultRolloverStrategy max="10" />
+    </RollingRandomAccessFile>
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="${LOG_PATTERN}"/>
     </Console>
   </Appenders>
   <Loggers>
+    <Logger name="timely.subscription" level="trace" additivity="false">
+      <AppenderRef ref="Subscription" />
+    </Logger>
     <Root level="trace" includeLocation="false">
       <AppenderRef ref="Console" level="warn" />
       <AppenderRef ref="Rolling" level="trace" />

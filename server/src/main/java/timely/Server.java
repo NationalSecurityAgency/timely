@@ -402,6 +402,10 @@ public class Server {
         wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         wsServer.option(ChannelOption.SO_BACKLOG, 128);
         wsServer.option(ChannelOption.SO_KEEPALIVE, true);
+        /* Not sure if next three lines are necessary */
+        wsServer.option(ChannelOption.SO_SNDBUF, 1048576);
+        wsServer.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 838860);
+        wsServer.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 620145);
         wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 

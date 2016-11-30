@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.Server;
-import timely.api.response.MetricResponse;
+import timely.api.response.MetricResponses;
 import timely.auth.AuthCache;
 import timely.client.websocket.ClientHandler;
 import timely.client.websocket.subscription.WebSocketSubscriptionClient;
@@ -130,10 +130,11 @@ public class WebSocketClientIT extends OneWaySSLBase {
             client.addSubscription("sys.cpu.user", null, TEST_TIME, TEST_TIME + 1000, 5000);
             sleepUninterruptibly(2, TimeUnit.SECONDS);
 
-            Assert.assertEquals(3, messages.size());
-            messages.forEach(m -> {
+            Assert.assertEquals(1, messages.size());
+            MetricResponses responses = JsonSerializer.getObjectMapper().readValue(messages.get(0),
+                    MetricResponses.class);
+            responses.getResponses().forEach(metric -> {
                 try {
-                    MetricResponse metric = JsonSerializer.getObjectMapper().readValue(m, MetricResponse.class);
                     Assert.assertTrue("sys.cpu.user".equals(metric.getMetric()) || metric.isComplete());
                 } catch (Exception e) {
                     Assert.fail(e.getMessage());

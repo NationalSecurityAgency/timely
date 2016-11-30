@@ -47,6 +47,10 @@ timely:
     port: 54323
     timeout: 60
     subscription-lag: 120
+    scanner-batch-size: 10000
+    flush-interval-seconds: 30
+    scanner-read-ahead: 1
+    subscription-batch-size: 5000
   meta-cache:
     expiration-minutes: 60
     initial-capacity: 2000

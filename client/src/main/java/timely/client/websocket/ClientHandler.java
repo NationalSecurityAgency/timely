@@ -32,7 +32,7 @@ public abstract class ClientHandler extends Endpoint {
 
     @Override
     public void onError(Session session, Throwable error) {
-        LOG.info("Error occurred on Websocket session" + session.getId(), error);
+        LOG.error("Error occurred on Websocket session" + session.getId(), error);
     }
 
 }

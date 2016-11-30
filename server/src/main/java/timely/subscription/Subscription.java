@@ -25,7 +25,11 @@ public class Subscription {
     private final DataStore store;
     private final ChannelHandlerContext ctx;
     private final ScheduledFuture<?> ping;
-    private final Integer lag;
+    private final int lag;
+    private final int scannerBatchSize;
+    private final int flushIntervalSeconds;
+    private final int scannerReadAhead;
+    private final int subscriptionBatchSize;
     private final String subscriptionId;
     private LinkedList<String> deadMetricScannerQueue = new LinkedList<>();
 
@@ -36,6 +40,10 @@ public class Subscription {
         this.store = store;
         this.ctx = ctx;
         this.lag = conf.getWebsocket().getSubscriptionLag();
+        this.scannerBatchSize = conf.getWebsocket().getScannerBatchSize();
+        this.flushIntervalSeconds = conf.getWebsocket().getFlushIntervalSeconds();
+        this.scannerReadAhead = conf.getWebsocket().getScannerReadAhead();
+        this.subscriptionBatchSize = conf.getWebsocket().getSubscriptionBatchSize();
         // send a websocket ping at half the timeout interval.
         int rate = conf.getWebsocket().getTimeout() / 2;
         this.ping = this.ctx.executor().scheduleAtFixedRate(() -> {
@@ -49,7 +57,8 @@ public class Subscription {
             throws TimelyException {
         LOG.debug("Adding metric scanner for subscription {}", this.subscriptionId);
         MetricScanner m = new MetricScanner(this, this.subscriptionId, this.sessionId, store, metric, tags, startTime,
-                endTime, delay, lag, ctx);
+                endTime, delay, lag, ctx, scannerBatchSize, flushIntervalSeconds, scannerReadAhead,
+                subscriptionBatchSize);
         METRICS.put(metric, m);
         m.start();
     }

@@ -786,7 +786,7 @@ public class DataStoreImpl implements DataStore {
     }
 
     public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
-            long endTime, int lag) throws TimelyException {
+            long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException {
         try {
             Authorizations auths = null;
             try {
@@ -819,6 +819,8 @@ public class DataStoreImpl implements DataStore {
             List<String> tagOrder = prioritizeTags(query);
             Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
             setQueryColumns(s, metric, orderedTags);
+            s.setBatchSize(scannerBatchSize);
+            s.setReadaheadThreshold(scannerReadAhead);
             return s;
         } catch (IllegalArgumentException | TableNotFoundException ex) {
             LOG.error("Error during lookup: " + ex.getMessage(), ex);

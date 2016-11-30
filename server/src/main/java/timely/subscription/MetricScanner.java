@@ -3,6 +3,7 @@ package timely.subscription;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.util.concurrent.ScheduledFuture;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Iterator;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.response.MetricResponse;
+import timely.api.response.MetricResponses;
 import timely.api.response.TimelyException;
 import timely.model.Metric;
 import timely.store.DataStore;
@@ -32,6 +34,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricScanner.class);
+    private static final ObjectMapper om = JsonUtil.getObjectMapper();
+
     private final Scanner scanner;
     private Iterator<Entry<Key, Value>> iter = null;
     private final ChannelHandlerContext ctx;
@@ -43,9 +47,13 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final String metric;
     private final long endTime;
     private final Subscription subscription;
+    private MetricResponses responses = new MetricResponses();
+    private final ScheduledFuture<?> flusher;
+    private final int subscriptionBatchSize;
 
     public MetricScanner(Subscription sub, String subscriptionId, String sessionId, DataStore store, String metric,
-            Map<String, String> tags, long startTime, long endTime, long delay, int lag, ChannelHandlerContext ctx)
+            Map<String, String> tags, long startTime, long endTime, long delay, int lag, ChannelHandlerContext ctx,
+            int scannerBatchSize, int flushIntervalSeconds, int scannerReadAhead, int subscriptionBatchSize)
             throws TimelyException {
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(this);
@@ -54,10 +62,12 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
         this.lag = lag;
         this.metric = metric;
         this.endTime = endTime;
-        this.scanner = store.createScannerForMetric(sessionId, metric, tags, startTime, endTime, lag);
+        this.scanner = store.createScannerForMetric(sessionId, metric, tags, startTime, endTime, lag, scannerBatchSize,
+                scannerReadAhead);
         this.iter = scanner.iterator();
         this.delay = delay;
         this.subscriptionId = subscriptionId;
+        this.subscriptionBatchSize = subscriptionBatchSize;
         ToStringBuilder buf = new ToStringBuilder(this);
         buf.append("sessionId", sessionId);
         buf.append("metric", metric);
@@ -68,28 +78,40 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
             buf.append("tags", tags.toString());
         }
         name = buf.toString();
-        LOG.trace("Created MetricScanner: {}", name);
         this.setName("Metric Scanner " + name);
+        this.flusher = this.ctx.executor().scheduleAtFixedRate(() -> {
+            flush();
+        }, flushIntervalSeconds, flushIntervalSeconds, TimeUnit.SECONDS);
+        LOG.trace("Created MetricScanner: {}", name);
+    }
+
+    public synchronized void flush() {
+        if (responses.size() > 0) {
+            try {
+                String json = om.writeValueAsString(responses);
+                this.ctx.writeAndFlush(new TextWebSocketFrame(json));
+                responses.clear();
+            } catch (JsonProcessingException e) {
+                LOG.error("Error serializing metrics: " + responses, e);
+            }
+        }
     }
 
     @Override
     public void run() {
         Metric m = null;
-        ObjectMapper om = JsonUtil.getObjectMapper();
         try {
             while (!closed) {
 
                 if (this.iter.hasNext()) {
                     Entry<Key, Value> e = this.iter.next();
                     m = MetricAdapter.parse(e.getKey(), e.getValue(), true);
-                    try {
-                        String json = om.writeValueAsString(MetricResponse.fromMetric(m, this.subscriptionId));
-                        LOG.trace("Returning {} for subscription", json);
-                        this.ctx.writeAndFlush(new TextWebSocketFrame(json));
-                    } catch (JsonProcessingException e1) {
-                        LOG.error("Error serializing metric: " + m, e1);
+                    if (responses.size() >= this.subscriptionBatchSize) {
+                        flush();
                     }
+                    this.responses.addResponse(MetricResponse.fromMetric(m, this.subscriptionId));
                 } else if (this.endTime == 0) {
+                    flush();
                     long endTimeStamp = (System.currentTimeMillis() - (lag * 1000));
                     byte[] end = MetricAdapter.encodeRowKey(this.metric, endTimeStamp);
                     Text endRow = new Text(end);
@@ -103,7 +125,8 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         this.iter = this.scanner.iterator();
                     } else {
                         // Reset the starting range to the last key returned
-                        LOG.debug("Exhausted scanner, waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
+                        LOG.debug("Exhausted scanner, last metric returned was {}", m);
+                        LOG.debug("Waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         this.scanner.setRange(new Range(new Text(MetricAdapter.encodeRowKey(m)), false, endRow,
                                 prevRange.isEndKeyInclusive()));
@@ -111,17 +134,16 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     }
                 } else {
                     LOG.debug("Exhausted scanner, sending completed message for subscription {}", this.subscriptionId);
-                    try {
-                        MetricResponse last = new MetricResponse();
-                        last.setSubscriptionId(this.subscriptionId);
-                        last.setComplete(true);
-                        this.ctx.writeAndFlush(new TextWebSocketFrame(om.writeValueAsString(last)));
-                    } catch (JsonProcessingException e1) {
-                        LOG.error("Error serializing metric: " + m, e1);
-                    }
+                    final MetricResponse last = new MetricResponse();
+                    last.setSubscriptionId(this.subscriptionId);
+                    last.setComplete(true);
+                    this.responses.addResponse(last);
+                    flush();
                     break;
                 }
             }
+        } catch (Exception e) {
+            LOG.error("Error in metric scanner, closing.", e);
         } finally {
             close();
             this.scanner.close();
@@ -131,6 +153,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
     public void close() {
         LOG.info("Marking metric scanner closed: {}", name);
+        this.flusher.cancel(false);
         this.closed = true;
     }
 

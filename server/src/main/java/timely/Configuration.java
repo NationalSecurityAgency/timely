@@ -530,6 +530,10 @@ public class Configuration {
         private Integer port;
         public int timeout = 60;
         public int subscriptionLag = 120;
+        public int scannerBatchSize = 5000;
+        public int flushIntervalSeconds = 30;
+        public int scannerReadAhead = 1;
+        public int subscriptionBatchSize = 1000;
 
         public String getIp() {
             return ip;
@@ -564,6 +568,42 @@ public class Configuration {
 
         public Configuration setSubscriptionLag(int subscriptionLag) {
             this.subscriptionLag = subscriptionLag;
+            return Configuration.this;
+        }
+
+        public int getScannerBatchSize() {
+            return this.scannerBatchSize;
+        }
+
+        public Configuration setScannerBatchSize(int batchSize) {
+            this.scannerBatchSize = batchSize;
+            return Configuration.this;
+        }
+
+        public int getFlushIntervalSeconds() {
+            return this.flushIntervalSeconds;
+        }
+
+        public Configuration setFlushIntervalSeconds(int flushInterval) {
+            this.flushIntervalSeconds = flushInterval;
+            return Configuration.this;
+        }
+
+        public int getScannerReadAhead() {
+            return this.scannerReadAhead;
+        }
+
+        public Configuration setScannerReadAhead(int readAhead) {
+            this.scannerReadAhead = readAhead;
+            return Configuration.this;
+        }
+
+        public int getSubscriptionBatchSize() {
+            return this.subscriptionBatchSize;
+        }
+
+        public Configuration setSubscriptionBatchSize(int batchSize) {
+            this.subscriptionBatchSize = batchSize;
             return Configuration.this;
         }
     }

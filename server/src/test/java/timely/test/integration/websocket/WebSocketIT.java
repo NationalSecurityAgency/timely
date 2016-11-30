@@ -1,19 +1,43 @@
 package timely.test.integration.websocket;
 
-import com.fasterxml.jackson.databind.JavaType;
-
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.security.Authorizations;
@@ -36,6 +60,7 @@ import timely.api.request.subscription.RemoveSubscription;
 import timely.api.request.timeseries.AggregatorsRequest;
 import timely.api.request.timeseries.MetricsRequest;
 import timely.api.response.MetricResponse;
+import timely.api.response.MetricResponses;
 import timely.api.response.timeseries.AggregatorsResponse;
 import timely.api.response.timeseries.QueryResponse;
 import timely.api.response.timeseries.SearchLookupResponse;
@@ -51,16 +76,7 @@ import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.fasterxml.jackson.databind.JavaType;
 
 @Category(IntegrationTest.class)
 public class WebSocketIT extends OneWaySSLBase {
@@ -247,8 +263,11 @@ public class WebSocketIT extends OneWaySSLBase {
                     .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
             Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
                     .tag(new Tag("tag3", "value3")).build();
-            for (String metrics : response) {
-                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+
+            Assert.assertEquals(1, response.size());
+            MetricResponses responses = JsonUtil.getObjectMapper().readValue(response.get(0), MetricResponses.class);
+            Assert.assertEquals(2, responses.size());
+            for (MetricResponse m : responses.getResponses()) {
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
                         || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
@@ -295,8 +314,11 @@ public class WebSocketIT extends OneWaySSLBase {
                     .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
             Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
                     .tag(new Tag("tag3", "value3")).build();
-            for (String metrics : response) {
-                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+
+            Assert.assertEquals(1, response.size());
+            MetricResponses responses = JsonUtil.getObjectMapper().readValue(response.get(0), MetricResponses.class);
+            Assert.assertEquals(2, responses.size());
+            for (MetricResponse m : responses.getResponses()) {
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
                         || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
@@ -323,8 +345,11 @@ public class WebSocketIT extends OneWaySSLBase {
                     .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
             second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME + 500, 7.0D).tag(new Tag("rack", "r2"))
                     .tag(new Tag("tag3", "value3")).build();
-            for (String metrics : response) {
-                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+
+            Assert.assertEquals(1, response.size());
+            responses = JsonUtil.getObjectMapper().readValue(response.get(0), MetricResponses.class);
+            Assert.assertEquals(2, responses.size());
+            for (MetricResponse m : responses.getResponses()) {
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
                         || m.equals(MetricResponse.fromMetric(second, subscriptionId)));
             }
@@ -354,8 +379,11 @@ public class WebSocketIT extends OneWaySSLBase {
                     .tag(new Tag("rack", "r1")).tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
             Metric fourth = Metric.newBuilder().name("sys.cpu.idle").value(TEST_TIME + 1000, 3.0D)
                     .tag(new Tag("rack", "r2")).tag(new Tag("tag3", "value3")).tag(new Tag("tag4", "value4")).build();
-            for (String metrics : response) {
-                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+
+            Assert.assertEquals(1, response.size());
+            responses = JsonUtil.getObjectMapper().readValue(response.get(0), MetricResponses.class);
+            Assert.assertEquals(4, responses.size());
+            for (MetricResponse m : responses.getResponses()) {
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
                         || m.equals(MetricResponse.fromMetric(second, subscriptionId))
                         || m.equals(MetricResponse.fromMetric(third, subscriptionId))
@@ -416,13 +444,15 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
-            Assert.assertEquals(3, response.size());
             Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
                     .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
             Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
                     .tag(new Tag("tag3", "value3")).build();
-            for (String metrics : response) {
-                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+
+            Assert.assertEquals(1, response.size());
+            MetricResponses responses = JsonUtil.getObjectMapper().readValue(response.get(0), MetricResponses.class);
+            Assert.assertEquals(3, responses.size());
+            for (MetricResponse m : responses.getResponses()) {
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
                         || m.equals(MetricResponse.fromMetric(second, subscriptionId)) || m.isComplete());
             }
@@ -502,13 +532,15 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
 
-            Assert.assertEquals(3, response.size());
             Metric first = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r1"))
                     .tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).tag(new Tag("viz", "A")).build();
             Metric second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("rack", "r2"))
                     .tag(new Tag("tag3", "value3")).tag(new Tag("viz", "A")).build();
-            for (String metrics : response) {
-                MetricResponse m = JsonUtil.getObjectMapper().readValue(metrics, MetricResponse.class);
+
+            Assert.assertEquals(1, response.size());
+            MetricResponses responses = JsonUtil.getObjectMapper().readValue(response.get(0), MetricResponses.class);
+            Assert.assertEquals(3, responses.size());
+            for (MetricResponse m : responses.getResponses()) {
                 Assert.assertTrue(m.equals(MetricResponse.fromMetric(first, subscriptionId))
                         || m.equals(MetricResponse.fromMetric(second, subscriptionId)) || m.isComplete());
             }
