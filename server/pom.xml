@@ -67,7 +67,14 @@
             <artifactId>netty-tcnative</artifactId>
             <version>${version.netty-tcnative}</version>
             <classifier>${os.detected.classifier}</classifier>
-            <!-- Eclipse doesn't like this, but it works on the cmd line -->
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <version>${version.netty}</version>
+            <classifier>${os.detected.name}-${os.detected.arch}</classifier>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
