@@ -127,6 +127,8 @@ public class DataStoreImpl implements DataStore {
     private final ThreadLocal<BatchWriter> metaWriter = new ThreadLocal<>();
     private final ThreadLocal<BatchWriter> batchWriter = new ThreadLocal<>();
     private boolean anonAccessAllowed = false;
+    private final Map<String, String> ageOff;
+    private final long defaultAgeOff;
 
     public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
 
@@ -159,6 +161,9 @@ public class DataStoreImpl implements DataStore {
                     }
                 }
             }
+            ageOff = getAgeOff(conf);
+            defaultAgeOff = this.getAgeOffForMetric(MetricAgeOffFilter.DEFAULT_AGEOFF_KEY);
+
             final Map<String, String> tableIdMap = connector.tableOperations().tableIdMap();
             if (!tableIdMap.containsKey(metricsTable)) {
                 try {
@@ -169,7 +174,7 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             this.removeAgeOffIterators(connector, metricsTable);
-            this.applyAgeOffIterator(connector, metricsTable, conf);
+            this.applyAgeOffIterator(connector, metricsTable);
 
             metaTable = conf.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
@@ -181,7 +186,7 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             this.removeAgeOffIterators(connector, metaTable);
-            this.applyAgeOffIterator(connector, metaTable, conf);
+            this.applyAgeOffIterator(connector, metaTable);
 
             internalMetricsTimer.schedule(new TimerTask() {
 
@@ -209,16 +214,20 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
-    private void applyAgeOffIterator(Connector con, String tableName, Configuration config) throws Exception {
-        int priority = 100;
-        Map<String, String> ageOffOptions = new HashMap<>();
-        for (Entry<String, Integer> e : config.getMetricAgeOffDays().entrySet()) {
-            String ageoff = Long.toString(e.getValue() * 86400000L);
-            ageOffOptions.put(MetricAgeOffFilter.AGE_OFF_PREFIX + e.getKey(), ageoff);
-        }
-        IteratorSetting ageOffIteratorSettings = new IteratorSetting(priority, "ageoff", MetricAgeOffFilter.class,
-                ageOffOptions);
+    private void applyAgeOffIterator(Connector con, String tableName) throws Exception {
+        IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffFilter.class,
+                this.ageOff);
         connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+    }
+
+    private Map<String, String> getAgeOff(Configuration conf) {
+        Map<String, String> ageOffOptions = new HashMap<>();
+        conf.getMetricAgeOffDays().forEach((k, v) -> {
+            String ageoff = Long.toString(v * 86400000L);
+            LOG.trace("Adding age off for metric: {} of {} days", k, v);
+            ageOffOptions.put(MetricAgeOffFilter.AGE_OFF_PREFIX + k, ageoff);
+        });
+        return ageOffOptions;
     }
 
     @Override
@@ -785,6 +794,15 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
+    private long getAgeOffForMetric(String metricName) {
+        String age = this.ageOff.get(MetricAgeOffFilter.AGE_OFF_PREFIX + metricName);
+        if (null == age) {
+            return this.defaultAgeOff;
+        } else {
+            return Long.parseLong(age);
+        }
+    }
+
     public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
             long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException {
         try {
@@ -805,6 +823,10 @@ public class DataStoreImpl implements DataStore {
             Scanner s = connector.createScanner(this.metricsTable, auths);
             if (null == metric) {
                 throw new IllegalArgumentException("metric name must be specified");
+            }
+            if (0 == startTime) {
+                startTime = (System.currentTimeMillis() - getAgeOffForMetric(metric) - 1000);
+                LOG.debug("Overriding zero start time to {} due to age off configuration", startTime);
             }
             byte[] start = MetricAdapter.encodeRowKey(metric, startTime);
             long endTimeStamp = (endTime == 0) ? (System.currentTimeMillis() - (lag * 1000)) : endTime;

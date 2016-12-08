@@ -16,6 +16,7 @@ import timely.Server;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
+import timely.store.MetricAgeOffFilter;
 import timely.test.IntegrationTest;
 
 @Category(IntegrationTest.class)
@@ -28,7 +29,7 @@ public class DataStoreIT extends OneWaySSLBase {
     @Test
     public void testDefaultAgeOff() throws Exception {
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
-        ageOffSettings.put("default", 1);
+        ageOffSettings.put(MetricAgeOffFilter.DEFAULT_AGEOFF_KEY, 1);
         conf.setMetricAgeOffDays(ageOffSettings);
 
         final Server s = new Server(conf);
@@ -62,7 +63,7 @@ public class DataStoreIT extends OneWaySSLBase {
     @Test
     public void testMultipleAgeOff() throws Exception {
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
-        ageOffSettings.put("default", 1);
+        ageOffSettings.put(MetricAgeOffFilter.DEFAULT_AGEOFF_KEY, 1);
         ageOffSettings.put("sys.cpu.user", 1);
         conf.setMetricAgeOffDays(ageOffSettings);
 
