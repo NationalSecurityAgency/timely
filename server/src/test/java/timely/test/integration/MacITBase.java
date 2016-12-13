@@ -1,5 +1,10 @@
 package timely.test.integration;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.HashMap;
+
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
@@ -9,13 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.Configuration;
-import timely.store.MetricAgeOffFilter;
+import timely.store.MetricAgeOffIterator;
 import timely.test.TestConfiguration;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.HashMap;
 
 /**
  * Base class for integration tests using mini accumulo cluster.
@@ -54,7 +54,7 @@ public class MacITBase {
             conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
             conf.getWebsocket().setFlushIntervalSeconds(TestConfiguration.WAIT_SECONDS);
             HashMap<String, Integer> ageOffSettings = new HashMap<>();
-            ageOffSettings.put(MetricAgeOffFilter.DEFAULT_AGEOFF_KEY, 7);
+            ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 7);
             conf.setMetricAgeOffDays(ageOffSettings);
         } else {
             LOG.info("Mini Accumulo already running.");
@@ -80,7 +80,7 @@ public class MacITBase {
         conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
         conf.getWebsocket().setFlushIntervalSeconds(TestConfiguration.WAIT_SECONDS);
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
-        ageOffSettings.put(MetricAgeOffFilter.DEFAULT_AGEOFF_KEY, 7);
+        ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 7);
         conf.setMetricAgeOffDays(ageOffSettings);
     }
 

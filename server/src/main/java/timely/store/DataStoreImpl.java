@@ -162,7 +162,7 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             ageOff = getAgeOff(conf);
-            defaultAgeOff = this.getAgeOffForMetric(MetricAgeOffFilter.DEFAULT_AGEOFF_KEY);
+            defaultAgeOff = this.getAgeOffForMetric(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY);
 
             final Map<String, String> tableIdMap = connector.tableOperations().tableIdMap();
             if (!tableIdMap.containsKey(metricsTable)) {
@@ -215,7 +215,7 @@ public class DataStoreImpl implements DataStore {
     }
 
     private void applyAgeOffIterator(Connector con, String tableName) throws Exception {
-        IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffFilter.class,
+        IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffIterator.class,
                 this.ageOff);
         connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
@@ -225,7 +225,7 @@ public class DataStoreImpl implements DataStore {
         conf.getMetricAgeOffDays().forEach((k, v) -> {
             String ageoff = Long.toString(v * 86400000L);
             LOG.trace("Adding age off for metric: {} of {} days", k, v);
-            ageOffOptions.put(MetricAgeOffFilter.AGE_OFF_PREFIX + k, ageoff);
+            ageOffOptions.put(MetricAgeOffIterator.AGE_OFF_PREFIX + k, ageoff);
         });
         return ageOffOptions;
     }
@@ -795,7 +795,7 @@ public class DataStoreImpl implements DataStore {
     }
 
     private long getAgeOffForMetric(String metricName) {
-        String age = this.ageOff.get(MetricAgeOffFilter.AGE_OFF_PREFIX + metricName);
+        String age = this.ageOff.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
         if (null == age) {
             return this.defaultAgeOff;
         } else {
