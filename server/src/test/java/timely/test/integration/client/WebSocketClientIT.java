@@ -1,4 +1,4 @@
-package timely.test.integration.websocket;
+package timely.test.integration.client;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import io.netty.handler.ssl.ApplicationProtocolConfig;

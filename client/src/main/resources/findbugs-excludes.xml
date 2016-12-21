@@ -1,3 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
+  <Or>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+    <Method name="connect" />
+    <Class name="timely.client.tcp.TcpClient"/>
+  </Or>
 </FindBugsFilter>
