@@ -70,13 +70,6 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-native-epoll</artifactId>
-            <version>${version.netty}</version>
-            <classifier>${os.detected.name}-${os.detected.arch}</classifier>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
@@ -337,4 +330,39 @@
             </plugin>
         </plugins>
     </reporting>
+    <profiles>
+        <profile>
+            <id>native-epoll-linux</id>
+            <activation>
+                <os>
+                    <family>!mac</family>
+                </os>
+            </activation>
+            <dependencies>
+		        <dependency>
+		            <groupId>io.netty</groupId>
+		            <artifactId>netty-transport-native-epoll</artifactId>
+		            <version>${version.netty}</version>
+		            <classifier>linux-x86_64</classifier>
+		            <scope>runtime</scope>
+		        </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>native-epoll</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <dependencies>
+		        <dependency>
+		            <groupId>io.netty</groupId>
+		            <artifactId>netty-transport-native-epoll</artifactId>
+		            <version>${version.netty}</version>
+		            <scope>runtime</scope>
+		        </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
