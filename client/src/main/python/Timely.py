@@ -1,20 +1,21 @@
 import time
-import pytz
 from datetime import datetime
 from TimeDateRange import TimeDateRange
 from TimeDateRange import TimeDateError
+from TimeDateRange import UTC
 import json
 import pandas
 import getopt
 import sys
-import seaborn
 import matplotlib.dates as mdates
-import matplotlib.ticker as tkr
 import random
+import plotly.graph_objs as go
+import plotly.offline as py
 
 from WebSocketClient import WebSocketClient
 from tornado import ioloop
 
+utc = UTC()
 
 class TimelyWebSocketClient(WebSocketClient):
 
@@ -50,12 +51,13 @@ class TimelyWebSocketClient(WebSocketClient):
             "endTime" : self.endTime
         }
 
-        if self.tags != None:
+        if self.tags is not None:
             t = self.tags.strip().split(',')
             for pair in t:
                 k = pair.split('=')[0].strip()
                 v = pair.split('=')[1].strip()
-                m1 = dict(m1.items + dict({k : v}).items())
+                tagDict = dict(m1.items + dict({k : v}).items())
+            m1["tags"] = tagDict
 
         self.send(m1)
 
@@ -79,9 +81,9 @@ class TimelyMetric(TimelyWebSocketClient):
         self.metric = metric
         self.tags = tags
         self.sample = sample
-        self.timestamps = []
         self.debug = False
         self.dataFrame = None
+        self.data = []
 
         timeDateRange = TimeDateRange(beginStr, endStr, hours)
 
@@ -100,6 +102,8 @@ class TimelyMetric(TimelyWebSocketClient):
         ioloop.IOLoop.current(instance=False).start()
         return self
 
+
+
     def _on_message(self, msg):
 
         global df
@@ -109,31 +113,34 @@ class TimelyMetric(TimelyWebSocketClient):
         complete = bool(obj.get("complete"));
         if complete:
             self._on_connection_close()
-
+            return
         else:
-
             date = int(obj.get("timestamp")/1000);
-            if not date in self.timestamps:
 
-                self.timestamps += [date];
-                dt = pandas.datetime.utcfromtimestamp(date)
-                metricName = str(obj.get("metric"))
-                metricValue = obj.get("value")
+            dt = pandas.datetime.utcfromtimestamp(date)
+            metricName = str(obj.get("metric"))
+            metricValue = obj.get("value")
 
-                df = pandas.DataFrame({'date': dt, metricName : [metricValue]}, columns=['date', metricName], index=[pandas.DatetimeIndex([dt])])
+            newData = {}
+            newData["date"] = dt
+            newData[metricName] = metricValue
 
-                tags = obj.get("tags")[0]
-                for t in tags:
-                    df[str(t)] = [tags[t]]
+            tags = obj.get("tags")
+            for d in tags:
+                for k,v in d.items():
+                    newData[k] = v
 
-                if self.dataFrame is None:
-                    self.dataFrame = df
-                else:
-                    self.dataFrame = self.dataFrame.append(df)
+            self.data.append(newData)
+
 
     def _on_connection_close(self):
 
         global client
+
+        self.dataFrame = pandas.DataFrame(self.data)
+        self.dataFrame = self.dataFrame.set_index(self.dataFrame['date'].apply(lambda x: pandas.DatetimeIndex([x])))
+
+
         self.close()
         ioloop.IOLoop.current(instance=False).stop()
         print("Exiting.")
@@ -150,54 +157,107 @@ class TimelyMetric(TimelyWebSocketClient):
 
         graph(self.dataFrame, self.metric, self.sample, self.how)
 
+def pivot(df, metric, groupByColumn=None):
 
-
-
-def resample(dataFrame, metric, sample, how):
-
-    newDataFrame = dataFrame
-    if not sample is None:
-        newDataFrame = newDataFrame.resample(sample, how=how)
-        newDataFrame['date'] = newDataFrame.index.values
-    return newDataFrame
-
-
-def graph(dataFrame, metric, sample):
-
+    dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
+        dataFrame = dataFrame.pivot_table(index="date", columns=groupByColumn, values=metric)
+    return dataFrame
 
-        plotDataFrame = dataFrame.set_index(dataFrame['date'].apply(lambda x: datetime2graphdays(x)))
 
-        seaborn.set(style="darkgrid", palette="Set2")
+def resample(df, metric, sample, how='mean', fill_method='ffill'):
 
-        # build the figure
-        fig, ax = seaborn.plt.subplots()
+    dataFrame = pandas.DataFrame(df, copy=True)
+    if dataFrame is not None:
+        if sample is not None:
+            dataFrame = dataFrame.resample(sample, how=how, fill_method=fill_method)
+    return dataFrame
 
-        seaborn.tsplot(plotDataFrame[metric], time=plotDataFrame.index, unit=None, interpolate=True, ax=ax, scalex=False,
-                       scaley=False, err_style="ci_bars", n_boot=1)
 
-        # assign locator and formatter for the xaxis ticks.
-        ax.xaxis_date();
+def unpivot(df, metric, groupByColumn=None):
+    dataFrame = pandas.DataFrame(df, copy=True)
+    if dataFrame is not None:
+        dataFrame['date'] = dataFrame.index.values
+        dataFrame = pandas.melt(dataFrame, id_vars=['date'], value_name=metric, var_name=groupByColumn)
+        dataFrame = dataFrame.set_index(dataFrame['date'])
+    return dataFrame
 
-        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d %H:%M:%S'))
 
-        formatter = tkr.ScalarFormatter(useMathText=False)
-        formatter.set_scientific(False)
-        ax.yaxis.set_major_formatter(formatter)
+def rolling_average(df, metric, rolling_average=None):
 
-        if sample is None:
-            seaborn.plt.title(metric, fontsize='large')
+    dataFrame = pandas.DataFrame(df, copy=True)
+    if dataFrame is not None:
+        dataFrame[metric] = pandas.rolling_mean(dataFrame[metric], rolling_average)
+    return dataFrame
+
+
+def graph(df, metric, sample=None, groupByColumn=None, graphConfig={}, notebook=False):
+
+    dataFrame = pandas.DataFrame(df, copy=True)
+    if dataFrame is not None:
+        dataFrame['colFromindex'] = dataFrame.index
+        if groupByColumn is not None:
+            # sort on date and the groupByColumn so that the series legend is sorted
+            dataFrame = dataFrame.sort_values(['colFromIndex', groupByColumn])
         else:
-            seaborn.plt.title(metric + ' sample ' + sample, fontsize='large')
+            dataFrame = dataFrame.sort_values(['colFromIndex'])
 
-        seaborn.plt.xlabel('date/time')
-        seaborn.plt.ylabel(metric)
+        title = None
+        if sample is None:
+            title = metric
+        else:
+            title = metric + ' sample ' + sample
 
-        # rotate the x-labels since they tend to be too long
-        fig.autofmt_xdate(rotation=45)
+        dataFrame['date'] = dataFrame.index
 
-        seaborn.plt.show()
+        layout = go.Layout(
+            title= title,
+            autosize=False,
+            width=1000,
+            height=700,
+            showlegend=True,
+            xaxis=dict(
+                autorange=True,
+                tickangle=45
+            ),
+            yaxis=dict(
+                autorange=True,
+                tickangle=45
+            )
+        )
+
+        data = None
+        for col in df[groupByColumn].unique():
+            dataFrame = dataFrame.loc[dataFrame[groupByColumn] == col]
+
+            addlColConfig = graphConfig.get(col, graphConfig.get('default', dict()))
+
+            config = dict(
+                name=col,
+                x=dataFrame.index,
+                y=dataFrame[metric],
+                hoverinfo='x+y+text',
+                text=col
+            )
+
+            config.update(addlColConfig)
+
+            s = go.Scatter(config)
+
+            if data is None:
+                data = [s]
+            else:
+                data.append(s)
+
+        now = datetime.now(tz=utc)
+        format = "%Y%m%d%H%M%S"
+        nowStr = time.strftime(format, now.timetuple())
+
+        fig = go.Figure(data=data, layout=layout)
+        if notebook:
+            py.iplot(fig, filename=title+'-'+nowStr, show_link=False)
+        else:
+            py.plot(fig, output_type='file', filename=title+'-'+nowStr+'.html', auto_open=False, show_link=False)
 
 
 def datetime2graphdays(dt):
@@ -215,15 +275,16 @@ def main():
     sample = None
     how = None
     tags = None
+    groupByColumn = None
     try:
         argv = sys.argv
-        options, remainder = getopt.getopt(argv[1:], 'h', ['metric=', 'tags=', 'hours=', 'begin=', 'end=', 'sample=', 'how=', 'hostport='])
+        options, remainder = getopt.getopt(argv[1:], 'h', ['metric=', 'tags=', 'hours=', 'groupByColumn=', 'begin=', 'end=', 'sample=', 'how=', 'hostport='])
     except getopt.GetoptError:
-        print 'TimelyMetric.py ---hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --sample=<sample_period> --how=<mean|min|max>'
+        print 'TimelyMetric.py ---hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --groupByColumn=<groupByColumn>, --sample=<sample_period> --how=<mean|min|max>'
         sys.exit(2)
     for opt, arg in options:
         if opt == '-h':
-            print 'TimelyMetric.py --hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --sample=<sample_period> --how=<mean|min|max>'
+            print 'TimelyMetric.py --hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --groupByColumn=<groupByColumn>, --sample=<sample_period> --how=<mean|min|max>'
             sys.exit()
         elif opt in ("--metric"):
             metric = arg
@@ -233,6 +294,8 @@ def main():
             beginStr = arg
         elif opt in ("--end"):
             endStr = arg
+        elif opt in ("--groupByColumn"):
+            groupByColumn = arg
         elif opt in ("--sample"):
             sample = arg
         elif opt in ("--how"):
@@ -241,13 +304,13 @@ def main():
             hostport = arg
     try:
 
-        metric = TimelyMetric(hostport, metric, tags, beginStr, endStr, hours, sample).fetch()
-        dataFrame = metric.getDataFrame()
+        timelyMetric = TimelyMetric(hostport, metric, tags, beginStr, endStr, hours, sample).fetch()
+        dataFrame = timelyMetric.getDataFrame()
 
-        if (dataFrame != None):
+        if dataFrame is not None:
             dataFrame = resample(dataFrame, metric, sample, how)
-            print(dataFrame)
-            graph(dataFrame, metric, sample)
+            dataFrame = pivot(dataFrame, metric, groupByColumn=groupByColumn)
+            graph(dataFrame, metric, sample=sample, groupByColumn=groupByColumn, graphConfig={}, notebook=False)
 
     except TimeDateError as e:
         print(e.message)
