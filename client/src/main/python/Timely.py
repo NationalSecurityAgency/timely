@@ -53,10 +53,11 @@ class TimelyWebSocketClient(WebSocketClient):
 
         if self.tags is not None:
             t = self.tags.strip().split(',')
+            tagDict = {}
             for pair in t:
                 k = pair.split('=')[0].strip()
                 v = pair.split('=')[1].strip()
-                tagDict = dict(m1.items + dict({k : v}).items())
+                tagDict = dict(tagDict.items() + dict({k : v}).items())
             m1["tags"] = tagDict
 
         self.send(m1)
@@ -103,38 +104,38 @@ class TimelyMetric(TimelyWebSocketClient):
         return self
 
 
-
     def _on_message(self, msg):
 
         global df
         global endtime
 
         obj = json.loads(msg)
-        complete = bool(obj.get("complete"));
-        if complete:
-            self._on_connection_close()
-            return
-        else:
-            date = int(obj.get("timestamp")/1000);
+        responses = responsesObj.get("responses")
 
-            dt = pandas.datetime.utcfromtimestamp(date)
-            metricName = str(obj.get("metric"))
-            metricValue = obj.get("value")
+        for obj in responses:
+            complete = bool(obj.get("complete"));
+            if complete:
+                self._on_connection_close()
+                return
+            else:
+                date = int(obj.get("timestamp")/1000);
+                dt = pandas.datetime.utcfromtimestamp(date)
+                metricName = str(obj.get("metric"))
+                metricValue = obj.get("value")
 
-            newData = {}
-            newData["date"] = dt
-            newData[metricName] = metricValue
+                newData = {}
+                newData["date"] = dt
+                newData[metricName] = metricValue
 
-            tags = obj.get("tags")
-            for d in tags:
-                for k,v in d.items():
-                    newData[k] = v
+                tags = obj.get("tags")
+                for d in tags:
+                    for k,v in d.items():
+                        newData[k] = v
 
-            self.data.append(newData)
+                self.data.append(newData)
 
 
     def _on_connection_close(self):
-
         global client
 
         self.dataFrame = pandas.DataFrame(self.data)
@@ -153,19 +154,19 @@ class TimelyMetric(TimelyWebSocketClient):
         if self.debug:
             print(self.dataFrame)
 
-    def graph(self):
-
-        graph(self.dataFrame, self.metric, self.sample, self.how)
+    def graph(self, groupByColumn=None):
+        graph(self.dataFrame, self.metric, sample=self.sample, how=self.how, groupByColumn=groupByColumn)
 
 def pivot(df, metric, groupByColumn=None):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
-        dataFrame = dataFrame.pivot_table(index="date", columns=groupByColumn, values=metric)
+        if groupByColumn is not None:
+            dataFrame = dataFrame.pivot_table(index="date", columns=groupByColumn, values=metric)
     return dataFrame
 
 
-def resample(df, metric, sample, how='mean', fill_method='ffill'):
+def resample(df, sample, how='mean', fill_method='ffill'):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
@@ -187,15 +188,16 @@ def rolling_average(df, metric, rolling_average=None):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
-        dataFrame[metric] = pandas.rolling_mean(dataFrame[metric], rolling_average)
+        if rolling_average is not None:
+            dataFrame[metric] = pandas.rolling_mean(dataFrame[metric], rolling_average)
     return dataFrame
 
 
-def graph(df, metric, sample=None, groupByColumn=None, graphConfig={}, notebook=False):
+def graph(df, metric, sample=None, groupByColumn=None, seriesConfig={}, graphConfig={}, notebook=False):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
-        dataFrame['colFromindex'] = dataFrame.index
+        dataFrame['colFromIndex'] = dataFrame.index
         if groupByColumn is not None:
             # sort on date and the groupByColumn so that the series legend is sorted
             dataFrame = dataFrame.sort_values(['colFromIndex', groupByColumn])
@@ -206,36 +208,40 @@ def graph(df, metric, sample=None, groupByColumn=None, graphConfig={}, notebook=
         if sample is None:
             title = metric
         else:
-            title = metric + ' sample ' + sample
+            title = metric + '\rsample ' + sample
 
         dataFrame['date'] = dataFrame.index
 
-        layout = go.Layout(
-            title= title,
+        layoutConfig = dict(
+            title=title,
             autosize=False,
             width=1000,
             height=700,
             showlegend=True,
             xaxis=dict(
                 autorange=True,
-                tickangle=45
+                tickangle=-45
             ),
             yaxis=dict(
                 autorange=True,
-                tickangle=45
+                title=title
             )
         )
 
+        layoutConfig.update(graphConfig)
+
+        layout = go.Layout(layoutConfig)
+
         data = None
         for col in df[groupByColumn].unique():
-            dataFrame = dataFrame.loc[dataFrame[groupByColumn] == col]
+            tempDataFrame = dataFrame.loc[dataFrame[groupByColumn] == col]
 
             addlColConfig = graphConfig.get(col, graphConfig.get('default', dict()))
 
             config = dict(
                 name=col,
-                x=dataFrame.index,
-                y=dataFrame[metric],
+                x=tempDataFrame.index,
+                y=tempDataFrame[metric],
                 hoverinfo='x+y+text',
                 text=col
             )
