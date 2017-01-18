@@ -74,6 +74,7 @@
         <version.maven-compiler>3.3</version.maven-compiler>
         <version.maven-dependency>2.10</version.maven-dependency>
         <version.maven-jar>3.0.1</version.maven-jar>
+        <version.buildnumber-maven>1.4</version.buildnumber-maven>
         <version.os-maven>1.5.0.Final</version.os-maven>
         <version.maven-pmd>3.6</version.maven-pmd>
         <version.maven-rpm>2.1.4</version.maven-rpm>
@@ -368,7 +369,12 @@
 	                    <archive>
 	                        <manifest>
 	                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+	                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
 	                        </manifest>
+                                <manifestEntries>
+				    <Implementation-Build>${buildNumber}</Implementation-Build>
+                                    <Implementation-Timestamp>${timestamp}</Implementation-Timestamp>
+                                </manifestEntries>
 	                    </archive>
 	                </configuration>
                 </plugin>
@@ -392,6 +398,23 @@
 	                <artifactId>build-helper-maven-plugin</artifactId>
 	                <version>${version.maven-build-helper}</version>
 	            </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>buildnumber-maven-plugin</artifactId>
+                    <version>${version.buildnumber-maven}</version>
+                    <executions>
+                        <execution>
+                           <phase>validate</phase>
+                           <goals>
+                              <goal>create</goal>
+                           </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <doCheck>false</doCheck>
+                        <doUpdate>false</doUpdate>
+                    </configuration>
+                </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>findbugs-maven-plugin</artifactId>
