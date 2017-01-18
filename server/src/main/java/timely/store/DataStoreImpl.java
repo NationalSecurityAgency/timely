@@ -174,7 +174,7 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             this.removeAgeOffIterators(connector, metricsTable);
-            this.applyAgeOffIterator(connector, metricsTable);
+            this.applyAgeOffIterator(connector, metricsTable, true);
 
             metaTable = conf.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
@@ -186,7 +186,7 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             this.removeAgeOffIterators(connector, metaTable);
-            this.applyAgeOffIterator(connector, metaTable);
+            this.applyAgeOffIterator(connector, metaTable, false);
 
             internalMetricsTimer.schedule(new TimerTask() {
 
@@ -214,9 +214,13 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
-    private void applyAgeOffIterator(Connector con, String tableName) throws Exception {
-        IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffIterator.class,
-                this.ageOff);
+    private void applyAgeOffIterator(Connector con, String tableName, boolean useIterator) throws Exception {
+        IteratorSetting ageOffIteratorSettings = null;
+        if (useIterator) {
+            ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffIterator.class, this.ageOff);
+        } else {
+            ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffFilter.class, this.ageOff);
+        }
         connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
 
