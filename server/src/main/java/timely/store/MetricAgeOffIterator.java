@@ -7,10 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
-import org.apache.accumulo.core.data.ByteSequence;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Range;
-import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.OptionDescriber;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
@@ -152,8 +149,12 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                     null != startKey.getColumnVisibility() ? startKey.getColumnVisibility().getBytes() : null,
                     timeTarget, startKey.isDeleted());
             // @formatter:on
-            newRange = new Range(newStartKey, this.range.isStartKeyInclusive(), this.range.getEndKey(),
-                    this.range.isEndKeyInclusive());
+            if (this.range.getEndKey() == null || this.range.getEndKey().compareTo(newStartKey) >= 0) {
+                newRange = new Range(newStartKey, true, this.range.getEndKey(), this.range.isEndKeyInclusive());
+            } else {
+                newRange = new Range(this.range.getEndKey(), false, this.range.getEndKey().followingKey(
+                        PartialKey.ROW_COLFAM_COLQUAL_COLVIS_TIME), false);
+            }
         }
         try {
             LOG.trace("Seeking to: {}", newRange);
