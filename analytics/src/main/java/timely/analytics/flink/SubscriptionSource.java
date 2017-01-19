@@ -102,6 +102,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
                     @Override
                     public void onMessage(final String message) {
+                        LOG.info("Message received on Websocket session {}: {}", session.getId(), message);
                         try {
                             // Deserialize in this thread
                             final MetricResponses responses = JsonSerializer.getObjectMapper().readValue(message,
@@ -114,7 +115,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                                         ctx.emitWatermark(new Watermark(Long.MAX_VALUE));
                                         return;
                                     }
-                                    LOG.trace("Sending response: {}", response);
+                                    LOG.trace("Sending metric: {}", response);
                                     long time = response.getTimestamp();
                                     ctx.collectWithTimestamp(response, time);
                                     dateTimeAccumulator.add(formatter.format(new Date(response.getTimestamp())));
@@ -150,6 +151,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
             @Override
             public void onClose(Session session, CloseReason reason) {
+                super.onClose(session, reason);
                 try {
                     close();
                 } catch (Exception e1) {
@@ -157,7 +159,6 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                 }
                 // Signal done sending data
                 ctx.emitWatermark(new Watermark(Long.MAX_VALUE));
-                super.onClose(session, reason);
             }
 
             @Override
@@ -178,7 +179,11 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                 client.addSubscription(m, null, start, end, 5000);
             }
             while (!client.isClosed()) {
-                Thread.sleep(5000);
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    LOG.error("Sleep interrupted.");
+                }
             }
         } finally {
             svc.shutdown();
