@@ -53,7 +53,9 @@ public class AggregationIteratorTest {
     }
 
     /**
-     * This will add key, values to the test data as output from the DownsampleIterator
+     * This will add key, values to the test data as output from the
+     * DownsampleIterator
+     * 
      * @param testData
      * @param m
      * @param sample

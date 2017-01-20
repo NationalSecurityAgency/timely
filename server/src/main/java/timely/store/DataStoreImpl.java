@@ -499,7 +499,8 @@ public class DataStoreImpl implements DataStore {
 
                     Class<? extends Aggregator> daggClass = getDownsampleAggregator(query);
                     if (daggClass == null) {
-                        // we should always have a downsample iterator in the stack.
+                        // we should always have a downsample iterator in the
+                        // stack.
                         throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                                 "Error during query: programming error", "daggClass == null");
                     } else {
@@ -521,8 +522,10 @@ public class DataStoreImpl implements DataStore {
 
                     // tag -> array of results by period starting at start
                     for (Entry<Key, Value> encoded : scanner) {
-                        // we can decode the value as a Map<Set<Tag>, Aggregation> even if an AggregationIterator
-                        // is not used because Downsample is a subclass of Aggregation
+                        // we can decode the value as a Map<Set<Tag>,
+                        // Aggregation> even if an AggregationIterator
+                        // is not used because Downsample is a subclass of
+                        // Aggregation
                         Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(encoded.getValue());
                         for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
                             Set<Tag> key = new HashSet<>();

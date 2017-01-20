@@ -22,13 +22,16 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * This iterator will aggregate across series as output from the DownsampleIterator.  The same set of aggregator
- * functions are supported as in the DownsampleIterator.
+ * This iterator will aggregate across series as output from the
+ * DownsampleIterator. The same set of aggregator functions are supported as in
+ * the DownsampleIterator.
  */
 public class AggregationIterator extends WrappingIterator {
 
-    // To keep the output of the aggregation iterator consistent with that of the downsample iterator, we
-    // supply a static set of tags to be returned with the Aggregation (subclass of Downsample)
+    // To keep the output of the aggregation iterator consistent with that of
+    // the downsample iterator, we
+    // supply a static set of tags to be returned with the Aggregation (subclass
+    // of Downsample)
     private static final String TAGS = "aggregation.tags";
     private static final String AGGCLASS = "aggregation.aggclass";
 

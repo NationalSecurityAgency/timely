@@ -140,5 +140,4 @@ public class Aggregation implements Iterable<Sample>, Serializable {
         return result;
     }
 
-
 }

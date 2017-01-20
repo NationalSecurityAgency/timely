@@ -69,7 +69,7 @@ public class DownsampleTest {
         for (int i = 0; i < 1000; i += 100) {
             ds.add(i, .2);
         }
-        Downsample result = Downsample.combine(Collections.singleton(ds), null);
+        Downsample result = Downsample.combineDownsample(Collections.singleton(ds), null);
         int count = 0;
         for (Sample s : result) {
             assertEquals(.2, s.value, 0.0D);
@@ -86,7 +86,7 @@ public class DownsampleTest {
                 ds.add(i, .2);
             }
         }
-        Downsample result = Downsample.combine(Collections.singleton(ds), null);
+        Downsample result = Downsample.combineDownsample(Collections.singleton(ds), null);
         int count = 0;
         for (Sample s : result) {
             assertEquals(.2, s.value, 0.0D);
