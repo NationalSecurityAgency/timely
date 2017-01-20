@@ -6,6 +6,7 @@ import java.util.List;
 
 import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseDeserializer;
 import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseSerializer;
+import timely.sample.Aggregator;
 import timely.sample.aggregators.Avg;
 import timely.sample.aggregators.Count;
 import timely.sample.aggregators.Dev;
@@ -57,6 +58,7 @@ public class AggregatorsResponse {
         RESPONSE.addAggregator(Min.class.getSimpleName().toLowerCase());
         RESPONSE.addAggregator(Sum.class.getSimpleName().toLowerCase());
         RESPONSE.addAggregator(Count.class.getSimpleName().toLowerCase());
+        RESPONSE.addAggregator(Aggregator.NONE);
     }
 
     private List<String> aggregators = new ArrayList<>();

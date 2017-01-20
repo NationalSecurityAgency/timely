@@ -48,7 +48,7 @@ public class DownsampleIteratorTest {
         createTestData2();
     }
 
-    private void createTestData2() {
+    private void createTestData1() {
         List<Tag> tags = Collections.singletonList(new Tag("host", "host1"));
 
         for (long i = 0; i < 1000; i += 100) {
@@ -71,7 +71,7 @@ public class DownsampleIteratorTest {
         }
     }
 
-    private void createTestData1() {
+    private void createTestData2() {
         List<Tag> tags = Collections.singletonList(new Tag("host", "host1"));
         List<Tag> tags2 = Collections.singletonList(new Tag("host", "host2"));
 

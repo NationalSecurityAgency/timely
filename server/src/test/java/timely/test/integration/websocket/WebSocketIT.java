@@ -681,7 +681,7 @@ public class WebSocketIT extends OneWaySSLBase {
             assertEquals("sys.cpu.user", query.getMetric());
             assertEquals(1, query.getTags().size());
             assertTrue(query.getTags().containsKey("tag1"));
-            assertEquals("value1", query.getTags().get("tag1"));
+            assertEquals(".*", query.getTags().get("tag1"));
             assertEquals(1, query.getDps().size()); // this is a rate query and
                                                     // we can only see 2 dps, we
                                                     // will only get 1 response.

@@ -78,9 +78,12 @@ import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
 import timely.model.Metric;
 import timely.model.Tag;
+import timely.sample.Aggregation;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
+import timely.sample.aggregators.Avg;
+import timely.sample.iterators.AggregationIterator;
 import timely.sample.iterators.DownsampleIterator;
 import timely.store.iterators.RateIterator;
 import timely.util.MetaKeySet;
@@ -90,7 +93,8 @@ public class DataStoreImpl implements DataStore {
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreImpl.class);
 
     private static final long METRICS_PERIOD = 30000;
-    private static final long DEFAULT_DOWNSAMPLE_MS = 60000;
+    private static final long DEFAULT_DOWNSAMPLE_MS = 1;
+    private static final String DEFAULT_DOWNSAMPLE_AGGREGATOR = Avg.class.getSimpleName().toLowerCase();
     private static final Pattern REGEX_TEST = Pattern.compile("^\\w+$");
 
     /*
@@ -466,7 +470,7 @@ public class DataStoreImpl implements DataStore {
         try {
             long now = System.currentTimeMillis();
             for (SubQuery query : msg.getQueries()) {
-                Map<Set<Tag>, List<Downsample>> allSeries = new HashMap<>();
+                Map<Set<Tag>, List<Aggregation>> allSeries = new HashMap<>();
                 String metric = query.getMetric();
                 BatchScanner scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
                         scannerThreads);
@@ -492,26 +496,44 @@ public class DataStoreImpl implements DataStore {
                         RateIterator.setRateOptions(rate, query.getRateOptions());
                         scanner.addScanIterator(rate);
                     }
+
+                    Class<? extends Aggregator> daggClass = getDownsampleAggregator(query);
+                    if (daggClass == null) {
+                        // we should always have a downsample iterator in the stack.
+                        throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                                "Error during query: programming error", "daggClass == null");
+                    } else {
+                        LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
+                        IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
+                        DownsampleIterator.setDownsampleOptions(is, startOfFirstPeriod, endOfLastPeriod, downsample,
+                                daggClass.getName());
+                        scanner.addScanIterator(is);
+                    }
+
                     Class<? extends Aggregator> aggClass = getAggregator(query);
-                    LOG.trace("Aggregator type {}", aggClass.getSimpleName());
-                    IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
-                    DownsampleIterator.setDownsampleOptions(is, startOfFirstPeriod, endOfLastPeriod, downsample,
-                            aggClass.getName());
-                    scanner.addScanIterator(is);
+                    // the aggregation iterator is optional
+                    if (aggClass != null) {
+                        LOG.trace("Aggregator type {}", aggClass.getSimpleName());
+                        IteratorSetting is = new IteratorSetting(501, AggregationIterator.class);
+                        AggregationIterator.setAggregationOptions(is, query.getTags(), aggClass.getName());
+                        scanner.addScanIterator(is);
+                    }
 
                     // tag -> array of results by period starting at start
                     for (Entry<Key, Value> encoded : scanner) {
-                        Map<Set<Tag>, Downsample> samples = DownsampleIterator.decodeValue(encoded.getValue());
-                        for (Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
+                        // we can decode the value as a Map<Set<Tag>, Aggregation> even if an AggregationIterator
+                        // is not used because Downsample is a subclass of Aggregation
+                        Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(encoded.getValue());
+                        for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
                             Set<Tag> key = new HashSet<>();
                             for (Tag tag : entry.getKey()) {
                                 if (query.getTags().keySet().contains(tag.getKey())) {
                                     key.add(tag);
                                 }
                             }
-                            List<Downsample> downsamples = allSeries.getOrDefault(key, new ArrayList<>());
-                            downsamples.add(entry.getValue());
-                            allSeries.put(key, downsamples);
+                            List<Aggregation> aggregations = allSeries.getOrDefault(key, new ArrayList<>());
+                            aggregations.add(entry.getValue());
+                            allSeries.put(key, aggregations);
                         }
                     }
                     LOG.trace("allSeries: {}", allSeries);
@@ -521,7 +543,7 @@ public class DataStoreImpl implements DataStore {
 
                 // TODO groupby here?
                 long tsDivisor = msg.isMsResolution() ? 1 : 1000;
-                for (Entry<Set<Tag>, List<Downsample>> entry : allSeries.entrySet()) {
+                for (Entry<Set<Tag>, List<Aggregation>> entry : allSeries.entrySet()) {
                     result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
                 }
             }
@@ -598,7 +620,7 @@ public class DataStoreImpl implements DataStore {
         return result;
     }
 
-    private QueryResponse convertToQueryResponse(SubQuery query, Set<Tag> tags, Collection<Downsample> values,
+    private QueryResponse convertToQueryResponse(SubQuery query, Set<Tag> tags, Collection<Aggregation> values,
             long tsDivisor) {
         QueryResponse response = new QueryResponse();
         response.setMetric(query.getMetric());
@@ -606,7 +628,7 @@ public class DataStoreImpl implements DataStore {
             response.putTag(tag.getKey(), tag.getValue());
         }
         RateOption rateOptions = query.getRateOptions();
-        Downsample combined = Downsample.combine(values, rateOptions);
+        Aggregation combined = Aggregation.combineAggregation(values, rateOptions);
         for (Sample entry : combined) {
             long ts = entry.timestamp / tsDivisor;
             response.putDps(Long.toString(ts), entry.value);
@@ -754,16 +776,29 @@ public class DataStoreImpl implements DataStore {
     }
 
     private Class<? extends Aggregator> getAggregator(SubQuery query) {
-        String aggregatorName = "avg";
+        return Aggregator.getAggregator(query.getAggregator());
+    }
+
+    private Class<? extends Aggregator> getDownsampleAggregator(SubQuery query) {
+        String aggregatorName = Aggregator.NONE;
         if (query.getDownsample().isPresent()) {
             String parts[] = query.getDownsample().get().split("-");
             aggregatorName = parts[1];
+        }
+        // disabling the downsampling OR setting the aggregation to none are
+        // both considered to be disabling
+        if (aggregatorName.equals(Aggregator.NONE)) {
+            // we need a downsampling iterator, so default to max to ensure we
+            // return something
+            aggregatorName = DEFAULT_DOWNSAMPLE_AGGREGATOR;
         }
         return Aggregator.getAggregator(aggregatorName);
     }
 
     private long getDownsamplePeriod(SubQuery query) {
-        if (!query.getDownsample().isPresent()) {
+        // disabling the downsampling OR setting the aggregation to none are
+        // both considered to be disabling
+        if (!query.getDownsample().isPresent() || query.getDownsample().get().endsWith("-none")) {
             return DEFAULT_DOWNSAMPLE_MS;
         }
         String parts[] = query.getDownsample().get().split("-");
