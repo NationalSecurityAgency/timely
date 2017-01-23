@@ -7,26 +7,27 @@ The subscription API allows the user to subscribe to metrics data using WebSocke
 ```json
 {
   "metric" : "sys.cpu.user",
-  "timestamp":1469028728091,
-  "value":1.0,
+  "timestamp": 1469028728091,
+  "value": 1.0,
   "tags":
   [
     {
-      "key":"rack",
-      "value":"r1"
+      "key": "rack",
+      "value": "r1"
     },{
-      "key":"tag3",
-      "value":"value3"
+      "key": "tag3",
+      "value": "value3"
     },{
-      "key":"tag4",
-      "value":"value4"
+      "key": "tag4",
+      "value": "value4"
     }
   ],
-  "subscriptionId":"<unique id>"
+  "subscriptionId": "<unique id>",
+  "complete": false
 }
 ```
 
-The Metric response contains the metric name, tag set, value for the metric, and the timestamp.
+The Metric response contains the metric name, tag set, value for the metric, and the timestamp. Unlike the timeseries api, the subscription responses will include the `viz` tag if it exists on the data.
 
 ## Create Operation
 
@@ -49,17 +50,19 @@ Initialize this WebSocket connection for subscription requests. This method does
   "metric" : "sys.cpu.user",
   "tags" : null,
   "startTime" : null,
+  "endTime" : null,
   "delayTime" : 1000
 }
 ```
 
-Subscribe to metrics that match the metric name and optional tag set. Only one subscription per `metric` is supported. The Timely server will return [Metric] (#metric-response) responses over the WebSocket channel that match the `metric` and `tags` in the request. The Timely server will return metrics that are older than the `startTime`, which can be zero to return all currently stored data. When all data has been returned, the Timely server will wait `delayTime` ms before looking for new data. The Timely server maintains a pointer to the last metric returned, so it will not return data that is newly inserted but older than the last returned metric. Use the `timely.websocket.subscription-lag` server configuration property to determine how close to current time the subscriptions will be. This will depend on your deployment. For example, if the `timely.accumulo.write.latency` configuration property is 30s, then you may want to set the lag to greater than 30s to ensure that all data has arrived.
+Subscribe to metrics that match the metric name and optional tag set. Only one subscription per `metric` is supported. The Timely server will return [Metric] (#metric-response) responses over the WebSocket channel that match the `metric` and `tags` in the request. The Timely server will return metrics that are older than the `startTime`, which can be zero to return all currently stored data. When all data has been returned, the Timely server will either send a completed message, or wait `delayTime` ms before looking for new data, depending on the value of endTime. If endTime has been specified, then the Timely server will send a final message with `complete` set to true. Otherwise, the Timely server maintains a pointer to the last metric returned, so it will not return data that is newly inserted but older than the last returned metric. Use the `timely.websocket.subscription-lag` server configuration property to determine how close to current time the subscriptions will be. This will depend on your deployment. For example, if the `timely.accumulo.write.latency` configuration property is 30s, then you may want to set the lag to greater than 30s to ensure that all data has arrived.
 
 Attribute | Type | Description
 ----------|------|------------
 metric | string | metric name
 tags | map | (Optional) Map of K,V strings to use in the query.
 startTime | long | (Optional, default 0) Return metrics after this time (in ms)
+endTime | long | (Optional, default 0) If specified, stop returning data at this time (in ms)
 delayTime | long | Wait time to look for the arrival of new data.
 
 ## Remove Operation

@@ -23,7 +23,7 @@ To deploy Timely with a running Accumulo instance you will need to modify the `c
 
 ## SSL Setup
 
-To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the `timely.security.ssl.key-password` property if there is no password for your private key.
+To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the `timely.security.ssl.key-password` property if there is no password for your private key. In a successful setup, you should only need to add the Timely Certificate Authority to your web browser.
 
 ### Creating your own SSL keys and certificates
 
@@ -37,7 +37,7 @@ Create a private key
 
 Create a certificate request using the private key
 
-`openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem`
+`openssl req -x509 -new -key CA.key -sha256 -subj '/C=US/ST=Confusion/L=Here/O=Timely/OU=CA/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1' -nodes -days 365 -out CA.pem`
 
 #### Create your SSL material for Grafana
 
@@ -47,7 +47,7 @@ Create the private key for the Grafana server
 
 Generate a certificate signing request (CSR) with our Grafana private key
 
-`openssl req -new -key grafana.key -sha256 -nodes -out grafana.csr`
+`openssl req -new -key grafana.key -sha256 -subj '/C=US/ST=Confusion/L=Here/O=Grafana/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1' -nodes -out grafana.csr`
 
 Use the CSR and the CA to create a certificate for the server (a reply to the CSR)
 
@@ -130,6 +130,10 @@ timely.websocket.ip | The IP address where the Timely server is listening for we
 timely.websocket.port | The port that will be used for processing web socket requests |
 timely.websocket.timeout | Number of seconds with no client ping response before closing subscription | 60
 timely.websocket.subscription-lag | Number of seconds that subscriptions should lag to account for latency | 120
+timely.websocket.scanner-batch-size | Accumulo Scanner batch size | 5000
+timely.websocket.flush-interval-seconds | Time in seconds that Timely will send a batch of subscription responses to the client | 30
+timely.websocket.scanner-read-ahead | Accumulo Scanner Readahead threshold | 1
+timely.websocket.subscription-batch-size | Maximum number of metric responses in a batch sent back to the client | 1000
 timely.meta-cache.expiration-minutes | Number of minutes after which unaccessed meta information will be purged from the meta cache | 60
 timely.meta-cache.initial-capacity | Initial capacity of the meta cache | 2000
 timely.meta-cache.max-capacity | Maximum capacity of the meta cache | 10000

@@ -1,5 +1,21 @@
 # Release Notes
 
+## 0.0.4
+
+### FEATURES
+
+- Added a Timely client library that contains Java code for interacting with the Timely API. Not all operations are finished.
+- Added an analytics module for writing Apache Flink jobs
+
+### PERFORMANCE
+
+- AgeOff performance is greatly improved with a new iterator
+- Added netty-transport-native-epoll as an optional runtime dependency
+
+### NOTES
+
+- Timely has not been tested with Grafana 4.x
+
 ## 0.0.3
 
 ### FEATURES

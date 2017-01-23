@@ -1,6 +1,6 @@
 # Standalone Quick Start
 
-1. Install latest version of Grafana (3.0.4 at time of writing)
+1. Install latest version of Grafana that works with Timely
 2. Create a grafana configuration file (e.g: `conf/settings.ini`)
   1. `protocol = https`
   2. `http_addr = localhost`

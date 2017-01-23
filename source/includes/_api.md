@@ -22,3 +22,7 @@ Add         |   |   |   | X
 Remove      |   |   |   | X
 Close       |   |   |   | X
 
+# Timely Client
+
+Java Timely client library was started in 0.0.4, it is not complete, but what is done does work. The client library includes classes for communicating over all the protocols (UDP, TCP, HTTPS, WSS).
+

@@ -2,7 +2,7 @@
 
 ## Securing the Transport
 
-Timely only exposes two operations over a non-secure transport, one to the version of the server and the other to insert data. All other operations are protected by either HTTPS or WSS protocols. The server [configuration] (#configuration) allows the user to change many of the security settings such as: CORS origins, specific SSL/TLS ciphers, duration of the HTTP session cookie, and more.
+Timely only exposes two operations over a non-secure transport, one to get the version of the server and the other to insert data. All other operations are protected by either HTTPS or WSS protocols. The server [configuration] (#configuration) allows the user to change many of the security settings such as: CORS origins, specific SSL/TLS ciphers, duration of the HTTP session cookie, and more.
 
 ### HTTP Strict Transport Security
 
