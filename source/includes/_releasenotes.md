@@ -15,6 +15,7 @@
 ### NOTES
 
 - Timely has not been tested with Grafana 4.x
+- The aggregation function (not the downsample aggregration function) in Grafana did not work prior to this release, it now works.
 
 ## 0.0.3
 
