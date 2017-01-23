@@ -113,6 +113,38 @@ public class HttpApiIT extends OneWaySSLBase {
     }
 
     @Test
+    public void testMetricsURLEncoded() throws Exception {
+        final Server s = new Server(conf);
+        s.run();
+        try {
+            // @formatter:off
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag%31=value%31 tag%32=value%32",
+                    "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag%33=value%33 tag%34=value%34",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag%33=value%33 tag%34=value%34 viz=(a|b|c)",
+                    "zzzz 1234567892 1.0 host=localhost");
+
+            // Latency in TestConfiguration is 2s, wait for it
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+
+            String metrics = "https://localhost:54322/api/metrics";
+            // Test prefix matching
+            String result = query(metrics);
+            Document doc = Jsoup.parse(result);
+            Elements tableData = doc.select("td");
+
+            assertEquals(1, tableData.select(":contains(sys.cpu.user)").size());
+            assertEquals(1, tableData.select(":contains(tag1=value1 tag2=value2)").size());
+            assertEquals(1, tableData.select(":contains(sys.cpu.idle)").size());
+            assertEquals(1, tableData.select(":contains(tag3=value3 tag4=value4)").size());
+            assertEquals(1, tableData.select(":contains(zzzz)").size());
+            assertEquals(1, tableData.select(":contains(host=localhost)").size());
+            // @formatter:on
+        } finally {
+            s.shutdown();
+        }
+    }
+
+    @Test
     public void testMetricsJson() throws Exception {
         // @formatter:off
 

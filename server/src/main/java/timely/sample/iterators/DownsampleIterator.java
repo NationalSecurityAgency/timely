@@ -72,7 +72,7 @@ public class DownsampleIterator extends WrappingIterator {
             try {
                 super.next();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Downstream next() failed", e);
             }
         }
         return last != null;

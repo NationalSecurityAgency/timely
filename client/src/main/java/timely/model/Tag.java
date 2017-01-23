@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import timely.model.parse.TagParser;
 
 import java.io.Serializable;
@@ -21,7 +23,6 @@ public class Tag implements Comparable<Tag>, Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Joiner equalJoiner = Joiner.on("=");
     private static final TagParser tagParser = new TagParser();
 
     private String key;
@@ -81,12 +82,12 @@ public class Tag implements Comparable<Tag>, Serializable {
      * @return
      */
     public String join() {
-        return equalJoiner.join(key, value);
+        return tagParser.combine(this);
     }
 
     @Override
     public String toString() {
-        return "Tag{" + equalJoiner.join(this.getKey(), this.getValue()) + "}";
+        return "Tag{" + join() + "}";
     }
 
     @Override
@@ -100,12 +101,12 @@ public class Tag implements Comparable<Tag>, Serializable {
             return true;
         if (null == o || getClass() != o.getClass())
             return false;
-
-        return this.toString().equals(o.toString());
+        Tag other = (Tag) o;
+        return new EqualsBuilder().append(this.key, other.key).append(this.value, other.value).isEquals();
     }
 
     @Override
     public int compareTo(Tag other) {
-        return this.toString().compareTo(other.toString());
+        return new CompareToBuilder().append(this.key, other.key).append(this.value, other.value).toComparison();
     }
 }

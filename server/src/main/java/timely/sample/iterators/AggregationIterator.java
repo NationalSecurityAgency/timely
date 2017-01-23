@@ -6,16 +6,14 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
-import org.apache.commons.lang3.StringUtils;
 import timely.model.Tag;
+import timely.model.parse.TagListParser;
 import timely.sample.Aggregation;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 
 import java.io.*;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -45,15 +43,13 @@ public class AggregationIterator extends WrappingIterator {
             throws IOException {
         super.init(source, options, env);
         String aggClassname = options.get(AGGCLASS);
-        Class<? extends Aggregator> aggClass;
+        Class<? extends Aggregator> aggClass = null;
         try {
             aggClass = (Class<? extends Aggregator>) this.getClass().getClassLoader().loadClass(aggClassname);
+            tags = new HashSet<>(new TagListParser().parse(options.get(TAGS)));
+            aggregation = new Aggregation(aggClass.newInstance());
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
-        }
-        tags = deserializeTags(options.get(TAGS));
-        try {
-            aggregation = new Aggregation(aggClass.newInstance());
         } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException("Error creating aggregator class: " + aggClass, e);
         }
@@ -85,7 +81,7 @@ public class AggregationIterator extends WrappingIterator {
             try {
                 super.next();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Downstream next() failed", e);
             }
         }
         return last != null;
@@ -117,45 +113,8 @@ public class AggregationIterator extends WrappingIterator {
     }
 
     public static void setAggregationOptions(IteratorSetting is, Map<String, String> tags, String classname) {
-        is.addOption(TAGS, serializeTags(tags));
+        is.addOption(TAGS, new TagListParser().combine(tags));
         is.addOption(AGGCLASS, classname);
-    }
-
-    public static String serializeTags(Map<String, String> tags) {
-        StringBuilder builder = new StringBuilder();
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
-            if (builder.length() > 0) {
-                builder.append(',');
-            }
-            builder.append(escape(entry.getKey())).append('=').append(escape(entry.getValue()));
-        }
-        return builder.toString();
-    }
-
-    private static String escape(String tag) {
-        try {
-            return URLEncoder.encode(tag, "UTF8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static String unescape(String tag) {
-        try {
-            return URLDecoder.decode(tag, "UTF8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static Set<Tag> deserializeTags(String tags) {
-        Set<Tag> tagSet = new HashSet<>();
-        String[] tagArray = StringUtils.split(tags, ',');
-        for (String tagStr : tagArray) {
-            String[] tagParts = StringUtils.split(tagStr, '=');
-            tagSet.add(new Tag(unescape(tagParts[0]), unescape(tagParts[1])));
-        }
-        return tagSet;
     }
 
     @SuppressWarnings("unchecked")
