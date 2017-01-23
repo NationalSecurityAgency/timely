@@ -1,9 +1,9 @@
-import Timely
-import Analytics
+import TimelyMetric
+import TimelyAnalytic
 
 hostport = "127.0.0.1:4244"
-timelyMetric = Timely.TimelyMetric(hostport, '', None, None, None, 48, None).fetch()
-Analytics.analytics(timelyMetric, alertConfig={
+timelyMetric = TimelyMetric.TimelyMetric(hostport, '', None, None, None, 48, None).fetch()
+TimelyAnalytic.find_alerts(timelyMetric, TimelyAnalyticConfiguration({
     'includeColRegex' : None,
     'excludeColRegex' : None,
     'groupByColumn' : 'instance',
@@ -14,5 +14,10 @@ Analytics.analytics(timelyMetric, alertConfig={
     'max_threshold' : None,
     'alert_percentage' : 25,
     'boolean' : 'and'
-})
+    'display' : 'all',
+    'output_dir' : '/path/to/output'
+}))
+
+if alert is not None:
+    alert.graph()
 
