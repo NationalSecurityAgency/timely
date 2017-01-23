@@ -9,6 +9,8 @@ import timely.sample.aggregators.Sum;
 
 public interface Aggregator {
 
+    String NONE = "none";
+
     /**
      * Given the current value, and the current count, incorporate the new value
      * into current and return the result.
@@ -36,6 +38,9 @@ public interface Aggregator {
     double last(double current, int count);
 
     static Class<? extends Aggregator> getAggregator(String aggregatorName) {
+        if (aggregatorName == null) {
+            return null;
+        }
         switch (aggregatorName) {
             case "sum":
                 return Sum.class;
@@ -50,7 +55,7 @@ public interface Aggregator {
             case "count":
                 return Count.class;
             default:
-                return Avg.class;
+                return null;
         }
     }
 }
