@@ -6,6 +6,7 @@
 
 - Added a Timely client library that contains Java code for interacting with the Timely API. Not all operations are finished.
 - Added an analytics module for writing Apache Flink jobs
+- Exposed Subscription Scanner configuration settings in the Timely configuration
 
 ### PERFORMANCE
 
