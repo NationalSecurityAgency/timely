@@ -14,11 +14,11 @@
   background-color: #272822;
 }
 .highlight .err {
-  color: #151515;
-  background-color: #ac4142;
+  color: #272822;
+  background-color: #f92672;
 }
 .highlight .c, .highlight .cd, .highlight .cm, .highlight .c1, .highlight .cs {
-  color: #505050;
+  color: #75715e;
 }
 .highlight .cp {
   color: #f4bf75;
@@ -27,45 +27,45 @@
   color: #f4bf75;
 }
 .highlight .o, .highlight .ow {
-  color: #d0d0d0;
+  color: #f8f8f2;
 }
 .highlight .p, .highlight .pi {
-  color: #d0d0d0;
+  color: #f8f8f2;
 }
 .highlight .gi {
-  color: #90a959;
+  color: #a6e22e;
 }
 .highlight .gd {
-  color: #ac4142;
+  color: #f92672;
 }
 .highlight .gh {
-  color: #6a9fb5;
-  background-color: #151515;
+  color: #66d9ef;
+  background-color: #272822;
   font-weight: bold;
 }
 .highlight .k, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kv {
-  color: #aa759f;
+  color: #ae81ff;
 }
 .highlight .kc {
-  color: #d28445;
+  color: #fd971f;
 }
 .highlight .kt {
-  color: #d28445;
+  color: #fd971f;
 }
 .highlight .kd {
-  color: #d28445;
+  color: #fd971f;
 }
 .highlight .s, .highlight .sb, .highlight .sc, .highlight .sd, .highlight .s2, .highlight .sh, .highlight .sx, .highlight .s1 {
-  color: #90a959;
+  color: #a6e22e;
 }
 .highlight .sr {
-  color: #75b5aa;
+  color: #a1efe4;
 }
 .highlight .si {
-  color: #8f5536;
+  color: #cc6633;
 }
 .highlight .se {
-  color: #8f5536;
+  color: #cc6633;
 }
 .highlight .nn {
   color: #f4bf75;
@@ -77,13 +77,13 @@
   color: #f4bf75;
 }
 .highlight .na {
-  color: #6a9fb5;
+  color: #66d9ef;
 }
 .highlight .m, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .il, .highlight .mo, .highlight .mb, .highlight .mx {
-  color: #90a959;
+  color: #a6e22e;
 }
 .highlight .ss {
-  color: #90a959;
+  color: #a6e22e;
 }
     </style>
     <link href="stylesheets/screen.css" rel="stylesheet" media="screen" />
@@ -95,11 +95,11 @@
     <a href="#" id="nav-button">
       <span>
         NAV
-        <img src="images/navbar.png" />
+        <img src="images/navbar.png" alt="Navbar" />
       </span>
     </a>
     <div class="tocify-wrapper">
-      <img src="images/logo.png" />
+      <img src="images/logo.png" alt="Logo" />
         <div class="lang-selector">
               <a href="#" data-language-name="plaintext">TCP</a>
               <a href="#" data-language-name="http">HTTP</a>
@@ -172,7 +172,7 @@ The standalone server will not save your metric data across restarts.
 
 <h2 id="ssl-setup">SSL Setup</h2>
 
-<p>To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the <code class="prettyprint">timely.security.ssl.key-password</code> property if there is no password for your private key.</p>
+<p>To user Timely, both Timely and Grafana will need to use SSL certificates. Grafana requires a PEM encoded certificate file and an un-encrypted PEM private key file. Timely requires a PEM encoded certificate file and a PKCS#8 encoded private key file. Timely supports private keys with and without a password, just comment out the <code class="prettyprint">timely.security.ssl.key-password</code> property if there is no password for your private key. In a successful setup, you should only need to add the Timely Certificate Authority to your web browser.</p>
 
 <h3 id="creating-your-own-ssl-keys-and-certificates">Creating your own SSL keys and certificates</h3>
 
@@ -186,7 +186,7 @@ The standalone server will not save your metric data across restarts.
 
 <p>Create a certificate request using the private key</p>
 
-<p><code class="prettyprint">openssl req -x509 -new -key CA.key -sha256 -nodes -days 365 -out CA.pem</code></p>
+<p><code class="prettyprint">openssl req -x509 -new -key CA.key -sha256 -subj &#39;/C=US/ST=Confusion/L=Here/O=Timely/OU=CA/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1&#39; -nodes -days 365 -out CA.pem</code></p>
 
 <h4 id="create-your-ssl-material-for-grafana">Create your SSL material for Grafana</h4>
 
@@ -196,7 +196,7 @@ The standalone server will not save your metric data across restarts.
 
 <p>Generate a certificate signing request (CSR) with our Grafana private key</p>
 
-<p><code class="prettyprint">openssl req -new -key grafana.key -sha256 -nodes -out grafana.csr</code></p>
+<p><code class="prettyprint">openssl req -new -key grafana.key -sha256 -subj &#39;/C=US/ST=Confusion/L=Here/O=Grafana/OU=Server/CN=localhost/emailAddress=noreply@localhost/subjectAltName=DNS.1=127.0.0.1&#39; -nodes -out grafana.csr</code></p>
 
 <p>Use the CSR and the CA to create a certificate for the server (a reply to the CSR)</p>
 
@@ -221,11 +221,10 @@ The standalone server will not save your metric data across restarts.
 <p><code class="prettyprint">openssl pkcs8 -topk8 -inform PEM -outform PEM -in timely.key -out timely-pkcs8.key</code></p>
 
 <h2 id="configuration">Configuration</h2>
-<pre class="highlight yaml"><code><span class="s">timely</span><span class="pi">:</span>
-   <span class="s">accumulo</span><span class="pi">:</span>
-       <span class="s">instance-name</span><span class="pi">:</span> <span class="s">MyInstanceName</span>
+<pre class="highlight yaml"><code><span class="na">timely</span><span class="pi">:</span>
+   <span class="na">accumulo</span><span class="pi">:</span>
+       <span class="na">instance-name</span><span class="pi">:</span> <span class="s">MyInstanceName</span>
 </code></pre>
-
 <p>The default configuration file type for Timely is a YAML. The configuration is read internally using Spring Boot, and therefore supports all of the configuration styles supported by Spring Boot. See <a href="http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config">here</a> and <a href="http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-yaml">here</a> for more details. In YAML, a property such as timely.accumulo.instance-name=MyInstanceName (which can also be timely.accumulo.instanceName) would look like the example on the right.</p>
 
 <p>The <code class="prettyprint">NUM_SERVER_THREADS</code> variable in the <code class="prettyprint">timely-server.sh</code> script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the <code class="prettyprint">conf</code> directory supports the following properties:</p>
@@ -446,6 +445,26 @@ The standalone server will not save your metric data across restarts.
 <td>120</td>
 </tr>
 <tr>
+<td>timely.websocket.scanner-batch-size</td>
+<td>Accumulo Scanner batch size</td>
+<td>5000</td>
+</tr>
+<tr>
+<td>timely.websocket.flush-interval-seconds</td>
+<td>Time in seconds that Timely will send a batch of subscription responses to the client</td>
+<td>30</td>
+</tr>
+<tr>
+<td>timely.websocket.scanner-read-ahead</td>
+<td>Accumulo Scanner Readahead threshold</td>
+<td>1</td>
+</tr>
+<tr>
+<td>timely.websocket.subscription-batch-size</td>
+<td>Maximum number of metric responses in a batch sent back to the client</td>
+<td>1000</td>
+</tr>
+<tr>
 <td>timely.meta-cache.expiration-minutes</td>
 <td>Number of minutes after which unaccessed meta information will be purged from the meta cache</td>
 <td>60</td>
@@ -639,7 +658,7 @@ Timely stores your metric N times in the metrics table, where N is the number of
 
 <h2 id="securing-the-transport">Securing the Transport</h2>
 
-<p>Timely only exposes two operations over a non-secure transport, one to the version of the server and the other to insert data. All other operations are protected by either HTTPS or WSS protocols. The server <a href="#configuration">configuration</a> allows the user to change many of the security settings such as: CORS origins, specific SSL/TLS ciphers, duration of the HTTP session cookie, and more.</p>
+<p>Timely only exposes two operations over a non-secure transport, one to get the version of the server and the other to insert data. All other operations are protected by either HTTPS or WSS protocols. The server <a href="#configuration">configuration</a> allows the user to change many of the security settings such as: CORS origins, specific SSL/TLS ciphers, duration of the HTTP session cookie, and more.</p>
 
 <h3 id="http-strict-transport-security">HTTP Strict Transport Security</h3>
 
@@ -658,7 +677,7 @@ Timely stores your metric N times in the metrics table, where N is the number of
           <h1 id="standalone-quick-start">Standalone Quick Start</h1>
 
 <ol>
-<li>Install latest version of Grafana (3.0.4 at time of writing)</li>
+<li>Install latest version of Grafana that works with Timely</li>
 <li>Create a grafana configuration file (e.g: <code class="prettyprint">conf/settings.ini</code>)
 
 <ol>
@@ -782,56 +801,56 @@ the dependencies with <code class="prettyprint">npm</code> and run <code class="
 
 <p>Login to Grafana and the Home dashboard should show the Timely App is available.</p>
 
-<p><img alt="App Available Home" src="images/screencaps/AppAvailableHome.png" /></p>
+<p><img src="images/screencaps/AppAvailableHome.png" alt="App Available Home" /></p>
 
 <h3 id="enable-timely-app">Enable Timely App</h3>
 
 <p>Once installed, the Timely App must be enabled in Grafana. Clicking the Enable Now
 link on the Home Dashboard or navigate to the app list in the Grafana Plugins page.</p>
 
-<p><img alt="AppInstalled" src="images/screencaps/AppInstalled.png" /></p>
+<p><img src="images/screencaps/AppInstalled.png" alt="AppInstalled" /></p>
 
 <p>These will both bring you to the enable page.</p>
 
-<p><img alt="EnablePage" src="images/screencaps/EnableApp.png" /></p>
+<p><img src="images/screencaps/EnableApp.png" alt="EnablePage" /></p>
 
 <p>Once enabled, Timely should appear in Grafana menu.</p>
 
-<p><img alt="TimelyEnabled" src="images/screencaps/AppEnabled.png" /></p>
+<p><img src="images/screencaps/AppEnabled.png" alt="TimelyEnabled" /></p>
 
 <h3 id="create-datasource">Create Datasource</h3>
 
 <p>Go to the Grafana Data Sources menu and add a new Data Source. In the Type drop down menu, select Timely and the Timely Server settings UI will populate.</p>
 
-<p><img alt="Server Settings" src="images/screencaps/AddDatasource.png" /></p>
+<p><img src="images/screencaps/AddDatasource.png" alt="Server Settings" /></p>
 
 <p>Fill in the timely server details as required. The Browser Test opens a new browser window to allow you to add an exception to the Timely server cert. This is only necessary if using self-signed certs.</p>
 
 <p>Click Add, and the datasource will be tested and added.</p>
 
-<p><img alt="Datasource Added" src="images/screencaps/SavedDatasource.png" /></p>
+<p><img src="images/screencaps/SavedDatasource.png" alt="Datasource Added" /></p>
 
 <p>Clicking the Dashboards tab will allow you to import a dashboard to display Timely&rsquo;s internal metrics. Depending on the security setup, the dashboard may not show any data until the Login process is completed.</p>
 
-<p><img alt="Import Dashboard" src="images/screencaps/ImportDashboard.png" /></p>
+<p><img src="images/screencaps/ImportDashboard.png" alt="Import Dashboard" /></p>
 
 <h3 id="login">Login</h3>
 
 <p>From the Timely App menu, select the Login page. This will present you a login prompt to authenticate you with the Timely datasources. This will set a cookie in your Browser
 that will be passed with the dashboard queries and Timely will pass your Accumulo column visibilities during data scans.</p>
 
-<p><img alt="Login" src="images/screencaps/Login.png" />
+<p><img src="images/screencaps/Login.png" alt="Login" />
 View dashboard - this should now be working</p>
 
 <p>If more than one Timely datasource is defined, multiple Login prompts will be available. Here, the top data source was defined with BasicAuths checked, and the second one assumes a valid Certificate is loaded in the browser and will be passed to Timely when Login is clicked.</p>
 
-<p><img alt="Multi Login" src="images/screencaps/MultiDatasourceLogin.png" /></p>
+<p><img src="images/screencaps/MultiDatasourceLogin.png" alt="Multi Login" /></p>
 
 <h3 id="metrics-browser">Metrics Browser</h3>
 
 <p>To help browsing the data in Timely, the Timely menu also contains a Metrics link to take you to the Metrics Broswer</p>
 
-<p><img alt="Metrics Browser" src="images/screencaps/MetricsBrowser.png" /></p>
+<p><img src="images/screencaps/MetricsBrowser.png" alt="Metrics Browser" /></p>
 
 <p>Timely data sources can be selected from the drop down menu and the results can be filtered by typing in the filter box.</p>
 
@@ -839,7 +858,7 @@ View dashboard - this should now be working</p>
 
 <p>Currently the imported dashboard has one plot for timely ingest metrics, and three other plots to display the artificial data inserted by the <code class="prettyprint">timely.util.InsertTestData</code> program.</p>
 
-<p><img alt="Graphs" src="images/screencaps/Graphs.png" /></p>
+<p><img src="images/screencaps/Graphs.png" alt="Graphs" /></p>
 
           <h1 id="plugins-for-collectd">Plugins for CollectD</h1>
 
@@ -860,7 +879,6 @@ View dashboard - this should now be working</p>
         <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
 <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
 </code></pre>
-
 <p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-timely-plugin directory. Place the resulting jar file somewhere on the local filesystem and the plugin configuration to the right to the collectd configuration file.</p>
 
 <h2 id="collectd-plugin-to-send-data-to-nsq">CollectD plugin to send data to <a href="http://nsq.io/">NSQ</a></h2>
@@ -878,7 +896,6 @@ View dashboard - this should now be working</p>
         <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
 <span class="o">&lt;/</span><span class="n">Plugin</span><span class="o">&gt;</span>
 </code></pre>
-
 <p>To build, run <code class="prettyprint">mvn clean package</code> in the collectd-nsq-plugin directory. Place the resulting jar file somewhere on the local filesystem and add the plugin configuration to the right to the collectd configuration file.</p>
 
 <h2 id="collecting-metrics-from-hadoop-and-accumulo">Collecting Metrics from Hadoop and Accumulo</h2>
@@ -921,7 +938,6 @@ View dashboard - this should now be working</p>
 <span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
 <span class="n">reducetask</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">ReduceTask</span>
 </code></pre>
-
 <p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2.properties file.</p>
 
 <h3 id="configuring-accumulo-to-use-the-statsd-sink">Configuring Accumulo to use the StatsD sink</h3>
@@ -941,7 +957,6 @@ View dashboard - this should now be working</p>
 <span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">skip</span><span class="o">.</span><span class="n">hostname</span><span class="o">=</span><span class="n">true</span>
 <span class="n">accumulo</span><span class="o">.</span><span class="n">sink</span><span class="o">.</span><span class="n">statsd</span><span class="o">-</span><span class="n">thrift</span><span class="o">.</span><span class="n">service</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">Thrift</span>
 </code></pre>
-
 <p>Uncomment and configure the <code class="prettyprint">*.period</code> property, then append the content to the right to the hadoop-metrics2-accumulo.properties file.</p>
 
           <h1 id="api-overview">API Overview</h1>
@@ -1049,54 +1064,46 @@ View dashboard - this should now be working</p>
 </tr>
 </tbody></table>
 
+<h1 id="timely-client">Timely Client</h1>
+
+<p>Java Timely client library was started in 0.0.4, it is not complete, but what is done does work. The client library includes classes for communicating over all the protocols (UDP, TCP, HTTPS, WSS).</p>
+
           <h1 id="general-api">General API</h1>
 
 <h2 id="version-operation">Version Operation</h2>
 <pre class="highlight plaintext"><code>echo "version" | nc &lt;host&gt; &lt;port&gt;
-</code></pre>
-<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/version</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-</code></pre>
-<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/version</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
+</code></pre><pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/version</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre><pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/version</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre><pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"version"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>Get the version of the Timely server. Returns a <a href="#version-response">Version</a> response.</p>
 
 <h2 id="version-response">Version Response</h2>
 <pre class="highlight plaintext"><code>0.0.2
-</code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+</code></pre><pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
 <span class="s">0.0.2</span>
-</code></pre>
-<pre class="highlight json"><code><span class="mf">0.0</span><span class="err">.</span><span class="mi">2</span><span class="w">
+</code></pre><pre class="highlight json"><code><span class="mf">0.0</span><span class="err">.</span><span class="mi">2</span><span class="w">
 </span></code></pre>
-
 <p>Represents the version of the Timely server. Contents are a single string with the version.</p>
 
 <h2 id="login-operation">Login Operation</h2>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/login</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-</code></pre>
-<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/login</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre><pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/login</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="s">{</span>
 <span class="s">  "username" : "user",</span>
 <span class="s">  "password" : "pass"</span>
 <span class="s">}</span>
 </code></pre>
-
 <p>Timely uses Spring Security for user authentication. When successful, a HTTP Set-Cookie header is returned in the response with the name <code class="prettyprint">TSESSIONID</code>. If a user does not log in, and anonymous access is enabled, then the user will only see data that is not marked. If a user does not log in, and anonymous access is disabled, then any operation that requires authentication will return an error. HTTP GET and POST methods are supported, the GET request is used when client SSL authentication is configured. When using the HTTP protocol, the <code class="prettyprint">TSESSIONID</code> cookie should be sent along with the request. For the WebSocket protocol the client will need to add the <code class="prettyprint">TSESSIONID</code> cookie value to the request in the <code class="prettyprint">sessionId</code> property. If using the WebSocket protocol with anonymous access, then use a unique <code class="prettyprint">sessionId</code> value for the duration of the client session. Returns a <a href="#login-response">Login</a> response.</p>
 
 <h2 id="login-response">Login Response</h2>
 <pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
 <span class="s">Set-Cookie TSESSIONID=e480176b-b0d4-4c96-8437-55eef3f1f6d8; Max-Age=86400; Expires=Thu, 14 Jul 2016 13:57:20 GMT; Domain=localhost; Secure; HTTPOnly</span>
+</code></pre><pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">401</span> <span class="ne">Unauthorized</span>
+</code></pre><pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">500</span> <span class="ne">Internal Server Error</span>
 </code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">401</span> <span class="ne">Unauthorized</span>
-</code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">500</span> <span class="ne">Internal Server Error</span>
-</code></pre>
-
 <p>Login response contains an error or a HTTP cookie for use in subsequent calls.</p>
 
           <h1 id="timeseries-api">Timeseries API</h1>
@@ -1106,8 +1113,7 @@ View dashboard - this should now be working</p>
 <h2 id="put-operation">Put Operation</h2>
 <pre class="highlight plaintext"><code>echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc &lt;host&gt; &lt;tcp_port&gt;
 echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc -u &lt;host&gt; &lt;udp_port&gt;
-</code></pre>
-<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/put</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre><pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/put</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="s">{</span>
 <span class="s">  "metric" : "sys.cpu.user",</span>
 <span class="s">  "timestamp" : 1234567890,</span>
@@ -1123,8 +1129,7 @@ echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc -u &lt;host&
 <span class="s">    }</span>
 <span class="s">  ]</span>
 <span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
+</code></pre><pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"put"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"timestamp"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1234567890</span><span class="p">,</span><span class="w">
@@ -1141,7 +1146,6 @@ echo "put sys.cpu.user 1234567890 1.0 tag1=value1 tag2=value2" | nc -u &lt;host&
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>The put operation is used for sending time series data to Timely. A time series metric is composed of the following items:</p>
 
 <table><thead>
@@ -1179,15 +1183,13 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 
 <h2 id="suggest-operation">Suggest Operation</h2>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/suggest?type=metrics&amp;q=sys.cpu.u&amp;max=30</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-</code></pre>
-<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/suggest</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre><pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/suggest</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="s">{</span>
 <span class="s">  "type" : "metrics",</span>
 <span class="s">  "q" : "sys.cpu",</span>
 <span class="s">  "max" : 30</span>
 <span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
+</code></pre><pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"suggest"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"sessionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;value of TSESSIONID&gt;"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"type"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"metrics"</span><span class="p">,</span><span class="w">
@@ -1195,7 +1197,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="nt">"max"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>The suggest operation is used to find metrics, tag keys, or tag values that match the specified pattern. Returns a <a href="#suggest-response">Suggest</a> response. Input parameters are:</p>
 
 <table><thead>
@@ -1229,24 +1230,19 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <span class="s">  "sys.cpu.user",</span>
 <span class="s">  "sys.cpu.wait"</span>
 <span class="s">]</span>
-</code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">401</span> <span class="ne">Unauthorized</span>
-</code></pre>
-<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">500</span> <span class="ne">Internal Server Error</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">[</span><span class="w">
+</code></pre><pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">401</span> <span class="ne">Unauthorized</span>
+</code></pre><pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">500</span> <span class="ne">Internal Server Error</span>
+</code></pre><pre class="highlight json"><code><span class="p">[</span><span class="w">
   </span><span class="s2">"sys.cpu.idle"</span><span class="p">,</span><span class="w">
   </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
   </span><span class="s2">"sys.cpu.wait"</span><span class="w">
 </span><span class="p">]</span><span class="w">
 </span></code></pre>
-
 <p>The response to the suggest operation contains a list of suggestions based on the request parameters or an error. An HTTP 401 error will be returned on a missing or unknown <code class="prettyprint">TSESSIONID</code> cookie. A TextWebSocketFrame will be returned on a successful WebSocket request, otherwise a CloseWebSocketFrame will be returned.</p>
 
 <h2 id="lookup-operation">Lookup Operation</h2>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/search/lookup?m=sys.cpu.user{host=*}&amp;limit=3000</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-</code></pre>
-<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/search/lookup</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre><pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/search/lookup</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="s">{</span>
 <span class="s">  "metric": "sys.cpu.user",</span>
 <span class="s">  "limit": 3000,</span>
@@ -1257,8 +1253,7 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <span class="s">    }</span>
 <span class="s">  ]</span>
 <span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
+</code></pre><pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"lookup"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"sessionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;value of TSESSIONID&gt;"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"metric"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
@@ -1271,7 +1266,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>The lookup operation is used to find information in the meta table associated with the supplied metric or tag input parameters. Returns a <a href="#lookup-response">Lookup</a> response.</p>
 
 <table><thead>
@@ -1324,8 +1318,7 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <span class="s">    }</span>
 <span class="s">  ]</span>
 <span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
+</code></pre><pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"LOOKUP"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"metric"</span><span class="p">:</span><span class="s2">"sys.cpu.idle"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"tags"</span><span class="p">:{</span><span class="w">
@@ -1345,7 +1338,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>The response to the lookup operation contains a set of metric names and tag set information that matches the request parameters. Response attributes are:</p>
 
 <table><thead>
@@ -1394,8 +1386,7 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 
 <h2 id="query-operation">Query Operation</h2>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/query?start=1356998400&amp;end=1356998460&amp;m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&amp;tsuid=sum:000001000002000042,000001000002000043</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-</code></pre>
-<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/query</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre><pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/query</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="s">{</span>
 <span class="s">  "start": 1356998400,</span>
 <span class="s">  "end": 1356998460,</span>
@@ -1438,8 +1429,7 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <span class="s">    }</span>
 <span class="s">  ]</span>
 <span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
+</code></pre><pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"operation"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"query"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"sessionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;value of TSESSIONID&gt;"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"start"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1356998400</span><span class="p">,</span><span class="w">
@@ -1477,7 +1467,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>The query operation is used to find time series data that matches the submitted query parameters. Returns a <a href="#query-response">Query</a> response.</p>
 
 <table><thead>
@@ -1517,8 +1506,7 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <span class="s">    "1468954530" : 3.0</span>
 <span class="s">  }</span>
 <span class="s">}</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">[{</span><span class="w">
+</code></pre><pre class="highlight json"><code><span class="p">[{</span><span class="w">
   </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"tags"</span><span class="w"> </span><span class="p">:{</span><span class="w">
     </span><span class="nt">"tag1"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"value1"</span><span class="w">
@@ -1530,7 +1518,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}]</span><span class="w">
 </span></code></pre>
-
 <p>The response to the query operation contains a set of an array of time series data points. Each array element contains the metric and associated set of tags along with the metric values and associated timestamps. Reponse attributes are:</p>
 
 <table><thead>
@@ -1589,26 +1576,26 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <h2 id="metric-response">Metric Response</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="mi">1469028728091</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"value"</span><span class="p">:</span><span class="mf">1.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">1469028728091</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w">
   </span><span class="nt">"tags"</span><span class="p">:</span><span class="w">
   </span><span class="p">[</span><span class="w">
     </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"key"</span><span class="p">:</span><span class="s2">"rack"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"value"</span><span class="p">:</span><span class="s2">"r1"</span><span class="w">
+      </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rack"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"r1"</span><span class="w">
     </span><span class="p">},{</span><span class="w">
-      </span><span class="nt">"key"</span><span class="p">:</span><span class="s2">"tag3"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"value"</span><span class="p">:</span><span class="s2">"value3"</span><span class="w">
+      </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tag3"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"value3"</span><span class="w">
     </span><span class="p">},{</span><span class="w">
-      </span><span class="nt">"key"</span><span class="p">:</span><span class="s2">"tag4"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"value"</span><span class="p">:</span><span class="s2">"value4"</span><span class="w">
+      </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tag4"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"value4"</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">],</span><span class="w">
-  </span><span class="nt">"subscriptionId"</span><span class="p">:</span><span class="s2">"&lt;unique id&gt;"</span><span class="w">
+  </span><span class="nt">"subscriptionId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;unique id&gt;"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"complete"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
-<p>The Metric response contains the metric name, tag set, value for the metric, and the timestamp.</p>
+<p>The Metric response contains the metric name, tag set, value for the metric, and the timestamp. Unlike the timeseries api, the subscription responses will include the <code class="prettyprint">viz</code> tag if it exists on the data.</p>
 
 <h2 id="create-operation">Create Operation</h2>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
@@ -1616,7 +1603,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="nt">"subscriptionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;unique id&gt;"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>Initialize this WebSocket connection for subscription requests. This method does not return a response.</p>
 
 <h2 id="add-operation">Add Operation</h2>
@@ -1626,11 +1612,11 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"tags"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
   </span><span class="nt">"startTime"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"endTime"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
   </span><span class="nt">"delayTime"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
-<p>Subscribe to metrics that match the metric name and optional tag set. Only one subscription per <code class="prettyprint">metric</code> is supported. The Timely server will return <a href="#metric-response">Metric</a> responses over the WebSocket channel that match the <code class="prettyprint">metric</code> and <code class="prettyprint">tags</code> in the request. The Timely server will return metrics that are older than the <code class="prettyprint">startTime</code>, which can be zero to return all currently stored data. When all data has been returned, the Timely server will wait <code class="prettyprint">delayTime</code> ms before looking for new data. The Timely server maintains a pointer to the last metric returned, so it will not return data that is newly inserted but older than the last returned metric. Use the <code class="prettyprint">timely.websocket.subscription-lag</code> server configuration property to determine how close to current time the subscriptions will be. This will depend on your deployment. For example, if the <code class="prettyprint">timely.accumulo.write.latency</code> configuration property is 30s, then you may want to set the lag to greater than 30s to ensure that all data has arrived.</p>
+<p>Subscribe to metrics that match the metric name and optional tag set. Only one subscription per <code class="prettyprint">metric</code> is supported. The Timely server will return <a href="#metric-response">Metric</a> responses over the WebSocket channel that match the <code class="prettyprint">metric</code> and <code class="prettyprint">tags</code> in the request. The Timely server will return metrics that are older than the <code class="prettyprint">startTime</code>, which can be zero to return all currently stored data. When all data has been returned, the Timely server will either send a completed message, or wait <code class="prettyprint">delayTime</code> ms before looking for new data, depending on the value of endTime. If endTime has been specified, then the Timely server will send a final message with <code class="prettyprint">complete</code> set to true. Otherwise, the Timely server maintains a pointer to the last metric returned, so it will not return data that is newly inserted but older than the last returned metric. Use the <code class="prettyprint">timely.websocket.subscription-lag</code> server configuration property to determine how close to current time the subscriptions will be. This will depend on your deployment. For example, if the <code class="prettyprint">timely.accumulo.write.latency</code> configuration property is 30s, then you may want to set the lag to greater than 30s to ensure that all data has arrived.</p>
 
 <table><thead>
 <tr>
@@ -1655,6 +1641,11 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <td>(Optional, default 0) Return metrics after this time (in ms)</td>
 </tr>
 <tr>
+<td>endTime</td>
+<td>long</td>
+<td>(Optional, default 0) If specified, stop returning data at this time (in ms)</td>
+</tr>
+<tr>
 <td>delayTime</td>
 <td>long</td>
 <td>Wait time to look for the arrival of new data.</td>
@@ -1668,7 +1659,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="nt">"metric"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"sys.cpu.user"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>Remove the subscription for this <code class="prettyprint">metric</code>. Data for this subscription will no longer be sent back to the user.</p>
 
 <table><thead>
@@ -1691,7 +1681,6 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
   </span><span class="nt">"subscriptionId"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;unique id&gt;"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
-
 <p>Remove all subscriptions associated with this WebSocket channel.</p>
 
           <h1 id="developer-information">Developer Information</h1>
@@ -1826,6 +1815,30 @@ You should see metrics show up after a minute or two. If you do not, check for a
 </aside>
 
           <h1 id="release-notes">Release Notes</h1>
+
+<h2 id="0-0-4">0.0.4</h2>
+
+<h3 id="features">FEATURES</h3>
+
+<ul>
+<li>Added a Timely client library that contains Java code for interacting with the Timely API. Not all operations are finished.</li>
+<li>Added an analytics module for writing Apache Flink jobs</li>
+<li>Exposed Subscription Scanner configuration settings in the Timely configuration</li>
+</ul>
+
+<h3 id="performance">PERFORMANCE</h3>
+
+<ul>
+<li>AgeOff performance is greatly improved with a new iterator</li>
+<li>Added netty-transport-native-epoll as an optional runtime dependency</li>
+</ul>
+
+<h3 id="notes">NOTES</h3>
+
+<ul>
+<li>Timely has not been tested with Grafana 4.x</li>
+<li>The aggregation function (not the downsample aggregration function) in Grafana did not work prior to this release, it now works.</li>
+</ul>
 
 <h2 id="0-0-3">0.0.3</h2>
 
