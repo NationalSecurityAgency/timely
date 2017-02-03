@@ -5,6 +5,9 @@ import pandas
 import matplotlib.dates as mdates
 import plotly.graph_objs as go
 import plotly.offline as py
+import seaborn
+import matplotlib.dates as dates
+import matplotlib.ticker as tkr
 
 utc = UTC()
 
@@ -42,6 +45,46 @@ def rolling_average(df, metric, rolling_average=None):
         if rolling_average is not None:
             dataFrame[metric] = pandas.rolling_mean(dataFrame[metric], rolling_average)
     return dataFrame
+
+
+def graphSeaborn(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, notebook=False):
+
+    dataFrame = pandas.DataFrame(df, copy=True)
+    if dataFrame is not None:
+        dataFrame = dataFrame.set_index(dataFrame['date'].apply(lambda x: datetime2graphdays(x)))
+
+        print(dataFrame)
+
+
+        seaborn.set(style="darkgrid", palette="Set2")
+        fix, ax = seaborn.plt.subplots()
+        seaborn.tsplot(dataFrame[metric], time=dataFrame.index, unit=None, interpolate=True, ax=ax, scalex=False, scaley=False, err_style="ci_bars", n_boot=1)
+        ax.xaxis_date()
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d %H:%M:%S'))
+
+        formatter = tkr.ScalarFormatter(useMathText=False)
+        formatter.set_scientific(False)
+        ax.yaxis.set_major_formatter(formatter)
+
+        seaborn.plt.title(graphConfig["title"], fontsize='large')
+        seaborn.plt.xlabel('date/time')
+        seaborn.plt.ylabel(metric)
+
+        fig.autofmt_xdate(rotation=45)
+
+        now = datetime.now(tz=utc)
+        format = "%Y%m%d%H%M%S"
+        nowStr = time.strftime(format, now.timetuple())
+
+        fileNameBase = analyticConfig.output_dir + "/" + metric
+        if analyticConfig.sample is not None:
+            fileNameBase += "-" + analyticConfig.sample
+        if analyticConfig.how is not None:
+            fileNameBase += "-" + analyticConfig.how
+        fileName = fileNameBase + '-' + nowStr + '.png'
+
+        fig.savefig(fileName)
 
 
 def graph(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, notebook=False):
@@ -120,7 +163,7 @@ def graph(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, notebook=
         if notebook:
             py.iplot(fig, filename=fileNameBase+'-'+nowStr, show_link=False)
         else:
-            py.plot(fig, output_type='file', filename=fileNameBase+'-'+nowStr+'.html', auto_open=False, show_link=False)
+            py.plot(fig, output_type='file', filename=fileNameBase+'-'+nowStr+'.html', image='png', auto_open=False, show_link=False)
 
 
 def datetime2graphdays(dt):

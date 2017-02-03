@@ -4,7 +4,7 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
-from TimelyMetric import graph
+from TimelyMetric import graphSeaborn
 import syslog
 
 syslog.openlog("TimelyNotifications")
@@ -108,7 +108,10 @@ class TimelyAlert():
 
         graphConfig = {}
         graphConfig["title"] = self.createTitle(self.timelyMetric.metric, self.analyticConfig)
-        graph(self.analyticConfig, self.dataFrame, self.timelyMetric.metric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook)
+        # graph(self.analyticConfig, self.dataFrame, self.timelyMetric.metric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook)
+
+        graphSeaborn(self.analyticConfig, self.dataFrame, self.timelyMetric.metric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook)
+
 
 
 def main():
