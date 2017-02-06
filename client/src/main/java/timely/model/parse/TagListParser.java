@@ -11,8 +11,7 @@ import java.util.Map;
 /**
  * Parses tag1=val1,tag2=val2,tag3=val3 into a {@code List} of {@code Tag}
  * Combines {@code List} of {@code Tag} into {@code String} of
- * tag1=val1,tag2=val2,tag3=val3 NOTE: the tag and the value are both URL
- * encoded and subsequently URL decoded.
+ * tag1=val1,tag2=val2,tag3=val3.
  */
 public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag>> {
 

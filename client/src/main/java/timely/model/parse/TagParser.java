@@ -12,8 +12,7 @@ import java.util.Map;
 
 /**
  * Parses tag1=val1 into a {@code Tag} Combines {@code Tag} into {@code String}
- * of tag1=val1 NOTE: the tag and the value are both URL encoded and
- * subsequently URL decoded.
+ * of tag1=val1
  */
 public class TagParser implements Parser<Tag>, Combiner<Tag> {
 
@@ -26,28 +25,12 @@ public class TagParser implements Parser<Tag>, Combiner<Tag> {
         if (parts.size() != 2) {
             throw new IllegalArgumentException("Invalid tag format: " + t);
         }
-        return new Tag(unescape(parts.get(0)), unescape(parts.get(1)));
+        return new Tag(parts.get(0), parts.get(1));
     }
 
     @Override
     public String combine(Tag t) {
-        return equalsJoiner.join(escape(t.getKey()), escape(t.getValue()));
-    }
-
-    private String escape(String tag) {
-        try {
-            return URLEncoder.encode(tag, "UTF8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String unescape(String tag) {
-        try {
-            return URLDecoder.decode(tag, "UTF8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        return equalsJoiner.join(t.getKey(), t.getValue());
     }
 
 }
