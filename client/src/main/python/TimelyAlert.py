@@ -4,12 +4,11 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
-from TimelyMetric import graphSeaborn
+import TimelyMetric
 import syslog
+import DataOperations
 
 syslog.openlog("TimelyNotifications")
-
-#def __init__(self, file, send_to, subject, text, analyticConfig, notebook):
 
 
 class TimelyAlert():
@@ -20,64 +19,6 @@ class TimelyAlert():
         self.seriesConfig = seriesConfig
         self.analyticConfig = analyticConfig
         self.notebook = notebook
-
-    def createFilename(self, metric, config):
-
-        metricTitle = metric
-        if config.sample is not None:
-            sampleTitle = config.sample + "-" + config.how
-
-        filename = metricTitle
-        if sampleTitle != "":
-            filename += "-" + sampleTitle
-
-        return filename
-
-    def createTitle(self, metric, config):
-
-        if config.orCondition:
-            condition = "OR"
-        else:
-            condition = "AND"
-
-        metricTitle = metric
-        sampleTitle = ""
-        alertTitle = ""
-        if config.sample is not None:
-            sampleTitle = config.sample + " " + config.how + " samples"
-
-        if config.min_threshold is not None:
-            if alertTitle != "":
-                alertTitle += " " + condition + " "
-            alertTitle += "(y < " + str(config.min_threshold) + ")"
-
-        if config.max_threshold is not None:
-            if alertTitle != "":
-                alertTitle += " " + condition + " "
-            alertTitle += "(y > " + str(config.max_threshold) + ")"
-
-        if config.alert_percentage is not None:
-            if alertTitle != "":
-                alertTitle += " " + condition + " "
-            if config.alert_percentage > 0:
-                alertTitle += "(y > " + str(config.alert_percentage) + "% above " + str(config.rolling_average) + " sample average)"
-            else:
-                alertTitle += "(y < " + str(-config.alert_percentage) + "% below " + str(config.rolling_average) + " sample average)"
-
-        title = metricTitle
-        if sampleTitle != "":
-            title += "\n" + sampleTitle
-
-        if alertTitle != "":
-            title += "\n" + alertTitle
-
-        return title
-
-    def notify(self, send_from, send_to, server="127.0.0.1"):
-
-        self.graph()
-
-        return
 
     def email(self, send_from, send_to, subject, text, files=None, server="127.0.0.1"):
         assert isinstance(send_to, list)
@@ -104,23 +45,24 @@ class TimelyAlert():
         smtp.sendmail(send_from, send_to, msg.as_string())
         smtp.close()
 
-    def graph(self):
+    def log(self, message):
+
+        syslog.systlog(syslog.LOG_ALERT, message)
+
+    def graph(self, type="png"):
 
         graphConfig = {}
-        graphConfig["title"] = self.createTitle(self.timelyMetric.metric, self.analyticConfig)
-        # graph(self.analyticConfig, self.dataFrame, self.timelyMetric.metric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook)
+        graphConfig["title"] = DataOperations.getTitle(self.timelyMetric.metric, self.analyticConfig)
+        return TimelyMetric.graph(self.analyticConfig, self.dataFrame, self.timelyMetric.metric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook, type=type)
 
-        graphSeaborn(self.analyticConfig, self.dataFrame, self.timelyMetric.metric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook)
+    def getDataFrame(self):
+        return self.dataFrame
 
+    def getAnalyticConfig(self):
+        return self.analyticConfig
 
+    def getSeriesConfig(self):
+        return self.seriesConfig
 
-def main():
-    #syslog.syslog(syslog.LOG_ALERT, "Example message")
-    a = TimelyAlert(None, None, None, None, False)
-
-    a.email_alert("wwoley@localhost", ["wwoley@localhost"], "Test1", "This is a sendmail test")
-
-
-
-if __name__ == '__main__':
-    main()
+    def getTimelyMetric(self):
+        return self.timelyMetric

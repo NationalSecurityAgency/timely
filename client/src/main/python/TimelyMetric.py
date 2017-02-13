@@ -135,8 +135,9 @@ class TimelyMetric(TimelyWebSocketClient):
         global client
 
         self.dataFrame = pandas.DataFrame(self.data)
-        self.dataFrame = self.dataFrame.set_index(self.dataFrame['date'].apply(lambda x: pandas.DatetimeIndex([x])))
-
+        if len(self.dataFrame) > 0:
+            self.dataFrame['date'] = pandas.DatetimeIndex(self.dataFrame['date'])
+            self.dataFrame = self.dataFrame.set_index('date')
 
         self.close()
         ioloop.IOLoop.current(instance=False).stop()
@@ -146,12 +147,16 @@ class TimelyMetric(TimelyWebSocketClient):
 
         return self.dataFrame;
 
+    def setDataFrame(self, dataFrame):
+
+        self.dataFrame = dataFrame
+
     def print_debug(self):
         if self.debug:
             print(self.dataFrame)
 
     def graph(self, groupByColumn=None):
-        graph(self.dataFrame, self.metric, sample=self.sample, how=self.how, groupByColumn=groupByColumn)
+        return graph(self.dataFrame, self.metric, sample=self.sample, how=self.how, groupByColumn=groupByColumn)
 
 
 
