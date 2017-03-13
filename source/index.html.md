@@ -44,6 +44,6 @@ Getting started with Timely requires that you:
 
 2. Install and configure the Timely [app] (#deployment)  within Grafana
 
-> Timely should accept data from TCollector with no changes. A [plugin] (#plugins-for-collectd) exists for sending data from CollectD.
-
 3. Send metrics to Timely using [CollectD] (http://collectd.org/), OpenTSDBs [TCollector] (https://github.com/OpenTSDB/tcollector), etc.
+
+> Timely should accept data from TCollector with no changes. A [plugin] (#plugins-for-collectd) exists for sending data from CollectD.
