@@ -2,6 +2,8 @@ import time
 from datetime import datetime
 from datetime import timedelta
 from datetime import tzinfo
+from pandas.tslib import Timedelta
+import pandas
 
 class TimeDateError(ValueError):
 
@@ -56,17 +58,17 @@ class TimeDateRange:
             return None
         return time.strftime(self.format, self.endDt.timetuple())
 
-    def __init__(self, beginStr, endStr, hours, format="%Y%m%d-%H%M%S"):
+    def __init__(self, beginStr, endStr, period, format="%Y%m%d-%H%M%S"):
 
         now = datetime.now(tz=utc)
         nowMs = TimeDateRange.unix_time_millis(now)
 
-        if beginStr != None and endStr != None and hours != None:
-            raise TimeDateError("You can not privide a begin, end, and hours")
-        elif (beginStr == None and endStr == None and hours == None) or (hours == None and beginStr == None):
+        if beginStr != None and endStr != None and period != None:
+            raise TimeDateError("You can not provide a begin, end, and period")
+        elif (beginStr == None and endStr == None and period == None) or (period == None and beginStr == None):
             raise TimeDateError("You must provide a time range")
 
-        if hours == None:
+        if period == None:
             # calculate begin time
             beginTuple = time.strptime(beginStr, self.format)
             self.beginDt = datetime(*beginTuple[0:6], tzinfo=utc)
@@ -81,10 +83,12 @@ class TimeDateRange:
                 if self.endDt > now:
                     self.endDt = now
         else:
-            # hours must be specified
-            rangeInSec = hours * 3600
+            # period must be specified
+            td = pandas.to_timedelta(period)
+            rangeInSec = td.total_seconds()
+
             if beginStr == None:
-                # calculate begin time from end tme and hours
+                # calculate begin time from end tme and period
 
                 # calculate end time
                 # end is either specified or now
@@ -99,7 +103,7 @@ class TimeDateRange:
                 self.beginDt = self.endDt - timedelta(milliseconds=rangeInSec * 1000)
 
             else:
-                # calculate end time from begin tme and hours
+                # calculate end time from begin tme and period
                 # calculate begin time
                 self.beginDt = datetime(*time.strptime(beginStr, self.format)[0:6], tzinfo=utc)
 

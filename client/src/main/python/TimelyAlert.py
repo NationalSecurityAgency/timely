@@ -13,12 +13,13 @@ syslog.openlog("TimelyNotifications")
 
 class TimelyAlert():
 
-    def __init__(self, timelyMetric, dataFrame, seriesConfig, analyticConfig, notebook):
+    def __init__(self, timelyMetric, dataFrame, message, seriesConfig, analyticConfig, notebook):
         self.timelyMetric = timelyMetric
         self.dataFrame = dataFrame
         self.seriesConfig = seriesConfig
         self.analyticConfig = analyticConfig
         self.notebook = notebook
+        self.message = message
 
     def email(self, send_from, send_to, subject, text, files=None, server="127.0.0.1"):
         assert isinstance(send_to, list)
@@ -66,3 +67,6 @@ class TimelyAlert():
 
     def getTimelyMetric(self):
         return self.timelyMetric
+
+    def getMessage(self):
+        return self.message

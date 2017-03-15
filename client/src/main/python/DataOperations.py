@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 from datetime import datetime
 from TimeDateRange import UTC
 import pandas
@@ -7,8 +8,8 @@ import plotly.graph_objs as go
 import plotly.offline as py
 import seaborn
 import matplotlib.ticker as tkr
-from scipy import stats
 import numpy as np
+import os
 
 utc = UTC()
 
@@ -22,12 +23,12 @@ def pivot(df, metric, groupByColumn=None):
     return dataFrame
 
 
-def resample(df, sample, how='mean', fill_method='ffill'):
+def resample(df, sample, how='mean'):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
         if sample is not None:
-            dataFrame = dataFrame.resample(sample, how=how, fill_method=fill_method)
+            dataFrame = dataFrame.resample(sample, how=how).interpolate()
     return dataFrame
 
 
@@ -90,9 +91,9 @@ def graphSeaborn(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, no
             else:
                 seaborn.tsplot(tempDataFrame, time="dateFloat", unit=None, interpolate=True, color=colors[i],
                                estimator=np.nanmean, condition=groupByColumn, value=metric, ax=ax)
+            i = i + 1
 
         ax.xaxis_date()
-        ax.xaxis.set_minor_locator(mdates.AutoDateLocator())
         ax.xaxis.set_major_locator(mdates.AutoDateLocator())
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d %H:%M:%S'))
         ax.set_xlim(xmin=dataFrame['dateFloat'].min(), xmax=dataFrame['dateFloat'].max())
@@ -111,16 +112,24 @@ def graphSeaborn(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, no
             legendTitle = groupByColumn
 
         seaborn.plt.legend(loc='upper center', prop={'size':8}, ncol=10, title=legendTitle, bbox_to_anchor=(0.5,-0.4))
-
         fig.autofmt_xdate(rotation=45)
+
+        seaborn.plt.autoscale(tight=False)
 
         if notebook == True:
             seaborn.plt.show()
             return None
         else:
-            fileName = getFilename(metric, analyticConfig)
-            fig.savefig(fileName + '.png')
-            return fileName + '.png'
+            directory = analyticConfig.output_dir
+            try:
+                os.makedirs(directory, mode=0755)
+            except OSError, e:
+                # be happy if someone already created the path
+                pass
+            baseFilename = getFilename(metric, analyticConfig)
+            filename = directory+'/'+baseFilename
+            fig.savefig(filename + '.png')
+            return baseFilename + '.png'
 
 
 def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, notebook=False):
@@ -159,7 +168,8 @@ def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, not
         layout = go.Layout(layoutConfig)
 
         data = None
-        for col in df[analyticConfig.groupByColumn].unique():
+        groupByValues = sorted(dataFrame[analyticConfig.groupByColumn].unique())
+        for col in groupByValues:
             tempDataFrame = dataFrame.loc[dataFrame[analyticConfig.groupByColumn] == col]
 
             addlColConfig = seriesConfig.get(col, seriesConfig.get('default', dict()))
@@ -181,29 +191,37 @@ def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, not
             else:
                 data.append(s)
 
-        fileName = getFilename(metric, analyticConfig)
+        directory = analyticConfig.output_dir
+        try:
+            os.makedirs(directory, mode=0755)
+        except OSError, e:
+            # be happy if someone already created the path
+            pass
+        baseFilename = getFilename(metric, analyticConfig)
+        filename = directory+'/'+baseFilename
 
         fig = go.Figure(data=data, layout=layout)
         if notebook:
-            py.iplot(fig, filename=fileName, show_link=False)
+            py.iplot(fig, filename=filename, show_link=False)
             return None
         else:
-            py.plot(fig, output_type='file', filename=fileName+'.html', image_filename=fileName, image=None, auto_open=False, show_link=False)
-            return fileName+'.html'
-
+            py.plot(fig, output_type='file', filename=filename+'.html', image_filename=filename, image=None, auto_open=False, show_link=False)
+            return baseFilename+'.html'
 
 def ensureMinSeriesLength(df, groupByColumn):
 
-    dataFrame = pandas.DataFrame(df, copy=True)
-    dataFrame = dataFrame.dropna()
+    dataFrame = df
+    if groupByColumn is not None:
+        dataFrame = pandas.DataFrame(df, copy=True)
+        dataFrame = dataFrame.dropna()
 
-    extra = pandas.DataFrame()
-    for c, (cond, df_c) in enumerate(dataFrame.groupby(groupByColumn, sort=False)):
-        if len(df_c) <= 1:
-            extra = extra.append(df_c)
+        extra = pandas.DataFrame()
+        for c, (cond, df_c) in enumerate(dataFrame.groupby(groupByColumn, sort=False)):
+            if len(df_c) <= 1:
+                extra = extra.append(df_c)
 
-    extra.index = extra.index + pandas.DateOffset(seconds=1)
-    dataFrame = dataFrame.append(extra)
+        extra.index = extra.index + pandas.DateOffset(seconds=1)
+        dataFrame = dataFrame.append(extra)
 
     return dataFrame
 
@@ -216,15 +234,12 @@ def graphdays2datetime(x):
     return datetime.fromtimestamp(int(epoch), utc)
 
 
-def getFilename(metric, analyticConfig, dir=None):
+def getFilename(metric, analyticConfig):
 
     now = datetime.now(tz=utc)
     format = "%Y%m%d%H%M%S"
     nowStr = time.strftime(format, now.timetuple())
-    directory = dir
-    if directory is None:
-        directory = analyticConfig.output_dir
-    fileNameBase = directory + "/" + metric
+    fileNameBase = metric
     if analyticConfig.sample is not None:
         fileNameBase += "-" + analyticConfig.sample
     if analyticConfig.how is not None:
@@ -232,8 +247,11 @@ def getFilename(metric, analyticConfig, dir=None):
 
     return fileNameBase + '-' + nowStr
 
+def getDirectoryPathForDate(format='%Y/%m/%d'):
+    now = datetime.now(tz=utc)
+    return time.strftime(format, now.timetuple())
 
-def getTitle(metric, config):
+def getTitle(metric, config, separator='\n'):
     if config.orCondition:
         condition = "OR"
     else:
@@ -242,8 +260,8 @@ def getTitle(metric, config):
     metricTitle = metric
     sampleTitle = ""
     alertTitle = ""
-    if config.sample is not None:
-        sampleTitle = config.sample + " " + config.how + " samples"
+    if config.sample_period is not None:
+        sampleTitle = config.sample_period + " " + config.how + " samples"
 
     if config.min_threshold is not None:
         if alertTitle != "":
@@ -260,16 +278,23 @@ def getTitle(metric, config):
             alertTitle += " " + condition + " "
         if config.alert_percentage > 0:
             alertTitle += "(y > " + str(config.alert_percentage) + "% above " + str(
-                config.rolling_average) + " sample average)"
+                config.rolling_average_period) + " sample average)"
         else:
             alertTitle += "(y < " + str(-config.alert_percentage) + "% below " + str(
-                config.rolling_average) + " sample average)"
+                config.rolling_average_period) + " sample average)"
 
-    title = metricTitle
+    if config.system_name is None:
+        title = metricTitle
+    else:
+        title = config.system_name + ' - ' + metricTitle
+
     if sampleTitle != "":
-        title += "\n" + sampleTitle
+        title += separator + sampleTitle
 
     if alertTitle != "":
+        if config.min_alert_period is not None:
+            alertTitle = '(' + alertTitle + ') for greater than ' + config.min_alert_period
         title += "\n" + alertTitle
+
 
     return title

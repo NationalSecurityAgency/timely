@@ -73,7 +73,7 @@ class TimelyMetric(TimelyWebSocketClient):
     client = None
     endtime = None
 
-    def __init__(self, hostport, metric, tags, beginStr, endStr, hours, sample):
+    def __init__(self, hostport, metric, tags, beginStr, endStr, period, sample):
         self.series = pandas.Series()
         self.metric = metric
         self.tags = tags
@@ -82,7 +82,7 @@ class TimelyMetric(TimelyWebSocketClient):
         self.dataFrame = None
         self.data = []
 
-        timeDateRange = TimeDateRange(beginStr, endStr, hours)
+        timeDateRange = TimeDateRange(beginStr, endStr, period)
 
         TimelyWebSocketClient.__init__(self, hostport, metric, tags, timeDateRange.getBeginMs(), timeDateRange.getEndMs())
 
@@ -162,7 +162,7 @@ class TimelyMetric(TimelyWebSocketClient):
 
 def main():
 
-    hours = None
+    period = None
     beginStr = None
     endStr = None
 
@@ -173,18 +173,18 @@ def main():
     groupByColumn = None
     try:
         argv = sys.argv
-        options, remainder = getopt.getopt(argv[1:], 'h', ['metric=', 'tags=', 'hours=', 'groupByColumn=', 'begin=', 'end=', 'sample=', 'how=', 'hostport='])
+        options, remainder = getopt.getopt(argv[1:], 'h', ['metric=', 'tags=', 'period=', 'groupByColumn=', 'begin=', 'end=', 'sample=', 'how=', 'hostport='])
     except getopt.GetoptError:
-        print('TimelyMetric.py ---hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --groupByColumn=<groupByColumn>, --sample=<sample_period> --how=<mean|min|max>')
+        print('TimelyMetric.py ---hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --period=<period>, --groupByColumn=<groupByColumn>, --sample=<sample_period> --how=<mean|min|max>')
         sys.exit(2)
     for opt, arg in options:
         if opt == '-h':
-            print('TimelyMetric.py --hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --hours=<hours>, --groupByColumn=<groupByColumn>, --sample=<sample_period> --how=<mean|min|max>')
+            print('TimelyMetric.py --hostport=<host:port> --metric=<metric> --tags=<tag1=val1,tag2=val2> --period=<period>, --groupByColumn=<groupByColumn>, --sample=<sample_period> --how=<mean|min|max>')
             sys.exit()
         elif opt in ("--metric"):
             metric = arg
-        elif opt in ("--hours"):
-            hours = int(arg)
+        elif opt in ("--period"):
+            period = arg
         elif opt in ("--begin"):
             beginStr = arg
         elif opt in ("--end"):
@@ -199,7 +199,7 @@ def main():
             hostport = arg
     try:
 
-        timelyMetric = TimelyMetric(hostport, metric, tags, beginStr, endStr, hours, sample).fetch()
+        timelyMetric = TimelyMetric(hostport, metric, tags, beginStr, endStr, period, sample).fetch()
         dataFrame = timelyMetric.getDataFrame()
 
         if dataFrame is not None:
