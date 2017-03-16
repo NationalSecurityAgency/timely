@@ -294,7 +294,7 @@ def getTitle(metric, config, separator='\n'):
     if alertTitle != "":
         if config.min_alert_period is not None:
             alertTitle = '(' + alertTitle + ') for greater than ' + config.min_alert_period
-        title += "\n" + alertTitle
+        title += separator + alertTitle
 
 
     return title

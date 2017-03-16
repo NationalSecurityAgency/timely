@@ -71,7 +71,7 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
 
         if analyticConfig.rolling_average_samples is not None:
             graphDF_avg = TimelyMetric.rolling_average(graphDF_avg, col, rolling_average=analyticConfig.rolling_average_samples)
-            if (analyticConfig.alert_percentage is not None) and (analyticConfig.rolling_average is not None):
+            if analyticConfig.alert_percentage is not None:
                 if analyticConfig.alert_percentage > 0:
                     multiple = 1.0 + (float(abs(analyticConfig.alert_percentage)) / float(100))
                     currCondition = graphDF[col].astype(float) > (graphDF_avg[col].astype(float) * multiple)
@@ -92,7 +92,7 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
         lastAlertRecentEnough = True
         minAlertPeriodMet = True
         if (exceptional.size > 0):
-            if (analyticConfig.min_alert_minutes is not None) or (analyticConfig.last_alert_minues is not None):
+            if (analyticConfig.min_alert_minutes is not None) or (analyticConfig.last_alert_minutes is not None):
                 if analyticConfig.last_alert_minutes is not None:
                     lastAlertRecentEnough = False
                 currentFirst = None
@@ -134,7 +134,7 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
                 ((analyticConfig.display.lower() == "all") or (analyticConfig.display.lower() == "alerts" and exceptional.size > 0 and analyticConfig.alert_percentage is not None and minAlertPeriodMet and lastAlertRecentEnough))):
             combined[col+'_avg'] = graphDF_avg[col]
 
-        if (exceptional.size > 0) and ((analyticConfig.display.lower() == 'all') or (minAlertPeriodMet and lastAlertRecentEnough)):
+        if (exceptional.size > 0) and ((analyticConfig.display.lower() == "all") or (minAlertPeriodMet and lastAlertRecentEnough)):
             combined[col+'_warn'] = exceptional.dropna()
 
             seriesConfig[col+'_warn'] = {

@@ -34,11 +34,11 @@ class TimelyAnalyticConfiguration():
                 self.sample = str(self.sample_minutes) + 'min'
 
             self.rolling_average_samples = None
-            self.rolling_average_minues = None
-            if self.rolling_average_period is not None:
+            self.rolling_average_minutes = None
+            if (self.rolling_average_period is not None) and (self.sample_minutes is not None):
                 td = pandas.to_timedelta(self.rolling_average_period)
-                self.rolling_average_minues = int(td.total_seconds() / 60)
-                self.rolling_average_samples = int(self.rolling_average_minues / self.sample_minutes)
+                self.rolling_average_minutes = int(td.total_seconds() / 60)
+                self.rolling_average_samples = int(self.rolling_average_minutes / self.sample_minutes)
 
             self.min_alert_minutes = None
             if self.min_alert_period is not None:
@@ -60,7 +60,7 @@ class TimelyAnalyticConfiguration():
             self.how = analyticConfig.how
             self.rolling_average_period = analyticConfig.rolling_average_period
             self.rolling_average_samples = analyticConfig.rolling_average_samples
-            self.rolling_average_minues = analyticConfig.rolling_average_minues
+            self.rolling_average_minutes = analyticConfig.rolling_average_minutes
             self.min_threshold = analyticConfig.min_threshold
             self.max_threshold = analyticConfig.max_threshold
             self.alert_percentage = analyticConfig.alert_percentage
