@@ -53,8 +53,8 @@ class TimelyAlert():
     def graph(self, type="png"):
 
         graphConfig = {}
-        graphConfig["title"] = DataOperations.getTitle(self.timelyMetric.metric, self.analyticConfig)
-        return TimelyMetric.graph(self.analyticConfig, self.dataFrame, self.timelyMetric.metric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook, type=type)
+        graphConfig["title"] = DataOperations.getTitle(self.timelyMetric, self.analyticConfig)
+        return TimelyMetric.graph(self.analyticConfig, self.dataFrame, self.timelyMetric, seriesConfig=self.seriesConfig, graphConfig=graphConfig, notebook=self.notebook, type=type)
 
     def getDataFrame(self):
         return self.dataFrame

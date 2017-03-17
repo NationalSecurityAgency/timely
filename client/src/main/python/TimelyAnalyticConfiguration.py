@@ -14,7 +14,9 @@ class TimelyAnalyticConfiguration():
             self.how = analyticConfig.get('how', 'mean')
             self.rolling_average_period = analyticConfig.get('rolling_average_period', None)
             self.min_threshold = analyticConfig.get('min_threshold', None)
+            self.average_min_threshold = analyticConfig.get('average_min_threshold', None)
             self.max_threshold = analyticConfig.get('max_threshold', None)
+            self.average_max_threshold = analyticConfig.get('average_max_threshold', None)
             self.alert_percentage = analyticConfig.get('alert_percentage', None)
             self.min_alert_period = analyticConfig.get('min_alert_period', None)
             boolean = analyticConfig.get('boolean', 'or')
@@ -62,7 +64,9 @@ class TimelyAnalyticConfiguration():
             self.rolling_average_samples = analyticConfig.rolling_average_samples
             self.rolling_average_minutes = analyticConfig.rolling_average_minutes
             self.min_threshold = analyticConfig.min_threshold
+            self.average_min_threshold = analyticConfig.average_min_threshold
             self.max_threshold = analyticConfig.max_threshold
+            self.average_max_threshold = analyticConfig.average_max_threshold
             self.alert_percentage = analyticConfig.alert_percentage
             self.min_alert_period = analyticConfig.min_alert_period
             self.min_alert_minutes = analyticConfig.min_alert_minutes

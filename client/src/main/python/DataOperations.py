@@ -50,14 +50,14 @@ def rolling_average(df, metric, rolling_average=None):
     return dataFrame
 
 
-def graph(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, notebook=False, type='png'):
+def graph(analyticConfig, df, timelyMetric, seriesConfig={}, graphConfig={}, notebook=False, type='png'):
     if type == 'png':
-        return graphSeaborn(analyticConfig, df, metric, seriesConfig=seriesConfig, graphConfig=graphConfig, notebook=notebook)
+        return graphSeaborn(analyticConfig, df, timelyMetric, seriesConfig=seriesConfig, graphConfig=graphConfig, notebook=notebook)
     else:
-        return graphPlotly(analyticConfig, df, metric, seriesConfig=seriesConfig, graphConfig=graphConfig, notebook=notebook)
+        return graphPlotly(analyticConfig, df, timelyMetric, seriesConfig=seriesConfig, graphConfig=graphConfig, notebook=notebook)
 
 
-def graphSeaborn(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, notebook=False):
+def graphSeaborn(analyticConfig, df, timelyMetric, seriesConfig={}, graphConfig={}, notebook=False):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
@@ -87,10 +87,10 @@ def graphSeaborn(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, no
             color = markerDict.get("color", "")
             if color == "red":
                 seaborn.tsplot(tempDataFrame, time="dateFloat", unit=None, interpolate=False, color="red", marker="d",
-                               estimator=np.nanmean, condition=groupByColumn, value=metric, ax=ax)
+                               estimator=np.nanmean, condition=groupByColumn, value=timelyMetric.metric, ax=ax)
             else:
                 seaborn.tsplot(tempDataFrame, time="dateFloat", unit=None, interpolate=True, color=colors[i],
-                               estimator=np.nanmean, condition=groupByColumn, value=metric, ax=ax)
+                               estimator=np.nanmean, condition=groupByColumn, value=timelyMetric.metric, ax=ax)
             i = i + 1
 
         ax.xaxis_date()
@@ -102,10 +102,10 @@ def graphSeaborn(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, no
         formatter.set_scientific(False)
         ax.yaxis.set_major_formatter(formatter)
 
-        graphTitle = getTitle(metric, analyticConfig)
+        graphTitle = getTitle(timelyMetric, analyticConfig)
         seaborn.plt.title(graphTitle, fontsize='large')
         seaborn.plt.xlabel('date/time')
-        seaborn.plt.ylabel(metric)
+        seaborn.plt.ylabel(timelyMetric.metric)
 
         legendTitle = "Legend"
         if groupByColumn is not None:
@@ -126,13 +126,13 @@ def graphSeaborn(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, no
             except OSError, e:
                 # be happy if someone already created the path
                 pass
-            baseFilename = getFilename(metric, analyticConfig)
+            baseFilename = getFilename(timelyMetric.metric, analyticConfig)
             filename = directory+'/'+baseFilename
             fig.savefig(filename + '.png')
             return baseFilename + '.png'
 
 
-def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, notebook=False):
+def graphPlotly(analyticConfig, df, timelyMetric, seriesConfig={}, graphConfig={}, notebook=False):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
@@ -143,7 +143,7 @@ def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, not
         else:
             dataFrame = dataFrame.sort_values(['colFromIndex'])
 
-        title = getTitle(metric, analyticConfig)
+        title = getTitle(timelyMetric, analyticConfig)
 
         dataFrame['date'] = dataFrame.index.values
 
@@ -159,7 +159,7 @@ def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, not
             ),
             yaxis=dict(
                 autorange=True,
-                title=title
+                title=timelyMetric.metric
             )
         )
 
@@ -177,7 +177,7 @@ def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, not
             config = dict(
                 name=col,
                 x=tempDataFrame.index,
-                y=tempDataFrame[metric],
+                y=tempDataFrame[timelyMetric.metric],
                 hoverinfo='x+y+text',
                 text=col
             )
@@ -197,7 +197,7 @@ def graphPlotly(analyticConfig, df, metric, seriesConfig={}, graphConfig={}, not
         except OSError, e:
             # be happy if someone already created the path
             pass
-        baseFilename = getFilename(metric, analyticConfig)
+        baseFilename = getFilename(timelyMetric.metric, analyticConfig)
         filename = directory+'/'+baseFilename
 
         fig = go.Figure(data=data, layout=layout)
@@ -251,27 +251,43 @@ def getDirectoryPathForDate(format='%Y/%m/%d'):
     now = datetime.now(tz=utc)
     return time.strftime(format, now.timetuple())
 
-def getTitle(metric, config, separator='\n'):
+def getTitle(timelyMetric, config, separator='\n'):
     if config.orCondition:
         condition = "OR"
     else:
         condition = "AND"
 
-    metricTitle = metric
+    metricTitle = timelyMetric.metric
+    if timelyMetric.tags is not None and len(timelyMetric.tags) > 0:
+        metricTitle += ' (' + timelyMetric.tags + ')'
+
     sampleTitle = ""
     alertTitle = ""
     if config.sample_period is not None:
         sampleTitle = config.sample_period + " " + config.how + " samples"
+
+    if config.rolling_average_period is not None:
+        sampleTitle += ', ' + config.rolling_average_period + ' rolling average'
 
     if config.min_threshold is not None:
         if alertTitle != "":
             alertTitle += " " + condition + " "
         alertTitle += "(y < " + str(config.min_threshold) + ")"
 
+    if config.average_min_threshold is not None:
+        if alertTitle != "":
+            alertTitle += " " + condition + " "
+        alertTitle += "(y-avg < " + str(config.average_min_threshold) + ")"
+
     if config.max_threshold is not None:
         if alertTitle != "":
             alertTitle += " " + condition + " "
         alertTitle += "(y > " + str(config.max_threshold) + ")"
+
+    if config.average_max_threshold is not None:
+        if alertTitle != "":
+            alertTitle += " " + condition + " "
+        alertTitle += "(y-avg > " + str(config.average_max_threshold) + ")"
 
     if config.alert_percentage is not None:
         if alertTitle != "":
@@ -294,6 +310,8 @@ def getTitle(metric, config, separator='\n'):
     if alertTitle != "":
         if config.min_alert_period is not None:
             alertTitle = '(' + alertTitle + ') for greater than ' + config.min_alert_period
+        if config.last_alert is not None:
+            alertTitle = alertTitle + ' in last ' + config.last_alert
         title += separator + alertTitle
 
 

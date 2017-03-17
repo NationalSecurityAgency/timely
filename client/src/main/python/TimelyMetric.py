@@ -156,7 +156,7 @@ class TimelyMetric(TimelyWebSocketClient):
             print(self.dataFrame)
 
     def graph(self, groupByColumn=None):
-        return graph(self.dataFrame, self.metric, sample=self.sample, how=self.how, groupByColumn=groupByColumn)
+        return graph(self.dataFrame, self, sample=self.sample, how=self.how, groupByColumn=groupByColumn)
 
 
 
@@ -205,7 +205,7 @@ def main():
         if dataFrame is not None:
             dataFrame = resample(dataFrame, metric, sample, how)
             dataFrame = pivot(dataFrame, metric, groupByColumn=groupByColumn)
-            graph(dataFrame, metric, sample=sample, groupByColumn=groupByColumn, graphConfig={}, notebook=False)
+            graph(dataFrame, timelyMetric, sample=sample, groupByColumn=groupByColumn, graphConfig={}, notebook=False)
 
     except TimeDateError as e:
         print(e.message)
