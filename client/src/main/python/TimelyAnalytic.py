@@ -30,9 +30,9 @@ def addCondition(orCondition, currResult, condition):
         currResult = currResult & condition
     return currResult
 
-def keepConsecutiveAlerts(dataFrame, exceptions, minumumSpan):
+def keepConsecutiveAlerts(dataFrame, exceptions, minimumSpan):
 
-    if exceptions.size > 0 and minumumSpan is not None:
+    if exceptions.size > 0 and minimumSpan is not None:
 
         currentFirst = None
         currentLast = None
@@ -49,7 +49,7 @@ def keepConsecutiveAlerts(dataFrame, exceptions, minumumSpan):
                 currentLast = index
                 if currentFirst is None:
                     currentFirst = index
-                if int((currentLast - currentFirst).total_seconds() / 60) > int(minumumSpan):
+                if int((currentLast - currentFirst).total_seconds() / 60) > int(minimumSpan):
                     result_span_values['bool'] = result_span_values['bool'] | current_result_span_values['bool']
             else:
                 current_result_span_values['bool'] = np.zeros(exceptions.shape, bool)
@@ -91,9 +91,9 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
             result_values = np.zeros(graphDF[col].shape, bool)
 
         any_conditions_average = False
-        result_average = np.ones(graphDF[col].shape, bool)
+        result_average = np.ones(graphDF_avg[col].shape, bool)
         if analyticConfig.orCondition:
-            result_average = np.zeros(graphDF[col].shape, bool)
+            result_average = np.zeros(graphDF_avg[col].shape, bool)
 
         if analyticConfig.min_threshold is not None:
             currCondition = graphDF[col].astype(float) < analyticConfig.min_threshold
@@ -120,14 +120,14 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
                         result_values = addCondition(analyticConfig.orCondition, result_values, currCondition)
                         any_conditions_values = True
 
-                if analyticConfig.average_min_threshold is not None:
-                    currCondition = graphDF_avg[col].astype(float) < analyticConfig.average_min_threshold
-                    result_average = addCondition(analyticConfig.orCondition, result_average, currCondition)
-                    any_conditions_average = True
-                if analyticConfig.max_threshold is not None:
-                    currCondition = graphDF_avg[col].astype(float) > analyticConfig.average_max_threshold
-                    result_average = addCondition(analyticConfig.orCondition, result_average, currCondition)
-                    any_conditions_average = True
+            if analyticConfig.average_min_threshold is not None:
+                currCondition = graphDF_avg[col].astype(float) < analyticConfig.average_min_threshold
+                result_average = addCondition(analyticConfig.orCondition, result_average, currCondition)
+                any_conditions_average = True
+            if analyticConfig.average_max_threshold is not None:
+                currCondition = graphDF_avg[col].astype(float) > analyticConfig.average_max_threshold
+                result_average = addCondition(analyticConfig.orCondition, result_average, currCondition)
+                any_conditions_average = True
 
         # if orCondition is AND and no exceptional conditions have been found, then result_values will be all True
         if any_conditions_values == False:
@@ -160,9 +160,9 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
                 combined[col+'_avg'] = graphDF_avg[col]
 
         if ((analyticConfig.display.lower() == "all") or (analyticConfig.display.lower() == "alerts" and anyValueExceptions)):
-            combined[col+'_warn'] = exceptional_values.dropna()
+            combined[col + '_warn'] = exceptional_values.dropna()
 
-            seriesConfig[col+'_warn'] = {
+            seriesConfig[col + '_warn'] = {
                 "mode" : "markers",
                 "marker" : {
                     "symbol" : "hash-open",
@@ -174,10 +174,10 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
         combined[col + '_avg_warn'] = exceptional_average.dropna()
 
         seriesConfig[col + '_avg_warn'] = {
-            "mode": "markers",
-            "marker": {
-                "symbol": "hash-open",
-                "color": "red"
+            "mode" : "markers",
+            "marker" : {
+                "symbol" : "hash-open",
+                "color" : "red"
             }
         }
 
