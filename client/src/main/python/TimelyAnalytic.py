@@ -170,16 +170,16 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
                 }
             }
 
-    if ((analyticConfig.display.lower() == "all") or (analyticConfig.display.lower() == "alerts" and anyAverageExceptions)):
-        combined[col + '_avg_warn'] = exceptional_average.dropna()
+        if ((analyticConfig.display.lower() == "all") or (analyticConfig.display.lower() == "alerts" and anyAverageExceptions)):
+            combined[col + '_avg_warn'] = exceptional_average.dropna()
 
-        seriesConfig[col + '_avg_warn'] = {
-            "mode" : "markers",
-            "marker" : {
-                "symbol" : "hash-open",
-                "color" : "red"
+            seriesConfig[col + '_avg_warn'] = {
+                "mode" : "markers",
+                "marker" : {
+                    "symbol" : "hash-open",
+                    "color" : "red"
+                }
             }
-        }
 
     timelyAlert = None
     if not combined.empty:
