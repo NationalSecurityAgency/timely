@@ -86,13 +86,15 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     }
 
     public synchronized void flush() {
-        if (responses.size() > 0) {
-            try {
-                String json = om.writeValueAsString(responses);
-                this.ctx.writeAndFlush(new TextWebSocketFrame(json));
-                responses.clear();
-            } catch (JsonProcessingException e) {
-                LOG.error("Error serializing metrics: " + responses, e);
+        synchronized (responses) {
+            if (responses.size() > 0) {
+                try {
+                    String json = om.writeValueAsString(responses);
+                    this.ctx.writeAndFlush(new TextWebSocketFrame(json));
+                    responses.clear();
+                } catch (JsonProcessingException e) {
+                    LOG.error("Error serializing metrics: " + responses, e);
+                }
             }
         }
     }
@@ -152,9 +154,12 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     }
 
     public void close() {
-        LOG.info("Marking metric scanner closed: {}", name);
-        this.flusher.cancel(false);
-        this.closed = true;
+        if (!closed) {
+            LOG.info("Marking metric scanner closed: {}", name);
+            flush();
+            this.flusher.cancel(false);
+            this.closed = true;
+        }
     }
 
     @Override

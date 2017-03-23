@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.websocket.CloseReason;
@@ -51,6 +52,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
     private final String[] metrics;
     private final SummarizationJobParameters jp;
     private final long window;
+    private final AtomicBoolean sourceFinished = new AtomicBoolean(false);
 
     public SubscriptionSource(SummarizationJobParameters jp) {
         this.jp = jp;
@@ -102,7 +104,8 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
                     @Override
                     public void onMessage(final String message) {
-                        LOG.info("Message received on Websocket session {}: {}", session.getId(), message);
+                        LOG.info("Message received on Websocket session {}, length: {}", session.getId(),
+                                message.length());
                         try {
                             // Deserialize in this thread
                             final MetricResponses responses = JsonSerializer.getObjectMapper().readValue(message,
@@ -113,9 +116,10 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                                     if (response.isComplete()) {
                                         LOG.info("Received last message.");
                                         ctx.emitWatermark(new Watermark(Long.MAX_VALUE));
+                                        sourceFinished.set(true);
                                         return;
                                     }
-                                    LOG.trace("Sending metric: {}", response);
+                                    LOG.trace("Received metric: {}", response);
                                     long time = response.getTimestamp();
                                     ctx.collectWithTimestamp(response, time);
                                     dateTimeAccumulator.add(formatter.format(new Date(response.getTimestamp())));
@@ -178,7 +182,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                 LOG.info("Adding subscription for {}", m);
                 client.addSubscription(m, null, start, end, 5000);
             }
-            while (!client.isClosed()) {
+            while (!client.isClosed() && !sourceFinished.get()) {
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
