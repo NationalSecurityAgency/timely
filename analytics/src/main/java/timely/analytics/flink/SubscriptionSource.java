@@ -8,7 +8,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.websocket.CloseReason;
@@ -52,7 +51,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
     private final String[] metrics;
     private final SummarizationJobParameters jp;
     private final long window;
-    private final AtomicBoolean sourceFinished = new AtomicBoolean(false);
+    private final AtomicInteger subscriptionsRemaining;
 
     public SubscriptionSource(SummarizationJobParameters jp) {
         this.jp = jp;
@@ -60,6 +59,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
         end = jp.getEndTime();
         metrics = jp.getMetrics();
         window = jp.getSummarizationInterval().toMilliseconds();
+        subscriptionsRemaining = new AtomicInteger(metrics.length);
     }
 
     @Override
@@ -116,7 +116,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                                     if (response.isComplete()) {
                                         LOG.info("Received last message.");
                                         ctx.emitWatermark(new Watermark(Long.MAX_VALUE));
-                                        sourceFinished.set(true);
+                                        subscriptionsRemaining.getAndDecrement();
                                         return;
                                     }
                                     LOG.trace("Received metric: {}", response);
@@ -182,7 +182,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                 LOG.info("Adding subscription for {}", m);
                 client.addSubscription(m, null, start, end, 5000);
             }
-            while (!client.isClosed() && !sourceFinished.get()) {
+            while (!client.isClosed() && subscriptionsRemaining.get() > 0) {
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
