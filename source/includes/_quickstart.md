@@ -1,18 +1,19 @@
 # Standalone Quick Start
 
-1. Install latest version of Grafana that works with Timely
-2. Create a grafana configuration file (e.g: `conf/settings.ini`)
+1. Build Timely
+  1. set `JAVA_HOME` to point to a JDK 8 installation
+  2. run `mvn clean package` from the top level directory in the source tree
+2. Install latest version of Grafana that works with Timely (3.1.x)
+3. Create a grafana configuration file (e.g: `conf/settings.ini`)
   1. `protocol = https`
   2. `http_addr = localhost`
   3. `cert_file= <path to PEM encoded certificate file>`
   4. `key_file= <path to PEM encoded un-encrypted private key file>`
-3. Start Grafana (`./bin/grafana-server -c conf/settings.ini`)
+4. Untar the timely-app distribution tarball located in grafana/target in the grafana plugins directory (default: /var/lib/grafana/plugins)
+5. Start Grafana (`./bin/grafana-server -c conf/settings.ini`)
   1. Visit `https://localhost:3000` to verify Grafana is working
-4. Build Timely
-  1. set `JAVA_HOME` to point to a JDK 8 installation
-  2. cd into the server directory and run `mvn clean package`
-5. Untar Timely server distribution (found in `target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz`)
-6. Modify `timely-standalone.yml`:
+6. Untar Timely server distribution (found in `target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz`)
+7. Modify `timely-standalone.yml`:
   1. Use generated server side SSL certificates
     1. `timely.security.ssl.use-generated-keypair=true`
   2. or, use your own SSL certificates - see [SSL] (#ssl-setup) Setup
@@ -28,11 +29,11 @@
     1. `grafana.http.address=https://localhost:3000/login`
   5. Set Anonymous access for Timely
     1. `timely.security.allow-anonymous-access=<true or false>`
-7. Start the Timely standalone server
+8. Start the Timely standalone server
   1. `cd bin; ./timely-standalone.sh`
-8. Insert test data
+9. Insert test data
   1. `cd bin; ./insert-test-data.sh`
-9. Add the Timely datasource to Grafana
+10. Add the Timely datasource to Grafana
   1. Login to Grafana, go to 'DataSources'
   2. Click 'Add data source'
   3. Enter the following information:
@@ -44,7 +45,7 @@
     6. Basic Auths: check
     7. Click `Browser Cert Check` and accept the certificate
     8. Click `Save & Test`.
-10. Import Standalone Test dashboard into Grafana.
+11. Import Standalone Test dashboard into Grafana.
 
 
 ## Notes on Security Options
