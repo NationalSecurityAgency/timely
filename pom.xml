@@ -26,9 +26,6 @@
         <module>common</module>
         <module>client</module>
         <module>server</module>
-        <module>collectd-timely-plugin</module>
-        <module>collectd-nsq-plugin</module>
-        <module>collectd-plugin-parent</module>
         <module>grafana</module>
         <module>analytics</module>
     </modules>
@@ -509,4 +506,17 @@
             </plugins>
         </pluginManagement>
     </build>
+    <profiles>
+        <profile>
+            <id>collectd</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <modules>
+                <module>collectd-timely-plugin</module>
+                <module>collectd-nsq-plugin</module>
+                <module>collectd-plugin-parent</module>
+            </modules>
+        </profile>
+    </profiles>
 </project>
