@@ -2,7 +2,7 @@
 
 ## Building Timely
 
-Timely requires a Java 8 and uses Maven for compiling source, running tests, and packaging distributions. Below is a set of useful Maven lifecyles that we use:
+Timely requires a Java 8 and uses Maven for compiling source, running tests, and packaging distributions. To build the CollectD plugins, activate the `collectd` profile. Below are a set of useful Maven lifecyles that we use:
  
 Command | Description
 --------|------------
