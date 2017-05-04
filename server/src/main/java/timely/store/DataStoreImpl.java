@@ -80,7 +80,6 @@ import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
 import timely.sample.Aggregator;
-import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.aggregators.Avg;
 import timely.sample.iterators.AggregationIterator;

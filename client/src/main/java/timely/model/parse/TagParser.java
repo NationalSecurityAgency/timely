@@ -4,11 +4,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import timely.model.Tag;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Parses tag1=val1 into a {@code Tag} Combines {@code Tag} into {@code String}

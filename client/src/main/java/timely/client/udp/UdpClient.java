@@ -38,6 +38,7 @@ public class UdpClient implements AutoCloseable {
     public void close() throws IOException {
         if (null != sock) {
             sock.close();
+            sock = null;
         }
     }
 
