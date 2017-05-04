@@ -63,7 +63,7 @@ import timely.auth.VisibilityCache;
 import timely.netty.http.HttpMetricPutHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.HttpVersionRequestHandler;
-import timely.netty.http.NonSecureHttpHandler;
+import timely.netty.http.NonSslRedirectHandler;
 import timely.netty.http.StrictTransportHandler;
 import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.http.auth.BasicAuthLoginRequestHandler;
@@ -473,10 +473,9 @@ public class Server {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
 
-                ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
+                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(config, sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
-                ch.pipeline().addLast("non-secure", new NonSecureHttpHandler(config));
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));

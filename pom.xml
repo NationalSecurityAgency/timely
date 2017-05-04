@@ -56,8 +56,8 @@
         <version.jsoup>1.9.2</version.jsoup>
         <version.junit>4.12</version.junit>
         <version.log4j>2.6.2</version.log4j>
-        <version.netty>4.0.38.Final</version.netty>
-        <version.netty-tcnative>1.1.33.Fork18</version.netty-tcnative>
+        <version.netty>4.0.46.Final</version.netty>
+        <version.netty-tcnative>2.0.1.Final</version.netty-tcnative>
         <version.powermock>1.6.4</version.powermock>
         <version.slf4j>1.7.21</version.slf4j>
         <version.spring-boot>1.4.1.RELEASE</version.spring-boot>
