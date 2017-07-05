@@ -493,7 +493,7 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
                 if (target.filters && target.filters.length > 0) {
                   return target.metric === metricData.metric;
                 } else {
-                  return target.metric === metricData.metric && _.all(target.tags, function (tagV, tagK) {
+                  return target.metric === metricData.metric && _.every(target.tags, function (tagV, tagK) {
                     interpolatedTagValue = this.templateSrv.replace(tagV, options.scopedVars, 'pipe');
                     return metricData.tags[tagK] === interpolatedTagValue || interpolatedTagValue === "*";
                   }.bind(this));
