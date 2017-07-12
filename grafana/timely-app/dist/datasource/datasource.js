@@ -385,7 +385,6 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
             var metricLabel = this.createMetricLabel(md, target, groupByTags, options);
             var dps = [];
 
-            // TSDB returns datapoints has a hash of ts => value.
             // Can't use _.pairs(invert()) because it stringifies keys/values
             _.each(md.dps, function (v, k) {
               dps.push([v, k * 1]);
@@ -408,7 +407,7 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
             var tagData = [];
 
             if (!_.isEmpty(md.tags)) {
-              _.each(_.pairs(md.tags), function (tag) {
+              _.each(_.toPairs(md.tags), function (tag) {
                 if (_.has(groupByTags, tag[0])) {
                   tagData.push(tag[0] + "=" + tag[1]);
                 }
