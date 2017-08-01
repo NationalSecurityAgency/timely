@@ -17,6 +17,7 @@ public abstract class CollectDPluginParent {
     private static final Pattern HADOOP_STATSD_PATTERN = Pattern
             .compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final String INSTANCE = " instance=";
+    private static final String NAME = " name=";
     private static final String SAMPLE = " sample=";
     private static final String CODE = " code=";
     private static final String PERIOD = ".";
@@ -170,17 +171,27 @@ public abstract class CollectDPluginParent {
         } else if (vl.getPlugin().equals("snmp")) {
             metric.append("sys.snmp.").append(vl.getType());
             tags.append(INSTANCE).append(vl.getTypeInstance().replaceAll(" ", "_"));
+        } else if (vl.getPlugin().equals("GenericJMX")) {
+            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD)
+                    .append(vl.getTypeInstance());
+            String[] pluginInstanceSplit = vl.getPluginInstance().split("-");
+            if (pluginInstanceSplit.length > 0) {
+                tags.append(INSTANCE).append(pluginInstanceSplit[0].replaceAll(" ", "_"));
+            }
+            if (pluginInstanceSplit.length > 1) {
+                tags.append(NAME).append(pluginInstanceSplit[1].replaceAll(" ", "_"));
+            }
         } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance())
                 && notEmpty(vl.getPlugin())) {
             metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD)
                     .append(vl.getTypeInstance());
-            tags.append(INSTANCE).append(vl.getPluginInstance());
+            tags.append(INSTANCE).append(vl.getPluginInstance().replaceAll(" ", "_"));
         } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPlugin())) {
             metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD)
                     .append(vl.getTypeInstance());
         } else if (notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance()) && notEmpty(vl.getPlugin())) {
             metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType());
-            tags.append(INSTANCE).append(vl.getPluginInstance());
+            tags.append(INSTANCE).append(vl.getPluginInstance().replaceAll(" ", "_"));
         } else if (notEmpty(vl.getType()) && notEmpty(vl.getPlugin())) {
             metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType());
         } else {
