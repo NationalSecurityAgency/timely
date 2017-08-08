@@ -23,8 +23,8 @@
       {"name": "Project site", "url": "https://github.com/NationalSecurityAgency/timely"},
       {"name": "License & Terms", "url": "https://raw.githubusercontent.com/NationalSecurityAgency/timely/master/LICENSE"}
     ],
-    "version": "0.0.4-SNAPSHOT",
-    "updated": "2016-10-27"
+    "version": "0.0.5-SNAPSHOT",
+    "updated": "2017-07-21"
   },
 
   "includes": [
@@ -34,7 +34,7 @@
   ],
 
   "dependencies": {
-    "grafanaVersion": "3.x.x",
+    "grafanaVersion": "4.x.x",
     "plugins": []
   }
 

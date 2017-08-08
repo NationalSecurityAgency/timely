@@ -347,7 +347,7 @@ export class TimelyDatasource {
     var tagData = [];
 
     if (!_.isEmpty(md.tags)) {
-      _.each(_.pairs(md.tags), function(tag) {
+      _.each(_.toPairs(md.tags), function(tag) {
         if (_.has(groupByTags, tag[0])) {
           tagData.push(tag[0] + "=" + tag[1]);
         }
@@ -430,9 +430,7 @@ export class TimelyDatasource {
         if (target.filters && target.filters.length > 0) {
           return target.metric === metricData.metric;
         } else {
-          return target.metric === metricData.metric &&
-          _.all(target.tags,
-              function(tagV, tagK) {
+          return target.metric === metricData.metric && _.every(target.tags, function(tagV, tagK) {
                 interpolatedTagValue = this.templateSrv.replace(tagV, options.scopedVars, 'pipe');
                 return metricData.tags[tagK] === interpolatedTagValue || interpolatedTagValue === "*";
               }.bind(this));
