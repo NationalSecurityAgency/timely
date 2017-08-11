@@ -134,15 +134,12 @@
 <ol>
 <li><p>Install and configure a Timely <a href="#timely-server">server</a></p></li>
 <li><p>Install and configure the Timely <a href="#deployment">app</a>  within Grafana</p></li>
+<li><p>Send metrics to Timely using <a href="http://collectd.org/">CollectD</a>, OpenTSDBs <a href="https://github.com/OpenTSDB/tcollector">TCollector</a>, etc.</p></li>
 </ol>
 
 <blockquote>
 <p>Timely should accept data from TCollector with no changes. A <a href="#plugins-for-collectd">plugin</a> exists for sending data from CollectD.</p>
 </blockquote>
-
-<ol>
-<li>Send metrics to Timely using <a href="http://collectd.org/">CollectD</a>, OpenTSDBs <a href="https://github.com/OpenTSDB/tcollector">TCollector</a>, etc.</li>
-</ol>
 
           <h1 id="timely-server">Timely Server</h1>
 
@@ -161,12 +158,8 @@ The standalone server will not save your metric data across restarts.
 <p>To deploy Timely with a running Accumulo instance you will need to modify the <code class="prettyprint">conf/timely.yml</code> file appropriately. Then copy the <code class="prettyprint">lib/timely-client.jar</code>, <code class="prettyprint">lib/timely-server.jar</code>, <code class="prettyprint">lib/commons-lang3-*.jar</code>, <code class="prettyprint">lib/commons-collections4-*.jar</code>, and <code class="prettyprint">lib/guava-*.jar</code> files to your Accumulo tablet servers. Finally, launch Timely using the <code class="prettyprint">bin/timely-server.sh</code> script. Because Timely uses a newer version of Guava, you will need to configure a classloader for the Timely context, set it to use post-delegation, and then configure your tables to use the Timely context classloader. This can be done in the shell or in the accumulo-site.xml file.</p>
 
 <blockquote>
-<p>In accumulo-site.xml: <br>
- &lt;name&gt;general.vfs.conext.classpath.timely.delegation=post&lt;/name&gt;<br>
- &lt;value&gt;some location&lt;/value&gt;</p>
-
 <p>In accumulo shell: <br>
-<code class="prettyprint">general.vfs.conext.classpath.timely=&lt;some location&gt;</code><br>
+<code class="prettyprint">general.vfs.context.classpath.timely=&lt;some location&gt;</code><br>
 <code class="prettyprint">general.vfs.context.classpath.timely.delegation=post</code></p>
 </blockquote>
 
@@ -227,7 +220,7 @@ The standalone server will not save your metric data across restarts.
 </code></pre>
 <p>The default configuration file type for Timely is a YAML. The configuration is read internally using Spring Boot, and therefore supports all of the configuration styles supported by Spring Boot. See <a href="http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config">here</a> and <a href="http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-yaml">here</a> for more details. In YAML, a property such as timely.accumulo.instance-name=MyInstanceName (which can also be timely.accumulo.instanceName) would look like the example on the right.</p>
 
-<p>The <code class="prettyprint">NUM_SERVER_THREADS</code> variable in the <code class="prettyprint">timely-server.sh</code> script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the <code class="prettyprint">conf</code> directory supports the following properties:</p>
+<p>The <code class="prettyprint">NUM_SERVER_THREADS</code> variable in the <code class="prettyprint">timely-server.sh</code> script controls how many threads are used in the Netty event group for UPD, TCP, HTTP, and WebSocket operations. The different protocols each use a Netty event group, so if you set the value to 8, then you will have 4 thread groups of 8 threads each. The properties file in the <code class="prettyprint">conf</code> directory supports the following properties:</p>
 
 <blockquote>
 <p>Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the <code class="prettyprint">timely.accumulo.write.latency</code> and <code class="prettyprint">timely.accumulo.write.threads</code> configuration property, but the buffer size for each BatchWriter is <code class="prettyprint">timely.accumulo.write.buffer-size</code> divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.accumulo.write.latency=30s, timely.accumulo.write.threads=2 timely.accumulo.write.buffer-size=1G</p>
@@ -677,7 +670,13 @@ Timely stores your metric N times in the metrics table, where N is the number of
           <h1 id="standalone-quick-start">Standalone Quick Start</h1>
 
 <ol>
-<li>Install latest version of Grafana that works with Timely</li>
+<li>Build Timely
+
+<ol>
+<li>set <code class="prettyprint">JAVA_HOME</code> to point to a JDK 8 installation</li>
+<li>run <code class="prettyprint">mvn clean package</code> from the top level directory in the source tree</li>
+</ol></li>
+<li>Install latest version of Grafana that works with Timely (4.4.3)</li>
 <li>Create a grafana configuration file (e.g: <code class="prettyprint">conf/settings.ini</code>)
 
 <ol>
@@ -686,16 +685,11 @@ Timely stores your metric N times in the metrics table, where N is the number of
 <li><code class="prettyprint">cert_file= &lt;path to PEM encoded certificate file&gt;</code></li>
 <li><code class="prettyprint">key_file= &lt;path to PEM encoded un-encrypted private key file&gt;</code></li>
 </ol></li>
+<li>Untar the timely-app distribution tarball located in grafana/target in the grafana plugins directory (default: /var/lib/grafana/plugins)</li>
 <li>Start Grafana (<code class="prettyprint">./bin/grafana-server -c conf/settings.ini</code>)
 
 <ol>
 <li>Visit <code class="prettyprint">https://localhost:3000</code> to verify Grafana is working</li>
-</ol></li>
-<li>Build Timely
-
-<ol>
-<li>set <code class="prettyprint">JAVA_HOME</code> to point to a JDK 8 installation</li>
-<li>cd into the server directory and run <code class="prettyprint">mvn clean package</code></li>
 </ol></li>
 <li>Untar Timely server distribution (found in <code class="prettyprint">target/timely-server-(VERSION)-SNAPSHOT-dist.tar.gz</code>)</li>
 <li>Modify <code class="prettyprint">timely-standalone.yml</code>:
@@ -1687,7 +1681,7 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 
 <h2 id="building-timely">Building Timely</h2>
 
-<p>Timely requires a Java 8 and uses Maven for compiling source, running tests, and packaging distributions. Below is a set of useful Maven lifecyles that we use:</p>
+<p>Timely requires a Java 8 and uses Maven for compiling source, running tests, and packaging distributions. To build the CollectD plugins, activate the <code class="prettyprint">collectd</code> profile. Below are a set of useful Maven lifecyles that we use:</p>
 
 <table><thead>
 <tr>
@@ -1706,6 +1700,10 @@ Timely accepts binary put requests over the UDP and TCP protocols using Google F
 <tr>
 <td>mvn package</td>
 <td>Runs findbugs and creates a distribution</td>
+</tr>
+<tr>
+<td>mvn package -Pcollectd</td>
+<td>Runs findbugs and creates a distribution, includes the collectd plugins</td>
 </tr>
 <tr>
 <td>mvn verify</td>
@@ -1815,6 +1813,21 @@ You should see metrics show up after a minute or two. If you do not, check for a
 </aside>
 
           <h1 id="release-notes">Release Notes</h1>
+
+<h2 id="0-0-5">0.0.5</h2>
+
+<h3 id="features">FEATURES</h3>
+
+<ul>
+<li>Made changes and tested with Grafana 4.4.3 (alerting not supported yet)</li>
+<li>Updated provided dashboards</li>
+</ul>
+
+<h3 id="notes">NOTES</h3>
+
+<ul>
+<li>Build modified to <em>not</em> build collectd modules by default, use the <code class="prettyprint">collectd</code> maven profile at build time</li>
+</ul>
 
 <h2 id="0-0-4">0.0.4</h2>
 
