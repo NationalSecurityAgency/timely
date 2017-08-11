@@ -12,12 +12,8 @@ The standalone server will not save your metric data across restarts.
 
 To deploy Timely with a running Accumulo instance you will need to modify the `conf/timely.yml` file appropriately. Then copy the `lib/timely-client.jar`, `lib/timely-server.jar`, `lib/commons-lang3-*.jar`, `lib/commons-collections4-*.jar`, and `lib/guava-*.jar` files to your Accumulo tablet servers. Finally, launch Timely using the `bin/timely-server.sh` script. Because Timely uses a newer version of Guava, you will need to configure a classloader for the Timely context, set it to use post-delegation, and then configure your tables to use the Timely context classloader. This can be done in the shell or in the accumulo-site.xml file.
 
-> In accumulo-site.xml: <br>
- &lt;name&gt;general.vfs.conext.classpath.timely.delegation=post&lt;/name&gt;<br>
- &lt;value&gt;some location&lt;/value&gt;
-
 > In accumulo shell: <br>
-`general.vfs.conext.classpath.timely=<some location>`<br>
+`general.vfs.context.classpath.timely=<some location>`<br>
 `general.vfs.context.classpath.timely.delegation=post`
 
 
@@ -80,7 +76,7 @@ timely:
 ```
 The default configuration file type for Timely is a YAML. The configuration is read internally using Spring Boot, and therefore supports all of the configuration styles supported by Spring Boot. See [here](http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config) and [here](http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-yaml) for more details. In YAML, a property such as timely.accumulo.instance-name=MyInstanceName (which can also be timely.accumulo.instanceName) would look like the example on the right.
 
-The `NUM_SERVER_THREADS` variable in the `timely-server.sh` script controls how many threads are used in the Netty event group for TCP and HTTP operations. The TCP and HTTP groups use a different event group, so if you set the value to 8, then you will have 8 threads for TCP operations and 8 threads for HTTP operations. The properties file in the `conf` directory supports the following properties:
+The `NUM_SERVER_THREADS` variable in the `timely-server.sh` script controls how many threads are used in the Netty event group for UPD, TCP, HTTP, and WebSocket operations. The different protocols each use a Netty event group, so if you set the value to 8, then you will have 4 thread groups of 8 threads each. The properties file in the `conf` directory supports the following properties:
 
 > Note: Each thread in the Timely server that is used for processing TCP put operations has its own BatchWriter. Each BatchWriter honors the `timely.accumulo.write.latency` and `timely.accumulo.write.threads` configuration property, but the buffer size for each BatchWriter is `timely.accumulo.write.buffer-size` divided by the number of threads. For example, if you have 8 threads processing put operations and the following settings, then you will have 8 BatchWriters each using 2 threads with a 30s latency and a maximum buffer size of 128M: timely.accumulo.write.latency=30s, timely.accumulo.write.threads=2 timely.accumulo.write.buffer-size=1G
 

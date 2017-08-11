@@ -9,6 +9,7 @@ Command | Description
 mvn compile | Compiles and formats the source
 mvn test | Runs unit tests
 mvn package | Runs findbugs and creates a distribution
+mvn package -Pcollectd | Runs findbugs and creates a distribution, includes the collectd plugins
 mvn verify | Runs integration tests
 mvn verify site | Creates the site
 

@@ -1,5 +1,16 @@
 # Release Notes
 
+## 0.0.5
+
+### FEATURES
+
+- Made changes and tested with Grafana 4.4.3 (alerting not supported yet)
+- Updated provided dashboards
+
+### NOTES
+
+- Build modified to *not* build collectd modules by default, use the `collectd` maven profile at build time
+
 ## 0.0.4
 
 ### FEATURES

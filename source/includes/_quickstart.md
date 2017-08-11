@@ -3,7 +3,7 @@
 1. Build Timely
   1. set `JAVA_HOME` to point to a JDK 8 installation
   2. run `mvn clean package` from the top level directory in the source tree
-2. Install latest version of Grafana that works with Timely (3.1.x)
+2. Install latest version of Grafana that works with Timely (4.4.3)
 3. Create a grafana configuration file (e.g: `conf/settings.ini`)
   1. `protocol = https`
   2. `http_addr = localhost`
