@@ -5,6 +5,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.ssl.SslCompletionEvent;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 
@@ -98,6 +99,11 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
                 } else {
                     LOG.warn("Channel idle, but no subscription id found on context. Unable to close subscriptions");
                 }
+            }
+        } else if (evt instanceof SslCompletionEvent) {
+            SslCompletionEvent ssl = (SslCompletionEvent) evt;
+            if (!ssl.isSuccess()) {
+                LOG.error("SSL error: {}", ssl.getClass().getSimpleName(), ssl.cause());
             }
         } else {
             LOG.warn("Received unhandled user event {}", evt);
