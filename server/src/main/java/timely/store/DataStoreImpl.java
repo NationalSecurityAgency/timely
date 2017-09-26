@@ -550,6 +550,7 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             LOG.debug("Query time: {}", (System.currentTimeMillis() - now));
+            internalMetrics.addQueryResponse(result.size(), (System.currentTimeMillis() - now));
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
             LOG.error("Error during query: " + ex.getMessage(), ex);
