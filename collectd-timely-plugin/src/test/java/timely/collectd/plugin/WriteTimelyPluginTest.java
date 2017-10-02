@@ -19,12 +19,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ Collectd.class })
 @NotThreadSafe
+@PowerMockIgnore("javax.management.*")
 public class WriteTimelyPluginTest {
 
     private WriteTimelyPlugin plugin = null;
@@ -63,7 +65,6 @@ public class WriteTimelyPluginTest {
         Assert.assertEquals(0, plugin.config(config));
         // Seed with one metric to create the connection
         Assert.assertEquals(0, plugin.write(createMetric()));
-        plugin.flush();
         Thread.sleep(100);
         Assert.assertTrue(server.messageReceived());
     }
@@ -77,7 +78,6 @@ public class WriteTimelyPluginTest {
             Thread.sleep(1000);
         }
         Assert.assertEquals(0, plugin.write(createMetric()));
-        plugin.flush();
         Thread.sleep(100);
         Assert.assertTrue(server.messageReceived());
         plugin.shutdown();
@@ -94,7 +94,6 @@ public class WriteTimelyPluginTest {
             Thread.sleep(1000);
         }
         Assert.assertEquals(0, plugin.write(createMetric()));
-        plugin.flush();
         Thread.sleep(100);
         Assert.assertTrue(server.messageReceived());
         server.shutdown();
@@ -104,16 +103,18 @@ public class WriteTimelyPluginTest {
         server.create();
         Thread t2 = new Thread(server);
         t2.start();
+        // Need to call this again because the server is not guaranteed to be
+        // listening on the same local port as the first time that it was
+        // started
+        setupPlugin();
         while (!server.ready()) {
             Thread.sleep(1000);
             // Keep sending metrics to plugin to force reconnect
             int result = plugin.write(createMetric());
             System.out.println("Wrote to client, result: " + result);
             Assert.assertEquals(0, result);
-            plugin.flush();
         }
         Assert.assertEquals(0, plugin.write(createMetric()));
-        plugin.flush();
         Thread.sleep(1000);
         Assert.assertTrue(server.messageReceived());
         plugin.shutdown();
@@ -139,6 +140,7 @@ public class WriteTimelyPluginTest {
             server.setReceiveBufferSize(8192);
             host = server.getInetAddress().getHostAddress();
             port = server.getLocalPort();
+            System.out.println("Local port " + port);
         }
 
         public String getHost() {

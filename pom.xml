@@ -44,6 +44,7 @@
         <version.collectd>5.5.1</version.collectd>
         <version.commons-collections4>4.1</version.commons-collections4>
         <version.commons-lang3>3.5</version.commons-lang3>
+        <version.commons-pool2>2.4.2</version.commons-pool2>
         <version.disruptor>3.3.6</version.disruptor>
         <version.fast-classpath-scanner>2.0.5</version.fast-classpath-scanner>
         <version.google-flatbuffers>1.4.0</version.google-flatbuffers>
@@ -198,6 +199,11 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>${version.commons-lang3}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-pool2</artifactId>
+                <version>${version.commons-pool2}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>

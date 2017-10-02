@@ -1,5 +1,6 @@
 package timely.collectd.plugin;
 
+import java.io.OutputStream;
 import java.text.MessageFormat;
 import java.util.HashSet;
 import java.util.Set;
@@ -54,9 +55,9 @@ public abstract class CollectDPluginParent {
         return 0;
     }
 
-    public abstract void write(String metric);
+    public abstract void write(String metric, OutputStream out);
 
-    public void process(ValueList vl) {
+    public void process(ValueList vl, OutputStream out) {
         debugValueList(vl);
 
         StringBuilder metric = new StringBuilder();
@@ -214,7 +215,7 @@ public abstract class CollectDPluginParent {
             String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(),
                     tagsWithSample.toString());
             Collectd.logDebug("Writing: " + datapoint);
-            write(datapoint);
+            write(datapoint, out);
         }
     }
 

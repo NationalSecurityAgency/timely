@@ -2,6 +2,7 @@ package timely.collectd.plugin;
 
 import static org.junit.Assert.*;
 
+import java.io.OutputStream;
 import java.util.Collections;
 
 import net.jcip.annotations.NotThreadSafe;
@@ -29,7 +30,7 @@ public class PluginParentTest {
         }
 
         @Override
-        public void write(String metric) {
+        public void write(String metric, OutputStream out) {
             result = metric;
         }
 
@@ -58,7 +59,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put statsd.dfs.BlocksRead 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo instance=DataNode sample=value sampleType=GAUGE\n",
                 result);
@@ -78,7 +79,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals("put statsd.baz 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo sample=value sampleType=GAUGE\n",
                 result);
     }
@@ -97,7 +98,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put statsd.baz 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo instance=bar sample=value sampleType=GAUGE\n",
                 result);
@@ -117,7 +118,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.hddtemp.temperature 1456156976840 35.0 host=r01n01 rack=r01 addl1=foo instance=sda sample=value sampleType=GAUGE\n",
                 result);
@@ -137,7 +138,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.smart.smart_badsectors 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo instance=sda sample=value sampleType=GAUGE\n",
                 result);
@@ -158,7 +159,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.smart.raw-read-error-rate 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo instance=sda sample=value sampleType=GAUGE\n",
                 result);
@@ -179,7 +180,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.smart.Total_LBAs_Read 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo code=242 instance=sda sample=value sampleType=GAUGE\n",
                 result);
@@ -200,7 +201,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.snmp.if_octets 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo instance=Ethernet1 sample=value sampleType=GAUGE\n",
                 result);
@@ -222,7 +223,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.sensors.temperature.coretemp-isa-0000 1456156976840 35.0 host=r01n01 rack=r01 addl1=foo instance=1 sample=value sampleType=GAUGE\n",
                 result);
@@ -242,7 +243,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.haproxy.run_queue 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo sample=value sampleType=GAUGE\n",
                 result);
@@ -263,7 +264,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.haproxy.queue_current 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo proxy_name=proxy1 service_name=server1 sample=value sampleType=GAUGE\n",
                 result);
@@ -284,7 +285,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.ethstat.tx_comp_queue_full 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo instance=eth0 sample=value sampleType=GAUGE\n",
                 result);
@@ -306,7 +307,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.ethstat.rx_bytes 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo queue=1 instance=eth0 sample=value sampleType=GAUGE\n",
                 result);
@@ -327,7 +328,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl);
+        test.process(vl, null);
         assertEquals(
                 "put sys.ipmi.temperature 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo instance=LAN_NIC_Temp_system_board_(3.2) sample=value sampleType=GAUGE\n",
                 result);

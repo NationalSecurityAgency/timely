@@ -3,8 +3,11 @@ package timely.collectd.plugin;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Random;
 
+import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.entity.EntityBuilder;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -33,10 +36,11 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
     private int port = 0;
     private String topic = "metrics#ephemeral";
     private String endpoint = null;
-    private ByteArrayOutputStream baos = null;
-    private DataOutputStream out = null;
+    private GenericObjectPool<CloseableHttpClient> clientPool = null;
 
-    private CloseableHttpClient client = HttpClients.createDefault();
+    // pool should be limited by the number of WriteThreads configured in
+    // collectd
+    final private int POOL_MAX_SIZE = Integer.MAX_VALUE;
 
     public WriteNSQPlugin() {
         Collectd.registerConfig(WriteNSQPlugin.class.getName(), this);
@@ -44,16 +48,18 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
         Collectd.registerWrite(WriteNSQPlugin.class.getName(), this);
     }
 
-    public synchronized int write(ValueList vl) {
-        baos = new ByteArrayOutputStream();
-        out = new DataOutputStream(baos);
-        super.process(vl);
+    public int write(ValueList vl) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(baos);
+        super.process(vl, out);
+        CloseableHttpClient client = null;
         try {
             out.flush();
             HttpPost post = new HttpPost(endpoint);
             EntityBuilder request = EntityBuilder.create();
             request.setBinary(baos.toByteArray());
             post.setEntity(request.build());
+            client = clientPool.borrowObject();
             CloseableHttpResponse response = client.execute(post);
             try {
                 int code = response.getStatusLine().getStatusCode();
@@ -66,13 +72,15 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
             } finally {
                 response.close();
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             Collectd.logError("Error sending metrics to NSQ: " + e.getMessage());
         } finally {
+            if (client != null) {
+                clientPool.returnObject(client);
+            }
             if (null != out) {
                 try {
                     out.close();
-                    out = null;
                 } catch (IOException e) {
                 }
             }
@@ -81,9 +89,9 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
     }
 
     @Override
-    public synchronized void write(String metric) {
+    public void write(String metric, OutputStream out) {
         try {
-            out.writeBytes(metric);
+            ((DataOutputStream) out).writeBytes(metric);
         } catch (IOException e) {
             Collectd.logError("Error writing metric: " + e.getMessage());
             try {
@@ -93,21 +101,21 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
         }
     }
 
-    public void flush() {
-    }
-
-    public synchronized int shutdown() {
+    public int shutdown() {
         Collectd.logInfo("Shutting down connection to NSQ at " + host + ":" + port);
-        try {
-            client.close();
-        } catch (IOException e) {
-            Collectd.logError("Error closing HttpClient: " + e.getMessage());
-        }
+        clientPool.close();
         return 0;
     }
 
-    public synchronized int config(OConfigItem config) {
+    public int config(OConfigItem config) {
         super.config(config);
+        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+        // use max size for maxTotal and maxIdle
+        // no need to activate or passivate
+        poolConfig.setMaxTotal(POOL_MAX_SIZE);
+        poolConfig.setMaxIdle(POOL_MAX_SIZE);
+        this.clientPool = new GenericObjectPool(new PooledCloseableHttpClientFactory(), poolConfig);
+
         for (OConfigItem child : config.getChildren()) {
             switch (child.getKey()) {
                 case "host":
