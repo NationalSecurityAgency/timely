@@ -189,7 +189,7 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
         combined = TimelyMetric.unpivot(combined, timelyMetric.metric, groupByColumn=alertAnalyticConfig.groupByColumn)
         combined = combined.sort_index()
         combined['date'] = combined.index.values
-        combined = combined.sort_values(['date', analyticConfig.groupByColumn])
+        combined = combined.sort_values(['date', alertAnalyticConfig.groupByColumn])
         combined = combined.drop(['date'], 1)
         combined = combined.dropna()
         combined = DataOperations.ensureMinSeriesLength(combined, alertAnalyticConfig.groupByColumn)
