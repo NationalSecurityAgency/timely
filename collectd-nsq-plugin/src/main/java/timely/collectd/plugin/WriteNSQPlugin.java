@@ -114,7 +114,8 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
         // no need to activate or passivate
         poolConfig.setMaxTotal(POOL_MAX_SIZE);
         poolConfig.setMaxIdle(POOL_MAX_SIZE);
-        this.clientPool = new GenericObjectPool(new PooledCloseableHttpClientFactory(), poolConfig);
+        poolConfig.setTestOnReturn(true);
+        PooledCloseableHttpClientFactory pooledCloseableHttpClientFactory = new PooledCloseableHttpClientFactory();
 
         for (OConfigItem child : config.getChildren()) {
             switch (child.getKey()) {
@@ -138,9 +139,30 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
                 case "Topic":
                     topic = child.getValues().get(0).getString();
                     break;
+                case "connectionRequestTimeout":
+                case "ConnectionRequestTimeout":
+                    int connectionRequestTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    pooledCloseableHttpClientFactory.setConnectionRequestTimeout(connectionRequestTimeout);
+                    break;
+                case "connectTimeout":
+                case "ConnectTimeout":
+                    int connectTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    pooledCloseableHttpClientFactory.setConnectTimeout(connectTimeout);
+                    break;
+                case "socketTimeout":
+                case "SocketTimeout":
+                    int socketTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    pooledCloseableHttpClientFactory.setSocketTimeout(socketTimeout);
+                    break;
+                case "connectionTimeToLive":
+                case "ConnectionTimeToLive":
+                    long connectionTimeToLive = Long.parseLong(child.getValues().get(0).getString());
+                    pooledCloseableHttpClientFactory.setConnectionTimeToLive(connectionTimeToLive);
+                    break;
                 default:
             }
         }
+        this.clientPool = new GenericObjectPool(pooledCloseableHttpClientFactory, poolConfig);
         this.endpoint = "http://" + host + ":" + port + "/mpub?topic=" + topic;
         if (null != host) {
             return 0;

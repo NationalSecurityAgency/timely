@@ -45,6 +45,13 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
             super.process(vl, socket.getOutputStream());
         } catch (Exception e) {
             Collectd.logWarning(e.getMessage());
+            try {
+                // close socket so that the object pool will discard it and
+                // reconnect
+                socket.close();
+            } catch (IOException e1) {
+                Collectd.logError(e1.getMessage());
+            }
             return -1;
         } finally {
             if (socket != null) {
@@ -59,6 +66,9 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
         PrintWriter printWriter = new PrintWriter(out, false);
         printWriter.write(metric);
         printWriter.flush();
+        if (printWriter.checkError()) {
+            throw new RuntimeException("Error writing to Timely");
+        }
     }
 
     public int shutdown() {
@@ -77,6 +87,7 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
             // no need to activate and passivate
             poolConfig.setMaxTotal(POOL_MAX_SIZE);
             poolConfig.setMaxIdle(POOL_MAX_SIZE);
+            poolConfig.setTestOnReturn(true);
             socketPool = new GenericObjectPool(socketFactory, poolConfig);
         }
         return retval;

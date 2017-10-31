@@ -6,7 +6,6 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.collectd.api.Collectd;
 import org.collectd.api.OConfigItem;
 
-import java.io.IOException;
 import java.net.Socket;
 
 public class PooledSocketFactory implements PooledObjectFactory {
@@ -14,7 +13,6 @@ public class PooledSocketFactory implements PooledObjectFactory {
     private String host = null;
     private int port = 0;
     private static final long initialBackoff = 2000;
-    private long currentBackoff = initialBackoff;
 
     public int config(OConfigItem config) {
         for (OConfigItem child : config.getChildren()) {
@@ -48,25 +46,22 @@ public class PooledSocketFactory implements PooledObjectFactory {
     private Socket connect() {
 
         Socket socket = null;
-        if (null == socket || !socket.isConnected()) {
-            long backoff = currentBackoff;
-            long connectTime = 0L;
-            if (System.currentTimeMillis() > (connectTime + backoff)) {
+        long currentBackoff = initialBackoff;
+        while (socket == null) {
+            try {
+                socket = new Socket(host, port);
+                Collectd.logInfo("Connected to Timely at " + host + ":" + port + " from local port:"
+                        + socket.getLocalPort());
+            } catch (Exception e) {
+                Collectd.logError("Error connecting to Timely at " + host + ":" + port + ". Error: " + e.getMessage()
+                        + ".  Will retry connection in " + currentBackoff + " ms.");
                 try {
-                    socket = new Socket(host, port);
-                    currentBackoff = initialBackoff;
-                    Collectd.logInfo("Connected to Timely at " + host + ":" + port + " from local port:"
-                            + socket.getLocalPort());
-                } catch (IOException e) {
-                    Collectd.logError("Error connecting to Timely at " + host + ":" + port + ". Error: "
-                            + e.getMessage());
-                    currentBackoff = backoff * 2;
-                    Collectd.logWarning("Will retry connection in " + currentBackoff + " ms.");
-                    return null;
+                    Thread.sleep(currentBackoff);
+                } catch (InterruptedException e1) {
+
                 }
-            } else {
-                Collectd.logWarning("Not writing to Timely, waiting to reconnect");
-                return null;
+                // max out reconnect period at one minute
+                currentBackoff = (currentBackoff * 2 > 60000) ? 60000 : currentBackoff * 2;
             }
         }
         return socket;
@@ -74,8 +69,7 @@ public class PooledSocketFactory implements PooledObjectFactory {
 
     @Override
     public PooledObject makeObject() throws Exception {
-        Socket socket = connect();
-        return new DefaultPooledObject(socket);
+        return new DefaultPooledObject(connect());
     }
 
     @Override
@@ -97,7 +91,8 @@ public class PooledSocketFactory implements PooledObjectFactory {
 
     @Override
     public boolean validateObject(PooledObject pooledObject) {
-        return pooledObject.getObject() != null;
+        Socket socket = (Socket) pooledObject.getObject();
+        return socket != null && !socket.isClosed();
     }
 
     @Override
