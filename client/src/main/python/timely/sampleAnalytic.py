@@ -9,6 +9,7 @@ timelyMetric = TimelyMetric.TimelyMetric(hostport, '', None, None, None, 48, Non
 
 analyticConfig = TimelyAnalyticConfiguration({
     'system_name' : 'TestSystem',
+    'counter' : False,
     'includeColRegex' : None,
     'excludeColRegex' : None,
     'groupByColumn' : 'instance',

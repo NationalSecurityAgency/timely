@@ -10,6 +10,7 @@ class TimelyAnalyticConfiguration():
             self.groupByColumn = analyticConfig.get('groupByColumn', None)
             self.includeColRegex = analyticConfig.get('includeColRegex', None)
             self.excludeColRegex = analyticConfig.get('excludeColRegex', None)
+            self.counter = analyticConfig.get('counter', False)
             self.sample_period = analyticConfig.get('sample', None)
             self.how = analyticConfig.get('how', 'mean')
             self.rolling_average_period = analyticConfig.get('rolling_average_period', None)
@@ -56,6 +57,7 @@ class TimelyAnalyticConfiguration():
             self.groupByColumn = analyticConfig.groupByColumn
             self.includeColRegex = analyticConfig.includeColRegex
             self.excludeColRegex = analyticConfig.excludeColRegex
+            self.counter = analyticConfig.counter
             self.sample_period = analyticConfig.sample_period
             self.sample_minutes = analyticConfig.sample_minutes
             self.sample = analyticConfig.sample

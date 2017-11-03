@@ -60,8 +60,22 @@ def keepConsecutiveAlerts(dataFrame, exceptions, minimumSpan):
     else:
         return exceptions
 
+def convertCounterToRate(timelyMetric, analyticConfig):
+    # Adjust counter metric into a rate metric
+    df = timelyMetric.getDataFrame()
+    columnNames = df[analyticConfig.groupByColumn].unique()
+    df = DataOperations.pivot(df, timelyMetric.metric, analyticConfig.groupByColumn)
+    df = DataOperations.resample(df, analyticConfig.sample, how=analyticConfig.how)
+    for c in columnNames:
+        df[c] = df[c].diff(1) / (analyticConfig.sample_minutes * 60 * 1000)
+    df = DataOperations.unpivot(df, timelyMetric.metric, analyticConfig.groupByColumn)
+    df = df.dropna()
+    timelyMetric.setDataFrame(df)
+
 def find_alerts(timelyMetric, analyticConfig, notebook=False):
 
+    if (analyticConfig.counter == True):
+        convertCounterToRate(timelyMetric, analyticConfig)
 
     df = timelyMetric.getDataFrame()
 
