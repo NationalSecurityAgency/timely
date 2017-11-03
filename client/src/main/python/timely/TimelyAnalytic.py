@@ -121,18 +121,23 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
 
         if analyticConfig.rolling_average_samples is not None:
             graphDF_avg = TimelyMetric.rolling_average(graphDF_avg, col, rolling_average=analyticConfig.rolling_average_samples)
-            if analyticConfig.alert_percentage is not None:
-                if analyticConfig.alert_percentage > 0:
-                    multiple = 1.0 + (float(abs(analyticConfig.alert_percentage)) / float(100))
-                    currCondition = graphDF[col].astype(float) > (graphDF_avg[col].astype(float) * multiple)
-                    result_values = addCondition(analyticConfig.orCondition, result_values, currCondition)
-                    any_conditions_values = True
-                if analyticConfig.alert_percentage < 0:
-                    multiple = 1.0 - (float(abs(analyticConfig.alert_percentage)) / float(100))
-                    if multiple > 0:
-                        currCondition = graphDF[col].astype(float) < (graphDF_avg[col].astype(float) * multiple)
-                        result_values = addCondition(analyticConfig.orCondition, result_values, currCondition)
-                        any_conditions_values = True
+            if analyticConfig.min_threshold_percentage is not None:
+                if analyticConfig.min_threshold_percentage >= 0:
+                    multiple = 1.0 + (float(abs(analyticConfig.min_threshold_percentage)) / float(100))
+                else:
+                    multiple = 1.0 - (float(abs(analyticConfig.min_threshold_percentage)) / float(100))
+                currCondition = graphDF[col].astype(float) < (graphDF_avg[col].astype(float) * multiple)
+                result_values = addCondition(analyticConfig.orCondition, result_values, currCondition)
+                any_conditions_values = True
+
+            if analyticConfig.max_threshold_percentage is not None:
+                if analyticConfig.max_threshold_percentage >= 0:
+                    multiple = 1.0 + (float(abs(analyticConfig.max_threshold_percentage)) / float(100))
+                else:
+                    multiple = 1.0 - (float(abs(analyticConfig.max_threshold_percentage)) / float(100))
+                currCondition = graphDF[col].astype(float) > (graphDF_avg[col].astype(float) * multiple)
+                result_values = addCondition(analyticConfig.orCondition, result_values, currCondition)
+                any_conditions_values = True
 
             if analyticConfig.average_min_threshold is not None:
                 currCondition = graphDF_avg[col].astype(float) < analyticConfig.average_min_threshold
@@ -170,8 +175,13 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
             combined[col] = graphDF[col]
 
         if analyticConfig.rolling_average_samples is not None:
-            if (analyticConfig.display.lower() == "all") or (analyticConfig.display.lower() == "alerts" and (anyAverageExceptions or analyticConfig.alert_percentage is not None)):
-                combined[col+'_avg'] = graphDF_avg[col]
+            if (analyticConfig.display.lower() == "all"):
+                combined[col + '_avg'] = graphDF_avg[col]
+            else:
+                if (anyAverageExceptions):
+                    combined[col + '_avg'] = graphDF_avg[col]
+                if (anyValueExceptions and (analyticConfig.min_threshold_percentage is not None or analyticConfig.max_threshold_percentage is not None)):
+                    combined[col + '_avg'] = graphDF_avg[col]
 
         if ((analyticConfig.display.lower() == "all") or (analyticConfig.display.lower() == "alerts" and anyValueExceptions)):
             combined[col + '_warn'] = exceptional_values.dropna()

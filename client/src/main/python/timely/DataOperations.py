@@ -289,15 +289,25 @@ def getTitle(timelyMetric, config, separator='\n'):
             alertTitle += " " + condition + " "
         alertTitle += "(y-avg > " + str(config.average_max_threshold) + ")"
 
-    if config.alert_percentage is not None:
+    if config.min_threshold_percentage is not None:
         if alertTitle != "":
             alertTitle += " " + condition + " "
-        if config.alert_percentage > 0:
-            alertTitle += "(y > " + str(config.alert_percentage) + "% above " + str(
-                config.rolling_average_period) + " sample average)"
+        if config.alert_percentage >= 0:
+            descriptivePercentage = 100 + config.min_threshold_percentage
         else:
-            alertTitle += "(y < " + str(-config.alert_percentage) + "% below " + str(
-                config.rolling_average_period) + " sample average)"
+            descriptivePercentage = abs(config.min_threshold_percentage)
+        alertTitle += "(y < " + str(descriptivePercentage) + "% of " + str(
+            config.rolling_average_period) + " sample average)"
+
+    if config.max_threshold_percentage is not None:
+        if alertTitle != "":
+            alertTitle += " " + condition + " "
+        if config.alert_percentage >= 0:
+            descriptivePercentage = 100 + config.max_threshold_percentage
+        else:
+            descriptivePercentage = abs(config.max_threshold_percentage)
+        alertTitle += "(y > " + str(descriptivePercentage) + "% of " + str(
+            config.rolling_average_period) + " sample average)"
 
     if config.system_name is None:
         title = metricTitle
