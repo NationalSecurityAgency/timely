@@ -13,6 +13,8 @@ public class PooledSocketFactory implements PooledObjectFactory {
     private String host = null;
     private int port = 0;
     private static final long initialBackoff = 2000;
+    private int socketTimeout = 60000; // 60 seconds in milliseconds
+    private long connectionTimeToLive = 300000; // 300 seconds in milliseconds
 
     public int config(OConfigItem config) {
         for (OConfigItem child : config.getChildren()) {
@@ -26,6 +28,14 @@ public class PooledSocketFactory implements PooledObjectFactory {
                 case "Port":
                 case "port":
                     port = Integer.parseInt(child.getValues().get(0).getString());
+                    break;
+                case "socketTimeout":
+                case "SocketTimeout":
+                    socketTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    break;
+                case "connectionTimeToLive":
+                case "ConnectionTimeToLive":
+                    connectionTimeToLive = Long.parseLong(child.getValues().get(0).getString());
                     break;
                 default:
 
@@ -50,6 +60,9 @@ public class PooledSocketFactory implements PooledObjectFactory {
         while (socket == null) {
             try {
                 socket = new Socket(host, port);
+                if (socketTimeout > -1) {
+                    socket.setSoTimeout(socketTimeout);
+                }
                 Collectd.logInfo("Connected to Timely at " + host + ":" + port + " from local port:"
                         + socket.getLocalPort());
             } catch (Exception e) {
@@ -75,7 +88,7 @@ public class PooledSocketFactory implements PooledObjectFactory {
     @Override
     public void destroyObject(PooledObject pooledObject) throws Exception {
         try {
-            Collectd.logInfo("Shutting down connection to Timely at " + host + ":" + port);
+            Collectd.logDebug("Shutting down connection to Timely at " + host + ":" + port);
             Socket socket = (Socket) pooledObject.getObject();
             if (socket != null) {
                 socket.close();
@@ -91,6 +104,11 @@ public class PooledSocketFactory implements PooledObjectFactory {
 
     @Override
     public boolean validateObject(PooledObject pooledObject) {
+        if (connectionTimeToLive > -1) {
+            if (pooledObject.getCreateTime() + connectionTimeToLive > System.currentTimeMillis()) {
+                return false;
+            }
+        }
         Socket socket = (Socket) pooledObject.getObject();
         return socket != null && !socket.isClosed();
     }

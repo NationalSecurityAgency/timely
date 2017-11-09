@@ -6,7 +6,7 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
+import org.collectd.api.OConfigItem;
 
 import java.util.concurrent.TimeUnit;
 
@@ -16,6 +16,31 @@ public class PooledCloseableHttpClientFactory implements PooledObjectFactory {
     private int connectTimeout = 30000; // 30 seconds in milliseconds
     private int socketTimeout = 60000; // 60 seconds in milliseconds
     private long connectionTimeToLive = 300000; // 300 seconds in milliseconds
+
+    public int config(OConfigItem config) {
+        for (OConfigItem child : config.getChildren()) {
+            switch (child.getKey()) {
+                case "connectionRequestTimeout":
+                case "ConnectionRequestTimeout":
+                    connectionRequestTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    break;
+                case "connectTimeout":
+                case "ConnectTimeout":
+                    connectTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    break;
+                case "socketTimeout":
+                case "SocketTimeout":
+                    socketTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    break;
+                case "connectionTimeToLive":
+                case "ConnectionTimeToLive":
+                    connectionTimeToLive = Long.parseLong(child.getValues().get(0).getString());
+                    break;
+                default:
+            }
+        }
+        return 0;
+    }
 
     @Override
     public PooledObject makeObject() throws Exception {
