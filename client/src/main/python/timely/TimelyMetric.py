@@ -81,10 +81,9 @@ class TimelyMetric(TimelyWebSocketClient):
         self.debug = False
         self.dataFrame = None
         self.data = []
+        self.timeDateRange = TimeDateRange(beginStr, endStr, period)
 
-        timeDateRange = TimeDateRange(beginStr, endStr, period)
-
-        TimelyWebSocketClient.__init__(self, hostport, metric, tags, timeDateRange.getBeginMs(), timeDateRange.getEndMs())
+        TimelyWebSocketClient.__init__(self, hostport, metric, tags, self.timeDateRange.getBeginMs(), self.timeDateRange.getEndMs())
 
     def debugOn(self):
         self.debug = True

@@ -74,6 +74,16 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
             }
         } catch (Exception e) {
             Collectd.logError("Error sending metrics to NSQ: " + e.getMessage());
+            if (client != null) {
+                try {
+                    client.close();
+                } catch (IOException e1) {
+                }
+                try {
+                    clientPool.invalidateObject(client);
+                } catch (Exception e2) {
+                }
+            }
         } finally {
             if (client != null) {
                 clientPool.returnObject(client);

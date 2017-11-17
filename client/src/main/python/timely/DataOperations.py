@@ -292,7 +292,7 @@ def getTitle(timelyMetric, config, separator='\n'):
     if config.min_threshold_percentage is not None:
         if alertTitle != "":
             alertTitle += " " + condition + " "
-        if config.alert_percentage >= 0:
+        if config.min_threshold_percentage >= 0:
             descriptivePercentage = 100 + config.min_threshold_percentage
         else:
             descriptivePercentage = abs(config.min_threshold_percentage)
@@ -302,7 +302,7 @@ def getTitle(timelyMetric, config, separator='\n'):
     if config.max_threshold_percentage is not None:
         if alertTitle != "":
             alertTitle += " " + condition + " "
-        if config.alert_percentage >= 0:
+        if config.max_threshold_percentage >= 0:
             descriptivePercentage = 100 + config.max_threshold_percentage
         else:
             descriptivePercentage = abs(config.max_threshold_percentage)
@@ -319,7 +319,7 @@ def getTitle(timelyMetric, config, separator='\n'):
 
     if alertTitle != "":
         if config.min_alert_period is not None:
-            alertTitle = '(' + alertTitle + ') for greater than ' + config.min_alert_period
+            alertTitle = '(' + alertTitle + ') for at least ' + config.min_alert_period
         if config.last_alert is not None:
             alertTitle = alertTitle + ' in last ' + config.last_alert
         title += separator + alertTitle

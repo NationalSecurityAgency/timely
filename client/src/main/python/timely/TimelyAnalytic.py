@@ -5,7 +5,7 @@ from TimelyAnalyticConfiguration import TimelyAnalyticConfiguration
 import DataOperations
 import pandas
 import re
-from pandas.tslib import Timestamp
+from datetime import datetime
 from datetime import timedelta
 
 from TimelyAlert import TimelyAlert
@@ -49,7 +49,7 @@ def keepConsecutiveAlerts(dataFrame, exceptions, minimumSpan):
                 currentLast = index
                 if currentFirst is None:
                     currentFirst = index
-                if int((currentLast - currentFirst).total_seconds() / 60) > int(minimumSpan):
+                if int((currentLast - currentFirst).total_seconds() / 60) >= int(minimumSpan):
                     result_span_values['bool'] = result_span_values['bool'] | current_result_span_values['bool']
             else:
                 current_result_span_values['bool'] = np.zeros(exceptions.shape, bool)
@@ -92,8 +92,6 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
     graphDF_avg = pandas.DataFrame(graphDF, copy=True)
 
     combined = pandas.DataFrame()
-
-    now = Timestamp.now()
 
     seriesConfig = {}
     for i in graphDF_avg.columns:
@@ -158,15 +156,16 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
             result_average = np.zeros(graphDF_avg[col].shape, bool)
         exceptional_average = graphDF_avg.loc[result_average, col]
 
-        # only evaluate the last analyticConfig.last_alert_minutes if set
-        if analyticConfig.last_alert_minutes is not None:
-            recentEnoughBegin = now - timedelta(minutes=analyticConfig.last_alert_minutes)
-            exceptional_values = exceptional_values.ix[recentEnoughBegin:now]
-            exceptional_average = exceptional_average.ix[recentEnoughBegin:now]
-
         # only keep alerts that are in consecutive periods of length analyticConfig.min_alert_minutes
         exceptional_values = keepConsecutiveAlerts(graphDF, exceptional_values, analyticConfig.min_alert_minutes)
         exceptional_average = keepConsecutiveAlerts(graphDF_avg, exceptional_average, analyticConfig.min_alert_minutes)
+
+        # only evaluate the last analyticConfig.last_alert_minutes if set
+        if analyticConfig.last_alert_minutes is not None:
+            end = datetime.fromtimestamp(timelyMetric.timeDateRange.getEndMs() / 1000.00, DataOperations.utc)
+            recentEnoughBegin = end - timedelta(minutes=analyticConfig.last_alert_minutes)
+            exceptional_values = exceptional_values.ix[recentEnoughBegin:end]
+            exceptional_average = exceptional_average.ix[recentEnoughBegin:end]
 
         anyValueExceptions = exceptional_values.size > 0
         anyAverageExceptions = exceptional_average.size > 0
