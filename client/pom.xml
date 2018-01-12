@@ -127,6 +127,7 @@
                     </execution>
                 </executions>
             </plugin>
+<!--
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -140,7 +141,7 @@
                         <configuration>
                             <executable>python</executable>
                             <workingDirectory>${project.basedir}/src/main/python</workingDirectory>
-                            <commandlineArgs>setup.py sdist --dist-dir ${project.build.directory}</commandlineArgs>
+                            <commandlineArgs>setup.py sdist - -dist-dir ${project.build.directory}</commandlineArgs>
                         </configuration>
                     </execution>
                     <execution>
@@ -157,6 +158,7 @@
                     </execution>
                 </executions>
             </plugin>
+-->
         </plugins>
     </build>
     <reporting>

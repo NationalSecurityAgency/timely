@@ -218,6 +218,7 @@ public class Configuration {
     public class Scan {
 
         private int threads = 4;
+        private long maxDownsampleMemory = -1;
 
         public int getThreads() {
             return threads;
@@ -225,6 +226,15 @@ public class Configuration {
 
         public Configuration setThreads(int threads) {
             this.threads = threads;
+            return Configuration.this;
+        }
+
+        public long getMaxDownsampleMemory() {
+            return maxDownsampleMemory;
+        }
+
+        public Configuration setMaxDownsampleMemory(long maxDownsampleMemory) {
+            this.maxDownsampleMemory = maxDownsampleMemory;
             return Configuration.this;
         }
     }
