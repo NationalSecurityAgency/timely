@@ -44,10 +44,30 @@ public class DownsampleIterator extends WrappingIterator {
     private boolean doneWithInitialBucketTimestamp = false;
 
     public class MemoryEstimator {
-        private long bucketsUntilReturn = -1;
         private long bucketsCompleted = 0;
+        private long bytesPerBucket = 0;
+        boolean highVolumeBuckets = false;
 
+        public void reset() {
+            bucketsCompleted = 0;
+            bytesPerBucket = 0;
+        }
 
+        public boolean shouldReturnBasedOnMemoryUsage() {
+            bucketsCompleted++;
+            double memoryRemainingPercentage = (maxAggregationMemory - (bucketsCompleted * bytesPerBucket)) / maxAggregationMemory * 100;
+            if (memoryRemainingPercentage <= 0) {
+                return true;
+            } else {
+                // recalculate bytesPerBucket
+                if (bytesPerBucket == 0 || highVolumeBuckets || bucketsCompleted % 100 == 0 || memoryRemainingPercentage < 10.0) {
+                    long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
+                    bytesPerBucket = memoryUsed / bucketsCompleted;
+                }
+                highVolumeBuckets = (bytesPerBucket / maxAggregationMemory) > 0.05;
+                return false;
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -83,15 +103,7 @@ public class DownsampleIterator extends WrappingIterator {
         return false;
     }
 
-    protected boolean shouldReturnBasedOnMemoryUsage() {
-        bucketsCompleted++;
-        if (bucketsUntilReturn == -1) {
-            long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
-            long memoryPerBucket = memoryUsed / bucketsCompleted;
-            bucketsUntilReturn = (maxAggregationMemory / memoryPerBucket);
-        }
-        bucketsUntilReturn--;
-    }
+
 
     @Override
     public boolean hasTop() {
