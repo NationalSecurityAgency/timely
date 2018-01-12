@@ -3,6 +3,7 @@ package timely.sample;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import timely.api.request.timeseries.QueryRequest;
+import timely.model.ObjectSizeOf;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -140,4 +141,7 @@ public class Aggregation implements Iterable<Sample>, Serializable {
         return result;
     }
 
+    public int getNumBuckets() {
+        return buckets.size();
+    }
 }
