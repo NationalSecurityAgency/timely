@@ -5,10 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
@@ -40,32 +37,95 @@ public class DownsampleIterator extends WrappingIterator {
     private long end;
     private long period;
     private Key last;
-    private long maxAggregationMemory = 1000; // max aggregation memory (bytes) before current batch is returned (after bucket is complete)
-    private boolean doneWithInitialBucketTimestamp = false;
+    private MemoryEstimator memoryEstimator = null;
 
-    public class MemoryEstimator {
+    static public class MemoryEstimator {
+
+        private boolean newBucket = false;
+        private long start;
+        private long period;
+        private long startOfCurrentBucket;
         private long bucketsCompleted = 0;
         private long bytesPerBucket = 0;
         boolean highVolumeBuckets = false;
+        long maxAggregationMemory = 0; // max aggregation memory (bytes) before
+                                       // current batch is returned (after
+                                       // bucket is complete)
+        LinkedList<Long> percentageChecks = new LinkedList<>();
 
         public void reset() {
+            newBucket = false;
             bucketsCompleted = 0;
             bytesPerBucket = 0;
+            percentageChecks.add(5l);
+            percentageChecks.add(25l);
+            percentageChecks.add(50l);
+            percentageChecks.add(75l);
         }
 
-        public boolean shouldReturnBasedOnMemoryUsage() {
-            bucketsCompleted++;
-            double memoryRemainingPercentage = (maxAggregationMemory - (bucketsCompleted * bytesPerBucket)) / maxAggregationMemory * 100;
-            if (memoryRemainingPercentage <= 0) {
-                return true;
-            } else {
-                // recalculate bytesPerBucket
-                if (bytesPerBucket == 0 || highVolumeBuckets || bucketsCompleted % 100 == 0 || memoryRemainingPercentage < 10.0) {
-                    long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
-                    bytesPerBucket = memoryUsed / bucketsCompleted;
+        public MemoryEstimator(long maxAggregationMemory, long start, long period) {
+            this.maxAggregationMemory = maxAggregationMemory;
+            this.start = start;
+            this.period = period;
+            this.startOfCurrentBucket = this.start;
+            reset();
+        }
+
+        public double getMemoryUsedPercentage() {
+            return (bucketsCompleted * bytesPerBucket) / (double) maxAggregationMemory * 100;
+        }
+
+        public long getBucketsCompleted() {
+            return bucketsCompleted;
+        }
+
+        public long getBytesPerBucket() {
+            return bytesPerBucket;
+        }
+
+        public boolean isHighVolumeBuckets() {
+            return highVolumeBuckets;
+        }
+
+        public boolean shouldReturnBasedOnMemoryUsage(long timestamp, Object value) {
+
+            sample(timestamp);
+            if (isNewBucket()) {
+                bucketsCompleted++;
+                double memoryUsedPercentage = getMemoryUsedPercentage();
+                if (memoryUsedPercentage >= 100) {
+                    return true;
+                } else {
+                    boolean checkMemoryNow = false;
+                    Long check = percentageChecks.peek();
+                    if (check != null && memoryUsedPercentage >= check) {
+                        checkMemoryNow = true;
+                        percentageChecks.removeFirst();
+                    }
+                    // recalculate bytesPerBucket
+                    if (bytesPerBucket == 0 || highVolumeBuckets || checkMemoryNow) {
+                        long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
+                        bytesPerBucket = memoryUsed / bucketsCompleted;
+                    }
+                    // bucket average greater than 10% of max
+                    highVolumeBuckets = (bytesPerBucket / (double) maxAggregationMemory) >= 0.1;
+                    return false;
                 }
-                highVolumeBuckets = (bytesPerBucket / maxAggregationMemory) > 0.05;
+            } else {
                 return false;
+            }
+        }
+
+        public boolean isNewBucket() {
+            return newBucket;
+        }
+
+        private void sample(long timestamp) {
+            if (timestamp >= (startOfCurrentBucket + period)) {
+                newBucket = true;
+                startOfCurrentBucket = timestamp - ((timestamp - start) % period);
+            } else {
+                newBucket = false;
             }
         }
     }
@@ -78,9 +138,13 @@ public class DownsampleIterator extends WrappingIterator {
         start = Long.parseLong(options.get(START));
         end = Long.parseLong(options.get(END));
         period = Long.parseLong(options.get(PERIOD));
+        // default = 100 MB
+        long maxAggregationMemory = 100000000;
         if (options.containsKey(MAX_AGGREGATION_MEMORY)) {
             maxAggregationMemory = Long.parseLong(options.get(MAX_AGGREGATION_MEMORY));
         }
+        memoryEstimator = new MemoryEstimator(maxAggregationMemory, start, period);
+
         String aggClassname = options.get(AGGCLASS);
         Class<?> aggClass;
         try {
@@ -91,20 +155,6 @@ public class DownsampleIterator extends WrappingIterator {
         factory = new DownsampleFactory(start, end, period, (Class<? extends Aggregator>) aggClass);
     }
 
-    protected boolean beginNewDownsampleBucket(long timestamp) {
-        boolean startOfBucket = (timestamp - start) % period == 0;
-        if (doneWithInitialBucketTimestamp && startOfBucket) {
-            doneWithInitialBucketTimestamp = false;
-            return true;
-        }
-        if (!startOfBucket) {
-            doneWithInitialBucketTimestamp = true;
-        }
-        return false;
-    }
-
-
-
     @Override
     public boolean hasTop() {
 
@@ -114,16 +164,7 @@ public class DownsampleIterator extends WrappingIterator {
                 Value topValue = super.getTopValue();
                 Metric metric = MetricAdapter.parse(topKey, topValue);
                 long timestamp = metric.getValue().getTimestamp();
-                if (beginNewDownsampleBucket(timestamp)) {
-                    bucketsCompleted++;
-                    if (bucketsUntilReturn == -1) {
-                        long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
-                        long memoryPerBucket = memoryUsed / bucketsCompleted;
-                        bucketsUntilReturn = (maxAggregationMemory / memoryPerBucket);
-                    }
-                    bucketsUntilReturn--;
-
-                    // start of new downsample bucket
+                if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
                     break;
                 }
                 last = topKey;
@@ -163,6 +204,7 @@ public class DownsampleIterator extends WrappingIterator {
             out.flush();
             // empty for next batch of downsamples
             value.clear();
+            memoryEstimator.reset();
             return new Value(bos.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -181,10 +223,6 @@ public class DownsampleIterator extends WrappingIterator {
         is.addOption(END, "" + end);
         is.addOption(PERIOD, "" + period);
         is.addOption(AGGCLASS, classname);
-    }
-
-    public static void setMaxTagSets(IteratorSetting is, long maxTagSets) {
-        is.addOption(MAXTAGSETS, "" + maxTagSets);
     }
 
     @SuppressWarnings("unchecked")
