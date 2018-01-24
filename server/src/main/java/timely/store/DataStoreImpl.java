@@ -125,6 +125,7 @@ public class DataStoreImpl implements DataStore {
     private final InternalMetrics internalMetrics = new InternalMetrics();
     private final Timer internalMetricsTimer = new Timer(true);
     private final int scannerThreads;
+    private final long maxDownsampleMemory;
     private final BatchWriterConfig bwConfig;
     private final List<BatchWriter> writers = new ArrayList<>();
     private final ThreadLocal<BatchWriter> metaWriter = new ThreadLocal<>();
@@ -149,6 +150,7 @@ public class DataStoreImpl implements DataStore {
             bwConfig.setMaxMemory(getMemoryInBytes(accumuloConf.getWrite().getBufferSize()) / numWriteThreads);
             bwConfig.setMaxWriteThreads(accumuloConf.getWrite().getThreads());
             scannerThreads = accumuloConf.getScan().getThreads();
+            maxDownsampleMemory = accumuloConf.getScan().getMaxDownsampleMemory();
             anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
 
             metricsTable = conf.getMetricsTable();
@@ -506,7 +508,7 @@ public class DataStoreImpl implements DataStore {
                         LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
                         IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
                         DownsampleIterator.setDownsampleOptions(is, startOfFirstPeriod, endOfLastPeriod, downsample,
-                                daggClass.getName());
+                                maxDownsampleMemory, daggClass.getName());
                         scanner.addScanIterator(is);
                     }
 

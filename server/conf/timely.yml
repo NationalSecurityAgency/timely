@@ -15,6 +15,7 @@ timely:
       bufferSize: 52428800
     scan:
       threads: 4
+      max-downsample-memory: 10000000
   security:
     session-max-age: 86400
     allow-anonymous-access: false

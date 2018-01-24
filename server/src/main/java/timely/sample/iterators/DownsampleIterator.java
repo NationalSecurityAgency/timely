@@ -14,6 +14,7 @@ import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
 
+import org.apache.log4j.Logger;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
 import timely.model.ObjectSizeOf;
@@ -28,7 +29,7 @@ public class DownsampleIterator extends WrappingIterator {
     private static final String START = "downsample.start";
     private static final String END = "downsample.end";
     private static final String PERIOD = "downsample.period";
-    private static final String MAX_AGGREGATION_MEMORY = "downsample.maxAggregationMemory";
+    private static final String MAX_DOWNSAMPLE_MEMORY = "downsample.maxDownsampleMemory";
     private static final String AGGCLASS = "downsample.aggclass";
 
     private DownsampleFactory factory;
@@ -48,9 +49,9 @@ public class DownsampleIterator extends WrappingIterator {
         private long bucketsCompleted = 0;
         private long bytesPerBucket = 0;
         boolean highVolumeBuckets = false;
-        long maxAggregationMemory = 0; // max aggregation memory (bytes) before
-                                       // current batch is returned (after
-                                       // bucket is complete)
+        long maxDownsampleMemory = 0; // max aggregation memory (bytes) before
+                                      // current batch is returned (after
+                                      // bucket is complete)
         LinkedList<Long> percentageChecks = new LinkedList<>();
 
         public void reset() {
@@ -63,8 +64,8 @@ public class DownsampleIterator extends WrappingIterator {
             percentageChecks.add(75l);
         }
 
-        public MemoryEstimator(long maxAggregationMemory, long start, long period) {
-            this.maxAggregationMemory = maxAggregationMemory;
+        public MemoryEstimator(long maxDownsampleMemory, long start, long period) {
+            this.maxDownsampleMemory = maxDownsampleMemory;
             this.start = start;
             this.period = period;
             this.startOfCurrentBucket = this.start;
@@ -72,7 +73,7 @@ public class DownsampleIterator extends WrappingIterator {
         }
 
         public double getMemoryUsedPercentage() {
-            return (bucketsCompleted * bytesPerBucket) / (double) maxAggregationMemory * 100;
+            return (bucketsCompleted * bytesPerBucket) / (double) maxDownsampleMemory * 100;
         }
 
         public long getBucketsCompleted() {
@@ -89,31 +90,33 @@ public class DownsampleIterator extends WrappingIterator {
 
         public boolean shouldReturnBasedOnMemoryUsage(long timestamp, Object value) {
 
-            sample(timestamp);
-            if (isNewBucket()) {
-                bucketsCompleted++;
-                double memoryUsedPercentage = getMemoryUsedPercentage();
-                if (memoryUsedPercentage >= 100) {
-                    return true;
-                } else {
-                    boolean checkMemoryNow = false;
-                    Long check = percentageChecks.peek();
-                    if (check != null && memoryUsedPercentage >= check) {
-                        checkMemoryNow = true;
-                        percentageChecks.removeFirst();
+            boolean shouldReturn = false;
+            if (maxDownsampleMemory >= 0) {
+                sample(timestamp);
+                if (isNewBucket()) {
+                    bucketsCompleted++;
+                    double memoryUsedPercentage = getMemoryUsedPercentage();
+                    if (memoryUsedPercentage >= 100) {
+                        shouldReturn = true;
+                    } else {
+                        boolean checkMemoryNow = false;
+                        Long check = percentageChecks.peek();
+                        if (check != null && memoryUsedPercentage >= check) {
+                            checkMemoryNow = true;
+                            percentageChecks.removeFirst();
+                        }
+                        // recalculate bytesPerBucket
+                        if (bytesPerBucket == 0 || highVolumeBuckets || checkMemoryNow) {
+                            long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
+                            bytesPerBucket = memoryUsed / bucketsCompleted;
+                        }
+                        // bucket average greater than 10% of max
+                        highVolumeBuckets = (bytesPerBucket / (double) maxDownsampleMemory) >= 0.1;
+                        shouldReturn = false;
                     }
-                    // recalculate bytesPerBucket
-                    if (bytesPerBucket == 0 || highVolumeBuckets || checkMemoryNow) {
-                        long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
-                        bytesPerBucket = memoryUsed / bucketsCompleted;
-                    }
-                    // bucket average greater than 10% of max
-                    highVolumeBuckets = (bytesPerBucket / (double) maxAggregationMemory) >= 0.1;
-                    return false;
                 }
-            } else {
-                return false;
             }
+            return shouldReturn;
         }
 
         public boolean isNewBucket() {
@@ -139,11 +142,11 @@ public class DownsampleIterator extends WrappingIterator {
         end = Long.parseLong(options.get(END));
         period = Long.parseLong(options.get(PERIOD));
         // default = 100 MB
-        long maxAggregationMemory = 100000000;
-        if (options.containsKey(MAX_AGGREGATION_MEMORY)) {
-            maxAggregationMemory = Long.parseLong(options.get(MAX_AGGREGATION_MEMORY));
+        long maxDownsampleMemory = -1;
+        if (options.containsKey(MAX_DOWNSAMPLE_MEMORY)) {
+            maxDownsampleMemory = Long.parseLong(options.get(MAX_DOWNSAMPLE_MEMORY));
         }
-        memoryEstimator = new MemoryEstimator(maxAggregationMemory, start, period);
+        memoryEstimator = new MemoryEstimator(maxDownsampleMemory, start, period);
 
         String aggClassname = options.get(AGGCLASS);
         Class<?> aggClass;
@@ -218,10 +221,12 @@ public class DownsampleIterator extends WrappingIterator {
         }
     }
 
-    public static void setDownsampleOptions(IteratorSetting is, long start, long end, long period, String classname) {
+    public static void setDownsampleOptions(IteratorSetting is, long start, long end, long period,
+            long maxDownsampleMemory, String classname) {
         is.addOption(START, "" + start);
         is.addOption(END, "" + end);
         is.addOption(PERIOD, "" + period);
+        is.addOption(MAX_DOWNSAMPLE_MEMORY, "" + maxDownsampleMemory);
         is.addOption(AGGCLASS, classname);
     }
 

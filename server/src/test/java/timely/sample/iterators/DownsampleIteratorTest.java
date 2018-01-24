@@ -83,7 +83,7 @@ public class DownsampleIteratorTest {
     public void simpleGetOneSample() throws Exception {
         // check that data gets pulled out
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData1, 100);
+        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData1, 100, -1);
         assertEquals(1, samples.size());
         for (Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
             Set<Tag> tags = entry.getKey();
@@ -102,7 +102,7 @@ public class DownsampleIteratorTest {
     @Test
     public void simpleGetTwoSamples() throws Exception {
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 100);
+        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 100, -1);
         assertEquals(2, samples.size());
         for (Tag tag : new Tag[] { new Tag("host", "host1"), new Tag("host", "host2") }) {
             Downsample dsample = samples.get(Collections.singleton(tag));
@@ -126,7 +126,7 @@ public class DownsampleIteratorTest {
     @Test
     public void simpleTestDownsampling() throws Exception {
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 200);
+        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 200, -1);
         assertEquals(2, samples.size());
         for (Tag tag : new Tag[] { new Tag("host", "host1"), new Tag("host", "host2") }) {
             Downsample dsample = samples.get(Collections.singleton(tag));
@@ -246,7 +246,7 @@ public class DownsampleIteratorTest {
         int skipInterval = 10;
         SortedMap<Key, Value> testData3 = createTestData3(elapsedTime, skipInterval, numTagVariations);
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData3, sampleInterval);
+        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData3, sampleInterval, 1000);
         assertEquals(numTagVariations, samples.size());
         long totalBuckets = 0;
         for (Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
@@ -256,9 +256,9 @@ public class DownsampleIteratorTest {
     }
 
     private Map<Set<Tag>, Downsample> runQuery(SortedKeyValueIterator<Key, Value> iter, SortedMap<Key, Value> testData,
-            long period) throws Exception {
+            long period, long maxDownsampleMemory) throws Exception {
         IteratorSetting is = new IteratorSetting(100, DownsampleIterator.class);
-        DownsampleIterator.setDownsampleOptions(is, 0, 1000, period, Avg.class.getName());
+        DownsampleIterator.setDownsampleOptions(is, 0, 1000, period, maxDownsampleMemory, Avg.class.getName());
         SortedKeyValueIterator<Key, Value> source = new SortedMapIterator(testData);
         iter.init(source, is.getOptions(), null);
         iter.seek(new Range(), Collections.emptyList(), true);
