@@ -5,11 +5,11 @@
     <parent>
         <groupId>timely</groupId>
         <artifactId>timely</artifactId>
-        <version>0.0.6-SNAPSHOT</version>
+        <version>0.0.6</version>
     </parent>
     <properties>
         <!-- PEP 440 compliant version gets supstituted into src/main/python/template/setup.py -->
-        <python.client.version>0.0.6.dev0</python.client.version>
+        <python.client.version>0.0.6</python.client.version>
     </properties>
     <dependencies>
         <dependency>

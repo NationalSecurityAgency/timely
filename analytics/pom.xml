@@ -23,7 +23,7 @@ under the License.
     <parent>
         <groupId>timely</groupId>
         <artifactId>timely</artifactId>
-        <version>0.0.6-SNAPSHOT</version>
+        <version>0.0.6</version>
     </parent>
     <properties>
         <flink.version>1.1.4</flink.version>
