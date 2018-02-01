@@ -36,7 +36,7 @@ public class MetricAdapter {
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
-    public static Joiner equalsJoiner = Joiner.on("=");
+    public static final Joiner equalsJoiner = Joiner.on("=");
 
     public static Mutation toMutation(Metric metric) {
         final Mutation mutation = new Mutation(encodeRowKey(metric));

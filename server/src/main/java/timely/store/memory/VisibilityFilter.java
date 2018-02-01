@@ -13,13 +13,12 @@ public class VisibilityFilter {
 
     protected VisibilityEvaluator ve;
     protected LRUMap cache;
-    protected Authorizations authorizations;
 
-    private static final Logger log = LoggerFactory.getLogger(org.apache.accumulo.core.iterators.system.VisibilityFilter.class);
+    private static final Logger log = LoggerFactory
+            .getLogger(org.apache.accumulo.core.iterators.system.VisibilityFilter.class);
 
     public VisibilityFilter(Authorizations authorizations) {
         this.ve = new VisibilityEvaluator(authorizations);
-        this.authorizations = authorizations;
         this.cache = new LRUMap(1000);
     }
 

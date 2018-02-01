@@ -3,7 +3,6 @@ package timely.store.memory;
 import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
 import fi.iki.yak.ts.compression.gorilla.Pair;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.apache.accumulo.core.iterators.WrappingIterator;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -21,6 +20,7 @@ import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.aggregators.Avg;
 
+import java.io.Serializable;
 import java.util.*;
 
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
@@ -38,7 +38,6 @@ public class MetricMemoryStore {
 
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
     }
-
 
     protected Map<TaggedMetric, GorillaStore> getGorillaStores(String metric) {
         Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(metric);
@@ -110,7 +109,7 @@ public class MetricMemoryStore {
         }
     }
 
-    private Downsample getDownsample(long startTs, long endTs, QueryRequest.SubQuery query) {
+    private Downsample getDownsample(long startTs, long endTs, QueryRequest.SubQuery query) throws TimelyException {
         long downsample = getDownsamplePeriod(query);
         long startOfFirstPeriod = startTs - (startTs % downsample);
         long endDistanceFromDownSample = endTs % downsample;
@@ -120,12 +119,11 @@ public class MetricMemoryStore {
         Aggregator dagg = null;
         try {
             dagg = daggClass.newInstance();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            return new Downsample(startOfFirstPeriod, endOfLastPeriod, downsample, dagg);
+        } catch (IllegalAccessException | InstantiationException e) {
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                    "Error during query: programming error", "daggClass == null");
         }
-        return new Downsample(startOfFirstPeriod, endOfLastPeriod, downsample, dagg);
     }
 
     private Class<? extends Aggregator> getAggregator(QueryRequest.SubQuery query) {
@@ -158,14 +156,15 @@ public class MetricMemoryStore {
         return getTimeInMillis(parts[0]);
     }
 
-    public class CustomComparator implements Comparator<Pair> {
+    static public class CustomComparator implements Comparator<Pair>, Serializable {
+
         @Override
         public int compare(Pair p1, Pair p2) {
             if (p1.getTimestamp() == p2.getTimestamp()) {
-                if (p1.getDoubleValue() == p2.getDoubleValue()) {
+                if (Double.compare(p1.getDoubleValue(), p2.getDoubleValue()) == 0) {
                     return 0;
                 } else {
-                    return (p1.getDoubleValue() < p2.getDoubleValue()) ? -1 : 1;
+                    return Double.compare(p1.getDoubleValue(), p2.getDoubleValue());
                 }
             } else {
                 return (p1.getTimestamp() < p2.getTimestamp()) ? -1 : 1;
@@ -201,8 +200,8 @@ public class MetricMemoryStore {
         }
     }
 
-    private QueryResponse convertToQueryResponse(QueryRequest.SubQuery query, Map<String, String> tags, Aggregation values,
-                                                 long tsDivisor) {
+    private QueryResponse convertToQueryResponse(QueryRequest.SubQuery query, Map<String, String> tags,
+            Aggregation values, long tsDivisor) {
         QueryResponse response = new QueryResponse();
         Set<String> requestedTags = query.getTags().keySet();
         response.setMetric(query.getMetric());
@@ -211,8 +210,9 @@ public class MetricMemoryStore {
                 response.putTag(tag.getKey(), tag.getValue());
             }
         }
-//        QueryRequest.RateOption rateOptions = query.getRateOptions();
-//        Aggregation combined = Aggregation.combineAggregation(values, rateOptions);
+        // QueryRequest.RateOption rateOptions = query.getRateOptions();
+        // Aggregation combined = Aggregation.combineAggregation(values,
+        // rateOptions);
         for (Sample entry : values) {
             long ts = entry.timestamp / tsDivisor;
             response.putDps(Long.toString(ts), entry.value);

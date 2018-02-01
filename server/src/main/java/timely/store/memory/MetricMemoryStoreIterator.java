@@ -11,9 +11,8 @@ import timely.api.request.timeseries.QueryRequest;
 import java.io.IOException;
 import java.util.*;
 
-public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key,Value> {
+public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Value> {
 
-    private MetricMemoryStore store;
     private VisibilityFilter visibilityFilter;
     private QueryRequest.SubQuery query;
     private long startTs;
@@ -21,13 +20,12 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key,Val
 
     private Iterator<Map.Entry<TaggedMetric, GorillaStore>> storeItr = null;
     private Pair<TaggedMetric, GorillaDecompressor> storePtr = null;
-    private GorillaDecompressor currentDecompressor = null;
     private KeyValue currentKeyValue = null;
     private Queue<KeyValue> kvQueue = new LinkedList<>();
 
-    public MetricMemoryStoreIterator(MetricMemoryStore store, VisibilityFilter visibilityFilter, QueryRequest.SubQuery query, long startTs, long endTs) {
+    public MetricMemoryStoreIterator(MetricMemoryStore store, VisibilityFilter visibilityFilter,
+            QueryRequest.SubQuery query, long startTs, long endTs) {
 
-        this.store = store;
         this.visibilityFilter = visibilityFilter;
         this.query = query;
         this.startTs = startTs;
@@ -50,10 +48,9 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key,Val
         return nextPair;
     }
 
-
     private void prepareEntries(int bufferSize) {
 
-        if (storePtr != null) {
+        if (storePtr != null && kvQueue.isEmpty()) {
             TaggedMetric tm = storePtr.getLeft();
             GorillaDecompressor decompressor = storePtr.getRight();
 
@@ -67,7 +64,9 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key,Val
                     }
                 } else {
                     if (gPair.getTimestamp() >= startTs && gPair.getTimestamp() <= endTs) {
-                        kvQueue.add(new KeyValue(MetricAdapter.toKey(tm.getMetric(), tm.getTags(), gPair.getTimestamp()), new Value(MetricAdapter.encodeValue(gPair.getDoubleValue()))))
+                        kvQueue.add(new KeyValue(
+                                MetricAdapter.toKey(tm.getMetric(), tm.getTags(), gPair.getTimestamp()), new Value(
+                                        MetricAdapter.encodeValue(gPair.getDoubleValue()))));
                     }
                 }
             }
@@ -75,19 +74,20 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key,Val
     }
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env) throws IOException {
+    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
+            throws IOException {
 
     }
 
     @Override
     public boolean hasTop() {
         prepareEntries(100);
-        return nextKey != null;
+        return kvQueue.peek() != null;
     }
 
     @Override
     public void next() throws IOException {
-        return;
+        currentKeyValue = kvQueue.poll();
     }
 
     @Override
@@ -97,12 +97,12 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key,Val
 
     @Override
     public Key getTopKey() {
-        return nextKey;
+        return currentKeyValue.getKey();
     }
 
     @Override
     public Value getTopValue() {
-        return nextValue;
+        return currentKeyValue.getValue();
     }
 
     @Override

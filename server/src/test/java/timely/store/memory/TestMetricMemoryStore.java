@@ -33,14 +33,14 @@ public class TestMetricMemoryStore {
 
         tags.put("part", "webservice");
         tags.put("host", "host1");
-        double[] values = new double[] {2.1, 2.3, 2.0, 2.8, 4.2, 2.1, 7.2, 4.1, 10.2};
+        double[] values = new double[] { 2.1, 2.3, 2.0, 2.8, 4.2, 2.1, 7.2, 4.1, 10.2 };
         for (double d : values) {
             mmStore.store(createMetric("mymetric", tags, d, timestamp));
             timestamp += 1000;
         }
 
         tags.put("host", "host2");
-        values = new double[] {2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2};
+        values = new double[] { 2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2 };
         for (double d : values) {
             mmStore.store(createMetric("mymetric", tags, d, timestamp));
             timestamp += 1000;
@@ -48,7 +48,7 @@ public class TestMetricMemoryStore {
 
         tags.put("part", "ingest");
         tags.put("host", "host3");
-        values = new double[] {2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2};
+        values = new double[] { 2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2 };
         for (double d : values) {
             mmStore.store(createMetric("mymetric", tags, d, timestamp));
             timestamp += 1000;
@@ -72,19 +72,24 @@ public class TestMetricMemoryStore {
 
         Random r = new Random();
         long timestamp = 0;
-        for (int x=0; x <= 60 * 24; x++) {
+        for (int x = 0; x <= 60 * 24; x++) {
             mmStore.store(createMetric("metric.number.1", tags, r.nextInt(1000), timestamp + (x * 1000)));
             if (x == 0) {
                 System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
             }
-//            mmStore.store(createMetric("metric.number.2", tags, r.nextInt(1000), timestamp + (x * 1000)));
-//            mmStore.store(createMetric("metric.number.3", tags, r.nextInt(1000), timestamp + (x * 1000)));
-//            mmStore.store(createMetric("metric.number.4", tags, r.nextInt(1000), timestamp + (x * 1000)));
-//            mmStore.store(createMetric("metric.number.5", tags, r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.2", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.3", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.4", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.5", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
         }
         System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
         return mmStore;
     }
+
     @Test
     public void testOne() throws TimelyException {
 
@@ -149,6 +154,5 @@ public class TestMetricMemoryStore {
         m.setValue(metricValue);
         return m;
     }
-
 
 }

@@ -54,14 +54,18 @@ public class TestMetricMemoryStoreIterator {
 
         Random r = new Random();
         long timestamp = 1000;
-        for (int x=0; x <= 60 * 24; x++) {
+        for (int x = 0; x <= 60 * 24; x++) {
             mmStore.store(createMetric("metric.number.1", tags, r.nextInt(1000), timestamp + (x * 1000)));
             if (x == 0) {
             }
-//            mmStore.store(createMetric("metric.number.2", tags, r.nextInt(1000), timestamp + (x * 1000)));
-//            mmStore.store(createMetric("metric.number.3", tags, r.nextInt(1000), timestamp + (x * 1000)));
-//            mmStore.store(createMetric("metric.number.4", tags, r.nextInt(1000), timestamp + (x * 1000)));
-//            mmStore.store(createMetric("metric.number.5", tags, r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.2", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.3", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.4", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
+            // mmStore.store(createMetric("metric.number.5", tags,
+            // r.nextInt(1000), timestamp + (x * 1000)));
         }
         return mmStore;
     }
@@ -73,8 +77,6 @@ public class TestMetricMemoryStoreIterator {
     public void test2() {
 
         byte[] bytes = rowCoder.encode(new ComparablePair<String, Long>("row", 0l));
-
-
 
         Key k = new Key(new Text(bytes), new Text("colFam"), new Text("colQual"));
         Pair<String, Long> pair = MetricAdapter.decodeRowKey(k);
@@ -139,6 +141,5 @@ public class TestMetricMemoryStoreIterator {
         m.setValue(metricValue);
         return m;
     }
-
 
 }
