@@ -26,11 +26,11 @@ import timely.sample.DownsampleFactory;
 
 public class DownsampleIterator extends WrappingIterator {
 
-    private static final String START = "downsample.start";
-    private static final String END = "downsample.end";
-    private static final String PERIOD = "downsample.period";
-    private static final String MAX_DOWNSAMPLE_MEMORY = "downsample.maxDownsampleMemory";
-    private static final String AGGCLASS = "downsample.aggclass";
+    public static final String START = "downsample.start";
+    public static final String END = "downsample.end";
+    public static final String PERIOD = "downsample.period";
+    public static final String MAX_DOWNSAMPLE_MEMORY = "downsample.maxDownsampleMemory";
+    public static final String AGGCLASS = "downsample.aggclass";
 
     private DownsampleFactory factory;
     private final Map<Set<Tag>, Downsample> value = new HashMap<>();

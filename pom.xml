@@ -135,6 +135,11 @@
                 <version>LATEST</version>
             </dependency>
             <dependency>
+                <groupId>fi.iki.yak</groupId>
+                <artifactId>compression-gorilla</artifactId>
+                <version>2.0.4-SNAPSHOT</version>
+            </dependency>
+            <dependency>
 	        <groupId>io.github.lukehutch</groupId>
 	        <artifactId>fast-classpath-scanner</artifactId>
 	        <version>${version.fast-classpath-scanner}</version>

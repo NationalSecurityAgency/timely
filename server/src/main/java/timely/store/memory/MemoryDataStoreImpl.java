@@ -1,0 +1,781 @@
+package timely.store.memory;
+
+import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.accumulo.core.client.*;
+import org.apache.accumulo.core.client.Scanner;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
+import org.apache.accumulo.core.data.*;
+import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
+import org.apache.accumulo.core.iterators.user.RegExFilter;
+import org.apache.accumulo.core.security.Authorizations;
+import org.apache.accumulo.core.util.Pair;
+import org.apache.commons.configuration.BaseConfiguration;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.io.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import timely.Configuration;
+import timely.Server;
+import timely.adapter.accumulo.MetricAdapter;
+import timely.api.model.Meta;
+import timely.api.request.AuthenticatedRequest;
+import timely.api.request.timeseries.QueryRequest;
+import timely.api.request.timeseries.QueryRequest.RateOption;
+import timely.api.request.timeseries.QueryRequest.SubQuery;
+import timely.api.request.timeseries.SearchLookupRequest;
+import timely.api.request.timeseries.SuggestRequest;
+import timely.api.response.TimelyException;
+import timely.api.response.timeseries.QueryResponse;
+import timely.api.response.timeseries.SearchLookupResponse;
+import timely.api.response.timeseries.SearchLookupResponse.Result;
+import timely.api.response.timeseries.SuggestResponse;
+import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
+import timely.sample.Aggregation;
+import timely.sample.Aggregator;
+import timely.sample.Sample;
+import timely.sample.aggregators.Avg;
+import timely.sample.iterators.AggregationIterator;
+import timely.sample.iterators.DownsampleIterator;
+import timely.store.*;
+import timely.store.iterators.RateIterator;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
+
+public class MemoryDataStoreImpl implements DataStore {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MemoryDataStoreImpl.class);
+
+    private static final long METRICS_PERIOD = 30000;
+    private static final long DEFAULT_DOWNSAMPLE_MS = 1;
+    private static final String DEFAULT_DOWNSAMPLE_AGGREGATOR = Avg.class.getSimpleName().toLowerCase();
+    private static final Pattern REGEX_TEST = Pattern.compile("^\\w+$");
+
+    /*
+     * Pair doesn't implement Comparable
+     */
+    private static class MetricTagK extends Pair<String, String> implements Comparable<MetricTagK> {
+
+        public MetricTagK(String f, String s) {
+            super(f, s);
+        }
+
+        @Override
+        public int compareTo(MetricTagK o) {
+            int result = getFirst().compareTo(o.getFirst());
+            if (result != 0) {
+                return result;
+            }
+            return getSecond().compareTo(o.getSecond());
+        }
+
+    }
+
+    private final Connector connector;
+    private MetaCache metaCache = null;
+    private final AtomicLong lastCountTime = new AtomicLong(System.currentTimeMillis());
+    private final AtomicReference<SortedMap<MetricTagK, Integer>> metaCounts = new AtomicReference<>(new TreeMap<>());
+    private final String metricsTable;
+    private final String metaTable;
+    private final InternalMetrics internalMetrics = new InternalMetrics();
+    private final Timer internalMetricsTimer = new Timer(true);
+    private final long maxDownsampleMemory;
+    private final int scannerThreads;
+    private final List<BatchWriter> writers = new ArrayList<>();
+    private final ThreadLocal<BatchWriter> metaWriter = new ThreadLocal<>();
+    private final ThreadLocal<BatchWriter> batchWriter = new ThreadLocal<>();
+    private boolean anonAccessAllowed = false;
+    private final Map<String, String> ageOff;
+    private final long defaultAgeOff;
+
+    public MemoryDataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
+
+        try {
+            final BaseConfiguration apacheConf = new BaseConfiguration();
+            Configuration.Accumulo accumuloConf = conf.getAccumulo();
+            apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
+            apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
+            final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
+            final Instance instance = new ZooKeeperInstance(aconf);
+            connector = instance
+                    .getConnector(accumuloConf.getUsername(), new PasswordToken(accumuloConf.getPassword()));
+            scannerThreads = accumuloConf.getScan().getThreads();
+            maxDownsampleMemory = accumuloConf.getScan().getMaxDownsampleMemory();
+            anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
+
+            metricsTable = conf.getMetricsTable();
+            if (metricsTable.contains(".")) {
+                final String[] parts = metricsTable.split("\\.", 2);
+                final String namespace = parts[0];
+                if (!connector.namespaceOperations().exists(namespace)) {
+                    try {
+                        LOG.info("Creating namespace " + namespace);
+                        connector.namespaceOperations().create(namespace);
+                    } catch (final NamespaceExistsException ex) {
+                        // don't care
+                    }
+                }
+            }
+            ageOff = getAgeOff(conf);
+            defaultAgeOff = this.getAgeOffForMetric(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY);
+
+            final Map<String, String> tableIdMap = connector.tableOperations().tableIdMap();
+            if (!tableIdMap.containsKey(metricsTable)) {
+                try {
+                    LOG.info("Creating table " + metricsTable);
+                    connector.tableOperations().create(metricsTable);
+                } catch (final TableExistsException ex) {
+                    // don't care
+                }
+            }
+            this.removeAgeOffIterators(connector, metricsTable);
+            this.applyAgeOffIterator(connector, metricsTable, true);
+
+            metaTable = conf.getMetaTable();
+            if (!tableIdMap.containsKey(metaTable)) {
+                try {
+                    LOG.info("Creating table " + metaTable);
+                    connector.tableOperations().create(metaTable);
+                } catch (final TableExistsException ex) {
+                    // don't care
+                }
+            }
+            this.removeAgeOffIterators(connector, metaTable);
+            this.applyAgeOffIterator(connector, metaTable, false);
+
+            internalMetricsTimer.schedule(new TimerTask() {
+
+                @Override
+                public void run() {
+                    internalMetrics.getMetricsAndReset().forEach(m -> store(m));
+                }
+
+            }, METRICS_PERIOD, METRICS_PERIOD);
+            this.metaCache = MetaCacheFactory.getCache(conf);
+        } catch (Exception e) {
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStoreImpl",
+                    e.getMessage(), e);
+        }
+    }
+
+    private static final EnumSet<IteratorScope> AGEOFF_SCOPES = EnumSet.allOf(IteratorScope.class);
+
+    private void removeAgeOffIterators(Connector con, String tableName) throws Exception {
+        Map<String, EnumSet<IteratorScope>> iters = con.tableOperations().listIterators(tableName);
+        for (String name : iters.keySet()) {
+            if (name.startsWith("ageoff")) {
+                con.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
+            }
+        }
+    }
+
+    private void applyAgeOffIterator(Connector con, String tableName, boolean useIterator) throws Exception {
+        IteratorSetting ageOffIteratorSettings = null;
+        if (useIterator) {
+            ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffIterator.class, this.ageOff);
+        } else {
+            ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffFilter.class, this.ageOff);
+        }
+        connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+    }
+
+    private Map<String, String> getAgeOff(Configuration conf) {
+        Map<String, String> ageOffOptions = new HashMap<>();
+        conf.getMetricAgeOffDays().forEach((k, v) -> {
+            String ageoff = Long.toString(v * 86400000L);
+            LOG.trace("Adding age off for metric: {} of {} days", k, v);
+            ageOffOptions.put(MetricAgeOffIterator.AGE_OFF_PREFIX + k, ageoff);
+        });
+        return ageOffOptions;
+    }
+
+    @Override
+    public void store(Metric metric) {
+        LOG.trace("Received Store Request for: {}", metric);
+
+        // must figure out way to also cache the internal metrics
+        internalMetrics.incrementMetricsReceived(1);
+        List<Meta> toCache = new ArrayList<>(metric.getTags().size());
+        for (final Tag tag : metric.getTags()) {
+            Meta key = new Meta(metric.getName(), tag.getKey(), tag.getValue());
+            if (!metaCache.contains(key)) {
+                toCache.add(key);
+            }
+        }
+        if (!toCache.isEmpty()) {
+            metaCache.addAll(toCache);
+        }
+        try {
+            batchWriter.get().addMutation(MetricAdapter.toMutation(metric));
+            internalMetrics.incrementMetricKeysInserted(metric.getTags().size());
+        } catch (MutationsRejectedException e) {
+            LOG.error("Unable to write to metrics table", e);
+            try {
+
+            } catch (Exception e1) {
+                Server.fatal("Unexpected error recreating metrics batch writer, shutting down Timely server", e1);
+            }
+        }
+    }
+
+    private static final long FIVE_MINUTES_IN_MS = TimeUnit.MINUTES.toMillis(5);
+
+    private void updateMetricCounts() {
+        long now = System.currentTimeMillis();
+        if (now - lastCountTime.get() > FIVE_MINUTES_IN_MS) {
+            this.lastCountTime.set(now);
+            SortedMap<MetricTagK, Integer> update = new TreeMap<>();
+            for (Meta meta : this.metaCache) {
+                MetricTagK key = new MetricTagK(meta.getMetric(), meta.getTagKey());
+                Integer count = update.getOrDefault(key, 0);
+                update.put(key, count + 1);
+            }
+            this.metaCounts.set(update);
+        }
+    }
+
+    @Override
+    public SuggestResponse suggest(SuggestRequest request) throws TimelyException {
+        SuggestResponse result = new SuggestResponse();
+        try {
+            if (request.getType().equals("metrics")) {
+                Range range;
+                if (request.getQuery().isPresent()) {
+                    Text start = new Text(Meta.METRIC_PREFIX + request.getQuery().get());
+                    Text endRow = new Text(start);
+                    endRow.append(new byte[] { (byte) 0xff }, 0, 1);
+                    range = new Range(start, endRow);
+                } else {
+                    // kind of a hack, maybe someone wants a metric with >100
+                    // 0xff bytes?
+                    Text start = new Text(Meta.METRIC_PREFIX);
+                    byte last = (byte) 0xff;
+                    byte[] lastBytes = new byte[100];
+                    Arrays.fill(lastBytes, last);
+                    Text end = new Text(Meta.METRIC_PREFIX);
+                    end.append(lastBytes, 0, lastBytes.length);
+                    range = new Range(start, end);
+                }
+                Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
+                scanner.setRange(range);
+                List<String> metrics = new ArrayList<>();
+                for (Entry<Key, Value> metric : scanner) {
+                    metrics.add(metric.getKey().getRow().toString().substring(Meta.METRIC_PREFIX.length()));
+                    if (metrics.size() >= request.getMax()) {
+                        break;
+                    }
+                }
+                result.setSuggestions(metrics);
+            }
+        } catch (Exception ex) {
+            LOG.error("Error during suggest: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during suggest: "
+                    + ex.getMessage(), ex.getMessage(), ex);
+        }
+        return result;
+    }
+
+    @Override
+    public void flush() {
+
+    }
+
+    @Override
+    public SearchLookupResponse lookup(SearchLookupRequest msg) throws TimelyException {
+        long startMillis = System.currentTimeMillis();
+        SearchLookupResponse result = new SearchLookupResponse();
+        result.setType("LOOKUP");
+        result.setMetric(msg.getQuery());
+        Map<String, String> tags = new TreeMap<>();
+        for (Tag tag : msg.getTags()) {
+            tags.put(tag.getKey(), tag.getValue());
+        }
+        result.setTags(tags);
+        result.setLimit(msg.getLimit());
+        Map<String, Pattern> tagPatterns = new HashMap<>();
+        tags.forEach((k, v) -> {
+            tagPatterns.put(k, Pattern.compile(v));
+        });
+        try {
+            List<Result> resultField = new ArrayList<>();
+            Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
+            Key start = new Key(Meta.VALUE_PREFIX + msg.getQuery());
+            Key end = start.followingKey(PartialKey.ROW);
+            Range range = new Range(start, end);
+            scanner.setRange(range);
+            tags.keySet().forEach(k -> scanner.fetchColumnFamily(new Text(k)));
+            int total = 0;
+            for (Entry<Key, Value> entry : scanner) {
+                Meta metaEntry = Meta.parse(entry.getKey(), entry.getValue());
+                if (matches(metaEntry.getTagKey(), metaEntry.getTagValue(), tagPatterns)) {
+                    if (resultField.size() < msg.getLimit()) {
+                        Result r = new Result();
+                        r.putTag(metaEntry.getTagKey(), metaEntry.getTagValue());
+                        resultField.add(r);
+                    }
+                    total++;
+                }
+            }
+            result.setResults(resultField);
+            result.setTotalResults(total);
+            result.setTime((int) (System.currentTimeMillis() - startMillis));
+        } catch (Exception ex) {
+            LOG.error("Error during lookup: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during lookup: "
+                    + ex.getMessage(), ex.getMessage(), ex);
+        }
+        return result;
+    }
+
+    private boolean matches(String tagk, String tagv, Map<String, Pattern> tags) {
+        for (Entry<String, Pattern> entry : tags.entrySet()) {
+            if (tagk.equals(entry.getKey()) && entry.getValue().matcher(tagv).matches()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public List<QueryResponse> query(QueryRequest msg) throws TimelyException {
+        List<QueryResponse> result = new ArrayList<>();
+        long startTs = msg.getStart();
+        long endTs = msg.getEnd();
+        try {
+            long now = System.currentTimeMillis();
+            for (SubQuery query : msg.getQueries()) {
+                Map<Set<Tag>, List<Aggregation>> allSeries = new HashMap<>();
+                String metric = query.getMetric();
+                BatchScanner scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
+                        scannerThreads);
+                try {
+
+                    // Reset the start timestamp for the query to the
+                    // beginning of the downsample period based on the epoch
+                    long downsample = getDownsamplePeriod(query);
+                    LOG.trace("Downsample period {}", downsample);
+                    long startOfFirstPeriod = startTs - (startTs % downsample);
+                    long endDistanceFromDownSample = endTs % downsample;
+                    long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsample
+                            - endDistanceFromDownSample : endTs);
+
+                    setQueryRange(scanner, metric, startOfFirstPeriod, endOfLastPeriod);
+                    List<String> tagOrder = prioritizeTags(query);
+                    Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
+                    setQueryColumns(scanner, metric, orderedTags);
+
+                    if (query.isRate()) {
+                        LOG.trace("Adding rate iterator");
+                        IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
+                        RateIterator.setRateOptions(rate, query.getRateOptions());
+                        scanner.addScanIterator(rate);
+                    }
+
+                    Class<? extends Aggregator> daggClass = getDownsampleAggregator(query);
+                    if (daggClass == null) {
+                        // we should always have a downsample iterator in the
+                        // stack.
+                        throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                                "Error during query: programming error", "daggClass == null");
+                    } else {
+                        LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
+                        IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
+                        DownsampleIterator.setDownsampleOptions(is, startOfFirstPeriod, endOfLastPeriod, downsample,
+                                maxDownsampleMemory, daggClass.getName());
+                        scanner.addScanIterator(is);
+                    }
+
+                    Class<? extends Aggregator> aggClass = getAggregator(query);
+                    // the aggregation iterator is optional
+                    if (aggClass != null) {
+                        LOG.trace("Aggregator type {}", aggClass.getSimpleName());
+                        IteratorSetting is = new IteratorSetting(501, AggregationIterator.class);
+                        AggregationIterator.setAggregationOptions(is, query.getTags(), aggClass.getName());
+                        scanner.addScanIterator(is);
+                    }
+
+                    // tag -> array of results by period starting at start
+                    for (Entry<Key, Value> encoded : scanner) {
+                        // we can decode the value as a Map<Set<Tag>,
+                        // Aggregation> even if an AggregationIterator
+                        // is not used because Downsample is a subclass of
+                        // Aggregation
+                        Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(encoded.getValue());
+                        for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
+                            Set<Tag> key = new HashSet<>();
+                            for (Tag tag : entry.getKey()) {
+                                if (query.getTags().keySet().contains(tag.getKey())) {
+                                    key.add(tag);
+                                }
+                            }
+                            List<Aggregation> aggregations = allSeries.getOrDefault(key, new ArrayList<>());
+                            aggregations.add(entry.getValue());
+                            allSeries.put(key, aggregations);
+                        }
+                    }
+                    LOG.trace("allSeries: {}", allSeries);
+                } finally {
+                    scanner.close();
+                }
+
+                // TODO groupby here?
+                long tsDivisor = msg.isMsResolution() ? 1 : 1000;
+                for (Entry<Set<Tag>, List<Aggregation>> entry : allSeries.entrySet()) {
+                    result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
+                }
+            }
+            LOG.debug("Query time: {}", (System.currentTimeMillis() - now));
+            internalMetrics.addQueryResponse(result.size(), (System.currentTimeMillis() - now));
+            return result;
+        } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
+            LOG.error("Error during query: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: "
+                    + ex.getMessage(), ex.getMessage(), ex);
+        }
+    }
+
+    private Map<String, String> orderTags(List<String> tagOrder, Map<String, String> tags) {
+        Map<String, String> order = new LinkedHashMap<>(tags.size());
+        tagOrder.forEach(t -> order.put(t, tags.get(t)));
+        if (tagOrder.size() > tags.size()) {
+            tags.entrySet().forEach(k -> {
+                if (!tagOrder.contains(k.getKey())) {
+                    order.put(k.getKey(), k.getValue());
+                }
+            });
+        }
+        return order;
+    }
+
+    /**
+     *
+     * @param query
+     * @return ordered list of most specific to least specific tags in the query
+     */
+    private List<String> prioritizeTags(SubQuery query) {
+        // trivial cases
+        Map<String, String> tags = query.getTags();
+        if (tags.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (tags.size() == 1) {
+            return Collections.singletonList(tags.keySet().iterator().next());
+        }
+        // favor tags with fewer values
+        Map<String, Integer> priority = new HashMap<>();
+        String metric = query.getMetric();
+        // Count matching tags
+        updateMetricCounts();
+        for (Entry<String, String> entry : tags.entrySet()) {
+            String tagk = entry.getKey();
+            String tagv = entry.getValue();
+            if (!isTagValueRegex(tagv)) {
+                MetricTagK start = new MetricTagK(metric, tagk);
+                int count = 0;
+                for (Entry<MetricTagK, Integer> metricCount : metaCounts.get().tailMap(start).entrySet()) {
+                    Pair<String, String> metricTagk = metricCount.getKey();
+                    if (!metricTagk.getFirst().equals(metric) || !metricTagk.getSecond().startsWith(tagk)) {
+                        break;
+                    } else {
+                        count += metricCount.getValue();
+                    }
+                }
+                priority.put(tagk, count);
+            } else {
+                priority.put(tagk, Integer.MAX_VALUE);
+            }
+        }
+        List<String> result = new ArrayList<>(tags.keySet());
+        Collections.sort(result, new Comparator<String>() {
+
+            @Override
+            public int compare(String o1, String o2) {
+                // greater count lowers priority
+                return priority.get(o1).intValue() - priority.get(o2).intValue();
+            }
+        });
+        LOG.trace("Tag priority {}", result);
+        return result;
+    }
+
+    private QueryResponse convertToQueryResponse(SubQuery query, Set<Tag> tags, Collection<Aggregation> values,
+            long tsDivisor) {
+        QueryResponse response = new QueryResponse();
+        response.setMetric(query.getMetric());
+        for (Tag tag : tags) {
+            response.putTag(tag.getKey(), tag.getValue());
+        }
+        RateOption rateOptions = query.getRateOptions();
+        Aggregation combined = Aggregation.combineAggregation(values, rateOptions);
+        for (Sample entry : combined) {
+            long ts = entry.timestamp / tsDivisor;
+            response.putDps(Long.toString(ts), entry.value);
+        }
+        LOG.trace("Created query response {}", response);
+        return response;
+    }
+
+    private boolean isTagValueRegex(String value) {
+        return !REGEX_TEST.matcher(value).matches();
+    }
+
+    private void setQueryColumns(ScannerBase scanner, String metric, Map<String, String> tags)
+            throws TableNotFoundException, TimelyException {
+        LOG.trace("Looking for requested tags: {}", tags);
+        Scanner meta = connector.createScanner(metaTable, Authorizations.EMPTY);
+        Text start = new Text(Meta.VALUE_PREFIX + metric);
+        Text end = new Text(Meta.VALUE_PREFIX + metric + "\\x0000");
+        end.append(new byte[] { (byte) 0xff }, 0, 1);
+        meta.setRange(new Range(start, end));
+        // Only look for the meta entries that match our tags, if any
+        boolean onlyFirstRow = false;
+        Entry<String, String> first = null;
+        // Set the columns on the meta scanner based on the first tag
+        // in the set of tags passed in the query. If no tags are present
+        // then we are only going to return the first tag name present in the
+        // meta table.
+        Iterator<Entry<String, String>> tagIter = tags.entrySet().iterator();
+        if (tagIter.hasNext()) {
+            first = tagIter.next();
+            if (isTagValueRegex(first.getValue())) {
+                meta.fetchColumnFamily(new Text(first.getKey()));
+            } else {
+                meta.fetchColumn(new Text(first.getKey()), new Text(first.getValue()));
+            }
+        } else {
+            // grab all of the values found for the first tag for the metric
+            onlyFirstRow = true;
+        }
+        final boolean ONLY_RETURN_FIRST_TAG = onlyFirstRow;
+        Iterator<Entry<Key, Value>> iter = meta.iterator();
+        Iterator<Pair<String, String>> knownKeyValues = new Iterator<Pair<String, String>>() {
+
+            Text firstTag = null;
+            Text tagName = null;
+            Text tagValue = null;
+
+            @Override
+            public boolean hasNext() {
+                if (iter.hasNext()) {
+                    Entry<Key, Value> metaEntry = iter.next();
+                    if (null == firstTag) {
+                        firstTag = metaEntry.getKey().getColumnFamily();
+                    }
+                    tagName = metaEntry.getKey().getColumnFamily();
+                    tagValue = metaEntry.getKey().getColumnQualifier();
+                    LOG.trace("Found tag entry {}={}", tagName, tagValue);
+
+                    if (ONLY_RETURN_FIRST_TAG && !tagName.equals(firstTag)) {
+                        return false;
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public Pair<String, String> next() {
+                LOG.trace("Returning tag {}={}", tagName, tagValue);
+                return new Pair<>(tagName.toString(), tagValue.toString());
+            }
+        };
+        // Expand the list of tags in the meta table for this metric that
+        // matches
+        // the pattern of the first tag in the query. The resulting set of tags
+        // will be used to fetch specific columns from the metric table.
+        Set<Tag> concrete = expandTagValues(first, knownKeyValues);
+        if (concrete.size() == 0) {
+            throw new TimelyException(HttpResponseStatus.BAD_REQUEST.code(), "No matching tags", "No tags were found "
+                    + " that matched the submitted tags. Please fix and retry");
+        }
+        LOG.trace("Found matching tags: {}", concrete);
+        for (Tag tag : concrete) {
+            Text colf = new Text(tag.getKey() + "=" + tag.getValue());
+            scanner.fetchColumnFamily(colf);
+            LOG.trace("Fetching metric table column family: {}", colf);
+        }
+        // Add the regular expression to filter the other tags
+        int priority = 100;
+        while (tagIter.hasNext()) {
+            Entry<String, String> tag = tagIter.next();
+            LOG.trace("Adding regex filter for tag {}", tag);
+            StringBuffer pattern = new StringBuffer();
+            pattern.append("(^|.*,)");
+            pattern.append(tag.getKey());
+            pattern.append("=");
+            pattern.append(tag.getValue());
+            pattern.append("(,.*|$)");
+
+            IteratorSetting setting = new IteratorSetting(priority++, tag.getKey() + " tag filter", RegExFilter.class);
+            LOG.trace("Using {} additional filter on tag: {}", pattern, tag.getKey());
+            RegExFilter.setRegexs(setting, null, null, pattern.toString(), null, false, true);
+            scanner.addScanIterator(setting);
+        }
+    }
+
+    private Set<Tag> expandTagValues(Entry<String, String> firstTag, Iterator<Pair<String, String>> knownKeyValues) {
+        Set<Tag> result = new HashSet<>();
+        Matcher matcher = null;
+        if (null != firstTag && isTagValueRegex(firstTag.getValue())) {
+            matcher = Pattern.compile(firstTag.getValue()).matcher("");
+        }
+        while (knownKeyValues.hasNext()) {
+            Pair<String, String> knownKeyValue = knownKeyValues.next();
+            if (firstTag == null) {
+                LOG.trace("Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
+                result.add(new Tag(knownKeyValue.getFirst(), knownKeyValue.getSecond()));
+            } else {
+                LOG.trace("Testing requested tag {}={}", firstTag.getKey(), firstTag.getValue());
+                if (firstTag.getKey().equals(knownKeyValue.getFirst())) {
+                    if (null != matcher) {
+                        matcher.reset(knownKeyValue.getSecond());
+                        if (matcher.matches()) {
+                            LOG.trace("Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
+                            result.add(new Tag(knownKeyValue.getFirst(), knownKeyValue.getSecond()));
+                        }
+                    } else {
+                        LOG.trace("Adding tag {}={}", knownKeyValue.getFirst(), knownKeyValue.getSecond());
+                        result.add(new Tag(knownKeyValue.getFirst(), knownKeyValue.getSecond()));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private void setQueryRange(BatchScanner scanner, String metric, long start, long end) {
+        final byte[] start_row = MetricAdapter.encodeRowKey(metric, start);
+        LOG.trace("Start key for metric {} and time {} is {}", metric, start, start_row);
+        final byte[] end_row = MetricAdapter.encodeRowKey(metric, end);
+        LOG.trace("End key for metric {} and time {} is {}", metric, end, end_row);
+        Range range = new Range(new Text(start_row), new Text(end_row));
+        LOG.trace("Set query range to {}", range);
+        scanner.setRanges(Collections.singletonList(range));
+    }
+
+    private Class<? extends Aggregator> getAggregator(SubQuery query) {
+        return Aggregator.getAggregator(query.getAggregator());
+    }
+
+    private Class<? extends Aggregator> getDownsampleAggregator(SubQuery query) {
+        String aggregatorName = Aggregator.NONE;
+        if (query.getDownsample().isPresent()) {
+            String parts[] = query.getDownsample().get().split("-");
+            aggregatorName = parts[1];
+        }
+        // disabling the downsampling OR setting the aggregation to none are
+        // both considered to be disabling
+        if (aggregatorName.equals(Aggregator.NONE)) {
+            // we need a downsampling iterator, so default to max to ensure we
+            // return something
+            aggregatorName = DEFAULT_DOWNSAMPLE_AGGREGATOR;
+        }
+        return Aggregator.getAggregator(aggregatorName);
+    }
+
+    private long getDownsamplePeriod(SubQuery query) {
+        // disabling the downsampling OR setting the aggregation to none are
+        // both considered to be disabling
+        if (!query.getDownsample().isPresent() || query.getDownsample().get().endsWith("-none")) {
+            return DEFAULT_DOWNSAMPLE_MS;
+        }
+        String parts[] = query.getDownsample().get().split("-");
+        return getTimeInMillis(parts[0]);
+    }
+
+    private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
+        return getSessionAuthorizations(request.getSessionId());
+    }
+
+    private Authorizations getSessionAuthorizations(String sessionId) {
+        if (anonAccessAllowed) {
+            if (StringUtils.isEmpty(sessionId)) {
+                return Authorizations.EMPTY;
+            } else {
+                Authorizations auths = AuthCache.getAuthorizations(sessionId);
+                if (null == auths) {
+                    auths = Authorizations.EMPTY;
+                }
+                return auths;
+            }
+        } else {
+            if (StringUtils.isEmpty(sessionId)) {
+                throw new IllegalArgumentException("session id cannot be null");
+            } else {
+                Authorizations auths = AuthCache.getAuthorizations(sessionId);
+                if (null == auths) {
+                    throw new IllegalStateException("No auths found for sessionId: " + sessionId);
+                }
+                return auths;
+            }
+        }
+    }
+
+    private long getAgeOffForMetric(String metricName) {
+        String age = this.ageOff.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
+        if (null == age) {
+            return this.defaultAgeOff;
+        } else {
+            return Long.parseLong(age);
+        }
+    }
+
+    public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
+            long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException {
+        try {
+            Authorizations auths = null;
+            try {
+                auths = getSessionAuthorizations(sessionId);
+            } catch (NullPointerException npe) {
+                // Session id being used for metric scanner, but session Id does
+                // not exist in Auth Cache. Use Empty auths if anonymous access
+                // allowed
+                if (anonAccessAllowed) {
+                    auths = Authorizations.EMPTY;
+                } else {
+                    throw npe;
+                }
+            }
+            LOG.debug("Creating metric scanner for session: {} with auths: {}", sessionId, auths);
+            Scanner s = connector.createScanner(this.metricsTable, auths);
+            if (null == metric) {
+                throw new IllegalArgumentException("metric name must be specified");
+            }
+            if (0 == startTime) {
+                startTime = (System.currentTimeMillis() - getAgeOffForMetric(metric) - 1000);
+                LOG.debug("Overriding zero start time to {} due to age off configuration", startTime);
+            }
+            byte[] start = MetricAdapter.encodeRowKey(metric, startTime);
+            long endTimeStamp = (endTime == 0) ? (System.currentTimeMillis() - (lag * 1000)) : endTime;
+            byte[] end = MetricAdapter.encodeRowKey(metric, endTimeStamp);
+            s.setRange(new Range(new Text(start), true, new Text(end), false));
+            SubQuery query = new SubQuery();
+            query.setMetric(metric);
+            if (null == tags) {
+                tags = Collections.emptyMap();
+            }
+            query.setTags(tags);
+            List<String> tagOrder = prioritizeTags(query);
+            Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
+            setQueryColumns(s, metric, orderedTags);
+            s.setBatchSize(scannerBatchSize);
+            s.setReadaheadThreshold(scannerReadAhead);
+            return s;
+        } catch (IllegalArgumentException | TableNotFoundException ex) {
+            LOG.error("Error during lookup: " + ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during lookup: "
+                    + ex.getMessage(), ex.getMessage(), ex);
+        }
+    }
+
+}
