@@ -60,6 +60,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
+import timely.netty.http.HttpCacheRequestHandler;
 import timely.netty.http.HttpMetricPutHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.HttpVersionRequestHandler;
@@ -96,6 +97,7 @@ import timely.netty.websocket.timeseries.WSSuggestRequestHandler;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
 import timely.store.MetaCacheFactory;
+import timely.store.cache.DataStoreCache;
 
 public class Server {
 
@@ -124,6 +126,7 @@ public class Server {
     protected Channel wsChannelHandle = null;
     protected Channel udpChannelHandle = null;
     protected DataStore dataStore = null;
+    protected DataStoreCache dataStoreCache = null;
     protected volatile boolean shutdown = false;
 
     private static boolean useEpoll() {
@@ -322,6 +325,10 @@ public class Server {
         int nettyThreads = Math.max(1,
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
         dataStore = DataStoreFactory.create(config, nettyThreads);
+        if (config.getCache().isEnabled()) {
+            dataStoreCache = new DataStoreCache(config);
+            dataStore.setCache(dataStoreCache);
+        }
         // Initialize the MetaCache
         MetaCacheFactory.getCache(config);
         // initialize the auth cache
@@ -509,6 +516,7 @@ public class Server {
                 ch.pipeline().addLast("search", new HttpSearchLookupRequestHandler(dataStore));
                 ch.pipeline().addLast("suggest", new HttpSuggestRequestHandler(dataStore));
                 ch.pipeline().addLast("version", new HttpVersionRequestHandler());
+                ch.pipeline().addLast("cache", new HttpCacheRequestHandler(dataStoreCache));
                 ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler());
             }

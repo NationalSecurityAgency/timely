@@ -23,8 +23,8 @@ public class InsertTestData {
         METRICS.add("sys.cpu.idle");
         METRICS.add("sys.cpu.system");
         METRICS.add("sys.cpu.wait");
-        METRICS.add("sys.memory.free");
-        METRICS.add("sys.memory.used");
+        METRICS.add("sys.cache.free");
+        METRICS.add("sys.cache.used");
         METRICS.add("sys.eth.rx-errors");
         METRICS.add("sys.eth.rx-dropped");
         METRICS.add("sys.eth.rx-packets");

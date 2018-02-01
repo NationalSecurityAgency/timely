@@ -55,6 +55,10 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>fi.iki.yak</groupId>
+            <artifactId>compression-gorilla</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.github.lukehutch</groupId>
             <artifactId>fast-classpath-scanner</artifactId>
         </dependency>

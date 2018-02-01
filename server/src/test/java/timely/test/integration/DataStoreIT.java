@@ -12,11 +12,13 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import timely.Configuration;
 import timely.Server;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
 import timely.store.MetricAgeOffIterator;
+import timely.store.cache.DataStoreCache;
 import timely.test.IntegrationTest;
 
 @Category(IntegrationTest.class)
@@ -27,7 +29,32 @@ public class DataStoreIT extends OneWaySSLBase {
     private static final long TEST_TIME = System.currentTimeMillis() - ONE_DAY;
 
     @Test
-    public void testDefaultAgeOff() throws Exception {
+    public void testDefaultAgeOffWithoutCache() throws Exception {
+        conf.getCache().setEnabled(false);
+        testDefaultAgeOff(conf);
+    }
+
+    @Test
+    public void testDefaultAgeOffWithCache() throws Exception {
+        conf.getCache().setEnabled(true);
+        testDefaultAgeOff(conf);
+    }
+
+    @Test
+    public void testDefaultAgeOffWithPartialCache() throws Exception {
+        conf.getCache().setEnabled(true);
+        // This test has three values in relation to TEST_TIME = 24 hours ago
+        // TEST_TIME, TEST_TIME + 1 hour, TEST_TIME + 2 hours
+        // TEST_TIME should be aged off
+        // TEST_TIME + 1 should be retrieved from Accumulo
+        // TEST_TIME + 2 should be retrieved from the cache
+        HashMap<String, Integer> ageOffHours = new HashMap<>();
+        ageOffHours.put(DataStoreCache.DEFAULT_AGEOFF_KEY, 23);
+        conf.getCache().setMetricAgeOffHours(ageOffHours);
+        testDefaultAgeOff(conf);
+    }
+
+    public void testDefaultAgeOff(Configuration conf) throws Exception {
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
         ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 1);
         conf.setMetricAgeOffDays(ageOffSettings);
@@ -62,7 +89,18 @@ public class DataStoreIT extends OneWaySSLBase {
     }
 
     @Test
-    public void testMultipleAgeOff() throws Exception {
+    public void testMultipleAgeOffWithoutCache() throws Exception {
+        conf.getCache().setEnabled(false);
+        testMultipleAgeOff(conf);
+    }
+
+    @Test
+    public void testMultipleAgeOffWithCache() throws Exception {
+        conf.getCache().setEnabled(true);
+        testMultipleAgeOff(conf);
+    }
+
+    public void testMultipleAgeOff(Configuration conf) throws Exception {
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
         ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 1);
         ageOffSettings.put("sys.cpu.user", 1);

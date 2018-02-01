@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
 
+import timely.store.cache.DataStoreCache;
 import timely.validator.NotEmptyIfFieldSet;
 
 import com.google.common.collect.Lists;
@@ -43,6 +45,9 @@ public class Configuration {
     @Valid
     @NestedConfigurationProperty
     private MetaCache metaCache = new MetaCache();
+    @Valid
+    @NestedConfigurationProperty
+    private Cache cache = new Cache();
     @Valid
     @NestedConfigurationProperty
     private VisibilityCache visibilityCache = new VisibilityCache();
@@ -107,6 +112,10 @@ public class Configuration {
 
     public MetaCache getMetaCache() {
         return metaCache;
+    }
+
+    public Cache getCache() {
+        return cache;
     }
 
     public VisibilityCache getVisibilityCache() {
@@ -648,6 +657,34 @@ public class Configuration {
 
         public Configuration setMaxCapacity(long maxCapacity) {
             this.maxCapacity = maxCapacity;
+            return Configuration.this;
+        }
+    }
+
+    public class Cache {
+
+        private boolean enabled = false;
+        private HashMap<String, Integer> metricAgeOffHours = new HashMap<>();
+
+        public HashMap<String, Integer> getMetricAgeOffHours() {
+            return metricAgeOffHours;
+        }
+
+        public Configuration setMetricAgeOffHours(HashMap<String, Integer> metricAgeOffHours) {
+            this.metricAgeOffHours = metricAgeOffHours;
+            return Configuration.this;
+        }
+
+        public void setDefaultAgeOffHours(int defaultAgeOffHours) {
+            this.metricAgeOffHours.put(DataStoreCache.DEFAULT_AGEOFF_KEY, defaultAgeOffHours);
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public Configuration setEnabled(boolean enabled) {
+            this.enabled = enabled;
             return Configuration.this;
         }
     }
