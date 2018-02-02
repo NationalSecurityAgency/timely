@@ -3,6 +3,11 @@ package timely.store.memory;
 import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
 import fi.iki.yak.ts.compression.gorilla.Pair;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.accumulo.core.client.IteratorSetting;
+import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Range;
+import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -14,12 +19,17 @@ import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
 import timely.model.Metric;
+import timely.model.Tag;
 import timely.sample.Aggregation;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.aggregators.Avg;
+import timely.sample.iterators.AggregationIterator;
+import timely.sample.iterators.DownsampleIterator;
+import timely.store.iterators.RateIterator;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 
@@ -71,33 +81,19 @@ public class MetricMemoryStore {
     public List<QueryResponse> query(QueryRequest msg) throws TimelyException {
 
         List<QueryResponse> result = new ArrayList<>();
-
         try {
-
-            long startTs = msg.getStart();
-            long endTs = msg.getEnd();
-            Authorizations auths = getSessionAuthorizations(msg);
-            VisibilityFilter visibilityFilter = new VisibilityFilter(auths);
-
+            SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
             Collection<QueryRequest.SubQuery> subQueries = msg.getQueries();
             for (QueryRequest.SubQuery query : subQueries) {
+                itr = setupIterator(msg, query, getSessionAuthorizations(msg));
 
-                String metric = query.getMetric();
-                Map<String, String> tags = query.getTags();
-                Map<TaggedMetric, GorillaStore> gorillaStores = getGorillaStores(metric);
-                for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStores.entrySet()) {
-                    Downsample downsample = getDownsample(startTs, endTs, query);
-                    TaggedMetric storedTaggedMetric = entry.getKey();
-                    if (storedTaggedMetric.matches(tags) && storedTaggedMetric.isVisible(visibilityFilter)) {
-                        GorillaDecompressor decompressor = entry.getValue().getDecompressor();
-                        Pair pair = null;
-                        while ((pair = decompressor.readPair()) != null) {
-                            if (pair.getTimestamp() >= startTs && pair.getTimestamp() <= endTs) {
-                                downsample.add(pair.getTimestamp(), pair.getDoubleValue());
-                            }
-                        }
+                while (itr.hasTop()) {
+                    itr.next();
+                    Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
+                    for (Map.Entry<Set<Tag>, Aggregation> entry : aggregations.entrySet()) {
                         long tsDivisor = msg.isMsResolution() ? 1 : 1000;
-                        result.add(convertToQueryResponse(query, storedTaggedMetric.getTags(), downsample, tsDivisor));
+                        result.add(convertToQueryResponse(query, entry.getKey(),
+                                Collections.singleton(entry.getValue()), tsDivisor));
                     }
                 }
             }
@@ -109,51 +105,61 @@ public class MetricMemoryStore {
         }
     }
 
-    private Downsample getDownsample(long startTs, long endTs, QueryRequest.SubQuery query) throws TimelyException {
-        long downsample = getDownsamplePeriod(query);
-        long startOfFirstPeriod = startTs - (startTs % downsample);
-        long endDistanceFromDownSample = endTs % downsample;
-        long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsample - endDistanceFromDownSample : endTs);
-        Class<? extends Aggregator> daggClass = getDownsampleAggregator(query);
+    protected SortedKeyValueIterator<Key, Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery,
+            Authorizations authorizations) throws TimelyException {
 
-        Aggregator dagg = null;
+        SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
         try {
-            dagg = daggClass.newInstance();
-            return new Downsample(startOfFirstPeriod, endOfLastPeriod, downsample, dagg);
-        } catch (IllegalAccessException | InstantiationException e) {
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                    "Error during query: programming error", "daggClass == null");
-        }
-    }
+            // create MetricMemoryStoreIterator which is the base iterator of
+            // the stack
+            VisibilityFilter visFilter = new VisibilityFilter(authorizations);
+            itr = new MetricMemoryStoreIterator(this, visFilter, subQuery, 0, 86400000);
 
-    private Class<? extends Aggregator> getAggregator(QueryRequest.SubQuery query) {
-        return Aggregator.getAggregator(query.getAggregator());
-    }
+            // create RateIterator if necessary
+            if (subQuery.isRate()) {
+                LOG.trace("Adding rate iterator");
+                IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
+                RateIterator.setRateOptions(rate, subQuery.getRateOptions());
+                RateIterator rateIterator = new RateIterator();
+                rateIterator.init(itr, rate.getOptions(), null);
+                itr = rateIterator;
+            }
 
-    private Class<? extends Aggregator> getDownsampleAggregator(QueryRequest.SubQuery query) {
-        String aggregatorName = Aggregator.NONE;
-        if (query.getDownsample().isPresent()) {
-            String parts[] = query.getDownsample().get().split("-");
-            aggregatorName = parts[1];
-        }
-        // disabling the downsampling OR setting the aggregation to none are
-        // both considered to be disabling
-        if (aggregatorName.equals(Aggregator.NONE)) {
-            // we need a downsampling iterator, so default to max to ensure we
-            // return something
-            aggregatorName = DEFAULT_DOWNSAMPLE_AGGREGATOR;
-        }
-        return Aggregator.getAggregator(aggregatorName);
-    }
+            // create DownsampleIterator - we should always have a downsample
+            // iterator
+            // in the stack even if only using the default downsample settings
+            Class<? extends Aggregator> daggClass = DownsampleIterator.getDownsampleAggregator(subQuery);
+            if (daggClass == null) {
+                throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                        "Error during query: programming error", "daggClass == null");
+            } else {
+                LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
+                IteratorSetting downsample = new IteratorSetting(500, DownsampleIterator.class);
+                DownsampleIterator.setDownsampleOptions(downsample, query.getStart(), query.getEnd(),
+                        DownsampleIterator.getDownsamplePeriod(subQuery), -1, Avg.class.getName());
+                DownsampleIterator downsampleIterator = new DownsampleIterator();
+                downsampleIterator.init(itr, downsample.getOptions(), null);
+                itr = downsampleIterator;
+            }
 
-    private long getDownsamplePeriod(QueryRequest.SubQuery query) {
-        // disabling the downsampling OR setting the aggregation to none are
-        // both considered to be disabling
-        if (!query.getDownsample().isPresent() || query.getDownsample().get().endsWith("-none")) {
-            return DEFAULT_DOWNSAMPLE_MS;
+            // create AggregatingIterator if necessary
+            Class<? extends Aggregator> aggClass = Aggregator.getAggregator(subQuery.getAggregator());
+            // the aggregation iterator is optional
+            if (aggClass != null) {
+                LOG.trace("Aggregator type {}", aggClass.getSimpleName());
+                IteratorSetting downsample = new IteratorSetting(501, AggregationIterator.class);
+                AggregationIterator.setAggregationOptions(downsample, subQuery.getTags(), aggClass.getName());
+                DownsampleIterator downsampleIterator = new DownsampleIterator();
+                downsampleIterator.init(itr, downsample.getOptions(), null);
+                itr = downsampleIterator;
+            }
+
+            itr.seek(new Range(subQuery.getMetric()), null, true);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        String parts[] = query.getDownsample().get().split("-");
-        return getTimeInMillis(parts[0]);
+        return itr;
     }
 
     static public class CustomComparator implements Comparator<Pair>, Serializable {
@@ -200,7 +206,24 @@ public class MetricMemoryStore {
         }
     }
 
-    private QueryResponse convertToQueryResponse(QueryRequest.SubQuery query, Map<String, String> tags,
+    private QueryResponse convertToQueryResponse(QueryRequest.SubQuery query, Set<Tag> tags,
+            Collection<Aggregation> values, long tsDivisor) {
+        QueryResponse response = new QueryResponse();
+        response.setMetric(query.getMetric());
+        for (Tag tag : tags) {
+            response.putTag(tag.getKey(), tag.getValue());
+        }
+        QueryRequest.RateOption rateOptions = query.getRateOptions();
+        Aggregation combined = Aggregation.combineAggregation(values, rateOptions);
+        for (Sample entry : combined) {
+            long ts = entry.timestamp / tsDivisor;
+            response.putDps(Long.toString(ts), entry.value);
+        }
+        LOG.trace("Created query response {}", response);
+        return response;
+    }
+
+    private QueryResponse convertToQueryResponse2(QueryRequest.SubQuery query, Map<String, String> tags,
             Aggregation values, long tsDivisor) {
         QueryResponse response = new QueryResponse();
         Set<String> requestedTags = query.getTags().keySet();

@@ -5,6 +5,8 @@ import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.timeseries.QueryRequest;
 
@@ -13,6 +15,7 @@ import java.util.*;
 
 public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Value> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(MetricMemoryStoreIterator.class);
     private VisibilityFilter visibilityFilter;
     private QueryRequest.SubQuery query;
     private long startTs;
@@ -92,17 +95,26 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Va
 
     @Override
     public void seek(Range range, Collection<ByteSequence> columnFamilies, boolean inclusive) throws IOException {
-        return;
+        prepareEntries(100);
+        currentKeyValue = kvQueue.poll();
     }
 
     @Override
     public Key getTopKey() {
-        return currentKeyValue.getKey();
+        if (currentKeyValue != null) {
+            return currentKeyValue.getKey();
+        } else {
+            return null;
+        }
     }
 
     @Override
     public Value getTopValue() {
-        return currentKeyValue.getValue();
+        if (currentKeyValue != null) {
+            return currentKeyValue.getValue();
+        } else {
+            return null;
+        }
     }
 
     @Override

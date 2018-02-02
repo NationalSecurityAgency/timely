@@ -479,7 +479,7 @@ public class DataStoreImpl implements DataStore {
 
                     // Reset the start timestamp for the query to the
                     // beginning of the downsample period based on the epoch
-                    long downsample = getDownsamplePeriod(query);
+                    long downsample = DownsampleIterator.getDownsamplePeriod(query);
                     LOG.trace("Downsample period {}", downsample);
                     long startOfFirstPeriod = startTs - (startTs % downsample);
                     long endDistanceFromDownSample = endTs % downsample;
@@ -498,7 +498,7 @@ public class DataStoreImpl implements DataStore {
                         scanner.addScanIterator(rate);
                     }
 
-                    Class<? extends Aggregator> daggClass = getDownsampleAggregator(query);
+                    Class<? extends Aggregator> daggClass = DownsampleIterator.getDownsampleAggregator(query);
                     if (daggClass == null) {
                         // we should always have a downsample iterator in the
                         // stack.
@@ -782,32 +782,6 @@ public class DataStoreImpl implements DataStore {
 
     private Class<? extends Aggregator> getAggregator(SubQuery query) {
         return Aggregator.getAggregator(query.getAggregator());
-    }
-
-    private Class<? extends Aggregator> getDownsampleAggregator(SubQuery query) {
-        String aggregatorName = Aggregator.NONE;
-        if (query.getDownsample().isPresent()) {
-            String parts[] = query.getDownsample().get().split("-");
-            aggregatorName = parts[1];
-        }
-        // disabling the downsampling OR setting the aggregation to none are
-        // both considered to be disabling
-        if (aggregatorName.equals(Aggregator.NONE)) {
-            // we need a downsampling iterator, so default to max to ensure we
-            // return something
-            aggregatorName = DEFAULT_DOWNSAMPLE_AGGREGATOR;
-        }
-        return Aggregator.getAggregator(aggregatorName);
-    }
-
-    private long getDownsamplePeriod(SubQuery query) {
-        // disabling the downsampling OR setting the aggregation to none are
-        // both considered to be disabling
-        if (!query.getDownsample().isPresent() || query.getDownsample().get().endsWith("-none")) {
-            return DEFAULT_DOWNSAMPLE_MS;
-        }
-        String parts[] = query.getDownsample().get().split("-");
-        return getTimeInMillis(parts[0]);
     }
 
     private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
