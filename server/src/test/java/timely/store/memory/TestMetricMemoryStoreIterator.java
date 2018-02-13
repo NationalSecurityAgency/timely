@@ -1,8 +1,5 @@
 package timely.store.memory;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-import org.apache.accumulo.core.client.IteratorSetting;
-import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
 import org.junit.Assert;
@@ -18,12 +15,8 @@ import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.Value;
 import timely.sample.Aggregation;
-import timely.sample.Aggregator;
 import timely.sample.Sample;
-import timely.sample.aggregators.Avg;
 import timely.sample.iterators.AggregationIterator;
-import timely.sample.iterators.DownsampleIterator;
-import timely.store.iterators.RateIterator;
 
 import java.io.IOException;
 import java.util.*;
@@ -39,9 +32,9 @@ public class TestMetricMemoryStoreIterator {
         configuration.getSecurity().setAllowAnonymousAccess(true);
     }
 
-    private MetricMemoryStore getMetricMemoryStore1() throws TimelyException {
+    private MemoryDataStore getMetricMemoryStore1() throws TimelyException {
 
-        MetricMemoryStore mmStore = new MetricMemoryStore(configuration);
+        MemoryDataStore mmStore = new MemoryDataStore(configuration);
 
         Map<String, String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -65,9 +58,9 @@ public class TestMetricMemoryStoreIterator {
         return mmStore;
     }
 
-    private MetricMemoryStore getMetricMemoryStore2() throws TimelyException {
+    private MemoryDataStore getMetricMemoryStore2() throws TimelyException {
 
-        MetricMemoryStore mmStore = new MetricMemoryStore(configuration);
+        MemoryDataStore mmStore = new MemoryDataStore(configuration);
 
         int increment = 10;
         Map<String, String> tags = new HashMap<>();
@@ -76,7 +69,7 @@ public class TestMetricMemoryStoreIterator {
 
         Random r = new Random();
         int value = 0;
-        long timestamp = 1000;
+        // long timestamp = 1000;
         for (int x = 0; x <= 60 * 24; x++) {
             for (int y = 0; y < 2; y++) {
                 tags.put("host", (y % 2 == 0) ? "r01n01" : "r02n01");
@@ -86,11 +79,11 @@ public class TestMetricMemoryStoreIterator {
                 } else {
                     value += 2 * increment;
                 }
-                mmStore.store(createMetric("metric.number.1", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.2", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.3", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.4", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.5", tags, value, timestamp + (x * 1000)));
+                mmStore.store(createMetric("metric.number.1", tags, value, (x * 1000)));
+                mmStore.store(createMetric("metric.number.2", tags, value, (x * 1000)));
+                mmStore.store(createMetric("metric.number.3", tags, value, (x * 1000)));
+                mmStore.store(createMetric("metric.number.4", tags, value, (x * 1000)));
+                mmStore.store(createMetric("metric.number.5", tags, value, (x * 1000)));
             }
         }
         return mmStore;
@@ -99,7 +92,7 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testDownsampleIterator() throws TimelyException {
 
-        MetricMemoryStore mmStore = getMetricMemoryStore1();
+        MemoryDataStore mmStore = getMetricMemoryStore1();
 
         QueryRequest query = new QueryRequest();
         query.setStart(0);
@@ -143,7 +136,7 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testRateIterator() throws TimelyException {
 
-        MetricMemoryStore mmStore = getMetricMemoryStore2();
+        MemoryDataStore mmStore = getMetricMemoryStore2();
 
         QueryRequest query = new QueryRequest();
         query.setStart(0);
@@ -159,6 +152,7 @@ public class TestMetricMemoryStoreIterator {
         subQuery.setRateOptions(rateOption);
         query.setQueries(Collections.singleton(subQuery));
 
+        int x = 0;
         SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
         try {
             long firstTimestamp = -1;
@@ -175,14 +169,15 @@ public class TestMetricMemoryStoreIterator {
                             firstTimestamp = s.timestamp;
                         }
                         lastTimestamp = s.timestamp;
-                        // System.out.println(entry.toString() + " --> " +
-                        // s.toString());
+//                        if (x++ < 10) {
+//                            System.out.println(entry.toString() + " --> " + s.toString());
+//                        }
                     }
                 }
             }
-            Assert.assertEquals("First timestamp incorrect", 0, firstTimestamp);
+            Assert.assertEquals("First timestamp incorrect", 1000, firstTimestamp);
             Assert.assertEquals("Last timestamp incorrect", 1440000, lastTimestamp);
-            Assert.assertEquals("Number of samples incorrect", 50, numSamples);
+            Assert.assertEquals("Number of samples incorrect", 2879, numSamples);
         } catch (IOException | ClassNotFoundException e) {
             LOG.error("exception in test", e);
         }
@@ -191,7 +186,7 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testDownsampleIterator2() throws TimelyException {
 
-        MetricMemoryStore mmStore = getMetricMemoryStore1();
+        MemoryDataStore mmStore = getMetricMemoryStore1();
 
         QueryRequest queryRequest = new QueryRequest();
         queryRequest.setStart(0);
@@ -205,11 +200,10 @@ public class TestMetricMemoryStoreIterator {
 
         List<QueryResponse> response = mmStore.query(queryRequest);
 
-        for (QueryResponse r : response) {
-            System.out.println(r.getMetric() + " " + r.getTags() + " " + r.getDps().toString());
-        }
+//        for (QueryResponse r : response) {
+//            System.out.println(r.getMetric() + " " + r.getTags() + " " + r.getDps().toString());
+//        }
     }
-
 
     private Metric createMetric(String metric, Map<String, String> tags, double value, long timestamp) {
         Metric m = new Metric();

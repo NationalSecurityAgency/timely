@@ -1,10 +1,8 @@
 package timely.store.memory;
 
-import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
 import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.adapter.accumulo.MetricAdapter;
@@ -16,36 +14,39 @@ import java.util.*;
 public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Value> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricMemoryStoreIterator.class);
+    private MemoryDataStore store;
     private VisibilityFilter visibilityFilter;
     private QueryRequest.SubQuery query;
     private long startTs;
     private long endTs;
 
     private Iterator<Map.Entry<TaggedMetric, GorillaStore>> storeItr = null;
-    private Pair<TaggedMetric, GorillaDecompressor> storePtr = null;
+    private DecompressorWrapperListIterable decompressors = null;
     private KeyValue currentKeyValue = null;
     private Queue<KeyValue> kvQueue = new LinkedList<>();
 
-    public MetricMemoryStoreIterator(MetricMemoryStore store, VisibilityFilter visibilityFilter,
+    public MetricMemoryStoreIterator(MemoryDataStore store, VisibilityFilter visibilityFilter,
             QueryRequest.SubQuery query, long startTs, long endTs) {
 
+        this.store = store;
         this.visibilityFilter = visibilityFilter;
         this.query = query;
         this.startTs = startTs;
         this.endTs = endTs;
 
-        storeItr = store.getGorillaStores(query.getMetric()).entrySet().iterator();
-        storePtr = getNextMetricStorePair();
+        this.storeItr = this.store.getGorillaStores(query.getMetric()).entrySet().iterator();
+        this.decompressors = getNextDecompressorIterable();
         prepareEntries(100);
     }
 
-    private Pair<TaggedMetric, GorillaDecompressor> getNextMetricStorePair() {
+    private DecompressorWrapperListIterable getNextDecompressorIterable() {
         Map<String, String> requestedTags = query.getTags();
-        Pair<TaggedMetric, GorillaDecompressor> nextPair = null;
+        DecompressorWrapperListIterable nextPair = null;
         while (nextPair == null && storeItr.hasNext()) {
             Map.Entry<TaggedMetric, GorillaStore> entry = storeItr.next();
             if (entry.getKey().matches(requestedTags) && entry.getKey().isVisible(visibilityFilter)) {
-                nextPair = Pair.of(entry.getKey(), entry.getValue().getDecompressor());
+                List<DecompressorWrapper> listDecompressors = entry.getValue().getDecompressors(startTs, endTs);
+                nextPair = new DecompressorWrapperListIterable(entry.getKey(), listDecompressors);
             }
         }
         return nextPair;
@@ -53,17 +54,21 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Va
 
     private void prepareEntries(int bufferSize) {
 
-        if (storePtr != null && kvQueue.isEmpty()) {
-            TaggedMetric tm = storePtr.getLeft();
-            GorillaDecompressor decompressor = storePtr.getRight();
+        if (decompressors != null && kvQueue.isEmpty()) {
+            TaggedMetric tm = decompressors.getTaggedMetric();
+            DecompressorWrapper decompressor = decompressors.getDecompressorWrapper();
 
             fi.iki.yak.ts.compression.gorilla.Pair gPair = null;
-            while (kvQueue.size() < bufferSize && gPair == null && storePtr != null) {
+            while (kvQueue.size() < bufferSize && gPair == null && decompressor != null && decompressors != null) {
                 gPair = decompressor.readPair();
                 if (gPair == null) {
-                    if ((storePtr = getNextMetricStorePair()) != null) {
-                        tm = storePtr.getLeft();
-                        decompressor = storePtr.getRight();
+                    if (decompressors.hasNext()) {
+                        decompressor = decompressors.next();
+                    } else {
+                        if ((decompressors = getNextDecompressorIterable()) != null) {
+                            tm = decompressors.getTaggedMetric();
+                            decompressor = decompressors.getDecompressorWrapper();
+                        }
                     }
                 } else {
                     if (gPair.getTimestamp() >= startTs && gPair.getTimestamp() <= endTs) {
@@ -121,4 +126,5 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Va
     public SortedKeyValueIterator<Key, Value> deepCopy(IteratorEnvironment env) {
         return null;
     }
+
 }

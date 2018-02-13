@@ -2,41 +2,60 @@ package timely.store.memory;
 
 import fi.iki.yak.ts.compression.gorilla.*;
 
+import java.util.*;
+
 public class GorillaStore {
 
-    GorillaCompressor compressor = null;
-    BitOutput compressorOutput = null;
+    private Queue<CompressorWrapper> archivedCompressors = new LinkedList<CompressorWrapper>();
 
-    private GorillaCompressor getCompressor(long timestamp) {
-        if (compressor == null) {
-            compressorOutput = new LongArrayOutput(480);
-            compressor = new GorillaCompressor(timestamp, compressorOutput);
+    private CompressorWrapper current = null;
+
+    // private Map<Long, Long> checkedOutDecompressors = new TreeMap<>();
+
+    private CompressorWrapper getCompressor(long timestamp) {
+        if (current == null) {
+            synchronized (this) {
+                current = new CompressorWrapper();
+                current.setFirstTimestamp(timestamp);
+                current.setLastTimestamp(timestamp);
+                current.setCompressorOutput(new LongArrayOutput(480));
+                current.setCompressor(new GorillaCompressor(timestamp, current.getCompressorOutput()));
+            }
         }
-        return compressor;
+        return current;
     }
 
-    public GorillaDecompressor getDecompressor() {
-        if (compressor == null) {
-            return null;
-        }
-        LongArrayOutput newCompressorOutput = null;
-        synchronized (this) {
-            newCompressorOutput = new LongArrayOutput((LongArrayOutput) compressorOutput);
+    public List<DecompressorWrapper> getDecompressors(long begin, long end) {
+
+        List<DecompressorWrapper> decompressors = new ArrayList<>();
+
+        for (CompressorWrapper r : archivedCompressors) {
+            if (r.inRange(begin, end)) {
+                GorillaDecompressor d = new GorillaDecompressor(new LongArrayInput(
+                        ((LongArrayOutput) r.getCompressorOutput()).getLongArray()));
+                // use -1 length since this compressor is closed
+                decompressors.add(new DecompressorWrapper(d, -1));
+            }
         }
 
-        // same code that the compressor uses in close()
-        newCompressorOutput.writeBits(0x0F, 4);
-        newCompressorOutput.writeBits(0xFFFFFFFF, 32);
-        newCompressorOutput.skipBit();
-        newCompressorOutput.flush();
-        LongArrayInput decompressorByteBufferInput = new LongArrayInput(newCompressorOutput.getLongArray());
-        return new GorillaDecompressor(decompressorByteBufferInput);
+        // as long as begin is inRange, we should use the data in the current
+        // compressor as well
+        synchronized (this) {
+            if (current.inRange(begin, begin)) {
+                LongArrayInput decompressorByteBufferInput = new LongArrayInput(
+                        ((LongArrayOutput) current.getCompressorOutput()).getLongArray());
+                GorillaDecompressor d = new GorillaDecompressor(decompressorByteBufferInput);
+                decompressors.add(new DecompressorWrapper(d, current.getNumEntries()));
+            }
+        }
+        return decompressors;
     }
 
     public void addValue(long timestamp, double value) {
+
         synchronized (this) {
-            GorillaCompressor compressor = getCompressor(timestamp);
-            compressor.addValue(timestamp, value);
+            getCompressor(timestamp).addValue(timestamp, value);
         }
     }
+
 }

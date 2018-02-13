@@ -1,6 +1,5 @@
 package timely.store.memory;
 
-import fi.iki.yak.ts.compression.gorilla.Pair;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import timely.Configuration;
@@ -14,7 +13,7 @@ import timely.model.Value;
 
 import java.util.*;
 
-public class TestMetricMemoryStore {
+public class TestMemoryDataStore {
 
     static private Configuration configuration = null;
 
@@ -24,9 +23,9 @@ public class TestMetricMemoryStore {
         configuration.getSecurity().setAllowAnonymousAccess(true);
     }
 
-    private MetricMemoryStore getMetricMemoryStore1() throws TimelyException {
+    private MemoryDataStore getMetricMemoryStore1() throws TimelyException {
 
-        MetricMemoryStore mmStore = new MetricMemoryStore(configuration);
+        MemoryDataStore mmStore = new MemoryDataStore(configuration);
 
         long timestamp = 10000;
         Map<String, String> tags = new HashMap<>();
@@ -57,9 +56,9 @@ public class TestMetricMemoryStore {
 
     }
 
-    private MetricMemoryStore getMetricMemoryStore2() throws TimelyException {
+    private MemoryDataStore getMetricMemoryStore2() throws TimelyException {
 
-        MetricMemoryStore mmStore = new MetricMemoryStore(configuration);
+        MemoryDataStore mmStore = new MemoryDataStore(configuration);
 
         Map<String, String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -93,7 +92,7 @@ public class TestMetricMemoryStore {
     @Test
     public void testOne() throws TimelyException {
 
-        MetricMemoryStore mmStore = getMetricMemoryStore1();
+        MemoryDataStore mmStore = getMetricMemoryStore1();
 
         QueryRequest query = new QueryRequest();
         query.setStart(10000);
@@ -118,7 +117,7 @@ public class TestMetricMemoryStore {
     @Test
     public void testStorage() throws TimelyException {
 
-        MetricMemoryStore mmStore = getMetricMemoryStore2();
+        MemoryDataStore mmStore = getMetricMemoryStore2();
 
         QueryRequest query = new QueryRequest();
         query.setStart(0);

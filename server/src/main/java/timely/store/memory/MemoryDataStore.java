@@ -1,9 +1,8 @@
 package timely.store.memory;
 
-import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
-import fi.iki.yak.ts.compression.gorilla.Pair;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.accumulo.core.client.IteratorSetting;
+import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
@@ -15,36 +14,35 @@ import org.slf4j.LoggerFactory;
 import timely.Configuration;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
+import timely.api.request.timeseries.SearchLookupRequest;
+import timely.api.request.timeseries.SuggestRequest;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
+import timely.api.response.timeseries.SearchLookupResponse;
+import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
 import timely.sample.Aggregator;
-import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.aggregators.Avg;
 import timely.sample.iterators.AggregationIterator;
 import timely.sample.iterators.DownsampleIterator;
+import timely.store.DataStore;
 import timely.store.iterators.RateIterator;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.*;
 
-import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
+public class MemoryDataStore implements DataStore {
 
-public class MetricMemoryStore {
-
-    private static final long DEFAULT_DOWNSAMPLE_MS = 1;
-    private static final String DEFAULT_DOWNSAMPLE_AGGREGATOR = Avg.class.getSimpleName().toLowerCase();
-    private static final Logger LOG = LoggerFactory.getLogger(MetricMemoryStore.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MemoryDataStore.class);
 
     private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
     private boolean anonAccessAllowed = false;
 
-    public MetricMemoryStore(Configuration conf) throws TimelyException {
+    public MemoryDataStore(Configuration conf) throws TimelyException {
 
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
     }
@@ -105,6 +103,11 @@ public class MetricMemoryStore {
         }
     }
 
+    @Override
+    public void flush() throws TimelyException {
+
+    }
+
     protected SortedKeyValueIterator<Key, Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery,
             Authorizations authorizations) throws TimelyException {
 
@@ -162,22 +165,6 @@ public class MetricMemoryStore {
         return itr;
     }
 
-    static public class CustomComparator implements Comparator<Pair>, Serializable {
-
-        @Override
-        public int compare(Pair p1, Pair p2) {
-            if (p1.getTimestamp() == p2.getTimestamp()) {
-                if (Double.compare(p1.getDoubleValue(), p2.getDoubleValue()) == 0) {
-                    return 0;
-                } else {
-                    return Double.compare(p1.getDoubleValue(), p2.getDoubleValue());
-                }
-            } else {
-                return (p1.getTimestamp() < p2.getTimestamp()) ? -1 : 1;
-            }
-        }
-    }
-
     private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
         return getSessionAuthorizations(request.getSessionId());
     }
@@ -223,23 +210,22 @@ public class MetricMemoryStore {
         return response;
     }
 
-    private QueryResponse convertToQueryResponse2(QueryRequest.SubQuery query, Map<String, String> tags,
-            Aggregation values, long tsDivisor) {
-        QueryResponse response = new QueryResponse();
-        Set<String> requestedTags = query.getTags().keySet();
-        response.setMetric(query.getMetric());
-        for (Map.Entry<String, String> tag : tags.entrySet()) {
-            if (requestedTags.contains(tag.getKey())) {
-                response.putTag(tag.getKey(), tag.getValue());
-            }
-        }
-        // QueryRequest.RateOption rateOptions = query.getRateOptions();
-        // Aggregation combined = Aggregation.combineAggregation(values,
-        // rateOptions);
-        for (Sample entry : values) {
-            long ts = entry.timestamp / tsDivisor;
-            response.putDps(Long.toString(ts), entry.value);
-        }
-        return response;
+    @Override
+    public SuggestResponse suggest(SuggestRequest query) throws TimelyException {
+        throw new TimelyException(500, "suggest not implemented", "suggest not implemented in "
+                + this.getClass().getSimpleName());
+    }
+
+    @Override
+    public SearchLookupResponse lookup(SearchLookupRequest msg) throws TimelyException {
+        throw new TimelyException(500, "lookup not implemented", "lookup not implemented in "
+                + this.getClass().getSimpleName());
+    }
+
+    @Override
+    public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
+            long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException {
+        throw new TimelyException(500, "createScannerForMetric not implemented",
+                "createScannerForMetric not implemented in " + this.getClass().getSimpleName());
     }
 }
