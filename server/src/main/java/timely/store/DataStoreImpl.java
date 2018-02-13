@@ -466,6 +466,7 @@ public class DataStoreImpl implements DataStore {
     @Override
     public List<QueryResponse> query(QueryRequest msg) throws TimelyException {
         List<QueryResponse> result = new ArrayList<>();
+        LOG.debug("Query request {}", msg);
         long startTs = msg.getStart();
         long endTs = msg.getEnd();
         try {

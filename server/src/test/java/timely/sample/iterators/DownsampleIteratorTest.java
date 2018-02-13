@@ -168,8 +168,7 @@ public class DownsampleIteratorTest {
         long period = 500l;
         long sizeOfObjects = 20;
         SampleObject o = new SampleObject();
-        DownsampleIterator.MemoryEstimator memoryEstimator = new DownsampleIterator.MemoryEstimator(maxMemory, start,
-                period);
+        DownsampleMemoryEstimator memoryEstimator = new DownsampleMemoryEstimator(maxMemory, start, period);
         boolean shouldReturn = false;
         for (long x = 100; x <= 5000; x += 100) {
             long timestamp = start + x;
@@ -198,8 +197,7 @@ public class DownsampleIteratorTest {
         long period = 500l;
         long sizeOfObjects = 200;
         SampleObject o = new SampleObject();
-        DownsampleIterator.MemoryEstimator memoryEstimator = new DownsampleIterator.MemoryEstimator(maxMemory, start,
-                period);
+        DownsampleMemoryEstimator memoryEstimator = new DownsampleMemoryEstimator(maxMemory, start, period);
         boolean shouldReturn = false;
         for (long x = 100; x <= 5000; x += 100) {
             long timestamp = start + x;

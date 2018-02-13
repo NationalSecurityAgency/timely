@@ -14,7 +14,7 @@ import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
 
-import org.apache.log4j.Logger;
+import org.slf4j.LoggerFactory;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
 import timely.model.ObjectSizeOf;
@@ -26,6 +26,7 @@ import timely.sample.DownsampleFactory;
 
 public class DownsampleIterator extends WrappingIterator {
 
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(DownsampleIterator.class);
     private static final String START = "downsample.start";
     private static final String END = "downsample.end";
     private static final String PERIOD = "downsample.period";
@@ -38,100 +39,7 @@ public class DownsampleIterator extends WrappingIterator {
     private long end;
     private long period;
     private Key last;
-    private MemoryEstimator memoryEstimator = null;
-
-    static public class MemoryEstimator {
-
-        private boolean newBucket = false;
-        private long start;
-        private long period;
-        private long startOfCurrentBucket;
-        private long bucketsCompleted = 0;
-        private long bytesPerBucket = 0;
-        boolean highVolumeBuckets = false;
-        long maxDownsampleMemory = 0; // max aggregation memory (bytes) before
-                                      // current batch is returned (after
-                                      // bucket is complete)
-        LinkedList<Long> percentageChecks = new LinkedList<>();
-
-        public void reset() {
-            newBucket = false;
-            bucketsCompleted = 0;
-            bytesPerBucket = 0;
-            percentageChecks.add(5l);
-            percentageChecks.add(25l);
-            percentageChecks.add(50l);
-            percentageChecks.add(75l);
-        }
-
-        public MemoryEstimator(long maxDownsampleMemory, long start, long period) {
-            this.maxDownsampleMemory = maxDownsampleMemory;
-            this.start = start;
-            this.period = period;
-            this.startOfCurrentBucket = this.start;
-            reset();
-        }
-
-        public double getMemoryUsedPercentage() {
-            return (bucketsCompleted * bytesPerBucket) / (double) maxDownsampleMemory * 100;
-        }
-
-        public long getBucketsCompleted() {
-            return bucketsCompleted;
-        }
-
-        public long getBytesPerBucket() {
-            return bytesPerBucket;
-        }
-
-        public boolean isHighVolumeBuckets() {
-            return highVolumeBuckets;
-        }
-
-        public boolean shouldReturnBasedOnMemoryUsage(long timestamp, Object value) {
-
-            boolean shouldReturn = false;
-            if (maxDownsampleMemory >= 0) {
-                sample(timestamp);
-                if (isNewBucket()) {
-                    bucketsCompleted++;
-                    double memoryUsedPercentage = getMemoryUsedPercentage();
-                    if (memoryUsedPercentage >= 100) {
-                        shouldReturn = true;
-                    } else {
-                        boolean checkMemoryNow = false;
-                        Long check = percentageChecks.peek();
-                        if (check != null && memoryUsedPercentage >= check) {
-                            checkMemoryNow = true;
-                            percentageChecks.removeFirst();
-                        }
-                        // recalculate bytesPerBucket
-                        if (bytesPerBucket == 0 || highVolumeBuckets || checkMemoryNow) {
-                            long memoryUsed = ObjectSizeOf.Sizer.getObjectSize(value);
-                            bytesPerBucket = memoryUsed / bucketsCompleted;
-                        }
-                        // bucket average greater than 10% of max
-                        highVolumeBuckets = (bytesPerBucket / (double) maxDownsampleMemory) >= 0.1;
-                        shouldReturn = false;
-                    }
-                }
-            }
-            return shouldReturn;
-        }
-
-        public boolean isNewBucket() {
-            return newBucket;
-        }
-
-        private void sample(long timestamp) {
-            if (timestamp >= (startOfCurrentBucket + period)) {
-                newBucket = true;
-                startOfCurrentBucket = timestamp - ((timestamp - start) % period);
-            } else {
-                newBucket = false;
-            }
-        }
-    }
+    private DownsampleMemoryEstimator memoryEstimator = null;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -146,7 +54,7 @@ public class DownsampleIterator extends WrappingIterator {
         if (options.containsKey(MAX_DOWNSAMPLE_MEMORY)) {
             maxDownsampleMemory = Long.parseLong(options.get(MAX_DOWNSAMPLE_MEMORY));
         }
-        memoryEstimator = new MemoryEstimator(maxDownsampleMemory, start, period);
+        memoryEstimator = new DownsampleMemoryEstimator(maxDownsampleMemory, start, period);
 
         String aggClassname = options.get(AGGCLASS);
         Class<?> aggClass;
@@ -162,12 +70,15 @@ public class DownsampleIterator extends WrappingIterator {
     public boolean hasTop() {
 
         if (super.hasTop()) {
+            Key topKey = super.getTopKey();
+            Value topValue = super.getTopValue();
+            Metric metric = MetricAdapter.parse(topKey, topValue);
+            LOG.trace("entering hasTop() for metric=" + metric.toString());
             while (super.hasTop()) {
-                Key topKey = super.getTopKey();
-                Value topValue = super.getTopValue();
-                Metric metric = MetricAdapter.parse(topKey, topValue);
                 long timestamp = metric.getValue().getTimestamp();
                 if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
+                    LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory
+                            + " for metric=" + metric.toString());
                     break;
                 }
                 last = topKey;
@@ -188,6 +99,7 @@ public class DownsampleIterator extends WrappingIterator {
                     throw new RuntimeException("Downstream next() failed", e);
                 }
             }
+            LOG.trace("exiting hasTop() for metric=" + metric.toString());
             return last != null;
         } else {
             return false;
