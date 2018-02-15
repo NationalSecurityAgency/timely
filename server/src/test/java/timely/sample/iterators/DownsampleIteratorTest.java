@@ -54,6 +54,7 @@ public class DownsampleIteratorTest {
             for (ColumnUpdate cu : mutation.getUpdates()) {
                 Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(),
                         cu.getColumnVisibility(), cu.getTimestamp());
+                System.out.println(key.toString());
                 testData1.put(key, new Value(cu.getValue()));
             }
         }
@@ -69,7 +70,6 @@ public class DownsampleIteratorTest {
     }
 
     private void createTestData2() {
-        List<List<Tag>> listOfTagVariations = new ArrayList<>();
         List<Tag> tags = Collections.singletonList(new Tag("host", "host1"));
         List<Tag> tags2 = Collections.singletonList(new Tag("host", "host2"));
 
@@ -279,6 +279,7 @@ public class DownsampleIteratorTest {
                 }
             }
             key = iter.getTopKey();
+            System.out.println(key.toString());
         } while (iter.hasTop());
 
         assertEquals(testData.lastKey(), key);

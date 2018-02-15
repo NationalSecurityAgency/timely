@@ -34,6 +34,14 @@ public class MetricAdapter {
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
 
+    public static long roundTimestampToLastHour(long timestamp) {
+        return timestamp - (timestamp % 3600000);
+    }
+
+    public static long roundTimestampToNextHour(long timestamp) {
+        return timestamp - (timestamp % 3600000) + 3600000;
+    }
+
     public static Mutation toMutation(Metric metric) {
         final Mutation mutation = new Mutation(encodeRowKey(metric));
 
@@ -46,7 +54,8 @@ public class MetricAdapter {
 
             final String cf = entry.join();
             // @formatter:off
-            String cq = tags.stream().filter(inner -> !inner.equals(entry))
+            String timestamp = Long.toString(metric.getValue().getTimestamp());
+            String cq = timestamp + "\0" + tags.stream().filter(inner -> !inner.equals(entry))
                     .filter(inner -> !inner.getKey().equals(VISIBILITY_TAG))
                     .map(Tag::join)
                     .collect(Collectors.joining(","));
@@ -87,10 +96,15 @@ public class MetricAdapter {
         // @formatter:off
         Metric.Builder builder = Metric.newBuilder()
                 .name(row.getFirst())
-                .value(row.getSecond(), ByteBuffer.wrap(v.get()).getDouble())
+                .value(k.getTimestamp(), ByteBuffer.wrap(v.get()).getDouble())
                 .tag(tagParser.parse(k.getColumnFamily().toString()));
         // @formatter:on
-        tagListParser.parse(k.getColumnQualifier().toString()).forEach(builder::tag);
+        String cf = k.getColumnQualifier().toString();
+        int x = cf.indexOf("\0");
+        if (x >= 0) {
+            cf = cf.substring(x + 1);
+        }
+        tagListParser.parse(cf).forEach(builder::tag);
         if (includeVizTag && k.getColumnVisibility().getLength() > 0) {
             tagListParser.parse("viz=" + k.getColumnVisibility().toString()).forEach(builder::tag);
         }
@@ -106,7 +120,8 @@ public class MetricAdapter {
     }
 
     public static byte[] encodeRowKey(Metric metric) {
-        return encodeRowKey(metric.getName(), metric.getValue().getTimestamp());
+        // round timestamp to hour for scan efficiency and compression
+        return encodeRowKey(metric.getName(), roundTimestampToLastHour(metric.getValue().getTimestamp()));
     }
 
     public static Pair<String, Long> decodeRowKey(Key k) {

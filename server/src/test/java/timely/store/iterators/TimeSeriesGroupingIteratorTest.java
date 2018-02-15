@@ -128,15 +128,16 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), new String("timestamp="
+                    + Long.toString(ts)).getBytes(), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             if (i < 50) {
                 // only populate this series 50 times
                 Metric m2 = new Metric("sys.cpu.user", ts, i * 2.0D, tags2);
                 byte[] row2 = MetricAdapter.encodeRowKey(m2);
-                Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0],
-                        ts);
+                Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), new String("timestamp="
+                        + Long.toString(ts)).getBytes(), new byte[0], ts);
                 Value v2 = new Value(MetricAdapter.encodeValue(m2.getValue().getMeasure()));
                 table.put(k2, v2);
             }
