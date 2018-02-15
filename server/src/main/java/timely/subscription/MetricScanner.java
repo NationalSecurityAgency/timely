@@ -2,16 +2,20 @@ package timely.subscription;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.client.Scanner;
+import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
@@ -25,6 +29,7 @@ import timely.api.response.MetricResponse;
 import timely.api.response.MetricResponses;
 import timely.api.response.TimelyException;
 import timely.model.Metric;
+import timely.model.Tag;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
 
@@ -45,11 +50,16 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final int lag;
     private final String subscriptionId;
     private final String metric;
-    private final long endTime;
+    private long startTime;
+    private long endTime;
     private final Subscription subscription;
     private MetricResponses responses = new MetricResponses();
     private final ScheduledFuture<?> flusher;
     private final int subscriptionBatchSize;
+    private List<Range> ranges = null;
+    private Iterator<Range> rangeItr = null;
+    private DataStore store = null;
+    private Set<Tag> colFamValues = null;
 
     public MetricScanner(Subscription sub, String subscriptionId, String sessionId, DataStore store, String metric,
             Map<String, String> tags, long startTime, long endTime, long delay, int lag, ChannelHandlerContext ctx,
@@ -57,13 +67,34 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
             throws TimelyException {
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(this);
+        this.store = store;
         this.subscription = sub;
         this.ctx = ctx;
         this.lag = lag;
         this.metric = metric;
+        this.startTime = startTime;
         this.endTime = endTime;
-        this.scanner = store.createScannerForMetric(sessionId, metric, tags, startTime, endTime, lag, scannerBatchSize,
-                scannerReadAhead);
+        this.scanner = this.store.createScannerForMetric(sessionId, metric, tags, startTime, endTime, lag,
+                scannerBatchSize, scannerReadAhead);
+
+        if (0 == startTime) {
+            this.startTime = (System.currentTimeMillis() - this.store.getAgeOffForMetric(metric) - 1000);
+            LOG.debug("Overriding zero start time to {} due to age off configuration", startTime);
+        }
+        long endTimeStamp = (endTime == 0) ? (System.currentTimeMillis() - (lag * 1000)) : endTime;
+
+        try {
+            this.colFamValues = this.store.getColumnFamilies(metric, tags);
+            ranges = this.store.getQueryRanges(metric, this.startTime, endTimeStamp, colFamValues);
+            rangeItr = ranges.iterator();
+            if (rangeItr.hasNext()) {
+                Range r = rangeItr.next();
+                this.scanner.setRange(r);
+            }
+        } catch (TableNotFoundException e) {
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error in MetricScanner",
+                    e.getMessage(), e);
+        }
         this.iter = scanner.iterator();
         this.delay = delay;
         this.subscriptionId = subscriptionId;
@@ -86,6 +117,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     }
 
     public synchronized void flush() {
+        LOG.info("Flush called");
         synchronized (responses) {
             if (responses.size() > 0) {
                 try {
@@ -103,7 +135,8 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     public void run() {
         Metric m = null;
         try {
-            while (!closed) {
+            boolean done = false;
+            while (!done && !closed) {
 
                 if (this.iter.hasNext()) {
                     Entry<Key, Value> e = this.iter.next();
@@ -112,39 +145,55 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         flush();
                     }
                     this.responses.addResponse(MetricResponse.fromMetric(m, this.subscriptionId));
+                } else if (rangeItr.hasNext()) {
+                    // set next range on the scanner
+                    Range r = rangeItr.next();
+                    this.scanner.close();
+                    this.scanner.setRange(r);
+                    this.iter = scanner.iterator();
                 } else if (this.endTime == 0) {
                     flush();
                     long endTimeStamp = (System.currentTimeMillis() - (lag * 1000));
-                    byte[] end = MetricAdapter.encodeRowKey(this.metric, endTimeStamp);
-                    Text endRow = new Text(end);
                     this.scanner.close();
-                    Range prevRange = this.scanner.getRange();
                     if (null == m) {
                         LOG.debug("No results found, waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
-                        this.scanner.setRange(new Range(prevRange.getStartKey().getRow(), prevRange
-                                .isStartKeyInclusive(), endRow, false));
-                        this.iter = this.scanner.iterator();
+                        ranges = this.store.getQueryRanges(metric, startTime, endTimeStamp, colFamValues);
+                        rangeItr = ranges.iterator();
+                        if (rangeItr.hasNext()) {
+                            Range r = rangeItr.next();
+                            this.scanner.setRange(r);
+                            this.iter = scanner.iterator();
+                        }
                     } else {
                         // Reset the starting range to the last key returned
                         LOG.debug("Exhausted scanner, last metric returned was {}", m);
                         LOG.debug("Waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
-                        this.scanner.setRange(new Range(new Text(MetricAdapter.encodeRowKey(m)), false, endRow,
-                                prevRange.isEndKeyInclusive()));
-                        this.iter = this.scanner.iterator();
+                        ranges = this.store.getQueryRanges(metric, m.getValue().getTimestamp() + 1, endTimeStamp,
+                                colFamValues);
+                        rangeItr = ranges.iterator();
+                        if (rangeItr.hasNext()) {
+                            Range r = rangeItr.next();
+                            this.scanner.setRange(r);
+                            this.iter = this.scanner.iterator();
+                        } else {
+                            done = true;
+                        }
                     }
                 } else {
+                    done = true;
+                }
+                if (done) {
                     LOG.debug("Exhausted scanner, sending completed message for subscription {}", this.subscriptionId);
                     final MetricResponse last = new MetricResponse();
                     last.setSubscriptionId(this.subscriptionId);
                     last.setComplete(true);
                     this.responses.addResponse(last);
                     flush();
-                    break;
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG.error("Error in metric scanner, closing.", e);
         } finally {
             close();

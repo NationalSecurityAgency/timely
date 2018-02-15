@@ -15,6 +15,8 @@ public class TimelyMetricsFormatter extends DefaultFormatter {
 
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());
+    private static final PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(),
+            new StringLexicoder());
 
     @Override
     public String next() {
@@ -25,7 +27,8 @@ public class TimelyMetricsFormatter extends DefaultFormatter {
         b.append(" ");
         b.append(e.getKey().getColumnFamily().toString());
         b.append(":");
-        b.append(e.getKey().getColumnQualifier().toString());
+        ComparablePair<Long, String> cq = colQualCoder.decode(e.getKey().getColumnQualifier().copyBytes());
+        b.append(cq.getFirst()).append("\\x00").append(cq.getSecond());
         b.append(" ");
         b.append(e.getKey().getColumnVisibility().toString());
         if (super.isDoTimestamps()) {

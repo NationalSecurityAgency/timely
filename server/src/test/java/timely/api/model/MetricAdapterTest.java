@@ -42,28 +42,33 @@ public class MetricAdapterTest {
         Mutation mut = MetricAdapter.toMutation(m);
 
         PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
-        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", ts));
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", MetricAdapter.roundTimestampToLastHour(ts)));
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
         Assert.assertEquals(rowCoder.decode(row), rowCoder.decode(mut.getRow()));
         Assert.assertEquals(3, mut.getUpdates().size());
         ColumnUpdate up = mut.getUpdates().get(0);
-        Assert.assertTrue(new String(up.getColumnFamily()).equals("tag1=value1"));
-        Assert.assertTrue(new String(up.getColumnQualifier()).equals("tag2=value2,tag3=value3"));
+        Assert.assertEquals("tag1=value1", new String(up.getColumnFamily()));
+        PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
+        Assert.assertEquals(new String(colQualCoder.encode(new ComparablePair<>(ts, "tag2=value2,tag3=value3"))),
+                new String(up.getColumnQualifier()));
+
         Assert.assertEquals(ts, up.getTimestamp());
-        Assert.assertTrue(new String(up.getColumnVisibility()).equals(""));
+        Assert.assertEquals("", new String(new String(up.getColumnVisibility())));
         Assert.assertArrayEquals(value, up.getValue());
         ColumnUpdate up2 = mut.getUpdates().get(1);
-        Assert.assertTrue(new String(up2.getColumnFamily()).equals("tag2=value2"));
-        Assert.assertTrue(new String(up2.getColumnQualifier()).equals("tag1=value1,tag3=value3"));
+        Assert.assertEquals("tag2=value2", new String(up2.getColumnFamily()));
+        Assert.assertEquals(new String(colQualCoder.encode(new ComparablePair<>(ts, "tag1=value1,tag3=value3"))),
+                new String(up2.getColumnQualifier()));
         Assert.assertEquals(ts, up2.getTimestamp());
-        Assert.assertTrue(new String(up2.getColumnVisibility()).equals(""));
+        Assert.assertEquals("", new String(up2.getColumnVisibility()));
         Assert.assertArrayEquals(value, up.getValue());
         ColumnUpdate up3 = mut.getUpdates().get(2);
-        Assert.assertTrue(new String(up3.getColumnFamily()).equals("tag3=value3"));
-        Assert.assertTrue(new String(up3.getColumnQualifier()).equals("tag1=value1,tag2=value2"));
+        Assert.assertEquals("tag3=value3", new String(up3.getColumnFamily()));
+        Assert.assertEquals(new String(colQualCoder.encode(new ComparablePair<>(ts, "tag1=value1,tag2=value2"))),
+                new String(up3.getColumnQualifier()));
         Assert.assertEquals(ts, up3.getTimestamp());
-        Assert.assertTrue(new String(up3.getColumnVisibility()).equals(""));
+        Assert.assertEquals("", new String(up3.getColumnVisibility()));
         Assert.assertArrayEquals(value, up.getValue());
     }
 
@@ -78,14 +83,16 @@ public class MetricAdapterTest {
         Mutation mut = MetricAdapter.toMutation(m);
 
         PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
-        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", ts));
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", MetricAdapter.roundTimestampToLastHour(ts)));
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
         Assert.assertEquals(rowCoder.decode(row), rowCoder.decode(mut.getRow()));
         Assert.assertEquals(1, mut.getUpdates().size());
         ColumnUpdate up = mut.getUpdates().get(0);
         Assert.assertEquals("tag1=value1", new String(up.getColumnFamily()));
-        Assert.assertEquals("", new String(up.getColumnQualifier()));
+        PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
+        Assert.assertEquals(new String(colQualCoder.encode(new ComparablePair<>(ts, ""))),
+                new String(up.getColumnQualifier()));
         Assert.assertEquals(ts, up.getTimestamp());
         Assert.assertEquals("(a&b)|(c&d)", new String(up.getColumnVisibility()));
         Assert.assertArrayEquals(value, up.getValue());
@@ -110,8 +117,9 @@ public class MetricAdapterTest {
         byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", 1000L));
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
-        Key k = new Key(row, "tag1=value1".getBytes(), "tag2=value2,tag3=value3".getBytes(), "(a&b)|(c&d)".getBytes(),
-                1000);
+        PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
+        Key k = new Key(row, "tag1=value1".getBytes(), colQualCoder.encode(new ComparablePair<>(new Long(1000),
+                "tag2=value2,tag3=value3")), "(a&b)|(c&d)".getBytes(), 1000);
         Value v = new Value(value);
         Metric m = MetricAdapter.parse(k, v);
         Assert.assertEquals("sys.cpu.user", m.getName());
@@ -130,8 +138,9 @@ public class MetricAdapterTest {
         byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", 1000L));
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
-        Key k = new Key(row, "tag1=value1".getBytes(), "tag2=value2,tag3=value3".getBytes(), "(a&b)|(c&d)".getBytes(),
-                1000);
+        PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
+        Key k = new Key(row, "tag1=value1".getBytes(), colQualCoder.encode(new ComparablePair<>(new Long(1000),
+                "tag2=value2,tag3=value3")), "(a&b)|(c&d)".getBytes(), 1000);
         Value v = new Value(value);
         Metric m = MetricAdapter.parse(k, v, true);
         Assert.assertEquals("sys.cpu.user", m.getName());

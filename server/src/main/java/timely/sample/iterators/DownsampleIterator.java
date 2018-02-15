@@ -75,6 +75,9 @@ public class DownsampleIterator extends WrappingIterator {
             Metric metric = MetricAdapter.parse(topKey, topValue);
             LOG.trace("entering hasTop() for metric=" + metric.toString());
             while (super.hasTop()) {
+                topKey = super.getTopKey();
+                topValue = super.getTopValue();
+                metric = MetricAdapter.parse(topKey, topValue);
                 long timestamp = metric.getValue().getTimestamp();
                 if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
                     LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory

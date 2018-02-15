@@ -6,4 +6,5 @@ target/
 *.iml
 logs/
 server/pki/
+client/src/main/python/setup.py
 

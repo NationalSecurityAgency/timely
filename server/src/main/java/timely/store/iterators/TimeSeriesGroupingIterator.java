@@ -231,7 +231,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         while (super.hasTop()) {
             Key k = super.getTopKey();
 
-            Long newTime = MetricAdapter.decodeRowKey(k).getSecond();
+            Long newTime = k.getTimestamp();
             if (time == null) {
                 time = newTime;
             }

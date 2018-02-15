@@ -49,6 +49,7 @@ public class DataStoreIT extends OneWaySSLBase {
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+
             assertEquals(1, response.size());
             Map<String, String> tags = response.get(0).getTags();
             assertEquals(1, tags.size());

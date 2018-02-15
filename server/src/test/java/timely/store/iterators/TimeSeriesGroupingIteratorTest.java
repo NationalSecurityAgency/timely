@@ -6,10 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
@@ -43,7 +40,8 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
+                    ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
         }
@@ -92,12 +90,14 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
+                    ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             Metric m2 = new Metric("sys.cpu.user", ts, i * 2.0D, tags2);
             byte[] row2 = MetricAdapter.encodeRowKey(m2);
-            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(
+                    ts, ""), new byte[0], ts);
             Value v2 = new Value(MetricAdapter.encodeValue(m2.getValue().getMeasure()));
             table.put(k2, v2);
         }
@@ -108,8 +108,12 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
         iter.init(source, settings.getOptions(), SCAN_IE);
         iter.seek(new Range(), EMPTY_COL_FAMS, true);
 
+        // this section changed when the key structure changed so that identical
+        // colFam values sorted consecutively within an given time period
         for (int i = 4; i < 100; i++) {
             checkNextResult(iter, new double[] { i - 4, i - 3, i - 2, i - 1, i });
+        }
+        for (int i = 4; i < 100; i++) {
             checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, i * 2 });
         }
         assertFalse(iter.hasTop());
@@ -128,19 +132,21 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
+                    ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             if (i < 50) {
                 // only populate this series 50 times
                 Metric m2 = new Metric("sys.cpu.user", ts, i * 2.0D, tags2);
                 byte[] row2 = MetricAdapter.encodeRowKey(m2);
-                Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0],
-                        ts);
+                Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8),
+                        MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
                 Value v2 = new Value(MetricAdapter.encodeValue(m2.getValue().getMeasure()));
                 table.put(k2, v2);
             }
         }
+
         SortedMapIterator source = new SortedMapIterator(table);
         TimeSeriesGroupingIterator iter = new TimeSeriesGroupingIterator();
         IteratorSetting settings = new IteratorSetting(100, TimeSeriesGroupingIterator.class);
@@ -148,12 +154,15 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
         iter.init(source, settings.getOptions(), SCAN_IE);
         iter.seek(new Range(), EMPTY_COL_FAMS, true);
 
+        // this section changed when the key structure changed so that identical
+        // colFam values sorted consecutively within an given time period
         for (int i = 4; i < 100; i++) {
             System.out.println(i);
             checkNextResult(iter, new double[] { i - 4, i - 3, i - 2, i - 1, i });
-            if (i < 50) {
-                checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, i * 2 });
-            }
+        }
+        for (int i = 4; i < 50; i++) {
+            System.out.println(i);
+            checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, i * 2 });
         }
         assertFalse(iter.hasTop());
     }
@@ -170,15 +179,16 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
+                    ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             if (i > 50) {
                 // only populate this series 50 times
                 Metric m2 = new Metric("sys.cpu.user", ts, i * 2.0D, tags2);
                 byte[] row2 = MetricAdapter.encodeRowKey(m2);
-                Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0],
-                        ts);
+                Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8),
+                        MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
                 Value v2 = new Value(MetricAdapter.encodeValue(m2.getValue().getMeasure()));
                 table.put(k2, v2);
             }
@@ -190,12 +200,15 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
         iter.init(source, settings.getOptions(), SCAN_IE);
         iter.seek(new Range(), EMPTY_COL_FAMS, true);
 
+        // this section changed when the key structure changed so that identical
+        // colFam values sorted consecutively within an given time period
         for (int i = 4; i < 100; i++) {
             checkNextResult(iter, new double[] { i - 4, i - 3, i - 2, i - 1, i });
-            if (i > 54) {
-                checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, i * 2 });
-            }
         }
+        for (int i = 55; i < 100; i++) {
+            checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, i * 2 });
+        }
+
         assertFalse(iter.hasTop());
 
     }
@@ -214,22 +227,25 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
+                    ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             // jitter the time on the second time series
             Metric m2 = new Metric("sys.cpu.user", ts + 50, i * 2.0D, tags2);
             byte[] row2 = MetricAdapter.encodeRowKey(m2);
-            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0],
-                    ts + 50);
+            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(
+                    ts, ""), new byte[0], ts + 50);
             Value v2 = new Value(MetricAdapter.encodeValue(m2.getValue().getMeasure()));
             table.put(k2, v2);
             Metric m3 = new Metric("sys.cpu.user", ts, i * 3.0D, tags3);
             byte[] row3 = MetricAdapter.encodeRowKey(m3);
-            Key k3 = new Key(row3, tags3.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+            Key k3 = new Key(row3, tags3.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(
+                    ts, ""), new byte[0], ts);
             Value v3 = new Value(MetricAdapter.encodeValue(m3.getValue().getMeasure()));
             table.put(k3, v3);
         }
+
         SortedMapIterator source = new SortedMapIterator(table);
         TimeSeriesGroupingIterator iter = new TimeSeriesGroupingIterator();
         IteratorSetting settings = new IteratorSetting(100, TimeSeriesGroupingIterator.class);
@@ -256,23 +272,20 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
         third.add(9D);
         third.add(12D);
 
-        for (int i = 4; i < 196; i++) {
+        // this section changed when the key structure changed so that identical
+        // colFam values sorted consecutively within an given time period
+        for (int i = 4; i < 100; i++) {
+            checkNextResult(iter, first);
+            shiftAndAdd(first, 1);
+        }
+        for (int i = 4; i < 100; i++) {
             System.out.println(i);
-            if (i == 4) {
-                checkNextResult(iter, first);
-                checkNextResult(iter, third);
-            } else if (i == 5) {
-                checkNextResult(iter, second);
-            } else if (i % 2 == 0) {
-                shiftAndAdd(first, 1);
-                checkNextResult(iter, first);
-
-                shiftAndAdd(third, 3);
-                checkNextResult(iter, third);
-            } else if (i % 2 != 0) {
-                shiftAndAdd(second, 2);
-                checkNextResult(iter, second);
-            }
+            checkNextResult(iter, second);
+            shiftAndAdd(second, 2);
+        }
+        for (int i = 4; i < 100; i++) {
+            checkNextResult(iter, third);
+            shiftAndAdd(third, 3);
         }
         assertFalse(iter.hasTop());
     }

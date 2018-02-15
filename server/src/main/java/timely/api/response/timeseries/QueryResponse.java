@@ -2,9 +2,9 @@ package timely.api.response.timeseries;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
@@ -13,7 +13,7 @@ public class QueryResponse {
     private String metric;
     private Map<String, String> tags = new HashMap<>();
     private List<String> aggregatedTags = new ArrayList<>();
-    private Map<String, Object> dps = new TreeMap<>();
+    private Map<String, Object> dps = new LinkedHashMap<>();
 
     public String getMetric() {
         return metric;

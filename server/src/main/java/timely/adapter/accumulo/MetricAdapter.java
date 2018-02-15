@@ -9,12 +9,14 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.apache.accumulo.core.util.Pair;
+import org.apache.hadoop.io.Text;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.parse.TagListParser;
 import timely.model.parse.TagParser;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -28,11 +30,22 @@ public class MetricAdapter {
     private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
             new LongLexicoder());
 
+    private static final PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(),
+            new StringLexicoder());
+
     private static final TagParser tagParser = new TagParser();
     private static final TagListParser tagListParser = new TagListParser();
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
+
+    public static long roundTimestampToLastHour(long timestamp) {
+        return timestamp - (timestamp % 3600000);
+    }
+
+    public static long roundTimestampToNextHour(long timestamp) {
+        return timestamp - (timestamp % 3600000) + 3600000;
+    }
 
     public static Mutation toMutation(Metric metric) {
         final Mutation mutation = new Mutation(encodeRowKey(metric));
@@ -51,8 +64,9 @@ public class MetricAdapter {
                     .map(Tag::join)
                     .collect(Collectors.joining(","));
             // @formatter:on
-
-            mutation.put(cf, cq, extractVisibility(tags), metric.getValue().getTimestamp(), extractValue(metric));
+            byte[] cqBytes = encodeColQual(metric.getValue().getTimestamp(), cq);
+            mutation.put(new Text(cf.getBytes(Charset.forName("UTF-8"))), new Text(cqBytes), extractVisibility(tags),
+                    metric.getValue().getTimestamp(), extractValue(metric));
         }
         return mutation;
     }
@@ -87,10 +101,11 @@ public class MetricAdapter {
         // @formatter:off
         Metric.Builder builder = Metric.newBuilder()
                 .name(row.getFirst())
-                .value(row.getSecond(), ByteBuffer.wrap(v.get()).getDouble())
+                .value(k.getTimestamp(), ByteBuffer.wrap(v.get()).getDouble())
                 .tag(tagParser.parse(k.getColumnFamily().toString()));
         // @formatter:on
-        tagListParser.parse(k.getColumnQualifier().toString()).forEach(builder::tag);
+        ComparablePair<Long, String> cq = colQualCoder.decode(k.getColumnQualifier().getBytes());
+        tagListParser.parse(cq.getSecond()).forEach(builder::tag);
         if (includeVizTag && k.getColumnVisibility().getLength() > 0) {
             tagListParser.parse("viz=" + k.getColumnVisibility().toString()).forEach(builder::tag);
         }
@@ -106,7 +121,16 @@ public class MetricAdapter {
     }
 
     public static byte[] encodeRowKey(Metric metric) {
-        return encodeRowKey(metric.getName(), metric.getValue().getTimestamp());
+        // round timestamp to hour for scan efficiency and compression
+        return encodeRowKey(metric.getName(), roundTimestampToLastHour(metric.getValue().getTimestamp()));
+    }
+
+    public static byte[] encodeColQual(Long timestamp, String colQual) {
+        return colQualCoder.encode(new ComparablePair<>(timestamp, colQual));
+    }
+
+    public static Pair<Long, String> decodeColQual(byte[] colQual) {
+        return colQualCoder.decode(colQual);
     }
 
     public static Pair<String, Long> decodeRowKey(Key k) {

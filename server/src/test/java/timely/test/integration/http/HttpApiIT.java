@@ -572,6 +572,11 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
+            System.out.println("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1");
+            System.out.println("sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2");
+            System.out.println("sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1");
+            System.out.println("sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
                     + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
                     + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
@@ -590,6 +595,11 @@ public class HttpApiIT extends OneWaySSLBase {
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+
+            for (QueryResponse r : response) {
+                System.out.println(r.toString());
+            }
+
             assertEquals(2, response.size());
             QueryResponse response1 = response.get(0);
             Map<String, String> tags = response1.getTags();
