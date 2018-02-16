@@ -29,11 +29,7 @@ import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Mutation;
-import org.apache.accumulo.core.data.PartialKey;
-import org.apache.accumulo.core.data.Range;
-import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
 import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
@@ -298,8 +294,21 @@ public class DataStoreImpl implements DataStore {
             metaCache.addAll(toCache);
         }
         try {
-
-            batchWriter.get().addMutation(MetricAdapter.toMutation(metric));
+            Mutation m = MetricAdapter.toMutation(metric);
+            for (ColumnUpdate c : m.getUpdates()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(MetricAdapter.decodeRowKey(new Key(new Text(m.getRow()))).toString());
+                sb.append(" ");
+                sb.append(new String(c.getColumnFamily()));
+                sb.append(":");
+                sb.append(new String(c.getColumnQualifier()));
+                sb.append(" ");
+                sb.append(Long.toString(c.getTimestamp()));
+                sb.append(" ");
+                sb.append(MetricAdapter.decodeValue(c.getValue()));
+                System.out.println("Mutation: " + sb.toString());
+            }
+            batchWriter.get().addMutation(m);
             internalMetrics.incrementMetricKeysInserted(metric.getTags().size());
         } catch (MutationsRejectedException e) {
             LOG.error("Unable to write to metrics table", e);
@@ -631,8 +640,9 @@ public class DataStoreImpl implements DataStore {
         return !REGEX_TEST.matcher(value).matches();
     }
 
-    public Set<Tag> getColumnFamilies(String metric, Map<String, String> tags) throws TableNotFoundException {
+    public Set<Tag> getColumnFamilies(String metric, Map<String, String> requestedTags) throws TableNotFoundException {
 
+        Map<String, String> tags = (requestedTags == null) ? new LinkedHashMap<>() : requestedTags;
         LOG.trace("Looking for requested tags: {}", tags);
         Scanner meta = connector.createScanner(metaTable, Authorizations.EMPTY);
         Text start = new Text(Meta.VALUE_PREFIX + metric);
@@ -723,7 +733,7 @@ public class DataStoreImpl implements DataStore {
             tag = tagIter.next();
             LOG.trace("Adding regex filter for tag {}", tag);
             StringBuffer pattern = new StringBuffer();
-            pattern.append("(^|.*,)");
+            pattern.append("(^\\d*\\x00|.*,)");
             pattern.append(tag.getKey());
             pattern.append("=");
             pattern.append(tag.getValue());
@@ -768,27 +778,50 @@ public class DataStoreImpl implements DataStore {
 
     public List<Range> getQueryRanges(String metric, long start, long end, Set<Tag> colFamValues) {
         List<Range> ranges = new ArrayList<>();
-        long lastBeginRange = MetricAdapter.roundTimestampToLastHour(end);
-        long beginRange = MetricAdapter.roundTimestampToLastHour(start);
-        while (beginRange <= lastBeginRange) {
-            // use end timestamp of begin + 1 hour except the last range where
-            // we use end + 1 msec
-            long endRange = (beginRange == lastBeginRange) ? end + 1 : beginRange + (1000 * 60 * 60);
-            for (Tag t : colFamValues) {
-                final byte[] start_row = MetricAdapter.encodeRowKey(metric,
-                        MetricAdapter.roundTimestampToLastHour(start));
-                Key startKey = new Key(new Text(start_row), new Text(t.join().getBytes(Charset.forName("UTF-8"))),
-                        new Text(Long.toString(start).getBytes(Charset.forName("UTF-8"))));
-                LOG.trace("Start key for metric {} and time {} is {}", metric, start, startKey.toStringNoTime());
-                final byte[] end_row = MetricAdapter.encodeRowKey(metric, MetricAdapter.roundTimestampToLastHour(end));
-                Key endKey = new Key(new Text(end_row), new Text(t.join().getBytes(Charset.forName("UTF-8"))),
-                        new Text(Long.toString(endRange).getBytes(Charset.forName("UTF-8"))));
-                LOG.trace("End key for metric {} and time {} is {}", metric, end, endKey.toStringNoTime());
-                Range range = new Range(startKey, true, endKey, false);
-                LOG.trace("Set query range to {}", range);
+        long beginRangeRounded = MetricAdapter.roundTimestampToLastHour(start);
+        if (colFamValues.isEmpty()) {
+            final byte[] start_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
+            Key startKey = new Key(new Text(start_row));
+            LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeRounded, startKey.toStringNoTime());
+            final byte[] end_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
+            Key endKey = new Key(new Text(end_row));
+            LOG.trace("End key for metric {} and time {} is {}", metric, MetricAdapter.roundTimestampToNextHour(end),
+                    endKey.toStringNoTime());
+            Range range = new Range(startKey, true, endKey, false);
+            LOG.trace("Set query range to {}", range);
+            ranges.add(range);
+        } else {
+            try {
+                long lastBeginRangeRounded = MetricAdapter.roundTimestampToLastHour(end);
+                while (beginRangeRounded <= lastBeginRangeRounded) {
+                    // use end timestamp of begin + 1 hour and one msec
+                    // except the last range where we use end + 1 msec
+                    long endRangeTimestamp = (beginRangeRounded == lastBeginRangeRounded) ? end + 1 : beginRangeRounded
+                            + (1000 * 60 * 60) + 1;
+                    for (Tag t : colFamValues) {
+                        final byte[] start_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
+                        Key startKey = new Key(new Text(start_row), new Text(t.join().getBytes(Charset.forName("UTF-8"))),
+                                new Text(Long.toString(beginRangeRounded).getBytes(Charset.forName("UTF-8"))), new Text(
+                                new byte[0]), beginRangeRounded);
+                        LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeRounded,
+                                startKey.toStringNoTime());
+                        final byte[] end_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
+                        Key endKey = new Key(new Text(end_row), new Text(t.join().getBytes(Charset.forName("UTF-8"))),
+                                new Text(Long.toString(endRangeTimestamp).getBytes(Charset.forName("UTF-8"))), new Text(
+                                new byte[0]), endRangeTimestamp);
+                        LOG.trace("End key for metric {} and time {} is {}", metric, beginRangeRounded,
+                                endKey.toStringNoTime());
+                        Range range = new Range(startKey, true, endKey, false);
+                        LOG.trace("Set query range to {}", range);
+                        ranges.add(range);
+                    }
+                    beginRangeRounded += (1000 * 60 * 60); // add an hour
+                }
+            } catch (Throwable t) {
+                t.printStackTrace();
             }
-            beginRange += (1000 * 60 * 60); // add an hour
         }
+
         return ranges;
     }
 
@@ -879,6 +912,9 @@ public class DataStoreImpl implements DataStore {
             Scanner s = connector.createScanner(this.metricsTable, auths);
             if (null == metric) {
                 throw new IllegalArgumentException("metric name must be specified");
+            }
+            if (tags == null) {
+                tags = new LinkedHashMap<>();
             }
             List<String> tagOrder = prioritizeTags(metric, tags);
             Map<String, String> orderedTags = orderTags(tagOrder, tags);

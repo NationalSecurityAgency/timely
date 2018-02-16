@@ -50,7 +50,8 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final int lag;
     private final String subscriptionId;
     private final String metric;
-    private final long endTime;
+    private long startTime;
+    private long endTime;
     private final Subscription subscription;
     private MetricResponses responses = new MetricResponses();
     private final ScheduledFuture<?> flusher;
@@ -71,12 +72,13 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
         this.ctx = ctx;
         this.lag = lag;
         this.metric = metric;
+        this.startTime = startTime;
         this.endTime = endTime;
         this.scanner = this.store.createScannerForMetric(sessionId, metric, tags, startTime, endTime, lag,
                 scannerBatchSize, scannerReadAhead);
 
         if (0 == startTime) {
-            startTime = (System.currentTimeMillis() - this.store.getAgeOffForMetric(metric) - 1000);
+            this.startTime = (System.currentTimeMillis() - this.store.getAgeOffForMetric(metric) - 1000);
             LOG.debug("Overriding zero start time to {} due to age off configuration", startTime);
         }
         long endTimeStamp = (endTime == 0) ? (System.currentTimeMillis() - (lag * 1000)) : endTime;
@@ -115,6 +117,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     }
 
     public synchronized void flush() {
+        LOG.info("Flush called");
         synchronized (responses) {
             if (responses.size() > 0) {
                 try {
@@ -138,6 +141,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 if (this.iter.hasNext()) {
                     Entry<Key, Value> e = this.iter.next();
                     m = MetricAdapter.parse(e.getKey(), e.getValue(), true);
+                    LOG.info("Adding metric to response: " + m.toString());
                     if (responses.size() >= this.subscriptionBatchSize) {
                         flush();
                     }
@@ -155,13 +159,16 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                             MetricAdapter.roundTimestampToNextHour(endTimeStamp));
                     Text endRow = new Text(end);
                     this.scanner.close();
-                    Range prevRange = this.scanner.getRange();
                     if (null == m) {
                         LOG.debug("No results found, waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
-                        this.scanner.setRange(new Range(prevRange.getStartKey().getRow(), prevRange
-                                .isStartKeyInclusive(), endRow, false));
-                        this.iter = this.scanner.iterator();
+                        ranges = this.store.getQueryRanges(metric, startTime, endTimeStamp, colFamValues);
+                        rangeItr = ranges.iterator();
+                        if (rangeItr.hasNext()) {
+                            Range r = rangeItr.next();
+                            this.scanner.setRange(r);
+                            this.iter = scanner.iterator();
+                        }
                     } else {
                         // Reset the starting range to the last key returned
                         LOG.debug("Exhausted scanner, last metric returned was {}", m);
@@ -190,7 +197,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     flush();
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG.error("Error in metric scanner, closing.", e);
         } finally {
             close();

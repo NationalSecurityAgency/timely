@@ -101,8 +101,13 @@ public class MetricAdapter {
         // @formatter:on
         String cf = k.getColumnQualifier().toString();
         int x = cf.indexOf("\0");
-        if (x >= 0) {
-            cf = cf.substring(x + 1);
+        if (x >= 0 && x < cf.length()) {
+            if (x == cf.length() - 1) {
+                // only the timestamp and nul are in the cf
+                cf = "";
+            } else {
+                cf = cf.substring(x + 1);
+            }
         }
         tagListParser.parse(cf).forEach(builder::tag);
         if (includeVizTag && k.getColumnVisibility().getLength() > 0) {

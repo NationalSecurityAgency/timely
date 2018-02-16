@@ -22,6 +22,7 @@ import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.timeseries.QueryRequest;
 import timely.model.Metric;
 import timely.model.Tag;
+import timely.store.DataStoreImpl;
 
 public class RateIteratorTest extends IteratorTestBase {
 
@@ -113,7 +114,8 @@ public class RateIteratorTest extends IteratorTestBase {
                 ts += 1000;
                 Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags);
                 byte[] row = MetricAdapter.encodeRowKey(m);
-                Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+                Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), new String(Long.toString(ts)
+                        + "\0").getBytes(), new byte[0], ts);
                 Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
                 table.put(k, v);
             }
@@ -147,7 +149,8 @@ public class RateIteratorTest extends IteratorTestBase {
                 ts += 1000;
                 Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags);
                 byte[] row = MetricAdapter.encodeRowKey(m);
-                Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+                Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), new String(Long.toString(ts)
+                        + "\0").getBytes(), new byte[0], ts);
                 Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
                 table.put(k, v);
             }
@@ -181,7 +184,8 @@ public class RateIteratorTest extends IteratorTestBase {
                 ts += 1000;
                 Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags);
                 byte[] row = MetricAdapter.encodeRowKey(m);
-                Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), new byte[0], new byte[0], ts);
+                Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), new String(Long.toString(ts)
+                        + "\0").getBytes(), new byte[0], ts);
                 Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
                 table.put(k, v);
             }
