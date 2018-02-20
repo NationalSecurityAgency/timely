@@ -294,21 +294,7 @@ public class DataStoreImpl implements DataStore {
             metaCache.addAll(toCache);
         }
         try {
-            Mutation m = MetricAdapter.toMutation(metric);
-            for (ColumnUpdate c : m.getUpdates()) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(MetricAdapter.decodeRowKey(new Key(new Text(m.getRow()))).toString());
-                sb.append(" ");
-                sb.append(new String(c.getColumnFamily()));
-                sb.append(":");
-                sb.append(new String(c.getColumnQualifier()));
-                sb.append(" ");
-                sb.append(Long.toString(c.getTimestamp()));
-                sb.append(" ");
-                sb.append(MetricAdapter.decodeValue(c.getValue()));
-                System.out.println("Mutation: " + sb.toString());
-            }
-            batchWriter.get().addMutation(m);
+            batchWriter.get().addMutation(MetricAdapter.toMutation(metric));
             internalMetrics.incrementMetricKeysInserted(metric.getTags().size());
         } catch (MutationsRejectedException e) {
             LOG.error("Unable to write to metrics table", e);
@@ -462,11 +448,17 @@ public class DataStoreImpl implements DataStore {
         LOG.debug("Query request {}", msg);
         long startTs = msg.getStart();
         long endTs = msg.getEnd();
+        StringBuilder metricList = new StringBuilder();
         try {
+            long numResults = 0;
             long now = System.currentTimeMillis();
             for (SubQuery query : msg.getQueries()) {
                 Map<Set<Tag>, List<Aggregation>> allSeries = new HashMap<>();
                 String metric = query.getMetric();
+                if (metricList.length() > 0) {
+                    metricList.append(",");
+                }
+                metricList.append(metric);
                 BatchScanner scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
                         scannerThreads);
                 try {
@@ -525,6 +517,7 @@ public class DataStoreImpl implements DataStore {
                         // Aggregation
                         Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(encoded.getValue());
                         for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
+                            numResults++;
                             Set<Tag> key = new HashSet<>();
                             for (Tag tag : entry.getKey()) {
                                 if (query.getTags().keySet().contains(tag.getKey())) {
@@ -544,10 +537,12 @@ public class DataStoreImpl implements DataStore {
                 // TODO groupby here?
                 long tsDivisor = msg.isMsResolution() ? 1 : 1000;
                 for (Entry<Set<Tag>, List<Aggregation>> entry : allSeries.entrySet()) {
+                    numResults += entry.getValue().size();
                     result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
                 }
             }
-            LOG.debug("Query time: {}", (System.currentTimeMillis() - now));
+            LOG.debug("Query time: {} duration: {} metrics: {} results: {}", (System.currentTimeMillis() - now),
+                    (endTs - startTs), metricList.toString(), numResults);
             internalMetrics.addQueryResponse(result.size(), (System.currentTimeMillis() - now));
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
@@ -733,7 +728,7 @@ public class DataStoreImpl implements DataStore {
             tag = tagIter.next();
             LOG.trace("Adding regex filter for tag {}", tag);
             StringBuffer pattern = new StringBuffer();
-            pattern.append("(^\\d*\\x00|.*,)");
+            pattern.append("(^.*\\x00|.*,)");
             pattern.append(tag.getKey());
             pattern.append("=");
             pattern.append(tag.getValue());
@@ -798,18 +793,20 @@ public class DataStoreImpl implements DataStore {
                     // except the last range where we use end + 1 msec
                     long endRangeTimestamp = (beginRangeRounded == lastBeginRangeRounded) ? end + 1 : beginRangeRounded
                             + (1000 * 60 * 60) + 1;
+                    long beginRangeTimestamp = (beginRangeRounded == MetricAdapter.roundTimestampToLastHour(start)) ? start
+                            : beginRangeRounded;
                     for (Tag t : colFamValues) {
                         final byte[] start_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
-                        Key startKey = new Key(new Text(start_row), new Text(t.join().getBytes(Charset.forName("UTF-8"))),
-                                new Text(Long.toString(beginRangeRounded).getBytes(Charset.forName("UTF-8"))), new Text(
-                                new byte[0]), beginRangeRounded);
-                        LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeRounded,
+                        Key startKey = new Key(new Text(start_row), new Text(t.join()
+                                .getBytes(Charset.forName("UTF-8"))), new Text(MetricAdapter.encodeColQual(
+                                beginRangeTimestamp, "")), new Text(new byte[0]), beginRangeTimestamp);
+                        LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeTimestamp,
                                 startKey.toStringNoTime());
                         final byte[] end_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
                         Key endKey = new Key(new Text(end_row), new Text(t.join().getBytes(Charset.forName("UTF-8"))),
-                                new Text(Long.toString(endRangeTimestamp).getBytes(Charset.forName("UTF-8"))), new Text(
-                                new byte[0]), endRangeTimestamp);
-                        LOG.trace("End key for metric {} and time {} is {}", metric, beginRangeRounded,
+                                new Text(MetricAdapter.encodeColQual(endRangeTimestamp, "")), new Text(new byte[0]),
+                                endRangeTimestamp);
+                        LOG.trace("End key for metric {} and time {} is {}", metric, beginRangeTimestamp,
                                 endKey.toStringNoTime());
                         Range range = new Range(startKey, true, endKey, false);
                         LOG.trace("Set query range to {}", range);
@@ -817,8 +814,8 @@ public class DataStoreImpl implements DataStore {
                     }
                     beginRangeRounded += (1000 * 60 * 60); // add an hour
                 }
-            } catch (Throwable t) {
-                t.printStackTrace();
+            } catch (Exception e) {
+                LOG.error("Error creating query ranges", e);
             }
         }
 

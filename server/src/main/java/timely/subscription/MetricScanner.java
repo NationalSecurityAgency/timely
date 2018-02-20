@@ -85,7 +85,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
         try {
             this.colFamValues = this.store.getColumnFamilies(metric, tags);
-            ranges = this.store.getQueryRanges(metric, startTime, endTimeStamp, colFamValues);
+            ranges = this.store.getQueryRanges(metric, this.startTime, endTimeStamp, colFamValues);
             rangeItr = ranges.iterator();
             if (rangeItr.hasNext()) {
                 Range r = rangeItr.next();
@@ -141,7 +141,6 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 if (this.iter.hasNext()) {
                     Entry<Key, Value> e = this.iter.next();
                     m = MetricAdapter.parse(e.getKey(), e.getValue(), true);
-                    LOG.info("Adding metric to response: " + m.toString());
                     if (responses.size() >= this.subscriptionBatchSize) {
                         flush();
                     }
@@ -155,9 +154,6 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 } else if (this.endTime == 0) {
                     flush();
                     long endTimeStamp = (System.currentTimeMillis() - (lag * 1000));
-                    byte[] end = MetricAdapter.encodeRowKey(this.metric,
-                            MetricAdapter.roundTimestampToNextHour(endTimeStamp));
-                    Text endRow = new Text(end);
                     this.scanner.close();
                     if (null == m) {
                         LOG.debug("No results found, waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
@@ -174,7 +170,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         LOG.debug("Exhausted scanner, last metric returned was {}", m);
                         LOG.debug("Waiting {}ms to retry with new end time {}.", delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
-                        ranges = this.store.getQueryRanges(metric, m.getValue().getTimestamp(), endTimeStamp,
+                        ranges = this.store.getQueryRanges(metric, m.getValue().getTimestamp() + 1, endTimeStamp,
                                 colFamValues);
                         rangeItr = ranges.iterator();
                         if (rangeItr.hasNext()) {

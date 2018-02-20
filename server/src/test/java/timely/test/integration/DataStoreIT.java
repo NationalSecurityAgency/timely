@@ -2,7 +2,6 @@ package timely.test.integration;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import java.util.HashMap;
 import java.util.List;
@@ -50,10 +49,6 @@ public class DataStoreIT extends OneWaySSLBase {
             subQuery.setDownsample(Optional.of("1s-max"));
             request.addQuery(subQuery);
             List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
-
-            for (QueryResponse r : response) {
-                System.out.println(r.toString());
-            }
 
             assertEquals(1, response.size());
             Map<String, String> tags = response.get(0).getTags();
