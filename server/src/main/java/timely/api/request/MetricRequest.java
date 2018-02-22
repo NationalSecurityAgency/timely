@@ -54,7 +54,11 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     @Override
     public void parse(String line) {
         LOG.trace("Parsing Line: {}", line);
-        metric = metricParser.parse(line);
+        try {
+            metric = metricParser.parse(line);
+        } catch (Exception e) {
+            LOG.error("Error parsing metric: {}", line);
+        }
     }
 
     @Override
