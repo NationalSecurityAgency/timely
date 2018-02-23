@@ -14,7 +14,7 @@ import java.util.*;
 public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Value> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricMemoryStoreIterator.class);
-    private MemoryDataStore store;
+    private DataStoreCache store;
     private VisibilityFilter visibilityFilter;
     private QueryRequest.SubQuery query;
     private long startTs;
@@ -25,7 +25,7 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Va
     private KeyValue currentKeyValue = null;
     private Queue<KeyValue> kvQueue = new LinkedList<>();
 
-    public MetricMemoryStoreIterator(MemoryDataStore store, VisibilityFilter visibilityFilter,
+    public MetricMemoryStoreIterator(DataStoreCache store, VisibilityFilter visibilityFilter,
             QueryRequest.SubQuery query, long startTs, long endTs) {
 
         this.store = store;
@@ -59,7 +59,7 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Va
             DecompressorWrapper decompressor = decompressors.getDecompressorWrapper();
 
             fi.iki.yak.ts.compression.gorilla.Pair gPair = null;
-            while (kvQueue.size() < bufferSize && gPair == null && decompressor != null && decompressors != null) {
+            while (kvQueue.size() < bufferSize && decompressor != null && decompressors != null) {
                 gPair = decompressor.readPair();
                 if (gPair == null) {
                     if (decompressors.hasNext()) {
@@ -90,7 +90,7 @@ public class MetricMemoryStoreIterator implements SortedKeyValueIterator<Key, Va
     @Override
     public boolean hasTop() {
         prepareEntries(100);
-        return kvQueue.peek() != null;
+        return currentKeyValue != null;
     }
 
     @Override

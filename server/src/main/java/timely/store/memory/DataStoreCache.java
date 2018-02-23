@@ -16,6 +16,7 @@ import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;
+import timely.api.response.CacheResponse;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.api.response.timeseries.SearchLookupResponse;
@@ -30,21 +31,43 @@ import timely.sample.aggregators.Avg;
 import timely.sample.iterators.AggregationIterator;
 import timely.sample.iterators.DownsampleIterator;
 import timely.store.DataStore;
+import timely.store.MetricAgeOffIterator;
 import timely.store.iterators.RateIterator;
 
 import java.io.IOException;
 import java.util.*;
 
-public class MemoryDataStore implements DataStore {
+public class DataStoreCache implements DataStore {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MemoryDataStore.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DataStoreCache.class);
 
     private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
     private boolean anonAccessAllowed = false;
+    private long ageOffMsec;
+    private Map<String, String> ageOff = new HashMap<>();
+    private long defaultAgeOff = Long.MAX_VALUE;
 
-    public MemoryDataStore(Configuration conf) throws TimelyException {
+    public DataStoreCache(Configuration conf) throws TimelyException {
 
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
+        ageOffMsec = conf.getCache().getExpirationMinutes();
+    }
+
+    private long getAgeOffForMetric(String metricName) {
+        String age = this.ageOff.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
+        if (null == age) {
+            return this.defaultAgeOff;
+        } else {
+            return Long.parseLong(age);
+        }
+    }
+
+    public void setAgeOff(Map<String, String> ageOff) {
+        this.ageOff = ageOff;
+    }
+
+    public void setDefaultAgeOff(long defaultAgeOff) {
+        this.defaultAgeOff = defaultAgeOff;
     }
 
     protected Map<TaggedMetric, GorillaStore> getGorillaStores(String metric) {
@@ -80,22 +103,47 @@ public class MemoryDataStore implements DataStore {
 
         List<QueryResponse> result = new ArrayList<>();
         try {
-            SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
             Collection<QueryRequest.SubQuery> subQueries = msg.getQueries();
             for (QueryRequest.SubQuery query : subQueries) {
-                itr = setupIterator(msg, query, getSessionAuthorizations(msg));
-
-                while (itr.hasTop()) {
-                    itr.next();
-                    Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
-                    for (Map.Entry<Set<Tag>, Aggregation> entry : aggregations.entrySet()) {
-                        long tsDivisor = msg.isMsResolution() ? 1 : 1000;
-                        result.add(convertToQueryResponse(query, entry.getKey(),
-                                Collections.singleton(entry.getValue()), tsDivisor));
-                    }
+                Map<Set<Tag>, List<Aggregation>> aggregations = subquery(msg, query);
+                for (Map.Entry<Set<Tag>, List<Aggregation>> entry : aggregations.entrySet()) {
+                    long tsDivisor = msg.isMsResolution() ? 1 : 1000;
+                    result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
                 }
             }
             return result;
+        } catch (Exception e) {
+            LOG.error("Error during query: " + e.getMessage(), e);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: "
+                    + e.getMessage(), e.getMessage(), e);
+        }
+    }
+
+    public Map<Set<Tag>, List<Aggregation>> subquery(QueryRequest msg, QueryRequest.SubQuery query)
+            throws TimelyException {
+
+        Map<Set<Tag>, List<Aggregation>> aggregationList = new HashMap<>();
+
+        try {
+            SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
+            itr = setupIterator(msg, query, getSessionAuthorizations(msg), getAgeOffForMetric(query.getMetric()));
+
+            while (itr.hasTop()) {
+                Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(itr.getTopValue());
+                for (Map.Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
+                    Set<Tag> key = new HashSet<>();
+                    for (Tag tag : entry.getKey()) {
+                        if (query.getTags().keySet().contains(tag.getKey())) {
+                            key.add(tag);
+                        }
+                    }
+                    List<Aggregation> aggregations = aggregationList.getOrDefault(key, new ArrayList<>());
+                    aggregations.add(entry.getValue());
+                    aggregationList.put(key, aggregations);
+                }
+                itr.next();
+            }
+            return aggregationList;
         } catch (Exception e) {
             LOG.error("Error during query: " + e.getMessage(), e);
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: "
@@ -109,14 +157,19 @@ public class MemoryDataStore implements DataStore {
     }
 
     protected SortedKeyValueIterator<Key, Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery,
-            Authorizations authorizations) throws TimelyException {
+            Authorizations authorizations, long ageOffForMetric) throws TimelyException {
 
         SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
         try {
             // create MetricMemoryStoreIterator which is the base iterator of
             // the stack
             VisibilityFilter visFilter = new VisibilityFilter(authorizations);
-            itr = new MetricMemoryStoreIterator(this, visFilter, subQuery, 0, 86400000);
+            long ageOffTs = System.currentTimeMillis() - ageOffForMetric;
+            long startTs = query.getStart();
+            if (startTs <= ageOffTs) {
+                startTs = ageOffTs + 1;
+            }
+            itr = new MetricMemoryStoreIterator(this, visFilter, subQuery, startTs, query.getEnd());
 
             // create RateIterator if necessary
             if (subQuery.isRate()) {
@@ -227,5 +280,63 @@ public class MemoryDataStore implements DataStore {
             long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException {
         throw new TimelyException(500, "createScannerForMetric not implemented",
                 "createScannerForMetric not implemented in " + this.getClass().getSimpleName());
+    }
+
+    public long getNewestTimestamp(String metric) {
+
+        long newest = 0;
+        Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
+        for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
+            if (entry.getValue().getNewestTimestamp() > newest) {
+                newest = entry.getValue().getNewestTimestamp();
+            }
+        }
+        return newest;
+    }
+
+    public long getOldestTimestamp(String metric) {
+        long oldest = Long.MAX_VALUE;
+        Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
+        for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
+            if (entry.getValue().getOldestTimestamp() < oldest) {
+                oldest = entry.getValue().getOldestTimestamp();
+            }
+        }
+        return oldest;
+    }
+
+    public long getNewestTimestamp() {
+
+        long newest = 0;
+        for (String metric : gorillaMap.keySet()) {
+            Long newestForMetric = getNewestTimestamp(metric);
+            if (newestForMetric > newest) {
+                newest = newestForMetric;
+            }
+        }
+        return newest;
+    }
+
+    public long getOldestTimestamp() {
+        long oldest = Long.MAX_VALUE;
+        for (String metric : gorillaMap.keySet()) {
+            Long oldestForMetric = getOldestTimestamp(metric);
+            if (oldestForMetric < oldest) {
+                oldest = oldestForMetric;
+            }
+        }
+        return oldest;
+    }
+
+    public CacheResponse getCacheStatus() {
+        CacheResponse response = new CacheResponse();
+        response.setOldestTimestamp(getOldestTimestamp());
+        response.setNewestTimestamp(getNewestTimestamp());
+        response.setMetrics(new ArrayList<>(gorillaMap.keySet()));
+        return response;
+    }
+
+    public long getAgeOffMsec() {
+        return ageOffMsec;
     }
 }

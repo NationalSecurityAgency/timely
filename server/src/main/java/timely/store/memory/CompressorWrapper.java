@@ -5,8 +5,8 @@ import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
 
 public class CompressorWrapper {
 
-    private long firstTimestamp;
-    private long lastTimestamp;
+    private long oldestTimestamp;
+    private long newestTimestamp;
     private GorillaCompressor compressor;
     private BitOutput compressorOutput = null;
     public long numEntries = 0;
@@ -17,8 +17,8 @@ public class CompressorWrapper {
 
     public CompressorWrapper(GorillaCompressor compressor, long firstTimestamp, long lastTimestamp) {
         this.compressor = compressor;
-        this.firstTimestamp = firstTimestamp;
-        this.lastTimestamp = lastTimestamp;
+        this.oldestTimestamp = firstTimestamp;
+        this.newestTimestamp = lastTimestamp;
     }
 
     public GorillaCompressor getCompressor() {
@@ -37,24 +37,24 @@ public class CompressorWrapper {
         this.compressorOutput = compressorOutput;
     }
 
-    public void setFirstTimestamp(long firstTimestamp) {
-        this.firstTimestamp = firstTimestamp;
+    public void setOldestTimestamp(long oldestTimestamp) {
+        this.oldestTimestamp = oldestTimestamp;
     }
 
-    public long getFirstTimestamp() {
-        return firstTimestamp;
+    public long getOldestTimestamp() {
+        return oldestTimestamp;
     }
 
-    public void setLastTimestamp(long lastTimestamp) {
-        this.lastTimestamp = lastTimestamp;
+    public void setNewestTimestamp(long newestTimestamp) {
+        this.newestTimestamp = newestTimestamp;
     }
 
-    public long getLastTimestamp() {
-        return lastTimestamp;
+    public long getNewestTimestamp() {
+        return newestTimestamp;
     }
 
     public boolean inRange(long begin, long end) {
-        return (begin >= firstTimestamp || end <= lastTimestamp);
+        return (begin >= oldestTimestamp || end <= newestTimestamp);
     }
 
     public long getNumEntries() {
@@ -63,7 +63,7 @@ public class CompressorWrapper {
 
     public void addValue(long timestamp, double value) {
         numEntries++;
-        lastTimestamp = timestamp;
+        newestTimestamp = timestamp;
         compressor.addValue(timestamp, value);
     }
 }

@@ -23,9 +23,9 @@ public class TestMemoryDataStore {
         configuration.getSecurity().setAllowAnonymousAccess(true);
     }
 
-    private MemoryDataStore getMetricMemoryStore1() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore1() throws TimelyException {
 
-        MemoryDataStore mmStore = new MemoryDataStore(configuration);
+        DataStoreCache mmStore = new DataStoreCache(configuration);
 
         long timestamp = 10000;
         Map<String, String> tags = new HashMap<>();
@@ -56,9 +56,9 @@ public class TestMemoryDataStore {
 
     }
 
-    private MemoryDataStore getMetricMemoryStore2() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore2() throws TimelyException {
 
-        MemoryDataStore mmStore = new MemoryDataStore(configuration);
+        DataStoreCache mmStore = new DataStoreCache(configuration);
 
         Map<String, String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -92,7 +92,7 @@ public class TestMemoryDataStore {
     @Test
     public void testOne() throws TimelyException {
 
-        MemoryDataStore mmStore = getMetricMemoryStore1();
+        DataStoreCache mmStore = getMetricMemoryStore1();
 
         QueryRequest query = new QueryRequest();
         query.setStart(10000);
@@ -117,7 +117,7 @@ public class TestMemoryDataStore {
     @Test
     public void testStorage() throws TimelyException {
 
-        MemoryDataStore mmStore = getMetricMemoryStore2();
+        DataStoreCache mmStore = getMetricMemoryStore2();
 
         QueryRequest query = new QueryRequest();
         query.setStart(0);

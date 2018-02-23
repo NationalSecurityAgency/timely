@@ -32,9 +32,9 @@ public class TestMetricMemoryStoreIterator {
         configuration.getSecurity().setAllowAnonymousAccess(true);
     }
 
-    private MemoryDataStore getMetricMemoryStore1() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore1() throws TimelyException {
 
-        MemoryDataStore mmStore = new MemoryDataStore(configuration);
+        DataStoreCache mmStore = new DataStoreCache(configuration);
 
         Map<String, String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -58,9 +58,9 @@ public class TestMetricMemoryStoreIterator {
         return mmStore;
     }
 
-    private MemoryDataStore getMetricMemoryStore2() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore2() throws TimelyException {
 
-        MemoryDataStore mmStore = new MemoryDataStore(configuration);
+        DataStoreCache mmStore = new DataStoreCache(configuration);
 
         int increment = 10;
         Map<String, String> tags = new HashMap<>();
@@ -92,7 +92,7 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testDownsampleIterator() throws TimelyException {
 
-        MemoryDataStore mmStore = getMetricMemoryStore1();
+        DataStoreCache mmStore = getMetricMemoryStore1();
 
         QueryRequest query = new QueryRequest();
         query.setStart(0);
@@ -109,7 +109,7 @@ public class TestMetricMemoryStoreIterator {
             long firstTimestamp = -1;
             long lastTimestamp = -1;
             int numSamples = 0;
-            itr = mmStore.setupIterator(query, subQuery, new Authorizations());
+            itr = mmStore.setupIterator(query, subQuery, new Authorizations(), Long.MAX_VALUE);
             while (itr.hasTop()) {
                 itr.next();
                 Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
@@ -136,7 +136,7 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testRateIterator() throws TimelyException {
 
-        MemoryDataStore mmStore = getMetricMemoryStore2();
+        DataStoreCache mmStore = getMetricMemoryStore2();
 
         QueryRequest query = new QueryRequest();
         query.setStart(0);
@@ -158,7 +158,7 @@ public class TestMetricMemoryStoreIterator {
             long firstTimestamp = -1;
             long lastTimestamp = -1;
             int numSamples = 0;
-            itr = mmStore.setupIterator(query, subQuery, new Authorizations());
+            itr = mmStore.setupIterator(query, subQuery, new Authorizations(), Long.MAX_VALUE);
             while (itr.hasTop()) {
                 itr.next();
                 Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
@@ -169,15 +169,16 @@ public class TestMetricMemoryStoreIterator {
                             firstTimestamp = s.timestamp;
                         }
                         lastTimestamp = s.timestamp;
-//                        if (x++ < 10) {
-//                            System.out.println(entry.toString() + " --> " + s.toString());
-//                        }
+                        // if (x++ < 10) {
+                        // System.out.println(entry.toString() + " --> " +
+                        // s.toString());
+                        // }
                     }
                 }
             }
             Assert.assertEquals("First timestamp incorrect", 1000, firstTimestamp);
             Assert.assertEquals("Last timestamp incorrect", 1440000, lastTimestamp);
-            Assert.assertEquals("Number of samples incorrect", 2879, numSamples);
+            Assert.assertEquals("Number of samples incorrect", 2880, numSamples);
         } catch (IOException | ClassNotFoundException e) {
             LOG.error("exception in test", e);
         }
@@ -186,7 +187,7 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testDownsampleIterator2() throws TimelyException {
 
-        MemoryDataStore mmStore = getMetricMemoryStore1();
+        DataStoreCache mmStore = getMetricMemoryStore1();
 
         QueryRequest queryRequest = new QueryRequest();
         queryRequest.setStart(0);
@@ -200,9 +201,10 @@ public class TestMetricMemoryStoreIterator {
 
         List<QueryResponse> response = mmStore.query(queryRequest);
 
-//        for (QueryResponse r : response) {
-//            System.out.println(r.getMetric() + " " + r.getTags() + " " + r.getDps().toString());
-//        }
+        // for (QueryResponse r : response) {
+        // System.out.println(r.getMetric() + " " + r.getTags() + " " +
+        // r.getDps().toString());
+        // }
     }
 
     private Metric createMetric(String metric, Map<String, String> tags, double value, long timestamp) {

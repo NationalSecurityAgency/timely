@@ -45,6 +45,9 @@ public class Configuration {
     private MetaCache metaCache = new MetaCache();
     @Valid
     @NestedConfigurationProperty
+    private Cache cache = new Cache();
+    @Valid
+    @NestedConfigurationProperty
     private VisibilityCache visibilityCache = new VisibilityCache();
     @Valid
     @NestedConfigurationProperty
@@ -107,6 +110,10 @@ public class Configuration {
 
     public MetaCache getMetaCache() {
         return metaCache;
+    }
+
+    public Cache getCache() {
+        return cache;
     }
 
     public VisibilityCache getVisibilityCache() {
@@ -648,6 +655,20 @@ public class Configuration {
 
         public Configuration setMaxCapacity(long maxCapacity) {
             this.maxCapacity = maxCapacity;
+            return Configuration.this;
+        }
+    }
+
+    public class Cache {
+
+        private long expirationMinutes = 60 * 24;
+
+        public long getExpirationMinutes() {
+            return expirationMinutes;
+        }
+
+        public Configuration setExpirationMinutes(long expirationMinutes) {
+            this.expirationMinutes = expirationMinutes;
             return Configuration.this;
         }
     }

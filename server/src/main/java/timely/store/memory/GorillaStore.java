@@ -10,19 +10,24 @@ public class GorillaStore {
 
     private CompressorWrapper current = null;
 
-    // private Map<Long, Long> checkedOutDecompressors = new TreeMap<>();
-
     private CompressorWrapper getCompressor(long timestamp) {
         if (current == null) {
             synchronized (this) {
                 current = new CompressorWrapper();
-                current.setFirstTimestamp(timestamp);
-                current.setLastTimestamp(timestamp);
+                current.setOldestTimestamp(timestamp);
+                current.setNewestTimestamp(timestamp);
                 current.setCompressorOutput(new LongArrayOutput(480));
                 current.setCompressor(new GorillaCompressor(timestamp, current.getCompressorOutput()));
             }
         }
         return current;
+    }
+
+    private void closeBitOutput(BitOutput out) {
+        out.writeBits(0x0F, 4);
+        out.writeBits(0xFFFFFFFF, 32);
+        out.skipBit();
+        out.flush();
     }
 
     public List<DecompressorWrapper> getDecompressors(long begin, long end) {
@@ -42,8 +47,11 @@ public class GorillaStore {
         // compressor as well
         synchronized (this) {
             if (current.inRange(begin, begin)) {
+                BitOutput copyLongArrayOutput = current.getCompressorOutput();
+                closeBitOutput(copyLongArrayOutput);
+
                 LongArrayInput decompressorByteBufferInput = new LongArrayInput(
-                        ((LongArrayOutput) current.getCompressorOutput()).getLongArray());
+                        ((LongArrayOutput) copyLongArrayOutput).getLongArray());
                 GorillaDecompressor d = new GorillaDecompressor(decompressorByteBufferInput);
                 decompressors.add(new DecompressorWrapper(d, current.getNumEntries()));
             }
@@ -58,4 +66,24 @@ public class GorillaStore {
         }
     }
 
+    public long getNewestTimestamp() {
+        long newestTimestamp = 0;
+        synchronized (this) {
+            newestTimestamp = current.getNewestTimestamp();
+        }
+        return newestTimestamp;
+    }
+
+    public long getOldestTimestamp() {
+        long first = 0;
+        synchronized (this) {
+            first = current.getOldestTimestamp();
+        }
+        for (CompressorWrapper c : archivedCompressors) {
+            if (c.getOldestTimestamp() < first) {
+                first = c.getOldestTimestamp();
+            }
+        }
+        return first;
+    }
 }
