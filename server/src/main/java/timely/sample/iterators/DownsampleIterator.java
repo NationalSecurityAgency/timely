@@ -5,7 +5,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
@@ -14,8 +18,11 @@ import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.adapter.accumulo.MetricAdapter;
+import timely.api.request.timeseries.QueryRequest;
 import timely.model.Metric;
 import timely.model.ObjectSizeOf;
 import timely.model.Tag;
@@ -23,15 +30,21 @@ import timely.api.response.TimelyException;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.DownsampleFactory;
+import timely.sample.aggregators.Avg;
+
+import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
 
 public class DownsampleIterator extends WrappingIterator {
 
-    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(DownsampleIterator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DownsampleIterator.class);
     private static final String START = "downsample.start";
     private static final String END = "downsample.end";
     private static final String PERIOD = "downsample.period";
     private static final String MAX_DOWNSAMPLE_MEMORY = "downsample.maxDownsampleMemory";
     private static final String AGGCLASS = "downsample.aggclass";
+
+    private static final long DEFAULT_DOWNSAMPLE_MS = 1;
+    private static final String DEFAULT_DOWNSAMPLE_AGGREGATOR = Avg.class.getSimpleName().toLowerCase();
 
     private DownsampleFactory factory;
     private final Map<Set<Tag>, Downsample> value = new HashMap<>();
@@ -39,6 +52,7 @@ public class DownsampleIterator extends WrappingIterator {
     private long end;
     private long period;
     private Key last;
+
     private DownsampleMemoryEstimator memoryEstimator = null;
 
     @SuppressWarnings("unchecked")
@@ -150,5 +164,31 @@ public class DownsampleIterator extends WrappingIterator {
         ByteArrayInputStream bis = new ByteArrayInputStream(value.get());
         ObjectInputStream ois = new ObjectInputStream(bis);
         return (Map<Set<Tag>, Downsample>) ois.readObject();
+    }
+
+    public static long getDownsamplePeriod(QueryRequest.SubQuery query) {
+        // disabling the downsampling OR setting the aggregation to none are
+        // both considered to be disabling
+        if (!query.getDownsample().isPresent() || query.getDownsample().get().endsWith("-none")) {
+            return DEFAULT_DOWNSAMPLE_MS;
+        }
+        String parts[] = query.getDownsample().get().split("-");
+        return getTimeInMillis(parts[0]);
+    }
+
+    public static Class<? extends Aggregator> getDownsampleAggregator(QueryRequest.SubQuery query) {
+        String aggregatorName = Aggregator.NONE;
+        if (query.getDownsample().isPresent()) {
+            String parts[] = query.getDownsample().get().split("-");
+            aggregatorName = parts[1];
+        }
+        // disabling the downsampling OR setting the aggregation to none are
+        // both considered to be disabling
+        if (aggregatorName.equals(Aggregator.NONE)) {
+            // we need a downsampling iterator, so default to max to ensure we
+            // return something
+            aggregatorName = DEFAULT_DOWNSAMPLE_AGGREGATOR;
+        }
+        return Aggregator.getAggregator(aggregatorName);
     }
 }

@@ -42,6 +42,7 @@ import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
 import timely.netty.Constants;
+import timely.store.cache.DataStoreCache;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
@@ -177,16 +178,27 @@ public class TwoWaySSLIT extends QueryBase {
     }
 
     @Test
-    public void testQueryWithVisibility() throws Exception {
+    public void testQueryWithVisibilityWithoutCache() throws Exception {
+        conf.getCache().setEnabled(false);
+        testQueryWithVisibility(conf);
+    }
+
+    @Test
+    public void testQueryWithVisibilityWithCache() throws Exception {
+        conf.getCache().setEnabled(true);
+        testQueryWithVisibility(conf);
+    }
+
+    public void testQueryWithVisibility(Configuration conf) throws Exception {
         final Server s = new Server(conf);
         s.run();
         try {
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=A",
-                "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=D",
-                "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=G");
+                "sys.cpu.user " + (TEST_TIME + 1000) + " 2.0 tag1=value1 tag2=value2",
+                "sys.cpu.user " + (TEST_TIME + 2000) + " 3.0 tag1=value1 tag3=value3 viz=A",
+                "sys.cpu.user " + (TEST_TIME + 3000) + " 4.0 tag1=value1 tag3=value3 viz=D",
+                "sys.cpu.user " + (TEST_TIME + 3000) + " 5.0 tag1=value1 tag3=value3 viz=G");
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
                 request.setStart(TEST_TIME);
