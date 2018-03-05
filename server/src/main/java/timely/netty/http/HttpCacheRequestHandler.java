@@ -8,15 +8,11 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import org.apache.thrift.TException;
 import timely.api.request.CacheRequest;
-import timely.api.request.VersionRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
-import timely.store.memory.DataStoreCache;
+import timely.store.cache.DataStoreCache;
 import timely.util.JsonUtil;
-
-import java.nio.charset.StandardCharsets;
 
 public class HttpCacheRequestHandler extends SimpleChannelInboundHandler<CacheRequest> implements TimelyHttpHandler {
 

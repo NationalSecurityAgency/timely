@@ -1,4 +1,4 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.commons.lang.builder.CompareToBuilder;
@@ -12,16 +12,11 @@ import java.util.Map;
 
 public class TaggedMetric implements Comparable<TaggedMetric> {
 
+    public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
     private String metric = null;
     private ColumnVisibility columnVisibility = null;
     private OrderedTags orderedTags = null;
-
-    public TaggedMetric(String metric, Map<String, String> tags) {
-        this.metric = metric;
-        this.columnVisibility = extractVisibility(tags);
-        this.orderedTags = new OrderedTags(tags);
-    }
 
     public TaggedMetric(String metric, List<Tag> tags) {
         this.metric = metric;
@@ -29,6 +24,7 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
         for (Tag t : tags) {
             tagMap.put(t.getKey(), t.getValue());
         }
+        this.columnVisibility = extractVisibility(tagMap);
         this.orderedTags = new OrderedTags(tagMap);
     }
 
@@ -87,9 +83,9 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
     private static ColumnVisibility extractVisibility(Map<String, String> tags) {
 
         if (tags.containsKey(VISIBILITY_TAG)) {
-            return new ColumnVisibility(tags.remove(VISIBILITY_TAG));
+            return new ColumnVisibility(tags.get(VISIBILITY_TAG));
         } else {
-            return null;
+            return EMPTY_VISIBILITY;
         }
     }
 }

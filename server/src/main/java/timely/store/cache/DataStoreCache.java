@@ -1,8 +1,7 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.accumulo.core.client.IteratorSetting;
-import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
@@ -14,63 +13,91 @@ import org.slf4j.LoggerFactory;
 import timely.Configuration;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
-import timely.api.request.timeseries.SearchLookupRequest;
-import timely.api.request.timeseries.SuggestRequest;
 import timely.api.response.CacheResponse;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
-import timely.api.response.timeseries.SearchLookupResponse;
-import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
 import timely.sample.Aggregator;
 import timely.sample.Sample;
-import timely.sample.aggregators.Avg;
 import timely.sample.iterators.AggregationIterator;
 import timely.sample.iterators.DownsampleIterator;
-import timely.store.DataStore;
 import timely.store.MetricAgeOffIterator;
 import timely.store.iterators.RateIterator;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-public class DataStoreCache implements DataStore {
+public class DataStoreCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreCache.class);
+    public static final String DEFAULT_AGEOFF_KEY = "default";
 
     private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
-    private boolean anonAccessAllowed = false;
-    private long ageOffMsec;
-    private Map<String, String> ageOff = new HashMap<>();
-    private long defaultAgeOff = Long.MAX_VALUE;
+    private boolean anonAccessAllowed;
+    private Map<String, Long> minimumAgeOff;
+    private Map<String, String> minimumAgeOffForIterator;
 
-    public DataStoreCache(Configuration conf) throws TimelyException {
-
+    public DataStoreCache(Configuration conf) {
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
-        ageOffMsec = conf.getCache().getExpirationMinutes();
+        Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
+        Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
+        minimumAgeOff = getMinimumAgeOffs(accumuloAgeOff, cacheAgeOff);
+        minimumAgeOffForIterator = getAgeOffForIterator(minimumAgeOff);
     }
 
-    private long getAgeOffForMetric(String metricName) {
-        String age = this.ageOff.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
-        if (null == age) {
-            return this.defaultAgeOff;
+    public long getAgeOffForMetric(String metricName) {
+        if (this.minimumAgeOff.containsKey(metricName)) {
+            return this.minimumAgeOff.get(metricName);
         } else {
-            return Long.parseLong(age);
+            return this.minimumAgeOff.get(DEFAULT_AGEOFF_KEY);
         }
     }
 
-    public void setAgeOff(Map<String, String> ageOff) {
-        this.ageOff = ageOff;
+    public void setDefaultAgeOffMilliSec(long defaultAgeOffMilliSec) {
+        this.minimumAgeOff.put(DEFAULT_AGEOFF_KEY, defaultAgeOffMilliSec);
+        this.minimumAgeOffForIterator.put(
+                MetricAgeOffIterator.AGE_OFF_PREFIX + MetricAgeOffIterator.DEFAULT_AGEOFF_KEY,
+                Long.toString(defaultAgeOffMilliSec));
     }
 
-    public void setDefaultAgeOff(long defaultAgeOff) {
-        this.defaultAgeOff = defaultAgeOff;
+    private Map<String, Long> getMinimumAgeOffs(Map<String, Integer> accumuloAgeOffDays,
+            Map<String, Integer> cacheAgeOffHours) {
+        Map<String, Long> minimumAgeOffs = new HashMap<>();
+        Set<String> keys = new HashSet<>();
+        keys.addAll(accumuloAgeOffDays.keySet());
+        keys.addAll(cacheAgeOffHours.keySet());
+        for (String name : keys) {
+            Long accumuloAgeOffValue = (accumuloAgeOffDays.containsKey(name)) ? accumuloAgeOffDays.get(name) * 86400000L
+                    : Long.MAX_VALUE;
+            Long cacheAgeOffValue = (cacheAgeOffHours.containsKey(name)) ? cacheAgeOffHours.get(name) * 3600000L
+                    : Long.MAX_VALUE;
+            minimumAgeOffs.put(name, Math.min(accumuloAgeOffValue, cacheAgeOffValue));
+        }
+        return minimumAgeOffs;
     }
 
-    protected Map<TaggedMetric, GorillaStore> getGorillaStores(String metric) {
+    private Map<String, String> getAgeOffForIterator(Map<String, Long> minimumAgeOff) {
+        Map<String, String> ageOffOptions = new HashMap<>();
+        minimumAgeOff.forEach((k, v) -> {
+            String ageoff = Long.toString(v);
+            LOG.trace("Adding age off for metric: {} of {} milliseconds", k, v);
+            ageOffOptions.put(MetricAgeOffIterator.AGE_OFF_PREFIX + k, ageoff);
+        });
+        ageOffOptions
+                .put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, Long.toString(minimumAgeOff.get(DEFAULT_AGEOFF_KEY)));
+        return ageOffOptions;
+    }
+
+    public Map<TaggedMetric, GorillaStore> getGorillaStores(String metric) {
         Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(metric);
         if (metricMap == null) {
             metricMap = new HashMap<>();
@@ -79,7 +106,7 @@ public class DataStoreCache implements DataStore {
         return metricMap;
     }
 
-    private GorillaStore getGorillaStore(TaggedMetric taggedMetric) {
+    public GorillaStore getGorillaStore(TaggedMetric taggedMetric) {
         Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(taggedMetric.getMetric());
         if (metricMap == null) {
             metricMap = new HashMap<>();
@@ -94,7 +121,6 @@ public class DataStoreCache implements DataStore {
     }
 
     public void store(Metric metric) {
-
         TaggedMetric taggedMetric = new TaggedMetric(metric.getName(), metric.getTags());
         getGorillaStore(taggedMetric).addValue(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
     }
@@ -151,25 +177,37 @@ public class DataStoreCache implements DataStore {
         }
     }
 
-    @Override
-    public void flush() throws TimelyException {
-
-    }
-
     protected SortedKeyValueIterator<Key, Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery,
             Authorizations authorizations, long ageOffForMetric) throws TimelyException {
 
         SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
+
+        long downsamplePeriod = DownsampleIterator.getDownsamplePeriod(subQuery);
+        long startTs = query.getStart();
+        long endTs = query.getEnd();
+        long ageOffTs = System.currentTimeMillis() - ageOffForMetric;
+        if (startTs <= ageOffTs) {
+            startTs = ageOffTs + 1;
+        }
+
+        long startOfFirstPeriod = startTs - (startTs % downsamplePeriod);
+        long endDistanceFromDownSample = endTs % downsamplePeriod;
+        long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsamplePeriod - endDistanceFromDownSample
+                : endTs);
+
         try {
-            // create MetricMemoryStoreIterator which is the base iterator of
+            // create DataStoreCacheIterator which is the base iterator of
             // the stack
             VisibilityFilter visFilter = new VisibilityFilter(authorizations);
-            long ageOffTs = System.currentTimeMillis() - ageOffForMetric;
-            long startTs = query.getStart();
-            if (startTs <= ageOffTs) {
-                startTs = ageOffTs + 1;
-            }
-            itr = new MetricMemoryStoreIterator(this, visFilter, subQuery, startTs, query.getEnd());
+
+            itr = new DataStoreCacheIterator(this, visFilter, subQuery, startOfFirstPeriod, endOfLastPeriod);
+
+            // IteratorSetting ageOffIteratorSettings = new IteratorSetting(100,
+            // "ageoff", MetricAgeOffIterator.class,
+            // this.minimumAgeOffForIterator);
+            // MetricAgeOffIterator ageOff = new MetricAgeOffIterator();
+            // ageOff.init(itr, ageOffIteratorSettings.getOptions(), null);
+            // itr = ageOff;
 
             // create RateIterator if necessary
             if (subQuery.isRate()) {
@@ -191,8 +229,8 @@ public class DataStoreCache implements DataStore {
             } else {
                 LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
                 IteratorSetting downsample = new IteratorSetting(500, DownsampleIterator.class);
-                DownsampleIterator.setDownsampleOptions(downsample, query.getStart(), query.getEnd(),
-                        DownsampleIterator.getDownsamplePeriod(subQuery), -1, Avg.class.getName());
+                DownsampleIterator.setDownsampleOptions(downsample, startOfFirstPeriod, endOfLastPeriod,
+                        DownsampleIterator.getDownsamplePeriod(subQuery), -1, daggClass.getName());
                 DownsampleIterator downsampleIterator = new DownsampleIterator();
                 downsampleIterator.init(itr, downsample.getOptions(), null);
                 itr = downsampleIterator;
@@ -203,11 +241,11 @@ public class DataStoreCache implements DataStore {
             // the aggregation iterator is optional
             if (aggClass != null) {
                 LOG.trace("Aggregator type {}", aggClass.getSimpleName());
-                IteratorSetting downsample = new IteratorSetting(501, AggregationIterator.class);
-                AggregationIterator.setAggregationOptions(downsample, subQuery.getTags(), aggClass.getName());
-                DownsampleIterator downsampleIterator = new DownsampleIterator();
-                downsampleIterator.init(itr, downsample.getOptions(), null);
-                itr = downsampleIterator;
+                IteratorSetting aggregation = new IteratorSetting(501, AggregationIterator.class);
+                AggregationIterator.setAggregationOptions(aggregation, subQuery.getTags(), aggClass.getName());
+                AggregationIterator aggregationIterator = new AggregationIterator();
+                aggregationIterator.init(itr, aggregation.getOptions(), null);
+                itr = aggregationIterator;
             }
 
             itr.seek(new Range(subQuery.getMetric()), null, true);
@@ -263,25 +301,6 @@ public class DataStoreCache implements DataStore {
         return response;
     }
 
-    @Override
-    public SuggestResponse suggest(SuggestRequest query) throws TimelyException {
-        throw new TimelyException(500, "suggest not implemented", "suggest not implemented in "
-                + this.getClass().getSimpleName());
-    }
-
-    @Override
-    public SearchLookupResponse lookup(SearchLookupRequest msg) throws TimelyException {
-        throw new TimelyException(500, "lookup not implemented", "lookup not implemented in "
-                + this.getClass().getSimpleName());
-    }
-
-    @Override
-    public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
-            long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException {
-        throw new TimelyException(500, "createScannerForMetric not implemented",
-                "createScannerForMetric not implemented in " + this.getClass().getSimpleName());
-    }
-
     public long getNewestTimestamp(String metric) {
 
         long newest = 0;
@@ -334,9 +353,5 @@ public class DataStoreCache implements DataStore {
         response.setNewestTimestamp(getNewestTimestamp());
         response.setMetrics(new ArrayList<>(gorillaMap.keySet()));
         return response;
-    }
-
-    public long getAgeOffMsec() {
-        return ageOffMsec;
     }
 }

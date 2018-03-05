@@ -72,6 +72,7 @@ public class MetricAdapter {
 
             if (cf == null) {
                 cf = equalsJoiner.join(entry.getKey(), entry.getValue());
+                continue;
             }
             if (colQualSb.length() > 0) {
                 colQualSb.append(",");
@@ -98,7 +99,7 @@ public class MetricAdapter {
         return bb.getDouble();
     }
 
-    private static ColumnVisibility extractVisibility(List<Tag> tags) {
+    public static ColumnVisibility extractVisibility(List<Tag> tags) {
         // @formatter:off
         Optional<Tag> visTag = tags.stream()
                 .filter(t -> t.getKey().equals(VISIBILITY_TAG))
@@ -107,7 +108,7 @@ public class MetricAdapter {
         // @formatter:on
     }
 
-    private static ColumnVisibility extractVisibility(Map<String, String> tags) {
+    public static ColumnVisibility extractVisibility(Map<String, String> tags) {
         if (tags.containsKey(VISIBILITY_TAG)) {
             return new ColumnVisibility(tags.get(VISIBILITY_TAG));
         } else {

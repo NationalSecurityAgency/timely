@@ -1,4 +1,4 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import timely.Configuration;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
-import timely.api.response.timeseries.QueryResponse;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.Value;
@@ -19,20 +18,30 @@ import timely.sample.Sample;
 import timely.sample.iterators.AggregationIterator;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
 
-public class TestMetricMemoryStoreIterator {
+public class TestDataStoreCacheIterator {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TestMetricMemoryStoreIterator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TestDataStoreCacheIterator.class);
     private static Configuration configuration = null;
 
     @BeforeClass
     public static void setup() {
         configuration = new Configuration();
         configuration.getSecurity().setAllowAnonymousAccess(true);
+        HashMap<String, Integer> ageoffs = new HashMap<>();
+        ageoffs.put(DataStoreCache.DEFAULT_AGEOFF_KEY, Integer.MAX_VALUE);
+        configuration.getCache().setMetricAgeOffHours(ageoffs);
     }
 
-    private DataStoreCache getMetricMemoryStore1() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore1(long baseTime) throws TimelyException {
 
         DataStoreCache mmStore = new DataStoreCache(configuration);
 
@@ -42,23 +51,22 @@ public class TestMetricMemoryStoreIterator {
 
         Random r = new Random();
         int value = 0;
-        long timestamp = 1000;
         for (int x = 0; x <= 60 * 24; x++) {
             for (int y = 0; y < 2; y++) {
                 tags.put("host", (y % 2 == 0) ? "r01n01" : "r02n01");
                 tags.put("rack", (y % 2 == 0) ? "r01" : "r02");
                 value = r.nextInt(1000);
-                mmStore.store(createMetric("metric.number.1", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.2", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.3", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.4", tags, value, timestamp + (x * 1000)));
-                mmStore.store(createMetric("metric.number.5", tags, value, timestamp + (x * 1000)));
+                mmStore.store(createMetric("metric.number.1", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.2", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.3", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.4", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.5", tags, value, baseTime + (x * 1000)));
             }
         }
         return mmStore;
     }
 
-    private DataStoreCache getMetricMemoryStore2() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore2(long baseTime) throws TimelyException {
 
         DataStoreCache mmStore = new DataStoreCache(configuration);
 
@@ -67,9 +75,7 @@ public class TestMetricMemoryStoreIterator {
         tags.put("part", "webservice");
         tags.put("instance", "sample");
 
-        Random r = new Random();
         int value = 0;
-        // long timestamp = 1000;
         for (int x = 0; x <= 60 * 24; x++) {
             for (int y = 0; y < 2; y++) {
                 tags.put("host", (y % 2 == 0) ? "r01n01" : "r02n01");
@@ -79,11 +85,11 @@ public class TestMetricMemoryStoreIterator {
                 } else {
                     value += 2 * increment;
                 }
-                mmStore.store(createMetric("metric.number.1", tags, value, (x * 1000)));
-                mmStore.store(createMetric("metric.number.2", tags, value, (x * 1000)));
-                mmStore.store(createMetric("metric.number.3", tags, value, (x * 1000)));
-                mmStore.store(createMetric("metric.number.4", tags, value, (x * 1000)));
-                mmStore.store(createMetric("metric.number.5", tags, value, (x * 1000)));
+                mmStore.store(createMetric("metric.number.1", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.2", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.3", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.4", tags, value, baseTime + (x * 1000)));
+                mmStore.store(createMetric("metric.number.5", tags, value, baseTime + (x * 1000)));
             }
         }
         return mmStore;
@@ -92,11 +98,14 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testDownsampleIterator() throws TimelyException {
 
-        DataStoreCache mmStore = getMetricMemoryStore1();
+        long BASETIME = System.currentTimeMillis();
+        // align basetime to a downsample period
+        BASETIME = BASETIME - (BASETIME % (1000 * 60));
+        DataStoreCache mmStore = getMetricMemoryStore1(BASETIME);
 
         QueryRequest query = new QueryRequest();
-        query.setStart(0);
-        query.setEnd(1440000);
+        query.setStart(BASETIME);
+        query.setEnd(BASETIME + 1440000);
         query.setMsResolution(true);
         QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
         subQuery.setDownsample(Optional.of("1m-avg"));
@@ -120,13 +129,11 @@ public class TestMetricMemoryStoreIterator {
                             firstTimestamp = s.timestamp;
                         }
                         lastTimestamp = s.timestamp;
-                        // System.out.println(entry.toString() + " --> " +
-                        // s.toString());
                     }
                 }
             }
-            Assert.assertEquals("First timestamp incorrect", 0, firstTimestamp);
-            Assert.assertEquals("Last timestamp incorrect", 1440000, lastTimestamp);
+            Assert.assertEquals("First timestamp incorrect", BASETIME, firstTimestamp);
+            Assert.assertEquals("Last timestamp incorrect", BASETIME + 1440000, lastTimestamp);
             Assert.assertEquals("Number of samples incorrect", 50, numSamples);
         } catch (IOException | ClassNotFoundException e) {
             LOG.error("exception in test", e);
@@ -136,11 +143,14 @@ public class TestMetricMemoryStoreIterator {
     @Test
     public void testRateIterator() throws TimelyException {
 
-        DataStoreCache mmStore = getMetricMemoryStore2();
+        long BASETIME = System.currentTimeMillis();
+        // align basetime to a downsample period
+        BASETIME = BASETIME - (BASETIME % 1000);
+        DataStoreCache mmStore = getMetricMemoryStore2(BASETIME);
 
         QueryRequest query = new QueryRequest();
-        query.setStart(0);
-        query.setEnd(1440000);
+        query.setStart(BASETIME);
+        query.setEnd(BASETIME + 1440000);
         query.setMsResolution(true);
         QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
         subQuery.setDownsample(Optional.of("1ms-avg"));
@@ -155,6 +165,7 @@ public class TestMetricMemoryStoreIterator {
         int x = 0;
         SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
         try {
+            // long firstTimestamp = Long.MAX_VALUE;
             long firstTimestamp = -1;
             long lastTimestamp = -1;
             int numSamples = 0;
@@ -169,42 +180,21 @@ public class TestMetricMemoryStoreIterator {
                             firstTimestamp = s.timestamp;
                         }
                         lastTimestamp = s.timestamp;
-                        // if (x++ < 10) {
-                        // System.out.println(entry.toString() + " --> " +
-                        // s.toString());
+                        // if (s.timestamp < firstTimestamp) {
+                        // firstTimestamp = s.timestamp;
+                        // }
+                        // if (s.timestamp > lastTimestamp) {
+                        // lastTimestamp = s.timestamp;
                         // }
                     }
                 }
             }
-            Assert.assertEquals("First timestamp incorrect", 1000, firstTimestamp);
-            Assert.assertEquals("Last timestamp incorrect", 1440000, lastTimestamp);
+            Assert.assertEquals("First timestamp incorrect", BASETIME + 1000, firstTimestamp);
+            Assert.assertEquals("Last timestamp incorrect", BASETIME + 1440000, lastTimestamp);
             Assert.assertEquals("Number of samples incorrect", 2880, numSamples);
         } catch (IOException | ClassNotFoundException e) {
             LOG.error("exception in test", e);
         }
-    }
-
-    @Test
-    public void testDownsampleIterator2() throws TimelyException {
-
-        DataStoreCache mmStore = getMetricMemoryStore1();
-
-        QueryRequest queryRequest = new QueryRequest();
-        queryRequest.setStart(0);
-        queryRequest.setEnd(1440000);
-        queryRequest.setMsResolution(true);
-        QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
-        subQuery.setDownsample(Optional.of("1m-avg"));
-        subQuery.setMetric("metric.number.1");
-        subQuery.addTag("host", ".*");
-        queryRequest.setQueries(Collections.singleton(subQuery));
-
-        List<QueryResponse> response = mmStore.query(queryRequest);
-
-        // for (QueryResponse r : response) {
-        // System.out.println(r.getMetric() + " " + r.getTags() + " " +
-        // r.getDps().toString());
-        // }
     }
 
     private Metric createMetric(String metric, Map<String, String> tags, double value, long timestamp) {

@@ -1,4 +1,4 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.ColumnVisibility;

@@ -5,7 +5,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
@@ -14,7 +18,6 @@ import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
 
-import org.apache.log4j.Logger;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.timeseries.QueryRequest;
 import timely.model.Metric;
@@ -56,7 +59,7 @@ public class DownsampleIterator extends WrappingIterator {
         private long bucketsCompleted = 0;
         private long bytesPerBucket = 0;
         boolean highVolumeBuckets = false;
-        long maxDownsampleMemory = 0; // max aggregation memory (bytes) before
+        long maxDownsampleMemory = 0; // max aggregation cache (bytes) before
                                       // current batch is returned (after
                                       // bucket is complete)
         LinkedList<Long> percentageChecks = new LinkedList<>();

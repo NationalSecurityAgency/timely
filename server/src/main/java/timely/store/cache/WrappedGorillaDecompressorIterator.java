@@ -1,22 +1,22 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import java.util.Iterator;
 import java.util.List;
 
-public class DecompressorWrapperListIterable {
+public class WrappedGorillaDecompressorIterator implements Iterator<WrappedGorillaDecompressor> {
 
     private TaggedMetric taggedMetric;
-    private List<DecompressorWrapper> decompressors;
-    private Iterator<DecompressorWrapper> iterator;
-    private DecompressorWrapper current = null;
+    private List<WrappedGorillaDecompressor> decompressors;
+    private Iterator<WrappedGorillaDecompressor> iterator;
+    private WrappedGorillaDecompressor current = null;
 
-    public DecompressorWrapperListIterable(TaggedMetric taggedMetric, List<DecompressorWrapper> decompressors) {
+    public WrappedGorillaDecompressorIterator(TaggedMetric taggedMetric, List<WrappedGorillaDecompressor> decompressors) {
         this.taggedMetric = taggedMetric;
         this.decompressors = decompressors;
         this.iterator = this.decompressors.iterator();
     }
 
-    public DecompressorWrapper getDecompressorWrapper() {
+    public WrappedGorillaDecompressor getDecompressorWrapper() {
         if (current == null) {
             if (iterator.hasNext()) {
                 current = iterator.next();
@@ -25,11 +25,13 @@ public class DecompressorWrapperListIterable {
         return current;
     }
 
+    @Override
     public boolean hasNext() {
         return iterator.hasNext();
     }
 
-    public DecompressorWrapper next() {
+    @Override
+    public WrappedGorillaDecompressor next() {
         current = iterator.next();
         return current;
     }

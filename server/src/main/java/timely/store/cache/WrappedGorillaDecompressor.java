@@ -1,14 +1,14 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import fi.iki.yak.ts.compression.gorilla.*;
 
-public class DecompressorWrapper {
+public class WrappedGorillaDecompressor {
 
     private GorillaDecompressor decompressor;
     private long length;
     private long current = 1;
 
-    public DecompressorWrapper(GorillaDecompressor decompressor, long length) {
+    public WrappedGorillaDecompressor(GorillaDecompressor decompressor, long length) {
 
         this.decompressor = decompressor;
         this.length = length;

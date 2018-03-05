@@ -1,4 +1,4 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import fi.iki.yak.ts.compression.gorilla.Pair;
 import org.junit.BeforeClass;
@@ -34,9 +34,9 @@ public class TestGorillaStore {
         gStore.addValue(now += 100, 6.0976);
         gStore.addValue(now += 100, 1.2345);
 
-        List<DecompressorWrapper> decompressorList = gStore.getDecompressors(0, Long.MAX_VALUE);
+        List<WrappedGorillaDecompressor> decompressorList = gStore.getDecompressors(0, Long.MAX_VALUE);
         Pair pair = null;
-        for (DecompressorWrapper w : decompressorList) {
+        for (WrappedGorillaDecompressor w : decompressorList) {
             while ((pair = w.readPair()) != null) {
                 System.out.println(pair.getTimestamp() + " --> " + pair.getDoubleValue());
             }
@@ -49,7 +49,7 @@ public class TestGorillaStore {
 
         decompressorList = gStore.getDecompressors(0, Long.MAX_VALUE);
         pair = null;
-        for (DecompressorWrapper w : decompressorList) {
+        for (WrappedGorillaDecompressor w : decompressorList) {
             while ((pair = w.readPair()) != null) {
                 System.out.println(pair.getTimestamp() + " --> " + pair.getDoubleValue());
             }

@@ -1,9 +1,9 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import fi.iki.yak.ts.compression.gorilla.BitOutput;
 import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
 
-public class CompressorWrapper {
+public class WrappedGorillaCompressor {
 
     private long oldestTimestamp;
     private long newestTimestamp;
@@ -11,11 +11,11 @@ public class CompressorWrapper {
     private BitOutput compressorOutput = null;
     public long numEntries = 0;
 
-    public CompressorWrapper() {
+    public WrappedGorillaCompressor() {
 
     }
 
-    public CompressorWrapper(GorillaCompressor compressor, long firstTimestamp, long lastTimestamp) {
+    public WrappedGorillaCompressor(GorillaCompressor compressor, long firstTimestamp, long lastTimestamp) {
         this.compressor = compressor;
         this.oldestTimestamp = firstTimestamp;
         this.newestTimestamp = lastTimestamp;

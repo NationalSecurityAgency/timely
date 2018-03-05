@@ -13,6 +13,7 @@ import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SuggestResponse;
+import timely.store.cache.DataStoreCache;
 
 public interface DataStore {
 
@@ -29,4 +30,7 @@ public interface DataStore {
     Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
             long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException;
 
+    void setCache(DataStoreCache cache);
+
+    DataStoreCache getCache();
 }

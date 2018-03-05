@@ -1,4 +1,4 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -21,13 +21,14 @@ public class TestMemoryDataStore {
     public static void setup() {
         configuration = new Configuration();
         configuration.getSecurity().setAllowAnonymousAccess(true);
+        configuration.getCache().setDefaultAgeOffHours(24);
     }
 
-    private DataStoreCache getMetricMemoryStore1() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore1(long baseTimestamp) throws TimelyException {
 
         DataStoreCache mmStore = new DataStoreCache(configuration);
 
-        long timestamp = 10000;
+        long timestamp = baseTimestamp + 10000;
         Map<String, String> tags = new HashMap<>();
 
         tags.put("part", "webservice");
@@ -56,7 +57,7 @@ public class TestMemoryDataStore {
 
     }
 
-    private DataStoreCache getMetricMemoryStore2() throws TimelyException {
+    private DataStoreCache getMetricMemoryStore2(long baseTimestamp) throws TimelyException {
 
         DataStoreCache mmStore = new DataStoreCache(configuration);
 
@@ -70,20 +71,12 @@ public class TestMemoryDataStore {
         System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
 
         Random r = new Random();
-        long timestamp = 0;
+        long timestamp = baseTimestamp;
         for (int x = 0; x <= 60 * 24; x++) {
             mmStore.store(createMetric("metric.number.1", tags, r.nextInt(1000), timestamp + (x * 1000)));
             if (x == 0) {
                 System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
             }
-            // mmStore.store(createMetric("metric.number.2", tags,
-            // r.nextInt(1000), timestamp + (x * 1000)));
-            // mmStore.store(createMetric("metric.number.3", tags,
-            // r.nextInt(1000), timestamp + (x * 1000)));
-            // mmStore.store(createMetric("metric.number.4", tags,
-            // r.nextInt(1000), timestamp + (x * 1000)));
-            // mmStore.store(createMetric("metric.number.5", tags,
-            // r.nextInt(1000), timestamp + (x * 1000)));
         }
         System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
         return mmStore;
@@ -92,11 +85,12 @@ public class TestMemoryDataStore {
     @Test
     public void testOne() throws TimelyException {
 
-        DataStoreCache mmStore = getMetricMemoryStore1();
+        long now = System.currentTimeMillis();
+        DataStoreCache mmStore = getMetricMemoryStore1(now);
 
         QueryRequest query = new QueryRequest();
-        query.setStart(10000);
-        query.setEnd(100000);
+        query.setStart(now);
+        query.setEnd(now + 100000);
         query.setMsResolution(true);
         QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
         subQuery.setDownsample(Optional.of("5s-avg"));
@@ -117,11 +111,12 @@ public class TestMemoryDataStore {
     @Test
     public void testStorage() throws TimelyException {
 
-        DataStoreCache mmStore = getMetricMemoryStore2();
+        long now = System.currentTimeMillis();
+        DataStoreCache mmStore = getMetricMemoryStore2(now);
 
         QueryRequest query = new QueryRequest();
-        query.setStart(0);
-        query.setEnd(86400000);
+        query.setStart(now);
+        query.setEnd(now + 86400000);
         query.setMsResolution(true);
         QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
         subQuery.setDownsample(Optional.of("5m-avg"));

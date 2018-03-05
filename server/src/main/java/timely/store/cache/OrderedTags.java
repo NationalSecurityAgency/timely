@@ -1,8 +1,11 @@
-package timely.store.memory;
+package timely.store.cache;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 public class OrderedTags {
@@ -47,27 +50,31 @@ public class OrderedTags {
     public boolean matches(Map<String, String> tags) {
         // default to false in case no tags match
         boolean matches = false;
-        done: for (Map.Entry<String, String> entry : tags.entrySet()) {
-            for (Pair<String, String> p : tagSet) {
-                if (entry.getKey().equals(p.getLeft())) {
-                    boolean regex = isTagValueRegex(entry.getValue());
-                    if (regex) {
-                        if (p.getRight().matches(entry.getValue())) {
-                            // at least one match
-                            matches = true;
+        if (tags.isEmpty()) {
+            matches = true;
+        } else {
+            done: for (Map.Entry<String, String> entry : tags.entrySet()) {
+                for (Pair<String, String> p : tagSet) {
+                    if (entry.getKey().equals(p.getLeft())) {
+                        boolean regex = isTagValueRegex(entry.getValue());
+                        if (regex) {
+                            if (p.getRight().matches(entry.getValue())) {
+                                // at least one match
+                                matches = true;
+                            } else {
+                                // failure to match - return false
+                                matches = false;
+                                break done;
+                            }
                         } else {
-                            // failure to match - return false
-                            matches = false;
-                            break done;
-                        }
-                    } else {
-                        if (p.getRight().equals(entry.getValue())) {
-                            // at least one match
-                            matches = true;
-                        } else {
-                            // failure to match - return false
-                            matches = false;
-                            break done;
+                            if (p.getRight().equals(entry.getValue())) {
+                                // at least one match
+                                matches = true;
+                            } else {
+                                // failure to match - return false
+                                matches = false;
+                                break done;
+                            }
                         }
                     }
                 }
