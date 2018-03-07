@@ -2,6 +2,7 @@ package timely.store.cache;
 
 import fi.iki.yak.ts.compression.gorilla.BitOutput;
 import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
+import org.apache.commons.lang3.Range;
 
 public class WrappedGorillaCompressor {
 
@@ -54,7 +55,9 @@ public class WrappedGorillaCompressor {
     }
 
     public boolean inRange(long begin, long end) {
-        return (begin >= oldestTimestamp || end <= newestTimestamp);
+        Range<Long> requestedRange = Range.between(begin, end);
+        Range<Long> compressorRange = Range.between(oldestTimestamp, newestTimestamp);
+        return compressorRange.isOverlappedBy(requestedRange);
     }
 
     public long getNumEntries() {
@@ -65,5 +68,9 @@ public class WrappedGorillaCompressor {
         numEntries++;
         newestTimestamp = timestamp;
         compressor.addValue(timestamp, value);
+    }
+
+    public void close() {
+        compressor.close();
     }
 }

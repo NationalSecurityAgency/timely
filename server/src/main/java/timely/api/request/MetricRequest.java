@@ -58,6 +58,7 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
             metric = metricParser.parse(line);
         } catch (Exception e) {
             LOG.error("Error parsing metric: {}", line);
+            throw e;
         }
     }
 

@@ -324,9 +324,11 @@ public class Server {
 
         int nettyThreads = Math.max(1,
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
-        dataStoreCache = new DataStoreCache(config);
         dataStore = DataStoreFactory.create(config, nettyThreads);
-        dataStore.setCache(dataStoreCache);
+        if (config.getCache().isEnabled()) {
+            dataStoreCache = new DataStoreCache(config);
+            dataStore.setCache(dataStoreCache);
+        }
         // Initialize the MetaCache
         MetaCacheFactory.getCache(config);
         // initialize the auth cache

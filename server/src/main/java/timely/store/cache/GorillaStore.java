@@ -1,8 +1,16 @@
 package timely.store.cache;
 
-import fi.iki.yak.ts.compression.gorilla.*;
+import fi.iki.yak.ts.compression.gorilla.BitOutput;
+import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
+import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
+import fi.iki.yak.ts.compression.gorilla.LongArrayInput;
+import fi.iki.yak.ts.compression.gorilla.LongArrayOutput;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
 public class GorillaStore {
 
@@ -10,8 +18,17 @@ public class GorillaStore {
 
     private WrappedGorillaCompressor current = null;
 
+    private long oldestTimestamp = -1;
+    private long newestTimestamp = -1;
+
     private WrappedGorillaCompressor getCompressor(long timestamp) {
         if (current == null) {
+            if (oldestTimestamp == -1) {
+                oldestTimestamp = timestamp;
+            }
+            if (newestTimestamp == -1) {
+                newestTimestamp = timestamp;
+            }
             synchronized (this) {
                 current = new WrappedGorillaCompressor();
                 current.setOldestTimestamp(timestamp);
@@ -23,35 +40,58 @@ public class GorillaStore {
         return current;
     }
 
-    private void closeBitOutput(BitOutput out) {
-        out.writeBits(0x0F, 4);
-        out.writeBits(0xFFFFFFFF, 32);
-        out.skipBit();
-        out.flush();
+    public int ageOffArchivedCompressors(long maxAge) {
+        int numRemoved = 0;
+        long oldestRemainingTimestamp = Long.MAX_VALUE;
+        synchronized (archivedCompressors) {
+            Iterator<WrappedGorillaCompressor> itr = archivedCompressors.iterator();
+            long now = System.currentTimeMillis();
+            while (itr.hasNext()) {
+                WrappedGorillaCompressor c = itr.next();
+                if (now - c.getNewestTimestamp() > maxAge) {
+                    itr.remove();
+                    numRemoved++;
+                } else {
+                    if (c.getOldestTimestamp() < oldestRemainingTimestamp) {
+                        oldestRemainingTimestamp = c.getOldestTimestamp();
+                    }
+                }
+            }
+            oldestTimestamp = oldestRemainingTimestamp;
+        }
+        return numRemoved;
+    }
+
+    public void archiveCurrentCompressor() {
+        synchronized (this) {
+            current.close();
+            archivedCompressors.add(current);
+            current = null;
+        }
     }
 
     public List<WrappedGorillaDecompressor> getDecompressors(long begin, long end) {
 
         List<WrappedGorillaDecompressor> decompressors = new ArrayList<>();
 
-        for (WrappedGorillaCompressor r : archivedCompressors) {
-            if (r.inRange(begin, end)) {
-                GorillaDecompressor d = new GorillaDecompressor(new LongArrayInput(
-                        ((LongArrayOutput) r.getCompressorOutput()).getLongArray()));
-                // use -1 length since this compressor is closed
-                decompressors.add(new WrappedGorillaDecompressor(d, -1));
+        synchronized (archivedCompressors) {
+            for (WrappedGorillaCompressor r : archivedCompressors) {
+                if (r.inRange(begin, end)) {
+                    GorillaDecompressor d = new GorillaDecompressor(new LongArrayInput(
+                            ((LongArrayOutput) r.getCompressorOutput()).getLongArray()));
+                    // use -1 length since this compressor is closed
+                    decompressors.add(new WrappedGorillaDecompressor(d, -1));
+                }
             }
         }
 
         // as long as begin is inRange, we should use the data in the current
         // compressor as well
         synchronized (this) {
-            if (current.inRange(begin, begin)) {
-                BitOutput copyLongArrayOutput = current.getCompressorOutput();
-                closeBitOutput(copyLongArrayOutput);
-
+            if (current != null && current.inRange(begin, end)) {
+                BitOutput currentLongArrayOutput = current.getCompressorOutput();
                 LongArrayInput decompressorByteBufferInput = new LongArrayInput(
-                        ((LongArrayOutput) copyLongArrayOutput).getLongArray());
+                        ((LongArrayOutput) currentLongArrayOutput).getLongArray());
                 GorillaDecompressor d = new GorillaDecompressor(decompressorByteBufferInput);
                 decompressors.add(new WrappedGorillaDecompressor(d, current.getNumEntries()));
             }
@@ -61,29 +101,20 @@ public class GorillaStore {
 
     public void addValue(long timestamp, double value) {
 
-        synchronized (this) {
-            getCompressor(timestamp).addValue(timestamp, value);
+        // values must be inserted in order
+        if (timestamp >= newestTimestamp) {
+            newestTimestamp = timestamp;
+            synchronized (this) {
+                getCompressor(timestamp).addValue(timestamp, value);
+            }
         }
     }
 
     public long getNewestTimestamp() {
-        long newestTimestamp = 0;
-        synchronized (this) {
-            newestTimestamp = current.getNewestTimestamp();
-        }
         return newestTimestamp;
     }
 
     public long getOldestTimestamp() {
-        long first = 0;
-        synchronized (this) {
-            first = current.getOldestTimestamp();
-        }
-        for (WrappedGorillaCompressor c : archivedCompressors) {
-            if (c.getOldestTimestamp() < first) {
-                first = c.getOldestTimestamp();
-            }
-        }
-        return first;
+        return oldestTimestamp;
     }
 }

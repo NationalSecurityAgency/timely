@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.TreeMap;
 
 public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value> {
 
@@ -42,10 +43,15 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
         this.query = query;
         this.startTs = startTs;
         this.endTs = endTs;
-
         this.storeItr = this.store.getGorillaStores(query.getMetric()).entrySet().iterator();
         this.decompressors = getNextDecompressorIterable();
-        prepareEntries(100);
+
+        long start = System.currentTimeMillis();
+        for (Map.Entry<Key, Value> entry : getEntries().entrySet()) {
+            kvQueue.add(new KeyValue(entry.getKey(), entry.getValue()));
+        }
+        LOG.info("Time to initialize cache iterator for {} - {}ms", query.toString(), System.currentTimeMillis()
+                - start);
     }
 
     private WrappedGorillaDecompressorIterator getNextDecompressorIterable() {
@@ -61,14 +67,17 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
         return nextPair;
     }
 
-    private void prepareEntries(int bufferSize) {
+    private Map<Key, Value> getEntries() {
 
-        if (decompressors != null && kvQueue.isEmpty()) {
+        // sort all retrieved entries by key order, consistent with the accumulo
+        // version
+        Map<Key, Value> entries = new TreeMap<>();
+        if (decompressors != null) {
             TaggedMetric tm = decompressors.getTaggedMetric();
             WrappedGorillaDecompressor decompressor = decompressors.getDecompressorWrapper();
 
             fi.iki.yak.ts.compression.gorilla.Pair gPair = null;
-            while (kvQueue.size() < bufferSize && decompressor != null && decompressors != null) {
+            while (decompressor != null && decompressors != null) {
                 gPair = decompressor.readPair();
                 if (gPair == null) {
                     if (decompressors.hasNext()) {
@@ -81,13 +90,13 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
                     }
                 } else {
                     if (gPair.getTimestamp() >= startTs && gPair.getTimestamp() <= endTs) {
-                        kvQueue.add(new KeyValue(
-                                MetricAdapter.toKey(tm.getMetric(), tm.getTags(), gPair.getTimestamp()), new Value(
-                                        MetricAdapter.encodeValue(gPair.getDoubleValue()))));
+                        entries.put(MetricAdapter.toKey(tm.getMetric(), tm.getTags(), gPair.getTimestamp()), new Value(
+                                MetricAdapter.encodeValue(gPair.getDoubleValue())));
                     }
                 }
             }
         }
+        return entries;
     }
 
     @Override
@@ -98,7 +107,6 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
 
     @Override
     public boolean hasTop() {
-        prepareEntries(100);
         return currentKeyValue != null;
     }
 
@@ -109,7 +117,6 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
 
     @Override
     public void seek(Range range, Collection<ByteSequence> columnFamilies, boolean inclusive) throws IOException {
-        prepareEntries(100);
         currentKeyValue = kvQueue.poll();
     }
 

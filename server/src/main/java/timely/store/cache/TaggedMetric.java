@@ -44,7 +44,7 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
         TaggedMetric o = (TaggedMetric) obj;
         EqualsBuilder eb = new EqualsBuilder();
         eb.append(this.metric, o.metric);
-        eb.append(this.columnVisibility, o.columnVisibility);
+        eb.append(this.columnVisibility.toString(), o.columnVisibility.toString());
         eb.append(this.orderedTags, o.orderedTags);
         return eb.isEquals();
     }

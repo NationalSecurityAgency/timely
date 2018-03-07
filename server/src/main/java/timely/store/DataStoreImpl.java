@@ -6,8 +6,25 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -477,7 +494,7 @@ public class DataStoreImpl implements DataStore {
                 }
                 metricList.append(metric);
                 Map<Set<Tag>, List<Aggregation>> cachedMetrics = new HashMap<>();
-                long oldestTimestampFromCache = Long.MAX_VALUE;
+                long oldestTimestampFromCache = 0;
 
                 if (cache != null) {
                     long oldestCacheTimestamp = cache.getOldestTimestamp(query.getMetric());
@@ -492,9 +509,7 @@ public class DataStoreImpl implements DataStore {
                 if (cachedMetrics.isEmpty() || requestedStartTs < oldestTimestampFromCache) {
                     // we have already searched from oldestTimestampFromCache to
                     // requestedEndTs
-                    long endTs = oldestTimestampFromCache - 1;
-                    BatchScanner scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
-                            scannerThreads);
+                    long endTs = (oldestTimestampFromCache == 0) ? requestedEndTs : oldestTimestampFromCache - 1;
 
                     // Reset the start timestamp for the query to the
                     // beginning of the downsample period based on the epoch
@@ -506,7 +521,10 @@ public class DataStoreImpl implements DataStore {
                             - endDistanceFromDownSample : endTs);
 
                     if (endOfLastPeriod > startOfFirstPeriod) {
+                        BatchScanner scanner = null;
                         try {
+                            scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
+                                    scannerThreads);
                             List<String> tagOrder = prioritizeTags(query.getMetric(), query.getTags());
                             Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
                             Set<Tag> colFamValues = getColumnFamilies(metric, orderedTags);
@@ -568,7 +586,9 @@ public class DataStoreImpl implements DataStore {
                             }
                             LOG.trace("allSeries: {}", allSeries);
                         } finally {
-                            scanner.close();
+                            if (scanner != null) {
+                                scanner.close();
+                            }
                         }
                     }
                 }

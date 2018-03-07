@@ -7,6 +7,8 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.commons.collections.map.LRUMap;
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,12 +31,16 @@ import timely.store.iterators.RateIterator;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class DataStoreCache {
 
@@ -46,12 +52,42 @@ public class DataStoreCache {
     private Map<String, Long> minimumAgeOff;
     private Map<String, String> minimumAgeOffForIterator;
 
+    private Timer maintenanceTimer = new Timer();
+
     public DataStoreCache(Configuration conf) {
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
         minimumAgeOff = getMinimumAgeOffs(accumuloAgeOff, cacheAgeOff);
         minimumAgeOffForIterator = getAgeOffForIterator(minimumAgeOff);
+        Date firstExecution = DateUtils.truncate(new Date(), Calendar.HOUR);
+        firstExecution = DateUtils.addHours(firstExecution, 1);
+        maintenanceTimer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                ageOffGorillaStores();
+                archiveGorillaStoreCurrentCompressors();
+            }
+        }, firstExecution, 3600000);
+    }
+
+    private void ageOffGorillaStores() {
+        for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
+            long maxAge = getAgeOffForMetric(entry1.getKey());
+            for (GorillaStore store : entry1.getValue().values()) {
+                store.ageOffArchivedCompressors(maxAge);
+            }
+        }
+    }
+
+    private void archiveGorillaStoreCurrentCompressors() {
+        for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
+            long maxAge = getAgeOffForMetric(entry1.getKey());
+            for (GorillaStore store : entry1.getValue().values()) {
+                store.archiveCurrentCompressor();
+            }
+        }
     }
 
     public long getAgeOffForMetric(String metricName) {
@@ -122,7 +158,8 @@ public class DataStoreCache {
 
     public void store(Metric metric) {
         TaggedMetric taggedMetric = new TaggedMetric(metric.getName(), metric.getTags());
-        getGorillaStore(taggedMetric).addValue(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
+        GorillaStore gs = getGorillaStore(taggedMetric);
+        gs.addValue(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
     }
 
     public List<QueryResponse> query(QueryRequest msg) throws TimelyException {
@@ -149,23 +186,27 @@ public class DataStoreCache {
             throws TimelyException {
 
         Map<Set<Tag>, List<Aggregation>> aggregationList = new HashMap<>();
-
+        long start = System.currentTimeMillis();
         try {
             SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
             itr = setupIterator(msg, query, getSessionAuthorizations(msg), getAgeOffForMetric(query.getMetric()));
-
+            LRUMap tagMap = new LRUMap(500);
             while (itr.hasTop()) {
                 Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(itr.getTopValue());
                 for (Map.Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
-                    Set<Tag> key = new HashSet<>();
-                    for (Tag tag : entry.getKey()) {
-                        if (query.getTags().keySet().contains(tag.getKey())) {
-                            key.add(tag);
+                    Set<Tag> allMatchingTags = (Set<Tag>) tagMap.get(entry.getKey());
+                    if (allMatchingTags == null) {
+                        allMatchingTags = new HashSet<>();
+                        for (Tag tag : entry.getKey()) {
+                            if (query.getTags().keySet().contains(tag.getKey())) {
+                                allMatchingTags.add(tag);
+                            }
                         }
+                        tagMap.put(entry.getKey(), allMatchingTags);
                     }
-                    List<Aggregation> aggregations = aggregationList.getOrDefault(key, new ArrayList<>());
+                    List<Aggregation> aggregations = aggregationList.getOrDefault(allMatchingTags, new ArrayList<>());
                     aggregations.add(entry.getValue());
-                    aggregationList.put(key, aggregations);
+                    aggregationList.put(allMatchingTags, aggregations);
                 }
                 itr.next();
             }
@@ -174,6 +215,8 @@ public class DataStoreCache {
             LOG.error("Error during query: " + e.getMessage(), e);
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: "
                     + e.getMessage(), e.getMessage(), e);
+        } finally {
+            LOG.info("Time for cache subquery for {} - {}ms", query.toString(), System.currentTimeMillis() - start);
         }
     }
 
@@ -316,9 +359,11 @@ public class DataStoreCache {
     public long getOldestTimestamp(String metric) {
         long oldest = Long.MAX_VALUE;
         Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
-        for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
-            if (entry.getValue().getOldestTimestamp() < oldest) {
-                oldest = entry.getValue().getOldestTimestamp();
+        if (gorillaStoreMap != null) {
+            for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
+                if (entry.getValue().getOldestTimestamp() < oldest) {
+                    oldest = entry.getValue().getOldestTimestamp();
+                }
             }
         }
         return oldest;
