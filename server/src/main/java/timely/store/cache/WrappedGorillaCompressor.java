@@ -1,53 +1,45 @@
 package timely.store.cache;
 
-import fi.iki.yak.ts.compression.gorilla.BitOutput;
 import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
+import fi.iki.yak.ts.compression.gorilla.LongArrayOutput;
 import org.apache.commons.lang3.Range;
 
-public class WrappedGorillaCompressor {
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
+public class WrappedGorillaCompressor implements Serializable {
+
+    private boolean closed = false;
+    private long numEntries = 0;
     private long oldestTimestamp;
     private long newestTimestamp;
+    private LongArrayOutput compressorOutput = null;
+    private long[] backingArray = null;
     private GorillaCompressor compressor;
-    private BitOutput compressorOutput = null;
-    public long numEntries = 0;
 
     public WrappedGorillaCompressor() {
 
     }
 
-    public WrappedGorillaCompressor(GorillaCompressor compressor, long firstTimestamp, long lastTimestamp) {
-        this.compressor = compressor;
-        this.oldestTimestamp = firstTimestamp;
-        this.newestTimestamp = lastTimestamp;
+    public WrappedGorillaCompressor(long timestamp) {
+        this.compressorOutput = new LongArrayOutput(480);
+        this.compressor = new GorillaCompressor(timestamp, this.compressorOutput);
+        this.oldestTimestamp = timestamp;
+        this.newestTimestamp = timestamp;
     }
 
-    public GorillaCompressor getCompressor() {
-        return compressor;
-    }
-
-    public void setCompressor(GorillaCompressor compressor) {
-        this.compressor = compressor;
-    }
-
-    public BitOutput getCompressorOutput() {
-        return compressorOutput;
-    }
-
-    public void setCompressorOutput(BitOutput compressorOutput) {
-        this.compressorOutput = compressorOutput;
-    }
-
-    public void setOldestTimestamp(long oldestTimestamp) {
-        this.oldestTimestamp = oldestTimestamp;
+    public long[] getCompressorOutput() {
+        if (closed) {
+            return backingArray;
+        } else {
+            return compressorOutput.getLongArray();
+        }
     }
 
     public long getOldestTimestamp() {
         return oldestTimestamp;
-    }
-
-    public void setNewestTimestamp(long newestTimestamp) {
-        this.newestTimestamp = newestTimestamp;
     }
 
     public long getNewestTimestamp() {
@@ -65,6 +57,9 @@ public class WrappedGorillaCompressor {
     }
 
     public void addValue(long timestamp, double value) {
+        if (closed) {
+            throw new IllegalStateException("Compressor is closed");
+        }
         numEntries++;
         newestTimestamp = timestamp;
         compressor.addValue(timestamp, value);
@@ -72,5 +67,34 @@ public class WrappedGorillaCompressor {
 
     public void close() {
         compressor.close();
+        backingArray = compressorOutput.getLongArray();
+        compressorOutput = null;
+        closed = true;
+    }
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        if (!closed) {
+            throw new IllegalStateException("Can not serialize before closed");
+        }
+        out.writeLong(numEntries);
+        out.writeLong(oldestTimestamp);
+        out.writeLong(newestTimestamp);
+        int length = backingArray.length;
+        out.writeInt(length);
+        for (int x=0; x < length; x++) {
+            out.writeLong(backingArray[x]);
+        }
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        closed = true;
+        numEntries = in.readLong();
+        oldestTimestamp = in.readLong();
+        newestTimestamp = in.readLong();
+        int length = in.readInt();
+        backingArray = new long[length];
+        for (int x=0; x < length; x++) {
+            backingArray[x] = in.readLong();
+        }
     }
 }

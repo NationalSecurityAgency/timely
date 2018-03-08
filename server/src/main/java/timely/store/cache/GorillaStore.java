@@ -1,10 +1,7 @@
 package timely.store.cache;
 
-import fi.iki.yak.ts.compression.gorilla.BitOutput;
-import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
 import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
 import fi.iki.yak.ts.compression.gorilla.LongArrayInput;
-import fi.iki.yak.ts.compression.gorilla.LongArrayOutput;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -16,7 +13,7 @@ public class GorillaStore {
 
     private Queue<WrappedGorillaCompressor> archivedCompressors = new LinkedList<WrappedGorillaCompressor>();
 
-    private WrappedGorillaCompressor current = null;
+    transient private WrappedGorillaCompressor current = null;
 
     private long oldestTimestamp = -1;
     private long newestTimestamp = -1;
@@ -30,11 +27,7 @@ public class GorillaStore {
                 newestTimestamp = timestamp;
             }
             synchronized (this) {
-                current = new WrappedGorillaCompressor();
-                current.setOldestTimestamp(timestamp);
-                current.setNewestTimestamp(timestamp);
-                current.setCompressorOutput(new LongArrayOutput(480));
-                current.setCompressor(new GorillaCompressor(timestamp, current.getCompressorOutput()));
+                current = new WrappedGorillaCompressor(timestamp);
             }
         }
         return current;
@@ -79,8 +72,7 @@ public class GorillaStore {
         synchronized (archivedCompressors) {
             for (WrappedGorillaCompressor r : archivedCompressors) {
                 if (r.inRange(begin, end)) {
-                    GorillaDecompressor d = new GorillaDecompressor(new LongArrayInput(
-                            ((LongArrayOutput) r.getCompressorOutput()).getLongArray()));
+                    GorillaDecompressor d = new GorillaDecompressor(new LongArrayInput(r.getCompressorOutput()));
                     // use -1 length since this compressor is closed
                     decompressors.add(new WrappedGorillaDecompressor(d, -1));
                 }
@@ -91,9 +83,7 @@ public class GorillaStore {
         // compressor as well
         synchronized (this) {
             if (current != null && current.inRange(begin, end)) {
-                BitOutput currentLongArrayOutput = current.getCompressorOutput();
-                LongArrayInput decompressorByteBufferInput = new LongArrayInput(
-                        ((LongArrayOutput) currentLongArrayOutput).getLongArray());
+                LongArrayInput decompressorByteBufferInput = new LongArrayInput(current.getCompressorOutput());
                 GorillaDecompressor d = new GorillaDecompressor(decompressorByteBufferInput);
                 decompressors.add(new WrappedGorillaDecompressor(d, current.getNumEntries()));
             }
