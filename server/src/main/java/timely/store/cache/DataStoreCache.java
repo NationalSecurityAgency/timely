@@ -82,9 +82,8 @@ public class DataStoreCache {
     }
 
     private void archiveGorillaStoreCurrentCompressors() {
-        for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
-            long maxAge = getAgeOffForMetric(entry1.getKey());
-            for (GorillaStore store : entry1.getValue().values()) {
+        for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
+            for (GorillaStore store : entry.getValue().values()) {
                 store.archiveCurrentCompressor();
             }
         }

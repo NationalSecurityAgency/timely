@@ -63,10 +63,12 @@ public class GorillaStore {
     }
 
     public void archiveCurrentCompressor() {
-        synchronized (this) {
-            current.close();
-            archivedCompressors.add(current);
-            current = null;
+        if (current != null) {
+            synchronized (this) {
+                current.close();
+                archivedCompressors.add(current);
+                current = null;
+            }
         }
     }
 
