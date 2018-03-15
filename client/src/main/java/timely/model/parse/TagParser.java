@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class TagParser implements Parser<Tag>, Combiner<Tag> {
 
-    private static final Splitter equalSplitter = Splitter.on("=").trimResults();
+    private static final Splitter equalSplitter = Splitter.on("=").limit(2).trimResults();
     private static final Joiner equalsJoiner = Joiner.on("=");
 
     @Override

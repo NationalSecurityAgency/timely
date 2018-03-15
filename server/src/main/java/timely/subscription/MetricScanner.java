@@ -140,11 +140,15 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
                 if (this.iter.hasNext()) {
                     Entry<Key, Value> e = this.iter.next();
-                    m = MetricAdapter.parse(e.getKey(), e.getValue(), true);
-                    if (responses.size() >= this.subscriptionBatchSize) {
-                        flush();
+                    try {
+                        m = MetricAdapter.parse(e.getKey(), e.getValue(), true);
+                        if (responses.size() >= this.subscriptionBatchSize) {
+                            flush();
+                        }
+                        this.responses.addResponse(MetricResponse.fromMetric(m, this.subscriptionId));
+                    } catch (Exception e1) {
+                        LOG.error("Error {} parsing metric at key: {}", e1.getMessage(), e.getKey().toString());
                     }
-                    this.responses.addResponse(MetricResponse.fromMetric(m, this.subscriptionId));
                 } else if (rangeItr.hasNext()) {
                     // set next range on the scanner
                     Range r = rangeItr.next();

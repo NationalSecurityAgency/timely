@@ -237,23 +237,27 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
             }
             if (time.equals(newTime)) {
 
-                Metric m = MetricAdapter.parse(k, super.getTopValue());
-                timely.model.Value v = m.getValue();
-                m.setValue(null);
+                try {
+                    Metric m = MetricAdapter.parse(k, super.getTopValue());
+                    timely.model.Value v = m.getValue();
+                    m.setValue(null);
 
-                TimeSeries values = series.get(m);
-                if (null == values) {
-                    LOG.trace("Creating new time series {}", m);
-                    values = new TimeSeries(this, filters.length);
+                    TimeSeries values = series.get(m);
+                    if (null == values) {
+                        LOG.trace("Creating new time series {}", m);
+                        values = new TimeSeries(this, filters.length);
+                    }
+
+                    LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
+                    values.add(k, v.getMeasure());
+
+                    // always re-put the metric back into the TimeSeriesGroup as
+                    // it
+                    // maintains a list of prepared answers
+                    series.put(m, values);
+                } catch (Exception e) {
+                    LOG.error("Error: {} parsing metric at key: {}", e.getMessage(), k.toString());
                 }
-
-                LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
-                values.add(k, v.getMeasure());
-
-                // always re-put the metric back into the TimeSeriesGroup as it
-                // maintains a list of prepared answers
-                series.put(m, values);
-
                 super.next();
             } else {
                 break;

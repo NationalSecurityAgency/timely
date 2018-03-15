@@ -133,6 +133,27 @@ public class MetricAdapterTest {
     }
 
     @Test
+    public void testParseWithEscapes() throws Exception {
+        PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
+        byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", 1000L));
+        byte[] value = new byte[Double.BYTES];
+        ByteBuffer.wrap(value).putDouble(2.0D);
+        PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
+        Key k = new Key(row, "tag1=value1".getBytes(), colQualCoder.encode(new ComparablePair<>(new Long(1000),
+                "tag2=test\\,value2,tag3=val\\=ue3")), "(a&b)|(c&d)".getBytes(), 1000);
+        Value v = new Value(value);
+        Metric m = MetricAdapter.parse(k, v);
+        Assert.assertEquals("sys.cpu.user", m.getName());
+        List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("tag1=value1"));
+        tags.add(new Tag("tag2=test,value2"));
+        tags.add(new Tag("tag3=val\\=ue3"));
+        Assert.assertEquals(tags, m.getTags());
+        Assert.assertEquals(new Long(1000), m.getValue().getTimestamp());
+        Assert.assertEquals(2.0D, m.getValue().getMeasure(), 0.0D);
+    }
+
+    @Test
     public void testParseWithViz() throws Exception {
         PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
         byte[] row = rowCoder.encode(new ComparablePair<>("sys.cpu.user", 1000L));

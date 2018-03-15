@@ -72,30 +72,39 @@ public class DownsampleIterator extends WrappingIterator {
         if (super.hasTop()) {
             Key topKey = super.getTopKey();
             Value topValue = super.getTopValue();
-            Metric metric = MetricAdapter.parse(topKey, topValue);
-            LOG.trace("entering hasTop() for metric=" + metric.toString());
+            Metric metric = null;
+            try {
+                metric = MetricAdapter.parse(topKey, topValue);
+                LOG.trace("entering hasTop() for metric=" + metric.toString());
+            } catch (Exception e) {
+                LOG.error("Error: {} parsing metric at key: {}", e.getMessage(), topKey.toString());
+            }
             while (super.hasTop()) {
                 topKey = super.getTopKey();
                 topValue = super.getTopValue();
-                metric = MetricAdapter.parse(topKey, topValue);
-                long timestamp = metric.getValue().getTimestamp();
-                if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
-                    LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory
-                            + " for metric=" + metric.toString());
-                    break;
-                }
-                last = topKey;
-
-                Set<Tag> tags = new HashSet<Tag>(metric.getTags());
-                Downsample sample = value.get(tags);
-                if (sample == null) {
-                    try {
-                        value.put(tags, sample = factory.create());
-                    } catch (TimelyException e) {
-                        throw new RuntimeException(e);
+                try {
+                    metric = MetricAdapter.parse(topKey, topValue);
+                    long timestamp = metric.getValue().getTimestamp();
+                    if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
+                        LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory
+                                + " for metric=" + metric.toString());
+                        break;
                     }
+                    last = topKey;
+
+                    Set<Tag> tags = new HashSet<Tag>(metric.getTags());
+                    Downsample sample = value.get(tags);
+                    if (sample == null) {
+                        try {
+                            value.put(tags, sample = factory.create());
+                        } catch (TimelyException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    sample.add(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
+                } catch (Exception e) {
+                    LOG.error("Error: {} parsing metric at key: {}", e.getMessage(), topKey.toString());
                 }
-                sample.add(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
                 try {
                     super.next();
                 } catch (IOException e) {

@@ -1,6 +1,5 @@
 package timely.model.parse;
 
-import com.google.common.base.Splitter;
 import timely.model.Tag;
 
 import java.util.ArrayList;
@@ -15,13 +14,22 @@ import java.util.Map;
  */
 public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag>> {
 
-    private static final Splitter commaSplitter = Splitter.on(",").omitEmptyStrings();
     private static final TagParser tagParser = new TagParser();
 
     @Override
     public List<Tag> parse(String t) {
         ArrayList<Tag> tags = new ArrayList<>();
-        commaSplitter.splitToList(t).forEach(p -> tags.add(tagParser.parse(p)));
+        // only split on commas that are not preceded with a backslash
+        String[] parts = t.split("(?<!\\\\),");
+        for (String p : parts) {
+            if (!p.isEmpty()) {
+                Tag tag = tagParser.parse(p);
+                // unescape commas in the key and value of the tag
+                tag.setKey(tag.getKey().replaceAll("\\\\,", ","));
+                tag.setValue(tag.getValue().replaceAll("\\\\,", ","));
+                tags.add(tag);
+            }
+        }
         return tags;
     }
 

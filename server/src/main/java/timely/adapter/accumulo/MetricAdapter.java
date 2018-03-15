@@ -17,6 +17,7 @@ import timely.model.parse.TagParser;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -47,10 +48,26 @@ public class MetricAdapter {
         return timestamp - (timestamp % 3600000) + 3600000;
     }
 
+    private static List<Tag> escapeDelimiters(List<Tag> tags) {
+        List<Tag> newTags = new ArrayList<>();
+        for (Tag t : tags) {
+            // escape all commas and equals in the tag key and value since they
+            // are used as a delimiter
+            String k = t.getKey();
+            String v = t.getValue();
+            k = k.replaceAll("=", "\\=");
+            k = k.replaceAll(",", "\\,");
+            v = v.replaceAll("=", "\\=");
+            v = v.replaceAll(",", "\\,");
+            newTags.add(new Tag(k, v));
+        }
+        return newTags;
+    }
+
     public static Mutation toMutation(Metric metric) {
         final Mutation mutation = new Mutation(encodeRowKey(metric));
-
         List<Tag> tags = metric.getTags();
+        tags = escapeDelimiters(tags);
         Collections.sort(tags);
 
         for (final Tag entry : tags) {

@@ -1,7 +1,8 @@
-package timely.model;
+package timely.model.parse;
 
 import org.junit.Assert;
 import org.junit.Test;
+import timely.model.Tag;
 import timely.model.parse.TagListParser;
 
 import java.util.ArrayList;
@@ -36,5 +37,16 @@ public class TagListParserTest {
         map.put("tag2", "value2");
         String combined = new TagListParser().combine(map);
         Assert.assertEquals("tag1=value1,tag2=value2", combined);
+    }
+
+    @Test
+    public void testParseTagsWithCommas() {
+
+        try {
+            String s = "tag1=value1,tag2=3.4.3_(default\\,_Date\\,_Time)_";
+            new TagListParser().parse(s);
+        } catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
     }
 }
