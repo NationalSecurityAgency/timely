@@ -137,6 +137,8 @@ class TimelyMetric(TimelyWebSocketClient):
         if len(self.dataFrame) > 0:
             self.dataFrame['date'] = pandas.DatetimeIndex(self.dataFrame['date'])
             self.dataFrame = self.dataFrame.set_index('date')
+            j = pandas.to_timedelta(self.dataFrame.groupby(self.dataFrame.index).cumcount(), unit='us').values
+            self.dataFrame.index = self.dataFrame.index + j
 
         self.close()
         ioloop.IOLoop.current(instance=False).stop()
