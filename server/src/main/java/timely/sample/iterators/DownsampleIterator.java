@@ -70,20 +70,11 @@ public class DownsampleIterator extends WrappingIterator {
     public boolean hasTop() {
 
         if (super.hasTop()) {
-            Key topKey = super.getTopKey();
-            Value topValue = super.getTopValue();
-            Metric metric = null;
-            try {
-                metric = MetricAdapter.parse(topKey, topValue);
-                LOG.trace("entering hasTop() for metric=" + metric.toString());
-            } catch (Exception e) {
-                LOG.error("Error: {} parsing metric at key: {}", e.getMessage(), topKey.toString());
-            }
             while (super.hasTop()) {
-                topKey = super.getTopKey();
-                topValue = super.getTopValue();
+                Key topKey = super.getTopKey();
+                Value topValue = super.getTopValue();
                 try {
-                    metric = MetricAdapter.parse(topKey, topValue);
+                    Metric metric = MetricAdapter.parse(topKey, topValue);
                     long timestamp = metric.getValue().getTimestamp();
                     if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
                         LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory
@@ -111,7 +102,6 @@ public class DownsampleIterator extends WrappingIterator {
                     throw new RuntimeException("Downstream next() failed", e);
                 }
             }
-            LOG.trace("exiting hasTop() for metric=" + metric.toString());
             return last != null;
         } else {
             return false;
