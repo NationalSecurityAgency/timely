@@ -18,11 +18,7 @@ import timely.model.parse.TagParser;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -67,7 +63,24 @@ public class MetricAdapter {
         return newTags;
     }
 
+    private static Map<String, String> escapeDelimiters(Map<String, String> tags) {
+        Map<String, String> newTags = new LinkedHashMap<>();
+        for (Map.Entry<String, String> t : tags.entrySet()) {
+            // escape all commas and equals in the tag key and value since they
+            // are used as a delimiter
+            String k = t.getKey();
+            String v = t.getValue();
+            k = k.replaceAll("=", "\\=");
+            k = k.replaceAll(",", "\\,");
+            v = v.replaceAll("=", "\\=");
+            v = v.replaceAll(",", "\\,");
+            newTags.put(k, v);
+        }
+        return newTags;
+    }
+
     public static Mutation toMutation(Metric metric) {
+
         final Mutation mutation = new Mutation(encodeRowKey(metric));
         List<Tag> tags = metric.getTags();
         tags = escapeDelimiters(tags);
@@ -94,6 +107,7 @@ public class MetricAdapter {
     public static Key toKey(String metric, Map<String, String> tags, long timestamp) {
         byte[] row = encodeRowKey(metric, timestamp);
 
+        tags = escapeDelimiters(tags);
         StringBuilder colQualSb = new StringBuilder();
         String cf = null;
         for (Map.Entry<String, String> entry : tags.entrySet()) {

@@ -60,8 +60,10 @@ public class DataStoreCache {
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
         minimumAgeOff = getMinimumAgeOffs(accumuloAgeOff, cacheAgeOff);
         minimumAgeOffForIterator = getAgeOffForIterator(minimumAgeOff);
-        Date firstExecution = DateUtils.truncate(new Date(), Calendar.HOUR);
-        firstExecution = DateUtils.addHours(firstExecution, 1);
+        // Date firstExecution = DateUtils.truncate(new Date(), Calendar.HOUR);
+        // firstExecution = DateUtils.addHours(firstExecution, 1);
+        Date firstExecution = DateUtils.truncate(new Date(), Calendar.MINUTE);
+        firstExecution = DateUtils.addMinutes(firstExecution, 2);
         maintenanceTimer.schedule(new TimerTask() {
 
             @Override
@@ -69,7 +71,10 @@ public class DataStoreCache {
                 ageOffGorillaStores();
                 archiveGorillaStoreCurrentCompressors();
             }
-        }, firstExecution, 3600000);
+        }, firstExecution, 300000);
+
+        // }
+        // }, firstExecution, 3600000);
     }
 
     private void ageOffGorillaStores() {

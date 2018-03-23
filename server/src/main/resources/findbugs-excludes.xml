@@ -8,4 +8,9 @@
     <Method name="shutdown" />
     <Bug pattern="UC_USELESS_OBJECT" />
   </Match>
+  <Match>
+    <Class name="timely.store.cache.WrappedGorillaCompressor" />
+    <Method name="getCompressorOutput" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
 </FindBugsFilter>

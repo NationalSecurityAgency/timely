@@ -1,6 +1,5 @@
 package timely.store.cache;
 
-import fi.iki.yak.ts.compression.gorilla.BitOutput;
 import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
 import fi.iki.yak.ts.compression.gorilla.LongArrayOutput;
 import org.apache.commons.lang3.Range;
@@ -31,7 +30,7 @@ public class WrappedGorillaCompressor implements Serializable {
         this.newestTimestamp = timestamp;
     }
 
-    private void closeBitOutput(BitOutput out) {
+    private void closeBitOutput(LongArrayOutput out) {
         out.writeBits(0x0F, 4);
         out.writeBits(0xFFFFFFFF, 32);
         out.skipBit();
@@ -40,13 +39,12 @@ public class WrappedGorillaCompressor implements Serializable {
 
     public long[] getCompressorOutput() {
         if (closed) {
-            long[] copy = new long[backingArray.length];
-            System.arraycopy(backingArray, 0, copy, 0, backingArray.length);
-            return copy;
+            // long[] copy = new long[backingArray.length];
+            // System.arraycopy(backingArray, 0, copy, 0, backingArray.length);
+            // return copy;
+            return backingArray;
         } else {
-            LongArrayOutput copy = new LongArrayOutput(compressorOutput);
-            closeBitOutput(copy);
-            return copy.getLongArray();
+            return compressorOutput.getLongArray();
         }
     }
 
@@ -73,6 +71,7 @@ public class WrappedGorillaCompressor implements Serializable {
             throw new IllegalStateException("Compressor is closed");
         }
         numEntries++;
+        System.out.println("writing to WrappedGorillaDecompressor numEntries=" + numEntries + " " + this);
         newestTimestamp = timestamp;
         compressor.addValue(timestamp, value);
     }

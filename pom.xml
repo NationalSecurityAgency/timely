@@ -137,7 +137,7 @@
             <dependency>
                 <groupId>fi.iki.yak</groupId>
                 <artifactId>compression-gorilla</artifactId>
-                <version>2.0.4-SNAPSHOT</version>
+                <version>2.1.1</version>
             </dependency>
             <dependency>
 	        <groupId>io.github.lukehutch</groupId>
