@@ -104,6 +104,8 @@ public class AggregationIterator extends WrappingIterator {
             return new Value(bos.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } finally {
+            aggregation.clear();
         }
     }
 

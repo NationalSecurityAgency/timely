@@ -141,6 +141,10 @@ public class Aggregation implements Iterable<Sample>, Serializable {
         return result;
     }
 
+    public void clear() {
+        buckets.clear();
+    }
+
     public int getNumBuckets() {
         return buckets.size();
     }

@@ -17,7 +17,6 @@ import org.apache.accumulo.core.iterators.WrappingIterator;
 import org.slf4j.LoggerFactory;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
-import timely.model.ObjectSizeOf;
 import timely.model.Tag;
 import timely.api.response.TimelyException;
 import timely.sample.Aggregator;
