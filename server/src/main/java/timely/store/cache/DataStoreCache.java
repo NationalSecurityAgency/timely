@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,7 +48,7 @@ public class DataStoreCache {
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreCache.class);
     public static final String DEFAULT_AGEOFF_KEY = "default";
 
-    private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
+    private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = Collections.synchronizedMap(new HashMap<>());
     private boolean anonAccessAllowed;
     private Map<String, Long> minimumAgeOff;
     private Map<String, String> minimumAgeOffForIterator;
@@ -78,18 +79,22 @@ public class DataStoreCache {
     }
 
     private void ageOffGorillaStores() {
-        for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
-            long maxAge = getAgeOffForMetric(entry1.getKey());
-            for (GorillaStore store : entry1.getValue().values()) {
-                store.ageOffArchivedCompressors(maxAge);
+        synchronized (gorillaMap) {
+            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
+                long maxAge = getAgeOffForMetric(entry1.getKey());
+                for (GorillaStore store : entry1.getValue().values()) {
+                    store.ageOffArchivedCompressors(maxAge);
+                }
             }
         }
     }
 
     private void archiveGorillaStoreCurrentCompressors() {
-        for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
-            for (GorillaStore store : entry.getValue().values()) {
-                store.archiveCurrentCompressor();
+        synchronized (gorillaMap) {
+            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
+                for (GorillaStore store : entry.getValue().values()) {
+                    store.archiveCurrentCompressor();
+                }
             }
         }
     }
@@ -138,12 +143,16 @@ public class DataStoreCache {
     }
 
     public Map<TaggedMetric, GorillaStore> getGorillaStores(String metric) {
-        Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(metric);
-        if (metricMap == null) {
-            metricMap = new HashMap<>();
-            gorillaMap.put(metric, metricMap);
+        Map<TaggedMetric, GorillaStore> returnedMap = new HashMap<>();
+        synchronized (gorillaMap) {
+            Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(metric);
+            if (metricMap == null) {
+                metricMap = new HashMap<>();
+                gorillaMap.put(metric, metricMap);
+            }
+            returnedMap.putAll(metricMap);
         }
-        return metricMap;
+        return returnedMap;
     }
 
     public GorillaStore getGorillaStore(TaggedMetric taggedMetric) {
@@ -376,10 +385,12 @@ public class DataStoreCache {
     public long getNewestTimestamp() {
 
         long newest = 0;
-        for (String metric : gorillaMap.keySet()) {
-            Long newestForMetric = getNewestTimestamp(metric);
-            if (newestForMetric > newest) {
-                newest = newestForMetric;
+        synchronized (gorillaMap) {
+            for (String metric : gorillaMap.keySet()) {
+                Long newestForMetric = getNewestTimestamp(metric);
+                if (newestForMetric > newest) {
+                    newest = newestForMetric;
+                }
             }
         }
         return newest;
@@ -387,10 +398,12 @@ public class DataStoreCache {
 
     public long getOldestTimestamp() {
         long oldest = Long.MAX_VALUE;
-        for (String metric : gorillaMap.keySet()) {
-            Long oldestForMetric = getOldestTimestamp(metric);
-            if (oldestForMetric < oldest) {
-                oldest = oldestForMetric;
+        synchronized (gorillaMap) {
+            for (String metric : gorillaMap.keySet()) {
+                Long oldestForMetric = getOldestTimestamp(metric);
+                if (oldestForMetric < oldest) {
+                    oldest = oldestForMetric;
+                }
             }
         }
         return oldest;

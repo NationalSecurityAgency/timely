@@ -1,14 +1,23 @@
 package timely.test;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
@@ -20,13 +29,14 @@ public class CaptureChannelHandlerContext implements ChannelHandlerContext {
     public static class TestDefaultPromise extends DefaultChannelPromise {
 
         public TestDefaultPromise(Channel channel) {
-            super(channel);
+            super(new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter())));
         }
 
         @Override
         public boolean isSuccess() {
             return true;
         }
+
     }
 
     public Object msg = null;

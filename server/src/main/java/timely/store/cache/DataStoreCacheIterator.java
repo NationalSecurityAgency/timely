@@ -61,7 +61,9 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
             Map.Entry<TaggedMetric, GorillaStore> entry = storeItr.next();
             if (entry.getKey().matches(requestedTags) && entry.getKey().isVisible(visibilityFilter)) {
                 List<WrappedGorillaDecompressor> listDecompressors = entry.getValue().getDecompressors(startTs, endTs);
-                nextPair = new WrappedGorillaDecompressorIterator(entry.getKey(), listDecompressors);
+                if (listDecompressors.size() > 0) {
+                    nextPair = new WrappedGorillaDecompressorIterator(entry.getKey(), listDecompressors);
+                }
             }
         }
         return nextPair;

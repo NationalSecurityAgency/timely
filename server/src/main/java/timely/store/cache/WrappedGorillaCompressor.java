@@ -24,7 +24,7 @@ public class WrappedGorillaCompressor implements Serializable {
     }
 
     public WrappedGorillaCompressor(long timestamp) {
-        this.compressorOutput = new LongArrayOutput(480);
+        this.compressorOutput = new LongArrayOutput(256);
         this.compressor = new GorillaCompressor(timestamp, this.compressorOutput);
         this.oldestTimestamp = timestamp;
         this.newestTimestamp = timestamp;
