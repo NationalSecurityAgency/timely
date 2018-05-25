@@ -20,7 +20,6 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +59,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private Iterator<Range> rangeItr = null;
     private DataStore store = null;
     private Set<Tag> colFamValues = null;
+    private boolean completedResponseSent = false;
 
     public MetricScanner(Subscription sub, String subscriptionId, String sessionId, DataStore store, String metric,
             Map<String, String> tags, long startTime, long endTime, long delay, int lag, ChannelHandlerContext ctx,
@@ -189,12 +189,8 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     done = true;
                 }
                 if (done) {
-                    LOG.debug("Exhausted scanner, sending completed message for subscription {}", this.subscriptionId);
-                    final MetricResponse last = new MetricResponse();
-                    last.setSubscriptionId(this.subscriptionId);
-                    last.setComplete(true);
-                    this.responses.addResponse(last);
-                    flush();
+                    LOG.debug("Exhausted scanner for subscription {}", this.subscriptionId);
+                    sendCompletedResponse();
                 }
             }
         } catch (Throwable e) {
@@ -206,10 +202,22 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
         }
     }
 
+    synchronized private void sendCompletedResponse() {
+        if (!completedResponseSent) {
+            LOG.debug("Sending completed response for subscription {}", this.subscriptionId);
+            final MetricResponse completedResponse = new MetricResponse();
+            completedResponse.setSubscriptionId(this.subscriptionId);
+            completedResponse.setComplete(true);
+            this.responses.addResponse(completedResponse);
+            flush();
+            completedResponseSent = true;
+        }
+    }
+
     public void close() {
         if (!closed) {
             LOG.info("Marking metric scanner closed: {}", name);
-            flush();
+            sendCompletedResponse();
             this.flusher.cancel(false);
             this.closed = true;
         }
