@@ -14,12 +14,26 @@ class WebSocketClient():
     DEFAULT_REQUEST_TIMEOUT = 60
     APPLICATION_JSON = 'application/json'
 
-    def __init__(self, hostport, connect_timeout=DEFAULT_CONNECT_TIMEOUT,
+    def __init__(self, hostport, path, params, connect_timeout=DEFAULT_CONNECT_TIMEOUT,
                  request_timeout=DEFAULT_REQUEST_TIMEOUT):
 
         self.connect_timeout = connect_timeout
         self.request_timeout = request_timeout
-        self.url = 'wss://' + hostport + '/websocket'
+        self.url = 'wss://' + hostport
+        if (path is not None and len(path) > 0):
+            if (path.startswith('/')):
+                self.uri = self.uri + path
+            else:
+                self.uri = self.uri + '/' + path
+        if (any(params.values())):
+            first = True
+            for key, value in params.iteritems():
+                if (first == True):
+                    self.url = self.url + '?'
+                    first = False
+                else:
+                    self.url = self.url + '&'
+                self.url = self.url + key + '=' + value
 
     def connect(self, ioloop=ioloop.IOLoop.current(instance=False)):
         """Connect to the server.

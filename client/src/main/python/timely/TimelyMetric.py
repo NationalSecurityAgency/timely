@@ -23,7 +23,7 @@ class TimelyWebSocketClient(WebSocketClient):
         self.startTime = startTime
         self.endTime = endTime
         self.subscriptionId = random.randint(1000000000, 9999999999)
-        WebSocketClient.__init__(self, hostport, connect_timeout, request_timeout)
+        WebSocketClient.__init__(self, hostport, '/websocket', {'metric' : metric}, connect_timeout, request_timeout)
 
     def _on_message(self, msg):
         # implement in subclass

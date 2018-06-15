@@ -554,7 +554,8 @@ public class Server {
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config));
                 ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
-                ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true));
+                ch.pipeline().addLast("ws-protocol",
+                        new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
                 ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new WSMetricsRequestHandler(config));

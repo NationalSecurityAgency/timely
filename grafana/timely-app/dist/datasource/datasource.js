@@ -227,33 +227,47 @@ System.register(['lodash', 'angular', '../../../app/core/utils/datemath'], funct
           key: 'performTimeSeriesQuery',
           value: function performTimeSeriesQuery(queries, start, end) {
             var msResolution = true;
+            var responsePromises = [];
 
-            var reqBody = {
-              start: start,
-              queries: queries,
-              msResolution: msResolution,
-              globalAnnotations: true,
-              showQuery: true
-            };
+            // execute backend datasourceRequests separately
+            // for better performance and load balancing
+            _.each(queries, function (query) {
 
-            // Relative queries (e.g. last hour) don't include an end time
-            if (end) {
-              reqBody.end = end;
-            }
+              var reqBody = {
+                start: start,
+                queries: [query],
+                msResolution: msResolution,
+                globalAnnotations: true,
+                showQuery: true
+              };
 
-            var options = {
-              method: 'POST',
-              url: this.url + '/api/query',
-              data: reqBody
-            };
+              // Relative queries (e.g. last hour) don't include an end time
+              if (end) {
+                reqBody.end = end;
+              }
 
-            this._addCredentialOptions(options);
+              var options = {
+                method: 'POST',
+                url: this.url + '/api/query?metric=' + query.metric,
+                data: reqBody
+              };
+              this._addCredentialOptions(options);
 
-            // In case the backend is 3rd-party hosted and does not suport OPTIONS, urlencoded requests
-            // go as POST rather than OPTIONS+POST
-            options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+              // In case the backend is 3rd-party hosted and does not suport OPTIONS, urlencoded requests
+              // go as POST rather than OPTIONS+POST
+              options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+              responsePromises.push(this.backendSrv.datasourceRequest(options));
+            }.bind(this));
 
-            return this.backendSrv.datasourceRequest(options);
+            // wait until all promised datasourceRequests complete
+            // and then return combined responses
+            return Promise.all(responsePromises).then(function (queryResponses) {
+              var combinedResponse = queryResponses[0];
+              for (var x = 1; x < queryResponses.length; x++) {
+                combinedResponse.data = combinedResponse.data.concat(queryResponses[x].data);
+              }
+              return combinedResponse;
+            }.bind(this));
           }
         }, {
           key: '_saveTagKeys',
