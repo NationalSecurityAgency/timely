@@ -1,5 +1,6 @@
 package timely.api.request.timeseries;
 
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import timely.api.annotation.Http;
 import timely.api.annotation.WebSocket;
@@ -12,6 +13,8 @@ import timely.api.request.WebSocketRequest;
 @WebSocket(operation = "aggregators")
 public class AggregatorsRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest,
         WebSocketRequest {
+
+    private FullHttpRequest httpRequest = null;
 
     @Override
     public String toString() {
@@ -28,4 +31,11 @@ public class AggregatorsRequest extends AuthenticatedRequest implements HttpGetR
         return new AggregatorsRequest();
     }
 
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
+    }
 }

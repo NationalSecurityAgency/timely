@@ -1,6 +1,8 @@
 package timely.api.request;
 
-public interface HttpPostRequest extends Request {
+import timely.api.request.timeseries.HttpRequest;
+
+public interface HttpPostRequest extends HttpRequest {
 
     public HttpPostRequest parseBody(String content) throws Exception;
 

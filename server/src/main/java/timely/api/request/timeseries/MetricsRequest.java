@@ -1,5 +1,6 @@
 package timely.api.request.timeseries;
 
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import timely.api.annotation.Http;
 import timely.api.annotation.WebSocket;
@@ -12,6 +13,8 @@ import timely.api.request.WebSocketRequest;
 @WebSocket(operation = "metrics")
 public class MetricsRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
+    private FullHttpRequest httpRequest = null;
+
     @Override
     public HttpGetRequest parseQueryParameters(QueryStringDecoder decoder) throws Exception {
         return new MetricsRequest();
@@ -22,4 +25,11 @@ public class MetricsRequest extends AuthenticatedRequest implements HttpGetReque
         return new MetricsRequest();
     }
 
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
+    }
 }

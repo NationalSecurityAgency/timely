@@ -1,6 +1,7 @@
 package timely.api.request;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import io.netty.handler.codec.http.FullHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.annotation.Http;
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequest, UdpRequest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricRequest.class);
+    private FullHttpRequest httpRequest = null;
 
     @XmlElement
     @JsonUnwrapped
@@ -83,5 +85,13 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     @Override
     public int hashCode() {
         return metric != null ? metric.hashCode() : 0;
+    }
+
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
     }
 }

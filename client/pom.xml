@@ -9,7 +9,7 @@
     </parent>
     <properties>
         <!-- PEP 440 compliant version gets supstituted into src/main/python/template/setup.py -->
-        <python.client.version>0.0.7.dev0</python.client.version>
+        <python.client.version>1.0.1.dev0</python.client.version>
     </properties>
     <dependencies>
         <dependency>
@@ -127,40 +127,47 @@
                     </execution>
                 </executions>
             </plugin>
-<!--
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>python-dist</id>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <executable>python</executable>
-                            <workingDirectory>${project.basedir}/src/main/python</workingDirectory>
-                            <commandlineArgs>setup.py sdist - -dist-dir ${project.build.directory}</commandlineArgs>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>python-clean</id>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <executable>rm</executable>
-                            <workingDirectory>${project.basedir}/src/main/python</workingDirectory>
-                            <commandlineArgs>-rf timely.egg-info setup.py</commandlineArgs>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
--->
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>python</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>python-dist</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>package</phase>
+                                <configuration>
+                                    <executable>python</executable>
+                                    <workingDirectory>${project.basedir}/src/main/python</workingDirectory>
+                                    <commandlineArgs>setup.py sdist --dist-dir ${project.build.directory}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>python-clean</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>package</phase>
+                                <configuration>
+                                    <executable>rm</executable>
+                                    <workingDirectory>${project.basedir}/src/main/python</workingDirectory>
+                                    <commandlineArgs>-rf timely.egg-info setup.py</commandlineArgs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
     <reporting>
         <plugins>
             <plugin>

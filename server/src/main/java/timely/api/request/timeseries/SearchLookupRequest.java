@@ -1,5 +1,6 @@
 package timely.api.request.timeseries;
 
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.util.ArrayList;
@@ -32,6 +33,8 @@ public class SearchLookupRequest extends AuthenticatedRequest implements HttpGet
     private int limit = 25;
     @JsonProperty("tags")
     private Collection<Tag> tags = new ArrayList<>();
+
+    private FullHttpRequest httpRequest = null;
 
     public String getQuery() {
         return query;
@@ -142,4 +145,11 @@ public class SearchLookupRequest extends AuthenticatedRequest implements HttpGet
         return search;
     }
 
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
+    }
 }

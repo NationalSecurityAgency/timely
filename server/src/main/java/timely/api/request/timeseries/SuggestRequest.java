@@ -1,5 +1,6 @@
 package timely.api.request.timeseries;
 
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class SuggestRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
     private static List<String> validTypes = new ArrayList<>();
+    private FullHttpRequest httpRequest = null;
     static {
         validTypes.add("metrics");
         validTypes.add("tagk");
@@ -104,4 +106,11 @@ public class SuggestRequest extends AuthenticatedRequest implements HttpGetReque
         return suggest;
     }
 
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
+    }
 }

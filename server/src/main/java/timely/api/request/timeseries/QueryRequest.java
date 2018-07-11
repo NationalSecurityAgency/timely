@@ -1,5 +1,6 @@
 package timely.api.request.timeseries;
 
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.util.ArrayList;
@@ -366,6 +367,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
     private boolean showSummary = false;
     private boolean showQuery = false;
     private boolean delete = false;
+    private FullHttpRequest httpRequest = null;
 
     public boolean isGlobalAnnotations() {
         return globalAnnotations;
@@ -612,5 +614,13 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
             });
         }
         return query;
+    }
+
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
     }
 }
