@@ -28,6 +28,7 @@
         <module>server</module>
         <module>grafana</module>
         <module>analytics</module>
+        <module>testing</module>
     </modules>
     <properties>
         <!-- Configure the os-maven-plugin extension to expand the classifier on -->
@@ -44,6 +45,7 @@
         <version.collectd>5.5.1</version.collectd>
         <version.commons-collections4>4.1</version.commons-collections4>
         <version.commons-configuration>1.10</version.commons-configuration>
+        <version.commons-io>2.6</version.commons-io>
         <version.commons-lang3>3.5</version.commons-lang3>
         <version.commons-pool2>2.4.2</version.commons-pool2>
         <version.disruptor>3.3.6</version.disruptor>
@@ -171,6 +173,11 @@
                 <groupId>commons-configuration</groupId>
                 <artifactId>commons-configuration</artifactId>
                 <version>${version.commons-configuration}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${version.commons-io}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>

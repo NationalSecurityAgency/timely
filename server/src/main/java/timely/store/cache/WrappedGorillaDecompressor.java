@@ -13,13 +13,10 @@ public class WrappedGorillaDecompressor {
 
         this.decompressor = decompressor;
         this.length = length;
-        System.out.println("create WrappedGorillaDecompressor length=" + length + " " + this);
     }
 
     public Pair readPair() {
         if (length == -1 || numRead < length) {
-            System.out.println("reading from WrappedGorillaDecompressor numRead=" + numRead + " length=" + length + " "
-                    + this);
             numRead++;
             return decompressor.readPair();
         } else {

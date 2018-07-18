@@ -367,6 +367,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
     private boolean showSummary = false;
     private boolean showQuery = false;
     private boolean delete = false;
+    @JsonIgnore
     private FullHttpRequest httpRequest = null;
 
     public boolean isGlobalAnnotations() {

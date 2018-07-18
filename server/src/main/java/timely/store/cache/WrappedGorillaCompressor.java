@@ -71,7 +71,6 @@ public class WrappedGorillaCompressor implements Serializable {
             throw new IllegalStateException("Compressor is closed");
         }
         numEntries++;
-        System.out.println("writing to WrappedGorillaDecompressor numEntries=" + numEntries + " " + this);
         newestTimestamp = timestamp;
         compressor.addValue(timestamp, value);
     }
