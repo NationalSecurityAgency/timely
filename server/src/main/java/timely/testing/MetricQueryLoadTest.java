@@ -40,7 +40,6 @@ public class MetricQueryLoadTest {
     private AtomicLong totalQueryDuration = new AtomicLong(0);
     private AtomicLong totalQueriesCompleted = new AtomicLong(0);
 
-
     public MetricQueryLoadTest() {
 
     }
@@ -137,7 +136,8 @@ public class MetricQueryLoadTest {
                 long stop = System.currentTimeMillis();
                 long duration = stop - start;
                 if (!testDone) {
-                    System.out.println("Query for " + metric + " response: " + response.getStatusLine() + " in " + duration + "ms");
+                    System.out.println("Query for " + metric + " response: " + response.getStatusLine() + " in "
+                            + duration + "ms");
                     totalQueryDuration.addAndGet(duration);
                     totalQueriesCompleted.incrementAndGet();
                 }
@@ -179,14 +179,14 @@ public class MetricQueryLoadTest {
             System.out.println("All Done");
             long endQueries = System.currentTimeMillis();
 
-
             long asSeenTime = totalQueryDuration.get() / totalQueriesCompleted.get();
-            System.out.println("Average individual rate for " + totalQueriesCompleted.get() + " = " + asSeenTime + "ms/query");
-            double msPerQuery = (endQueries - beginQueries) / queriesCompleted;
+            System.out.println("Average individual rate for " + totalQueriesCompleted.get() + " = " + asSeenTime
+                    + "ms/query");
+            double msPerQuery = (endQueries - beginQueries) / ((double) queriesCompleted);
             long numQueriesPerHour = Math.round((60 * 60 * 1000) / msPerQuery);
             System.out.println("Aggregate rate for " + queriesCompleted + " = " + msPerQuery + "ms/query");
             System.out.println("Queries per hour = " + numQueriesPerHour);
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         } finally {
             if (executorService != null) {
@@ -196,7 +196,6 @@ public class MetricQueryLoadTest {
     }
 
     public static void main(String[] args) {
-
 
         try {
             MetricQueryLoadTest lt = new MetricQueryLoadTest();
@@ -234,7 +233,8 @@ public class MetricQueryLoadTest {
                 lt.run();
 
             } else {
-                System.out.println("Usage " + MetricQueryLoadTest.class.getName() + " host port metricTestData queryDurationMins testDurationMins");
+                System.out.println("Usage " + MetricQueryLoadTest.class.getName()
+                        + " host port metricTestData queryDurationMins testDurationMins");
                 System.exit(-1);
             }
         } catch (Exception e) {

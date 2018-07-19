@@ -1,7 +1,5 @@
 package timely.testing;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.util.EntityUtils;
 import timely.api.request.timeseries.QueryRequest;
 import timely.util.JsonUtil;
 
@@ -78,4 +76,3 @@ public class MetricQuery {
         return query;
     }
 }
-

@@ -17,12 +17,10 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 public class MetricPutLoadTest {
 
     private ExecutorService executorService = null;
-    private long beginTs;
     private long samplePeriod;
     private List<MetricPut> metrics = new ArrayList<>();
     private Queue<MetricPut> metricsToPut = new LinkedList<>();
@@ -37,7 +35,6 @@ public class MetricPutLoadTest {
         this.port = port;
         this.numThreads = numThreads;
         executorService = Executors.newFixedThreadPool(numThreads);
-        this.beginTs = beginTs;
         this.samplePeriod = samplePeriod;
         try {
             readMetricsFromFile(testDataFile);
@@ -84,13 +81,13 @@ public class MetricPutLoadTest {
             if (metricsToPut.isEmpty()) {
                 metricsToPut.addAll(metrics);
                 nextTimestamp = nextTimestamp + samplePeriod;
-                System.out.println("Sending metrics for ts=" + nextTimestamp + "(" + sdf.format(new Date(nextTimestamp)) + ")");
+                System.out.println("Sending metrics for ts=" + nextTimestamp + "("
+                        + sdf.format(new Date(nextTimestamp)) + ")");
             }
             metricPut = metricsToPut.remove();
         }
         return metricPut;
     }
-
 
     public void run() {
 
@@ -100,7 +97,8 @@ public class MetricPutLoadTest {
             while (true) {
                 MetricPut metricPut = getNextMetric();
                 ts = getNextTimestamp();
-                // once we have caught up, don't post metrics until ts >= current timestamp
+                // once we have caught up, don't post metrics until ts >=
+                // current timestamp
                 while (ts > System.currentTimeMillis()) {
                     try {
                         Thread.sleep(1000);
@@ -123,9 +121,8 @@ public class MetricPutLoadTest {
             }
         };
 
-        List<Future> futures = new ArrayList<>();
-        for (int x=0; x < numThreads; x++) {
-            futures.add(executorService.submit(runnableTask));
+        for (int x = 0; x < numThreads; x++) {
+            executorService.execute(runnableTask);
         }
     }
 
@@ -150,7 +147,8 @@ public class MetricPutLoadTest {
                 MetricPutLoadTest lt = new MetricPutLoadTest(host, port, file, threads, beginTs, 60000);
                 lt.run();
             } else {
-                System.out.println("Usage " + MetricPutLoadTest.class.getName() + " host port metricTestData backlogMinutes");
+                System.out.println("Usage " + MetricPutLoadTest.class.getName()
+                        + " host port metricTestData backlogMinutes");
                 System.exit(-1);
             }
         } catch (Exception e) {
@@ -158,7 +156,7 @@ public class MetricPutLoadTest {
         }
     }
 
-    private class ThreadLocalTcpClient extends ThreadLocal<TcpClient> {
+    static private class ThreadLocalTcpClient extends ThreadLocal<TcpClient> {
 
         private String host;
         private int port;

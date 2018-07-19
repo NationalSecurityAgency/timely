@@ -14,10 +14,10 @@ public class TimelyHttpsUtil {
     private CloseableHttpClient client = null;
     CookieStore cookieStore = new BasicCookieStore();
 
-    public TimelyHttpsUtil(String trustStoreFile, String trustStoreType, String trustStorePass,
-                           String keyStoreFile, String keyStoreType, String keyStorePass) {
-        client = HttpClient.get(trustStoreFile, trustStoreType, trustStorePass,
-                keyStoreFile, keyStoreType, keyStorePass, cookieStore, false);
+    public TimelyHttpsUtil(String trustStoreFile, String trustStoreType, String trustStorePass, String keyStoreFile,
+            String keyStoreType, String keyStorePass) {
+        client = HttpClient.get(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType,
+                keyStorePass, cookieStore, false);
     }
 
     public CloseableHttpResponse query(MetricQuery query, String host, int port) {
