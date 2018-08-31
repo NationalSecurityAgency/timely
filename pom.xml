@@ -28,6 +28,7 @@
         <module>server</module>
         <module>grafana</module>
         <module>analytics</module>
+        <module>balancer</module>
     </modules>
     <properties>
         <!-- Configure the os-maven-plugin extension to expand the classifier on -->

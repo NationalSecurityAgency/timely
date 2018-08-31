@@ -14,22 +14,16 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
-    private String metric = null;
     private ColumnVisibility columnVisibility = null;
     private OrderedTags orderedTags = null;
 
     public TaggedMetric(String metric, List<Tag> tags) {
-        this.metric = metric;
         Map<String, String> tagMap = new LinkedHashMap<>();
         for (Tag t : tags) {
             tagMap.put(t.getKey(), t.getValue());
         }
         this.columnVisibility = extractVisibility(tagMap);
         this.orderedTags = new OrderedTags(tagMap);
-    }
-
-    public String getMetric() {
-        return metric;
     }
 
     public Map<String, String> getTags() {
@@ -43,7 +37,6 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
         }
         TaggedMetric o = (TaggedMetric) obj;
         EqualsBuilder eb = new EqualsBuilder();
-        eb.append(this.metric, o.metric);
         eb.append(this.columnVisibility.toString(), o.columnVisibility.toString());
         eb.append(this.orderedTags, o.orderedTags);
         return eb.isEquals();
@@ -52,7 +45,6 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
     @Override
     public int hashCode() {
         HashCodeBuilder hcb = new HashCodeBuilder();
-        hcb.append(metric);
         hcb.append(columnVisibility);
         hcb.append(orderedTags);
         return hcb.toHashCode();
@@ -61,7 +53,6 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
     @Override
     public int compareTo(TaggedMetric o) {
         CompareToBuilder ctb = new CompareToBuilder();
-        ctb.append(this.metric, o.metric);
         ctb.append(this.columnVisibility, o.columnVisibility);
         ctb.append(this.orderedTags, o.orderedTags);
         return ctb.toComparison();

@@ -30,6 +30,8 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     @JsonUnwrapped
     private Metric metric;
 
+    private String line;
+
     private static final MetricParser metricParser = new MetricParser();
 
     public MetricRequest() {
@@ -57,7 +59,8 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     public void parse(String line) {
         LOG.trace("Parsing Line: {}", line);
         try {
-            metric = metricParser.parse(line);
+            this.metric = metricParser.parse(line);
+            this.line = line;
         } catch (Exception e) {
             LOG.error("Error parsing metric: {}", line);
             throw e;
@@ -67,6 +70,10 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     @Override
     public String toString() {
         return metric.toString();
+    }
+
+    public String getLine() {
+        return line;
     }
 
     @Override

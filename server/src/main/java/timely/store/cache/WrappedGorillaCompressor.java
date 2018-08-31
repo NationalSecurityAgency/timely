@@ -19,7 +19,7 @@ public class WrappedGorillaCompressor implements Serializable {
     private long[] backingArray = null;
     private GorillaCompressor compressor;
 
-    public WrappedGorillaCompressor() {
+    private WrappedGorillaCompressor() {
 
     }
 
@@ -30,18 +30,8 @@ public class WrappedGorillaCompressor implements Serializable {
         this.newestTimestamp = timestamp;
     }
 
-    private void closeBitOutput(LongArrayOutput out) {
-        out.writeBits(0x0F, 4);
-        out.writeBits(0xFFFFFFFF, 32);
-        out.skipBit();
-        out.flush();
-    }
-
     public long[] getCompressorOutput() {
         if (closed) {
-            // long[] copy = new long[backingArray.length];
-            // System.arraycopy(backingArray, 0, copy, 0, backingArray.length);
-            // return copy;
             return backingArray;
         } else {
             return compressorOutput.getLongArray();

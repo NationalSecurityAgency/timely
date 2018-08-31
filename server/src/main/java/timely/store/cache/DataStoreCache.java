@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -61,10 +62,11 @@ public class DataStoreCache {
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
         minimumAgeOff = getMinimumAgeOffs(accumuloAgeOff, cacheAgeOff);
         minimumAgeOffForIterator = getAgeOffForIterator(minimumAgeOff);
-        // Date firstExecution = DateUtils.truncate(new Date(), Calendar.HOUR);
-        // firstExecution = DateUtils.addHours(firstExecution, 1);
-        Date firstExecution = DateUtils.truncate(new Date(), Calendar.MINUTE);
-        firstExecution = DateUtils.addMinutes(firstExecution, 2);
+
+        Calendar now = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+        int hour = now.get(Calendar.HOUR_OF_DAY);
+        // archive compressors and age off every 2 hours (on the even GMT hour)
+        Date firstExecution = DateUtils.addHours(now.getTime(), hour % 2 == 0 ? 2 : 1);
         maintenanceTimer.schedule(new TimerTask() {
 
             @Override
@@ -72,10 +74,7 @@ public class DataStoreCache {
                 ageOffGorillaStores();
                 archiveGorillaStoreCurrentCompressors();
             }
-        }, firstExecution, 300000);
-
-        // }
-        // }, firstExecution, 3600000);
+        }, firstExecution, (2 * 3600 * 1000));
     }
 
     private void ageOffGorillaStores() {
@@ -155,11 +154,11 @@ public class DataStoreCache {
         return returnedMap;
     }
 
-    public GorillaStore getGorillaStore(TaggedMetric taggedMetric) {
-        Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(taggedMetric.getMetric());
+    public GorillaStore getGorillaStore(String metric, TaggedMetric taggedMetric) {
+        Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(metric);
         if (metricMap == null) {
             metricMap = new HashMap<>();
-            gorillaMap.put(taggedMetric.getMetric(), metricMap);
+            gorillaMap.put(metric, metricMap);
         }
         GorillaStore gStore = metricMap.get(taggedMetric);
         if (gStore == null) {
@@ -171,7 +170,7 @@ public class DataStoreCache {
 
     public void store(Metric metric) {
         TaggedMetric taggedMetric = new TaggedMetric(metric.getName(), metric.getTags());
-        GorillaStore gs = getGorillaStore(taggedMetric);
+        GorillaStore gs = getGorillaStore(metric.getName(), taggedMetric);
         gs.addValue(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
     }
 

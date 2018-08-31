@@ -156,8 +156,6 @@ public class GorillaStore {
                 GorillaDecompressor d = new GorillaDecompressor(decompressorByteBufferInput);
 
                 WrappedGorillaDecompressor wd = new WrappedGorillaDecompressor(d, current.getNumEntries());
-                System.out.println("creating Decompressor " + d + " from Compressor " + wd + " numEntries="
-                        + current.getNumEntries());
                 decompressors.add(wd);
             }
         }

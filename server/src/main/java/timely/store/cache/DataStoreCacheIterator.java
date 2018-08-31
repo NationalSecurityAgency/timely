@@ -92,8 +92,8 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
                     }
                 } else {
                     if (gPair.getTimestamp() >= startTs && gPair.getTimestamp() <= endTs) {
-                        entries.put(MetricAdapter.toKey(tm.getMetric(), tm.getTags(), gPair.getTimestamp()), new Value(
-                                MetricAdapter.encodeValue(gPair.getDoubleValue())));
+                        entries.put(MetricAdapter.toKey(this.query.getMetric(), tm.getTags(), gPair.getTimestamp()),
+                                new Value(MetricAdapter.encodeValue(gPair.getDoubleValue())));
                     }
                 }
             }

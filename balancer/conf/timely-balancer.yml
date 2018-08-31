@@ -1,0 +1,141 @@
+timely:
+  metrics-table: timely.metrics
+  meta-table: timely.meta
+  metric-age-off-days:
+    default: 7
+  accumulo:
+    instance-name: dummy
+    zookeepers: localhost
+    username: dummy
+    password: dummy
+    write:
+      latency: 5s
+      threads: 3
+      bufferSize: 52428800
+    scan:
+      threads: 4
+      max-downsample-memory: 10000000
+  security:
+    session-max-age: 86400
+    allow-anonymous-access: true
+    ssl:
+      certificate-file: /home/wwoley/certificates/server2/balancer-server.pem
+      key-file: /home/wwoley/certificates/server2/balancer-server.p8
+      key-password: secret
+      use-generated-keypair: false
+      trust-store-file: /home/wwoley/certificates/server2/ca.pem
+      use-openssl: true
+      #use-ciphers:
+  server:
+    ip: 127.0.0.1
+    tcp-port: 5242
+    udp-port: 5245
+  http:
+    host: localhost
+    ip: 127.0.0.1
+    port: 5243
+    redirect-path: /secure-me
+    strict-transport-max-age: 608400
+    cors:
+      allow-any-origin: false
+      allow-null-origin: false
+      allow-credentials: true
+      allowed-origins:
+      allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+      allowed-headers: content-type
+  websocket:
+    ip: 127.0.0.1
+    port: 5244
+    timeout: 60
+    subscription-lag: 120
+    scanner-batch-size: 10000
+    flush-interval-seconds: 30
+    scanner-read-ahead: 1
+    subscription-batch-size: 5000
+  balancer:
+    timelyHosts:
+      -
+        host: localhost
+        tcpPort: 4242
+        httpPort: 4243
+        wsPort: 4244
+        udpPort: 4245
+      -
+        host: localhost
+        tcpPort: 4342
+        httpPort: 4343
+        wsPort: 4244
+        udpPort: 4245
+      -
+        host: localhost
+        tcpPort: 4442
+        httpPort: 4443
+        wsPort: 4444
+        udpPort: 4445
+    tcpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    httpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    wsClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    udpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    clientSsl:
+      keyFile: /home/wwoley/certificates/server2/timely-client.p12
+      keyType: pkcs12
+      keyPassword: secret
+      trustStoreFile: /home/wwoley/certificates/server2/truststore.jks
+      trustStoreType: jks
+      trustStorePassword: changeit

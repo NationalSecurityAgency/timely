@@ -46,6 +46,7 @@ public class TcpClient implements AutoCloseable {
         if (connect() != 0) {
             throw new IOException();
         }
+        LOG.info("writing '" + metric + "' to " + this.host + ":" + this.port);
         out.write(metric);
     }
 
