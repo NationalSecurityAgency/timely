@@ -37,7 +37,6 @@ class TimelyWebSocketClient(WebSocketClient):
             "subscriptionId": self.subscriptionId,
         }
         self.send(create)
-        self.send(create)
 
         m1 = {
             "operation": "add",
@@ -105,30 +104,41 @@ class TimelyMetric(TimelyWebSocketClient):
         global endtime
 
         responsesObj = json.loads(msg)
+
         responses = responsesObj.get("responses")
+        if responses is not None:
+	    for obj in responses:
+		complete = bool(obj.get("complete"))
+		if complete:
+		    self._on_connection_close()
+		    return
+		else:
+		    date = int(obj.get("timestamp")/1000)
+		    dt = pandas.datetime.utcfromtimestamp(date)
+		    metricName = str(obj.get("metric"))
+		    metricValue = obj.get("value")
 
-        for obj in responses:
-            complete = bool(obj.get("complete"))
-            if complete:
-                self._on_connection_close()
-                return
-            else:
-                date = int(obj.get("timestamp")/1000)
-                dt = pandas.datetime.utcfromtimestamp(date)
-                metricName = str(obj.get("metric"))
-                metricValue = obj.get("value")
+		    newData = {}
+		    newData["date"] = dt
+		    newData[metricName] = metricValue
 
-                newData = {}
-                newData["date"] = dt
-                newData[metricName] = metricValue
+		    tags = obj.get("tags")
+		    for d in tags:
+			for k,v in d.items():
+			    newData[k] = v
 
-                tags = obj.get("tags")
-                for d in tags:
-                    for k,v in d.items():
-                        newData[k] = v
-
-                self.data.append(newData)
-
+		    self.data.append(newData)
+        else:
+            print("Session ended abnormally")
+            exception = responsesObj.get("TimelyException")
+            if exception is not None:
+                code = exception.get("code")
+                message = exception.get("message")
+                print("Exception")
+                print("code: " + str(code))
+                print("message: " + message)
+	    self._on_connection_close()
+	    return
 
     def _on_connection_close(self):
         global client
