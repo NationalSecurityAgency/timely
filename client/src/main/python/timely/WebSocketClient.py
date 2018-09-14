@@ -22,9 +22,9 @@ class WebSocketClient():
         self.url = 'wss://' + hostport
         if (path is not None and len(path) > 0):
             if (path.startswith('/')):
-                self.uri = self.uri + path
+                self.url = self.url + path
             else:
-                self.uri = self.uri + '/' + path
+                self.url = self.url + '/' + path
         if (any(params.values())):
             first = True
             for key, value in params.iteritems():
