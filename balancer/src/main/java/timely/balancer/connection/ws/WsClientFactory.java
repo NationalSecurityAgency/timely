@@ -5,36 +5,46 @@ import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.BasicCookieStore;
+import timely.Configuration;
+import timely.balancer.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
+import timely.client.websocket.subscription.WebSocketSubscriptionClient;
 
 import javax.net.ssl.SSLContext;
 
-public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, HttpClient> {
+public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, WebSocketSubscriptionClient> {
 
     private final SSLContext sslContext;
+    private final boolean doLogin;
+    private Configuration config;
 
-    public WsClientFactory(SSLContext sslContext) {
+    public WsClientFactory(Configuration config, SSLContext sslContext, boolean doLogin) {
         this.sslContext = sslContext;
+        this.doLogin = doLogin;
+        this.config = config;
     }
 
     @Override
-    public PooledObject<HttpClient> makeObject(TimelyBalancedHost k) throws Exception {
-        BasicCookieStore cookieJar = new BasicCookieStore();
-        return new DefaultPooledObject<>(timely.client.http.HttpClient.get(this.sslContext, cookieJar, false));
+    public PooledObject<WebSocketSubscriptionClient> makeObject(TimelyBalancedHost k) throws Exception {
+
+        int bufferSize = config.getWebsocket().getSubscriptionBatchSize() * 500;
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslContext, k.getHost(), k.getHttpPort(),
+                k.getWsPort(), doLogin, "", "", false, bufferSize);
+        return new DefaultPooledObject<>(client);
     }
 
     @Override
-    public void destroyObject(TimelyBalancedHost k, PooledObject<HttpClient> o) throws Exception {
+    public void destroyObject(TimelyBalancedHost k, PooledObject<WebSocketSubscriptionClient> o) throws Exception {
 
     }
 
     @Override
-    public boolean validateObject(TimelyBalancedHost k, PooledObject<HttpClient> o) {
+    public boolean validateObject(TimelyBalancedHost k, PooledObject<WebSocketSubscriptionClient> o) {
         return true;
     }
 
     @Override
-    public void activateObject(TimelyBalancedHost k, PooledObject<HttpClient> o) throws Exception {
+    public void activateObject(TimelyBalancedHost k, PooledObject<WebSocketSubscriptionClient> o) throws Exception {
 
         // try {
         // o.getObject().open();
@@ -45,7 +55,7 @@ public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedH
     }
 
     @Override
-    public void passivateObject(TimelyBalancedHost k, PooledObject<HttpClient> o) throws Exception {
+    public void passivateObject(TimelyBalancedHost k, PooledObject<WebSocketSubscriptionClient> o) throws Exception {
         // try {
         // o.getObject().flush();
         // } catch (Exception e) {

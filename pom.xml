@@ -65,6 +65,7 @@
         <version.powermock>1.6.4</version.powermock>
         <version.slf4j>1.7.21</version.slf4j>
         <version.spring-boot>1.4.1.RELEASE</version.spring-boot>
+        <version.spring-websocket>5.0.8.RELEASE</version.spring-websocket>
         <!-- plugin versions -->
         <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
         <version.findbugs-maven>3.0.3</version.findbugs-maven>

@@ -1,195 +1,205 @@
 package timely.balancer.netty.ws;
 
-import io.netty.buffer.Unpooled;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
+
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.message.BasicHeader;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StreamUtils;
-import timely.api.request.HttpGetRequest;
-import timely.api.request.HttpPostRequest;
-import timely.api.request.MetricRequest;
-import timely.api.request.timeseries.HttpRequest;
-import timely.api.request.timeseries.QueryRequest;
+import timely.Configuration;
+import timely.api.request.subscription.AddSubscription;
+import timely.api.request.subscription.CloseSubscription;
+import timely.api.request.subscription.CreateSubscription;
+import timely.api.request.subscription.RemoveSubscription;
+import timely.api.request.subscription.SubscriptionRequest;
 import timely.api.response.TimelyException;
 import timely.balancer.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
-import timely.balancer.connection.http.HttpClientPool;
+import timely.balancer.connection.ws.WsClientPool;
 import timely.balancer.resolver.MetricResolver;
+import timely.client.websocket.subscription.WebSocketSubscriptionClient;
 import timely.netty.http.TimelyHttpHandler;
 
-import java.io.ByteArrayOutputStream;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.net.ConnectException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class WsRelayHandler extends SimpleChannelInboundHandler<HttpRequest> implements TimelyHttpHandler {
+public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequest> implements TimelyHttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(WsRelayHandler.class);
-    private static final String LOG_RECEIVED_REQUEST = "Received HTTP request {}";
-    private static final String LOG_PARSED_REQUEST = "Parsed request {}";
-    private static final String NO_AUTHORIZATIONS = "";
 
-    private final BalancerConfiguration conf;
-    private final HttpClientPool wsClientPool;
+    private final BalancerConfiguration balancerConfig;
+    private final Configuration config;
+    private final WsClientPool wsClientPool;
     private MetricResolver metricResolver;
+    static private ObjectMapper mapper;
+    Map<String, Map<String, WsClientHolder>> wsClients = new ConcurrentHashMap<>();
+    Map<String, ChannelHandlerContext> wsSubscriptions = new ConcurrentHashMap<>();
 
-    public WsRelayHandler(BalancerConfiguration config, MetricResolver metricResolver, HttpClientPool wsClientPool) {
-        this.conf = config;
+    static {
+        mapper = new ObjectMapper();
+        mapper.registerModule(new Jdk8Module());
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+        mapper.configure(SerializationFeature.WRAP_EXCEPTIONS, true);
+        mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, true);
+    }
+
+    public WsRelayHandler(BalancerConfiguration balancerConfig, Configuration config, MetricResolver metricResolver,
+            WsClientPool wsClientPool) {
+        this.balancerConfig = balancerConfig;
+        this.config = config;
         this.metricResolver = metricResolver;
         this.wsClientPool = wsClientPool;
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, WsReqRequest msg) throws Exception {
-        byte[] buf;
-        HttpClient client = null;
-        TimelyBalancedHost k = null;
-        HttpResponse relayedResponse = null;
+    protected void channelRead0(ChannelHandlerContext ctx, SubscriptionRequest msg) throws Exception {
+        TimelyBalancedHost k;
+        ChannelHandlerContext origContext = null;
+        String subscriptionId;
         try {
-            FullHttpRequest request = msg.getHttpRequest();
-            String originalURI = request.getUri();
-            LOG.info("uri=" + originalURI);
-            originalURI = encodeURI(originalURI);
-            // originalURI = URLEncoder.encode(originalURI, "UTF-8");
-
             String metric = null;
-            if (msg instanceof QueryRequest) {
-                Collection<QueryRequest.SubQuery> subqueries = ((QueryRequest) msg).getQueries();
-                if (subqueries != null) {
-                    Iterator<QueryRequest.SubQuery> itr = subqueries.iterator();
-                    if (itr.hasNext()) {
-                        metric = itr.next().getMetric();
+            if (msg instanceof CreateSubscription) {
+                CreateSubscription create = (CreateSubscription) msg;
+                final String currentSubscriptionId = create.getSubscriptionId();
+                subscriptionId = currentSubscriptionId;
+                wsSubscriptions.put(subscriptionId, ctx);
+                // WebSocketSubscriptionClient sends the createSubscription when
+                // we call open
+                // We don't know where to send it to yet anyway because that
+                // depends on the metric.
+                ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
+
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        Map<String, WsClientHolder> metricToClientMap = wsClients.get(currentSubscriptionId);
+
+                        if (metricToClientMap != null) {
+                            synchronized (metricToClientMap) {
+                                // close all clients for this subscriptionId
+                                LOG.info("Channel closed, closing subscriptions for subscriptionId:%s",
+                                        currentSubscriptionId);
+                                for (Map.Entry<String, WsClientHolder> entry : metricToClientMap.entrySet()) {
+                                    entry.getValue().close(wsClientPool);
+                                }
+                                wsClients.remove(currentSubscriptionId);
+                                wsSubscriptions.remove(currentSubscriptionId);
+                            }
+                        }
+                    }
+                });
+
+            } else if (msg instanceof AddSubscription) {
+                AddSubscription add = (AddSubscription) msg;
+                metric = add.getMetric();
+                subscriptionId = add.getSubscriptionId();
+                origContext = wsSubscriptions.get(subscriptionId);
+                if (origContext == null) {
+                    // send error because user never sent a CreateSubscription
+                    // and we have nowhere to send the results
+                    LOG.info("ChannelHandlerContext not found for subscriptionId:%s - createSubscription not called?",
+                            subscriptionId);
+                    sendErrorResponse(ctx, HttpResponseStatus.BAD_REQUEST, new IllegalArgumentException(
+                            "Must call create first"));
+                }
+                Map<String, WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
+                if (metricToClientMap == null) {
+                    metricToClientMap = new HashMap<>();
+                    wsClients.put(subscriptionId, metricToClientMap);
+                }
+                WebSocketSubscriptionClient client = null;
+                synchronized (metricToClientMap) {
+                    WsClientHolder hostClientHolder = metricToClientMap.get(metric);
+                    if (hostClientHolder == null) {
+                        k = metricResolver.getHostPortKey(metric);
+                        client = wsClientPool.borrowObject(k);
+                        client.open(new WsClientHandler(origContext, (config.getWebsocket().getTimeout() / 2)));
+                        metricToClientMap.put(metric, new WsClientHolder(k, client));
+                    } else {
+                        client = hostClientHolder.getClient();
                     }
                 }
-            }
-            if (msg instanceof MetricRequest) {
-                metric = ((MetricRequest) msg).getMetric().getName();
-            }
-            k = metricResolver.getHostPortKey(metric);
-            client = wsClientPool.borrowObject(k);
+                Map<String, String> tags = null;
 
-            List<Map.Entry<String, String>> headerList = request.headers().entries();
-            Header[] headerArray = new Header[headerList.size()];
-            for (int x = 0; x < headerArray.length; x++) {
-                Map.Entry<String, String> h = headerList.get(x);
-                headerArray[x] = new BasicHeader(h.getKey(), h.getValue());
-            }
-
-            String relayURI = "https://" + k.getHost() + ":" + k.getHttpPort() + originalURI;
-            if (msg instanceof HttpGetRequest) {
-                LOG.info("Get request");
-                HttpUriRequest relayedRequest = new HttpGet(relayURI);
-                if (headerArray.length > 0) {
-                    relayedRequest.setHeaders(headerArray);
+                Long startTime = 0L;
+                Long endTime = 0L;
+                Long delayTime = 5000L;
+                if (add.getTags().isPresent()) {
+                    tags = add.getTags().get();
                 }
-                relayedResponse = client.execute(relayedRequest);
-
-            } else if (msg instanceof HttpPostRequest) {
-                LOG.info("Post request");
-                HttpUriRequest relayedRequest = new HttpPost(relayURI);
-                byte[] content = ((DefaultFullHttpRequest) request).content().array();
-                ByteArrayEntity entity = new ByteArrayEntity(content);
-                ((HttpPost) relayedRequest).setEntity(entity);
-                if (headerArray.length > 0) {
-                    relayedRequest.setHeaders(headerArray);
+                if (add.getStartTime().isPresent()) {
+                    startTime = add.getStartTime().get();
                 }
-                relayedResponse = client.execute(relayedRequest);
-
-            }
-        } catch (Exception e) {
-            String message = e.getMessage();
-            if (message == null) {
-                LOG.error("", e);
-            } else {
-                if (message.contains("No matching tags")) {
-                    LOG.trace(message);
-                } else {
-                    LOG.error(message, e);
+                if (add.getEndTime().isPresent()) {
+                    endTime = add.getEndTime().get();
                 }
-            }
-            this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                    e.getMessage(), e.getLocalizedMessage(), e));
-            return;
-        } finally {
-            if (client != null && k != null) {
-                wsClientPool.returnObject(k, client);
-            }
-        }
-        FullHttpResponse response = null;
-        if (relayedResponse == null) {
-            this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
-                    "Method not allowed", "Method not allowed"));
-        } else {
-            // buf = JsonUtil.getObjectMapper().writeValueAsBytes(msg);
-            ByteArrayOutputStream baos = new MyByteArrayOutputStream();
-            StreamUtils.copy(relayedResponse.getEntity().getContent(), baos);
+                if (add.getDelayTime().isPresent()) {
+                    delayTime = add.getDelayTime().get();
+                }
 
-            response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(relayedResponse
-                    .getStatusLine().getStatusCode()), Unpooled.copiedBuffer(baos.toByteArray()));
-            for (Header h : relayedResponse.getAllHeaders()) {
-                response.headers().add(h.getName(), h.getValue());
+                client.addSubscription(add.getMetric(), tags, startTime, endTime, delayTime);
+
+            } else if (msg instanceof RemoveSubscription) {
+                RemoveSubscription remove = (RemoveSubscription) msg;
+                metric = remove.getMetric();
+                subscriptionId = remove.getSubscriptionId();
+                Map<String, WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
+                if (metricToClientMap != null) {
+                    synchronized (metricToClientMap) {
+                        WsClientHolder hostClientHolder = metricToClientMap.get(metric);
+                        if (hostClientHolder != null) {
+                            hostClientHolder.getClient().removeSubscription(metric);
+                        } else {
+                            LOG.info("client not found for subscriptionId:%s metric:%s", subscriptionId, metric);
+                        }
+                    }
+                }
+            } else if (msg instanceof CloseSubscription) {
+                CloseSubscription close = (CloseSubscription) msg;
+                subscriptionId = close.getSubscriptionId();
+                Map<String, WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
+                if (metricToClientMap != null) {
+                    synchronized (metricToClientMap) {
+                        // close all clients for this subscriptionId
+                        for (Map.Entry<String, WsClientHolder> entry : metricToClientMap.entrySet()) {
+                            entry.getValue().close(wsClientPool);
+                        }
+                    }
+                    wsClients.remove(subscriptionId);
+                    wsSubscriptions.remove(subscriptionId);
+                }
+                ctx.writeAndFlush(new CloseWebSocketFrame(1000, "Client requested close."));
             }
-            // response.headers().set(HttpHeaders.Names.CONTENT_TYPE,
-            // Constants.JSON_TYPE);
-            response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, response.content().readableBytes());
-            sendResponse(ctx, response);
+        } catch (ConnectException e1) {
+            LOG.error(e1.getMessage(), e1);
+            ChannelHandlerContext errorCtx = origContext == null ? ctx : origContext;
+            sendErrorResponse(errorCtx, HttpResponseStatus.INTERNAL_SERVER_ERROR, e1);
+        } catch (Exception e2) {
+            LOG.error(e2.getMessage(), e2);
+            ChannelHandlerContext errorCtx = origContext == null ? ctx : origContext;
+            sendErrorResponse(errorCtx, HttpResponseStatus.INTERNAL_SERVER_ERROR, e2);
         }
 
     }
 
-    static public class MyByteArrayOutputStream extends ByteArrayOutputStream {
+    static public void sendErrorResponse(ChannelHandlerContext ctx, HttpResponseStatus status, Exception ex) {
 
-        public MyByteArrayOutputStream() {
-        }
-
-        public MyByteArrayOutputStream(int size) {
-            super(size);
-        }
-
-        public int getCount() {
-            return count;
-        }
-
-        public byte[] getBuf() {
-            return buf;
-        }
-    }
-
-    static public String encodeURI(String s) {
         try {
-            s = s.replaceAll("\\{", URLEncoder.encode("{", "UTF-8"));
-            s = s.replaceAll("\\}", URLEncoder.encode("}", "UTF-8"));
-        } catch (Exception e) {
-
+            TimelyException te = new TimelyException(status.code(), ex.getMessage(), ex.getMessage());
+            String json = mapper.writeValueAsString(te);
+            ctx.writeAndFlush(new TextWebSocketFrame(json));
+        } catch (JsonProcessingException e) {
+            LOG.error("Error serializing exception");
         }
-        return s;
     }
-
-    public static void main(String[] args) {
-
-        String s = "https://127.0.0.1:4243/api/query?start=1356998400000&end=1528398304000&m=sum:rate{false,100,0}:sys.thermal.gauge{class=aws}";
-        URI uri = URI.create(encodeURI(s));
-
-        System.out.println(uri.toString());
-    }
-
 }

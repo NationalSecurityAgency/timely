@@ -33,7 +33,6 @@ import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.resolver.MetricResolver;
 import timely.netty.http.TimelyHttpHandler;
 
-import javax.net.ssl.SSLContext;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.URLEncoder;

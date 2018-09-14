@@ -20,9 +20,10 @@ public class HashMetricResolver implements MetricResolver {
     final private HealthChecker healthChecker;
 
     public HashMetricResolver(BalancerConfiguration config, HealthChecker healthChecker) {
+        int n = 0;
         for (TimelyBalancedHost h : config.getTimelyHosts()) {
             h.setConfig(config);
-            serverMap.put(0, h);
+            serverMap.put(n++, h);
         }
         this.healthChecker = healthChecker;
     }
@@ -30,11 +31,18 @@ public class HashMetricResolver implements MetricResolver {
     @Override
     public TimelyBalancedHost getHostPortKey(String metric) {
         int n = 0;
-        if (StringUtils.isBlank(metric)) {
-            n = Math.abs(r.nextInt() & Integer.MAX_VALUE) % serverMap.size();
-        } else {
-            n = Math.abs(metric.hashCode() & Integer.MAX_VALUE) % serverMap.size();
-        }
+        // if (StringUtils.isBlank(metric)) {
+        // n = Math.abs(r.nextInt() & Integer.MAX_VALUE) % serverMap.size();
+        // } else {
+        // n = Math.abs(metric.hashCode() & Integer.MAX_VALUE) % if
+        // (StringUtils.isBlank(metric)) {
+        // // n = Math.abs(r.nextInt() & Integer.MAX_VALUE) % serverMap.size();
+        // // } else {
+        // // n = Math.abs(metric.hashCode() & Integer.MAX_VALUE) %
+        // serverMap.size();
+        // // }
+        // serverMap.size();
+        //
         TimelyBalancedHost hpk = serverMap.get(n);
         LOG.info("routing metric: " + metric + " to " + hpk.getHost() + ":" + hpk.getTcpPort());
         return hpk;

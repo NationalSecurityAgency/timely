@@ -47,14 +47,15 @@ import timely.SpringBootstrap;
 import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.connection.tcp.TcpClientPool;
 import timely.balancer.connection.udp.UdpClientPool;
+import timely.balancer.connection.ws.WsClientPool;
 import timely.balancer.healthcheck.HealthChecker;
 import timely.balancer.netty.http.HttpRelayHandler;
 import timely.balancer.netty.tcp.TcpRelayHandler;
 import timely.balancer.netty.udp.UdpRelayHandler;
+import timely.balancer.netty.ws.WsRelayHandler;
 import timely.balancer.resolver.HashMetricResolver;
 import timely.balancer.resolver.MetricResolver;
 import timely.client.http.HttpClient;
-import timely.client.udp.UdpClient;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.NonSslRedirectHandler;
 import timely.netty.http.TimelyExceptionHandler;
@@ -64,15 +65,9 @@ import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpVersionHandler;
 import timely.netty.udp.UdpDecoder;
 import timely.netty.udp.UdpPacketToByteBuf;
-import timely.netty.websocket.WSVersionRequestHandler;
 import timely.netty.websocket.WebSocketHttpCookieHandler;
 import timely.netty.websocket.WebSocketRequestDecoder;
-import timely.netty.websocket.subscription.WSAddSubscriptionRequestHandler;
-import timely.netty.websocket.subscription.WSCloseSubscriptionRequestHandler;
-import timely.netty.websocket.subscription.WSRemoveSubscriptionRequestHandler;
 import timely.netty.websocket.subscription.WSTimelyExceptionHandler;
-import timely.netty.websocket.timeseries.WSAggregatorsRequestHandler;
-import timely.netty.websocket.timeseries.WSMetricsRequestHandler;
 
 import javax.net.ssl.SSLContext;
 import java.io.File;
@@ -380,8 +375,7 @@ public class Balancer {
         httpServer.channel(channelClass);
         httpServer.handler(new LoggingHandler());
         HttpClientPool httpClientPool = new HttpClientPool(balancerConfig, clientSSLContext);
-        httpServer.childHandler(setupHttpChannel(config, balancerConfig, sslCtx, clientSSLContext, metricResolver,
-                httpClientPool));
+        httpServer.childHandler(setupHttpChannel(config, balancerConfig, sslCtx, metricResolver, httpClientPool));
         httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         httpServer.option(ChannelOption.SO_BACKLOG, 128);
         httpServer.option(ChannelOption.SO_KEEPALIVE, true);
@@ -394,7 +388,8 @@ public class Balancer {
         wsServer.group(wsBossGroup, wsWorkerGroup);
         wsServer.channel(channelClass);
         wsServer.handler(new LoggingHandler());
-        wsServer.childHandler(setupWSChannel(config, balancerConfig, sslCtx));
+        WsClientPool wsClientPool = new WsClientPool(config, balancerConfig, clientSSLContext);
+        wsServer.childHandler(setupWSChannel(config, balancerConfig, sslCtx, metricResolver, wsClientPool));
         wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         wsServer.option(ChannelOption.SO_BACKLOG, 128);
         wsServer.option(ChannelOption.SO_KEEPALIVE, true);
@@ -446,7 +441,7 @@ public class Balancer {
     }
 
     protected ChannelHandler setupHttpChannel(Configuration config, BalancerConfiguration balancerConfig,
-            SslContext sslCtx, SSLContext clientSSLContext, MetricResolver metricResolver, HttpClientPool httpClientPool) {
+            SslContext sslCtx, MetricResolver metricResolver, HttpClientPool httpClientPool) {
 
         return new ChannelInitializer<SocketChannel>() {
 
@@ -500,7 +495,8 @@ public class Balancer {
         };
     }
 
-    protected ChannelHandler setupWSChannel(Configuration conf, BalancerConfiguration balancerConfig, SslContext sslCtx) {
+    protected ChannelHandler setupWSChannel(Configuration conf, BalancerConfiguration balancerConfig,
+            SslContext sslCtx, MetricResolver metricResolver, WsClientPool wsClientPool) {
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
@@ -509,15 +505,14 @@ public class Balancer {
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config));
+
                 ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol",
                         new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
-                ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
-                ch.pipeline()
-                        .addLast("httpRelay", new WsRelayHandler(balancerConfig, metricResolver, wsClientPool));
+                ch.pipeline().addLast("httpRelay",
+                        new WsRelayHandler(balancerConfig, config, metricResolver, wsClientPool));
                 ch.pipeline().addLast("error", new WSTimelyExceptionHandler());
-
             }
         };
     }
