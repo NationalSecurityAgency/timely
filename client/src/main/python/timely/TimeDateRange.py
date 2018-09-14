@@ -41,7 +41,7 @@ class TimeDateRange:
     def getBeginMs(self):
         if self.beginDt == None:
             return None
-        return int(time.mktime(self.beginDt.timetuple()) * 1000)
+        return TimeDateRange.unix_time_millis(self.beginDt)
 
     def getBeginStr(self):
         if self.beginDt == None:
@@ -51,7 +51,7 @@ class TimeDateRange:
     def getEndMs(self):
         if self.endDt == None:
             return None
-        return int(time.mktime(self.endDt.timetuple()) * 1000)
+        return TimeDateRange.unix_time_millis(self.endDt)
 
     def getEndStr(self):
         if self.endDt == None:
@@ -123,6 +123,6 @@ class TimeDateRange:
 
     @classmethod
     def unix_time_millis(cls, dt):
-        return (dt - TimeDateRange.epoch).total_seconds() * 1000.0
+        return int((dt - TimeDateRange.epoch).total_seconds() * 1000.0)
 
 
