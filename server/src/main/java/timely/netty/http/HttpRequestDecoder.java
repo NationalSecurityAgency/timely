@@ -104,7 +104,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
                 ((AuthenticatedRequest) request).setSessionId(sessionId);
                 ((AuthenticatedRequest) request).addHeaders(msg.headers().entries());
             }
-            request.setHttpRequest(msg);
+            request.setHttpRequest(msg.copy());
             LOG.trace(LOG_PARSED_REQUEST, request);
             request.validate();
             out.add(request);
