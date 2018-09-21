@@ -28,7 +28,11 @@ def resample(df, sample, how='mean'):
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
         if sample is not None:
-            dataFrame = dataFrame.resample(sample, how=how).interpolate()
+            dataFrame = dataFrame.resample(sample, how=how)
+            if (interpolate == True):
+                dataFrame = dataFrame.interpolate()
+            if fill is not None:
+                dataFrame = dataFrame.fillna(value=fill)
     return dataFrame
 
 

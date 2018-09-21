@@ -87,7 +87,7 @@ def find_alerts(timelyMetric, analyticConfig, notebook=False):
         graphDF = graphDF.select(lambda x : re.search(analyticConfig.includeColRegex, x), axis=1)
 
     if analyticConfig.sample is not None:
-        graphDF = TimelyMetric.resample(graphDF, analyticConfig.sample, how=analyticConfig.how)
+        graphDF = TimelyMetric.resample(graphDF, analyticConfig.sample, how=analyticConfig.how, interpolate=analyticConfig.interpolate, fill=analyticConfig.fill)
 
     graphDF_avg = pandas.DataFrame(graphDF, copy=True)
 

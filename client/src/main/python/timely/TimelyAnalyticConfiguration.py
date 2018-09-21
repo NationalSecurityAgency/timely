@@ -13,6 +13,8 @@ class TimelyAnalyticConfiguration():
             self.counter = analyticConfig.get('counter', False)
             self.sample_period = analyticConfig.get('sample', None)
             self.how = analyticConfig.get('how', 'mean')
+            self.interpolate = analyticConfig.get('interpolate', True)
+            self.fill = analyticConfig.get('fill', None)
             self.rolling_average_period = analyticConfig.get('rolling_average_period', None)
             self.min_threshold = analyticConfig.get('min_threshold', None)
             self.average_min_threshold = analyticConfig.get('average_min_threshold', None)
@@ -63,6 +65,8 @@ class TimelyAnalyticConfiguration():
             self.sample_minutes = analyticConfig.sample_minutes
             self.sample = analyticConfig.sample
             self.how = analyticConfig.how
+            self.interpolate = analyticConfig.interpolate
+            self.fill = analyticConfig.fill
             self.rolling_average_period = analyticConfig.rolling_average_period
             self.rolling_average_samples = analyticConfig.rolling_average_samples
             self.rolling_average_minutes = analyticConfig.rolling_average_minutes
