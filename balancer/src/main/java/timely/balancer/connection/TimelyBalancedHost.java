@@ -4,6 +4,7 @@ import timely.balancer.BalancerConfiguration;
 
 public class TimelyBalancedHost {
 
+    private String regex;
     private String host;
     private int tcpPort;
     private int httpPort;
@@ -72,6 +73,14 @@ public class TimelyBalancedHost {
                 }
             }
         }
+    }
+
+    public String getRegex() {
+        return regex;
+    }
+
+    public void setRegex(String regex) {
+        this.regex = regex;
     }
 
     public String getHost() {

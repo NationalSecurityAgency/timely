@@ -2,18 +2,21 @@ timely:
   balancer:
     timelyHosts:
       -
+        regex: ^[a-g].*
         host: localhost
         tcpPort: 4242
         httpPort: 4243
         wsPort: 4244
         udpPort: 4245
       -
+        regex: ^[h-n].*
         host: localhost
         tcpPort: 4342
         httpPort: 4343
         wsPort: 4244
         udpPort: 4245
       -
+        regex: ^[o-z].*
         host: localhost
         tcpPort: 4442
         httpPort: 4443
@@ -80,9 +83,9 @@ timely:
       blockWhenExhausted: true
       jmxEnabled: true
     clientSsl:
-      keyFile: /home/wwoley/certificates/server2/timely-client.p12
+      keyFile: 
       keyType: pkcs12
-      keyPassword: secret
-      trustStoreFile: /home/wwoley/certificates/server2/truststore.jks
+      keyPassword: 
+      trustStoreFile: 
       trustStoreType: jks
-      trustStorePassword: changeit
+      trustStorePassword: 

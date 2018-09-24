@@ -19,11 +19,11 @@ timely:
     session-max-age: 86400
     allow-anonymous-access: true
     ssl:
-      certificate-file: /home/wwoley/certificates/server2/balancer-server.pem
-      key-file: /home/wwoley/certificates/server2/balancer-server.p8
-      key-password: secret
+      certificate-file: 
+      key-file: 
+      key-password: 
       use-generated-keypair: false
-      trust-store-file: /home/wwoley/certificates/server2/ca.pem
+      trust-store-file: 
       use-openssl: true
       #use-ciphers:
   server:

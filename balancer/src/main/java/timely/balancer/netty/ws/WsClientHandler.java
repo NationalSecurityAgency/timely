@@ -32,13 +32,9 @@ public class WsClientHandler extends ClientHandler {
 
     @Override
     public void onOpen(Session session, EndpointConfig config) {
-        session.addMessageHandler(new MessageHandler.Whole<String>() {
-
-            @Override
-            public void onMessage(String message) {
-                ctx.writeAndFlush(new TextWebSocketFrame(message));
-                LOG.debug("Message received on Websocket session {}: {}", session.getId(), message);
-            }
+        session.addMessageHandler((MessageHandler.Whole<String>) message -> {
+            ctx.writeAndFlush(new TextWebSocketFrame(message));
+            LOG.debug("Message received on Websocket session {}: {}", session.getId(), message);
         });
     }
 

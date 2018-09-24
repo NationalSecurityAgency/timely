@@ -21,7 +21,12 @@ public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
 
     @Override
     public void destroyObject(TimelyBalancedHost k, PooledObject<TcpClient> o) throws Exception {
-
+        try {
+            o.getObject().flush();
+            o.getObject().close();
+        } catch (IOException e) {
+            throw new IOException("Error closing connection to " + k.getHost() + ":" + k.getTcpPort());
+        }
     }
 
     @Override
@@ -44,12 +49,6 @@ public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
             o.getObject().flush();
         } catch (Exception e) {
             throw new IOException("Error flushing connection to " + k.getHost() + ":" + k.getTcpPort());
-        }
-        try {
-            o.getObject().flush();
-            o.getObject().close();
-        } catch (IOException e) {
-            throw new IOException("Error closing connection to " + k.getHost() + ":" + k.getTcpPort());
         }
     }
 }

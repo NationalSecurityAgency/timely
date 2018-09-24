@@ -6,6 +6,8 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.client.udp.UdpClient;
 
+import java.io.IOException;
+
 public class UdpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, UdpClient> {
 
     public UdpClientFactory() {
@@ -18,7 +20,12 @@ public class UdpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
 
     @Override
     public void destroyObject(TimelyBalancedHost k, PooledObject<UdpClient> o) throws Exception {
-
+        try {
+            o.getObject().flush();
+            o.getObject().close();
+        } catch (IOException e) {
+            throw new IOException("Error closing connection to " + k.getHost() + ":" + k.getUdpPort());
+        }
     }
 
     @Override
@@ -27,12 +34,20 @@ public class UdpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
     }
 
     @Override
-    public void activateObject(TimelyBalancedHost timelyBalancedHost, PooledObject<UdpClient> o) throws Exception {
-        o.getObject().open();
+    public void activateObject(TimelyBalancedHost k, PooledObject<UdpClient> o) throws Exception {
+        try {
+            o.getObject().open();
+        } catch (IOException e) {
+            throw new IOException("Unable to connect to " + k.getHost() + ":" + k.getUdpPort());
+        }
     }
 
     @Override
-    public void passivateObject(TimelyBalancedHost timelyBalancedHost, PooledObject<UdpClient> o) throws Exception {
-        o.getObject().close();
+    public void passivateObject(TimelyBalancedHost k, PooledObject<UdpClient> o) throws Exception {
+        try {
+            o.getObject().flush();
+        } catch (Exception e) {
+            throw new IOException("Error flushing connection to " + k.getHost() + ":" + k.getUdpPort());
+        }
     }
 }

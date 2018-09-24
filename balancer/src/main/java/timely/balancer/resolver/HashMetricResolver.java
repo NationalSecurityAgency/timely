@@ -30,19 +30,12 @@ public class HashMetricResolver implements MetricResolver {
 
     @Override
     public TimelyBalancedHost getHostPortKey(String metric) {
-        int n = 0;
-        // if (StringUtils.isBlank(metric)) {
-        // n = Math.abs(r.nextInt() & Integer.MAX_VALUE) % serverMap.size();
-        // } else {
-        // n = Math.abs(metric.hashCode() & Integer.MAX_VALUE) % if
-        // (StringUtils.isBlank(metric)) {
-        // // n = Math.abs(r.nextInt() & Integer.MAX_VALUE) % serverMap.size();
-        // // } else {
-        // // n = Math.abs(metric.hashCode() & Integer.MAX_VALUE) %
-        // serverMap.size();
-        // // }
-        // serverMap.size();
-        //
+        int n;
+        if (StringUtils.isBlank(metric)) {
+            n = Math.abs(r.nextInt() & Integer.MAX_VALUE) % serverMap.size();
+        } else {
+            n = Math.abs(metric.hashCode() & Integer.MAX_VALUE) % serverMap.size();
+        }
         TimelyBalancedHost hpk = serverMap.get(n);
         LOG.info("routing metric: " + metric + " to " + hpk.getHost() + ":" + hpk.getTcpPort());
         return hpk;

@@ -8,8 +8,8 @@ import timely.balancer.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 
 import javax.net.ssl.SSLContext;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+//import java.util.Map;
+//import java.util.concurrent.ConcurrentHashMap;
 
 public class HttpClientPool extends GenericKeyedObjectPool<TimelyBalancedHost, CloseableHttpClient> {
 
@@ -19,35 +19,40 @@ public class HttpClientPool extends GenericKeyedObjectPool<TimelyBalancedHost, C
         super(new HttpClientFactory(sslContext), config.getHttpClientPool());
     }
 
-    private Map<TimelyBalancedHost, Integer> checkedOut = new ConcurrentHashMap<>();
+    // private Map<TimelyBalancedHost, Integer> checkedOut = new
+    // ConcurrentHashMap<>();
 
-    @Override
-    public CloseableHttpClient borrowObject(TimelyBalancedHost key) throws Exception {
-        CloseableHttpClient client = super.borrowObject(key);
-        Integer n;
-        synchronized (checkedOut) {
-            n = checkedOut.get(key);
-            if (n == null) {
-                n = 0;
-            }
-            n++;
-            checkedOut.put(key, n);
-        }
-        LOG.info("Borrowing HttpClient for key " + key.getHost() + ":" + key.getHttpPort() + " " + getNumActive(key)
-                + ":" + getNumIdle(key) + ":" + n);
-        return client;
-    }
-
-    @Override
-    public void returnObject(TimelyBalancedHost key, CloseableHttpClient obj) {
-        super.returnObject(key, obj);
-        Integer n;
-        synchronized (checkedOut) {
-            n = checkedOut.get(key);
-            n--;
-            checkedOut.put(key, n);
-        }
-        LOG.info("Returning HttpClient for key " + key.getHost() + ":" + key.getHttpPort() + " " + getNumActive(key)
-                + ":" + getNumIdle(key) + ":" + n);
-    }
+    // @Override
+    // public CloseableHttpClient borrowObject(TimelyBalancedHost key) throws
+    // Exception {
+    // CloseableHttpClient client = super.borrowObject(key);
+    // Integer n;
+    // synchronized (checkedOut) {
+    // n = checkedOut.get(key);
+    // if (n == null) {
+    // n = 0;
+    // }
+    // n++;
+    // checkedOut.put(key, n);
+    // }
+    // LOG.trace("Borrowing HttpClient for key " + key.getHost() + ":" +
+    // key.getHttpPort() + " " + getNumActive(key)
+    // + ":" + getNumIdle(key) + ":" + n);
+    // return client;
+    // }
+    //
+    // @Override
+    // public void returnObject(TimelyBalancedHost key, CloseableHttpClient obj)
+    // {
+    // super.returnObject(key, obj);
+    // Integer n;
+    // synchronized (checkedOut) {
+    // n = checkedOut.get(key);
+    // n--;
+    // checkedOut.put(key, n);
+    // }
+    // LOG.trace("Returning HttpClient for key " + key.getHost() + ":" +
+    // key.getHttpPort() + " " + getNumActive(key)
+    // + ":" + getNumIdle(key) + ":" + n);
+    // }
 }

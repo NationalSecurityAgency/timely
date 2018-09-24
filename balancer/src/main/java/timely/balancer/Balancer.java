@@ -55,6 +55,7 @@ import timely.balancer.netty.udp.UdpRelayHandler;
 import timely.balancer.netty.ws.WsRelayHandler;
 import timely.balancer.resolver.HashMetricResolver;
 import timely.balancer.resolver.MetricResolver;
+import timely.balancer.resolver.RegexMetricResolver;
 import timely.client.http.HttpClient;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.NonSslRedirectHandler;
@@ -342,7 +343,7 @@ public class Balancer {
 
         TcpClientPool tcpClientPool = new TcpClientPool(this.balancerConfig);
         HealthChecker healthChecker = new HealthChecker(this.balancerConfig, tcpClientPool);
-        this.metricResolver = new HashMetricResolver(this.balancerConfig, healthChecker);
+        this.metricResolver = new RegexMetricResolver(this.balancerConfig, healthChecker);
 
         final ServerBootstrap tcpServer = new ServerBootstrap();
         tcpServer.group(tcpBossGroup, tcpWorkerGroup);
