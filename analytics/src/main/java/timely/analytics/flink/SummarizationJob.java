@@ -13,7 +13,6 @@ import org.apache.flink.streaming.api.functions.sink.SocketClientSink;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.response.MetricResponse;
 
 public class SummarizationJob {

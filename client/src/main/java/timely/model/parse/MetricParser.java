@@ -1,10 +1,10 @@
 package timely.model.parse;
 
+import java.util.List;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import timely.model.Metric;
-
-import java.util.List;
 
 public class MetricParser implements Parser<Metric> {
 

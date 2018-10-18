@@ -2,8 +2,6 @@ package timely.api.response.timeseries;
 
 import org.junit.Assert;
 import org.junit.Test;
-
-import timely.api.response.timeseries.SuggestResponse;
 import timely.util.JsonUtil;
 
 public class SuggestResponseTest {

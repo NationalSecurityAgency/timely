@@ -26,8 +26,8 @@ public interface Aggregator {
     double aggregate(double current, int count, double update);
 
     /**
-     * Compute the final value given the aggregated amount and the number of
-     * items in the aggregate.
+     * Compute the final value given the aggregated amount and the number of items
+     * in the aggregate.
      * 
      * @param current
      *            the last value returned from aggregate

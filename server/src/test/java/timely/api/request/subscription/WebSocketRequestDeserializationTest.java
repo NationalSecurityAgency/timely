@@ -4,12 +4,7 @@ import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
-
 import timely.api.request.WebSocketRequest;
-import timely.api.request.subscription.AddSubscription;
-import timely.api.request.subscription.CloseSubscription;
-import timely.api.request.subscription.CreateSubscription;
-import timely.api.request.subscription.RemoveSubscription;
 import timely.util.JsonUtil;
 
 public class WebSocketRequestDeserializationTest {

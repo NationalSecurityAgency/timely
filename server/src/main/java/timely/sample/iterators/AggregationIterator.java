@@ -1,5 +1,11 @@
 package timely.sample.iterators;
 
+import java.io.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
@@ -12,12 +18,6 @@ import timely.sample.Aggregation;
 import timely.sample.Aggregator;
 import timely.sample.Downsample;
 import timely.sample.Sample;
-
-import java.io.*;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * This iterator will aggregate across series as output from the

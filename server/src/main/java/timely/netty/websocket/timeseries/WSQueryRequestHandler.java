@@ -4,10 +4,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
 import timely.netty.http.timeseries.HttpQueryRequestHandler;

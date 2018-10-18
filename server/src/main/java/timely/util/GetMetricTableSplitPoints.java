@@ -16,9 +16,8 @@ import org.apache.commons.configuration.BaseConfiguration;
 import org.springframework.boot.Banner.Mode;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-
-import timely.SpringBootstrap;
 import timely.Configuration;
+import timely.SpringBootstrap;
 import timely.api.model.Meta;
 
 public class GetMetricTableSplitPoints {

@@ -1,14 +1,12 @@
 package timely.netty.websocket;
 
+import java.util.List;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.FullHttpRequest;
-
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.Configuration;
 import timely.netty.http.HttpRequestDecoder;
 import timely.subscription.SubscriptionRegistry;

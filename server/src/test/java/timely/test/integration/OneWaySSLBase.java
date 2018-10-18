@@ -1,5 +1,12 @@
 package timely.test.integration;
 
+import java.io.File;
+import java.net.URL;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+
 import io.netty.handler.ssl.*;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.After;
@@ -7,12 +14,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import timely.Configuration;
 import timely.auth.AuthCache;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import java.io.File;
-import java.net.URL;
 
 /**
  * Base test class for SSL with anonymous access

@@ -1,5 +1,12 @@
 package timely.sample.iterators;
 
+import static org.junit.Assert.*;
+
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.util.*;
+import java.util.Map.Entry;
+
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
@@ -15,13 +22,6 @@ import timely.sample.Aggregation;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.aggregators.Avg;
-
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
-import java.util.*;
-import java.util.Map.Entry;
-
-import static org.junit.Assert.*;
 
 public class AggregationIteratorTest {
 
@@ -141,8 +141,8 @@ public class AggregationIteratorTest {
         }
     }
 
-    private Map<Set<Tag>, Aggregation> runQuery(SortedKeyValueIterator<Key, Value> iter,
-            SortedMap<Key, Value> testData, long period) throws Exception {
+    private Map<Set<Tag>, Aggregation> runQuery(SortedKeyValueIterator<Key, Value> iter, SortedMap<Key, Value> testData,
+            long period) throws Exception {
         IteratorSetting is = new IteratorSetting(100, AggregationIterator.class);
         AggregationIterator.setAggregationOptions(is, Collections.singletonMap("host", ".*"), Avg.class.getName());
         SortedKeyValueIterator<Key, Value> source = new SortedMapIterator(testData);

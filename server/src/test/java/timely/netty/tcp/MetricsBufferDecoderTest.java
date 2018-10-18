@@ -1,22 +1,19 @@
 package timely.netty.tcp;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.google.flatbuffers.FlatBufferBuilder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Test;
-
 import timely.api.request.MetricRequest;
 import timely.model.Metric;
 import timely.model.Tag;
-
-import com.google.flatbuffers.FlatBufferBuilder;
 
 public class MetricsBufferDecoderTest {
 

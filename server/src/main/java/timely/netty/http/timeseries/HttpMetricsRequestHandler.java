@@ -8,7 +8,8 @@ import timely.api.request.timeseries.MetricsRequest;
 import timely.api.response.timeseries.MetricsResponse;
 import timely.netty.http.TimelyHttpHandler;
 
-public class HttpMetricsRequestHandler extends SimpleChannelInboundHandler<MetricsRequest> implements TimelyHttpHandler {
+public class HttpMetricsRequestHandler extends SimpleChannelInboundHandler<MetricsRequest>
+        implements TimelyHttpHandler {
 
     private Configuration conf = null;
 

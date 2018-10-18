@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import timely.Server;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
@@ -35,9 +34,9 @@ public class DataStoreIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + ONE_HOUR)
-                    + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + (ONE_HOUR * 2))
-                    + " 2.0 tag1=value1 tag3=value3");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + ONE_HOUR) + " 3.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + (ONE_HOUR * 2)) + " 2.0 tag1=value1 tag3=value3");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
@@ -73,10 +72,10 @@ public class DataStoreIT extends OneWaySSLBase {
         try {
             put("sys.cpu.idle " + (TEST_TIME - ONE_DAY - (2 * ONE_HOUR)) + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME - ONE_DAY - ONE_HOUR) + " 3.0 tag1=value1 tag2=value2",
-                    "sys.cpu.idle " + (TEST_TIME - ONE_DAY) + " 2.0 tag1=value1 tag3=value3", "sys.cpu.user "
-                            + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + ONE_HOUR)
-                            + " 3.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + (ONE_HOUR * 2))
-                            + " 2.0 tag1=value1 tag3=value3");
+                    "sys.cpu.idle " + (TEST_TIME - ONE_DAY) + " 2.0 tag1=value1 tag3=value3",
+                    "sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + ONE_HOUR) + " 3.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + (ONE_HOUR * 2)) + " 2.0 tag1=value1 tag3=value3");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(4, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();

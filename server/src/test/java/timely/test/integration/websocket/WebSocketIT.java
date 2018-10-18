@@ -3,6 +3,15 @@ package timely.test.integration.websocket;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import com.fasterxml.jackson.databind.JavaType;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,14 +40,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.security.Authorizations;
 import org.junit.AfterClass;
@@ -50,7 +51,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-
 import timely.Server;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
@@ -75,8 +75,6 @@ import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
-
-import com.fasterxml.jackson.databind.JavaType;
 
 @Category(IntegrationTest.class)
 public class WebSocketIT extends OneWaySSLBase {
@@ -681,8 +679,8 @@ public class WebSocketIT extends OneWaySSLBase {
             }
             assertEquals(1, response.size());
 
-            JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
-                    .constructCollectionType(List.class, QueryResponse.class);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class,
+                    QueryResponse.class);
             List<QueryResponse> results = JsonUtil.getObjectMapper().readValue(response.get(0), type);
 
             assertEquals(1, results.size());

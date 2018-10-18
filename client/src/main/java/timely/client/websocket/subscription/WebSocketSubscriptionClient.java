@@ -13,7 +13,6 @@ import javax.websocket.DeploymentException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.AddSubscription;
 import timely.api.CloseSubscription;
 import timely.api.CreateSubscription;
@@ -37,9 +36,9 @@ public class WebSocketSubscriptionClient extends WebSocketClient {
     }
 
     public WebSocketSubscriptionClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean doLogin,
-            String timelyUsername, String timelyPassword, String keyStoreFile, String keyStoreType,
-            String keyStorePass, String trustStoreFile, String trustStoreType, String trustStorePass,
-            boolean hostVerificationEnabled, int bufferSize) {
+            String timelyUsername, String timelyPassword, String keyStoreFile, String keyStoreType, String keyStorePass,
+            String trustStoreFile, String trustStoreType, String trustStorePass, boolean hostVerificationEnabled,
+            int bufferSize) {
         super(timelyHostname, timelyHttpsPort, timelyWssPort, doLogin, timelyUsername, timelyPassword, keyStoreFile,
                 keyStoreType, keyStorePass, trustStoreFile, trustStoreType, trustStorePass, hostVerificationEnabled,
                 bufferSize);

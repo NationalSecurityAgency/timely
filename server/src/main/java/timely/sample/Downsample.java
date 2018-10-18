@@ -1,15 +1,14 @@
 package timely.sample;
 
-import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import timely.api.request.timeseries.QueryRequest.RateOption;
-import timely.model.ObjectSizeOf;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import timely.api.request.timeseries.QueryRequest.RateOption;
 
 public class Downsample extends Aggregation implements Iterable<Sample>, Serializable {
 

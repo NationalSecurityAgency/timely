@@ -5,10 +5,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.accumulo.core.client.Scanner;
-
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Range;
-import timely.model.Metric;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;
@@ -16,6 +14,7 @@ import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SuggestResponse;
+import timely.model.Metric;
 import timely.model.Tag;
 
 public interface DataStore {

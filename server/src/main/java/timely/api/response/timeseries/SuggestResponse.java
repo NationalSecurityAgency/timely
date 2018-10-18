@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import timely.api.response.timeseries.SuggestResponse.SuggestDeserializer;
-import timely.api.response.timeseries.SuggestResponse.SuggestSerializer;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -17,6 +14,8 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import timely.api.response.timeseries.SuggestResponse.SuggestDeserializer;
+import timely.api.response.timeseries.SuggestResponse.SuggestSerializer;
 
 @JsonSerialize(using = SuggestSerializer.class)
 @JsonDeserialize(using = SuggestDeserializer.class)
@@ -38,8 +37,8 @@ public class SuggestResponse {
     public static class SuggestDeserializer extends JsonDeserializer<SuggestResponse> {
 
         @Override
-        public SuggestResponse deserialize(JsonParser p, DeserializationContext ctxt) throws IOException,
-                JsonProcessingException {
+        public SuggestResponse deserialize(JsonParser p, DeserializationContext ctxt)
+                throws IOException, JsonProcessingException {
             SuggestResponse response = new SuggestResponse();
             if (p.getCurrentToken() == JsonToken.START_ARRAY) {
                 while (p.nextToken() != JsonToken.END_ARRAY) {

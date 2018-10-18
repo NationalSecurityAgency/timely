@@ -1,10 +1,10 @@
 package timely.model.parse;
 
+import java.util.List;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import timely.model.Tag;
-
-import java.util.List;
 
 /**
  * Parses tag1=val1 into a {@code Tag} Combines {@code Tag} into {@code String}

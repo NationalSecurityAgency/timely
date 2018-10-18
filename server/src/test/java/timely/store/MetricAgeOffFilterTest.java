@@ -1,11 +1,11 @@
 package timely.store;
 
+import static org.junit.Assert.*;
+
 import java.util.HashMap;
 
-import static org.junit.Assert.*;
 import org.apache.accumulo.core.data.Key;
 import org.junit.Test;
-
 import timely.adapter.accumulo.MetricAdapter;
 
 public class MetricAgeOffFilterTest {

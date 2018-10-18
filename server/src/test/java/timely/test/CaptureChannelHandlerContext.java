@@ -1,5 +1,7 @@
 package timely.test;
 
+import java.net.SocketAddress;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -12,8 +14,6 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
-
-import java.net.SocketAddress;
 
 public class CaptureChannelHandlerContext implements ChannelHandlerContext {
 

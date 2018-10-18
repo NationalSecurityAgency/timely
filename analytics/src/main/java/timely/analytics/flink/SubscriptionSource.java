@@ -22,7 +22,6 @@ import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.response.MetricResponse;
 import timely.api.response.MetricResponses;
 import timely.client.websocket.ClientHandler;
@@ -66,10 +65,10 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
     public void open(Configuration parameters) throws Exception {
         LOG.info("Opening summarization job.");
         super.open(parameters);
-        client = new WebSocketSubscriptionClient(jp.getTimelyHostname(), jp.getTimelyHttpsPort(),
-                jp.getTimelyWssPort(), jp.isDoLogin(), jp.getTimelyUsername(), jp.getTimelyPassword(),
-                jp.getKeyStoreFile(), jp.getKeyStoreType(), jp.getKeyStorePass(), jp.getTrustStoreFile(),
-                jp.getTrustStoreType(), jp.getTrustStorePass(), jp.isHostVerificationEnabled(), jp.getBufferSize());
+        client = new WebSocketSubscriptionClient(jp.getTimelyHostname(), jp.getTimelyHttpsPort(), jp.getTimelyWssPort(),
+                jp.isDoLogin(), jp.getTimelyUsername(), jp.getTimelyPassword(), jp.getKeyStoreFile(),
+                jp.getKeyStoreType(), jp.getKeyStorePass(), jp.getTrustStoreFile(), jp.getTrustStoreType(),
+                jp.getTrustStorePass(), jp.isHostVerificationEnabled(), jp.getBufferSize());
     }
 
     @Override
@@ -126,13 +125,13 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                                     sourceInputs.add(1);
                                     // Emit a watermark every second of event
                                     // time
-                                        if (lastWatermarkTime == 0) {
-                                            lastWatermarkTime = time;
-                                        } else if ((time - lastWatermarkTime) > window) {
-                                            lastWatermarkTime = time;
-                                            ctx.emitWatermark(new Watermark(time - 1));
-                                        }
-                                    });
+                                    if (lastWatermarkTime == 0) {
+                                        lastWatermarkTime = time;
+                                    } else if ((time - lastWatermarkTime) > window) {
+                                        lastWatermarkTime = time;
+                                        ctx.emitWatermark(new Watermark(time - 1));
+                                    }
+                                });
                             };
                             try {
                                 svc.execute(r);

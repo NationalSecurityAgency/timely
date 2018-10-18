@@ -1,5 +1,9 @@
 package timely.store.iterators;
 
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.*;
+
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
@@ -13,10 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.*;
 
 /**
  * Iterator that groups time series so that a filter can be applied to the time
@@ -48,10 +48,10 @@ import java.util.*;
 public class TimeSeriesGroupingIterator extends WrappingIterator {
 
     /**
-     * Object representing a single time series and its computed value. The
-     * value will be computed when the time series its values reach the target
-     * size. Calling getAndRemoveAnswer will return the answer and clear it's
-     * internal representation.
+     * Object representing a single time series and its computed value. The value
+     * will be computed when the time series its values reach the target size.
+     * Calling getAndRemoveAnswer will return the answer and clear it's internal
+     * representation.
      *
      */
     private static class TimeSeries extends LinkedList<Pair<Key, Double>> implements Serializable {
@@ -94,8 +94,8 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
     /**
      *
-     * Object representing a group of time series, where uniqueness is defined
-     * by the name of the metric and a unique tag set.
+     * Object representing a group of time series, where uniqueness is defined by
+     * the name of the metric and a unique tag set.
      *
      */
     private static class TimeSeriesGroup extends HashMap<Metric, TimeSeries> implements Iterable<Pair<Key, Double>> {
@@ -118,8 +118,8 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         }
 
         /**
-         * Iterates over the time series group and returns for each time series
-         * the last key and the filtered value.
+         * Iterates over the time series group and returns for each time series the last
+         * key and the filtered value.
          */
         @Override
         public Iterator<Pair<Key, Double>> iterator() {
@@ -220,8 +220,8 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     }
 
     /**
-     * This will parse the next set of keys with the same timestamp (encoded in
-     * the row) from the underlying source.
+     * This will parse the next set of keys with the same timestamp (encoded in the
+     * row) from the underlying source.
      * 
      * @throws IOException
      */

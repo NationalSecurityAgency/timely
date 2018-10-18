@@ -4,11 +4,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-import timely.Configuration;
-import timely.api.model.Meta;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import timely.Configuration;
+import timely.api.model.Meta;
 
 public class MetaCacheImpl implements MetaCache {
 

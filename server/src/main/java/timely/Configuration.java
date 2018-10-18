@@ -9,15 +9,13 @@ import java.util.Set;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
+import com.google.common.collect.Lists;
 import org.apache.accumulo.core.client.BatchWriterConfig;
 import org.hibernate.validator.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
-
 import timely.validator.NotEmptyIfFieldSet;
-
-import com.google.common.collect.Lists;
 
 @Component
 @ConfigurationProperties(prefix = "timely")
@@ -282,8 +280,8 @@ public class Configuration {
         private boolean useGeneratedKeypair = false;
         private boolean useOpenssl = true;
         private List<String> useCiphers = Lists.newArrayList("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_RSA_WITH_AES_128_CBC_SHA", "SSL_RSA_WITH_3DES_EDE_CBC_SHA");
+                "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_128_CBC_SHA",
+                "SSL_RSA_WITH_3DES_EDE_CBC_SHA");
 
         public String getCertificateFile() {
             return certificateFile;
@@ -388,9 +386,8 @@ public class Configuration {
         }
 
         /**
-         * Time to wait (in seconds) for connections to finish and to make sure
-         * no new connections happen before shutting down Netty event loop
-         * groups.
+         * Time to wait (in seconds) for connections to finish and to make sure no new
+         * connections happen before shutting down Netty event loop groups.
          *
          * @return
          */

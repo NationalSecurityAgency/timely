@@ -26,14 +26,13 @@ import org.jsoup.select.Elements;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import timely.Server;
-import timely.model.Metric;
-import timely.model.Tag;
 import timely.api.request.VersionRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.model.Value;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
@@ -53,9 +52,10 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4", "zzzz 1234567892 1.0 host=localhost");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+                    "zzzz 1234567892 1.0 host=localhost");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
@@ -143,8 +143,9 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                    "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -178,8 +179,9 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -225,8 +227,9 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -263,8 +266,9 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -298,12 +302,12 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + TEST_TIME
-                    + " 2.0 tag1=value1 tag2=value2 host=h2", "sys.cpu.user " + (TEST_TIME + 1000)
-                    + " 4.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + (TEST_TIME + 1000)
-                    + " 3.0 tag1=value1 tag2=value2 host=h2", "sys.cpu.user " + (TEST_TIME + 2000)
-                    + " 5.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + (TEST_TIME + 2000)
-                    + " 6.0 tag1=value1 tag2=value2 host=h1");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1",
+                    "sys.cpu.user " + TEST_TIME + " 2.0 tag1=value1 tag2=value2 host=h2",
+                    "sys.cpu.user " + (TEST_TIME + 1000) + " 4.0 tag1=value1 tag2=value2 host=h1",
+                    "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2 host=h2",
+                    "sys.cpu.user " + (TEST_TIME + 2000) + " 5.0 tag1=value1 tag2=value2 host=h1",
+                    "sys.cpu.user " + (TEST_TIME + 2000) + " 6.0 tag1=value1 tag2=value2 host=h1");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
@@ -339,10 +343,10 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
-                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                    "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
@@ -577,10 +581,10 @@ public class HttpApiIT extends OneWaySSLBase {
             System.out.println("sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1");
             System.out.println("sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
 
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
-                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                    "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
@@ -638,10 +642,10 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1)
-                    + " 1.0 tag3=value3 rack=r2", "sys.cpu.idle " + (TEST_TIME + 2)
-                    + " 1.0 tag3=value3 tag4=value4 rack=r1", "sys.cpu.idle " + (TEST_TIME + 1000)
-                    + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                    "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                    "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();

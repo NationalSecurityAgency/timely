@@ -1,8 +1,8 @@
 package timely.sample.iterators;
 
-import timely.model.ObjectSizeOf;
-
 import java.util.LinkedList;
+
+import timely.model.ObjectSizeOf;
 
 public class DownsampleMemoryEstimator {
 

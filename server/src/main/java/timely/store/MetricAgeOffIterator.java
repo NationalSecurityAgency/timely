@@ -18,7 +18,6 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.adapter.accumulo.MetricAdapter;
 
 public class MetricAgeOffIterator extends WrappingIterator implements OptionDescriber {
@@ -152,8 +151,8 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
             if (this.range.getEndKey() == null || this.range.getEndKey().compareTo(newStartKey) >= 0) {
                 newRange = new Range(newStartKey, true, this.range.getEndKey(), this.range.isEndKeyInclusive());
             } else {
-                newRange = new Range(this.range.getEndKey(), false, this.range.getEndKey().followingKey(
-                        PartialKey.ROW_COLFAM_COLQUAL_COLVIS_TIME), false);
+                newRange = new Range(this.range.getEndKey(), false,
+                        this.range.getEndKey().followingKey(PartialKey.ROW_COLFAM_COLQUAL_COLVIS_TIME), false);
             }
         }
         try {

@@ -1,14 +1,13 @@
 package timely.model.parse;
 
-import org.junit.Assert;
-import org.junit.Test;
-import timely.model.Tag;
-import timely.model.parse.TagListParser;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.junit.Assert;
+import org.junit.Test;
+import timely.model.Tag;
 
 public class TagListParserTest {
 

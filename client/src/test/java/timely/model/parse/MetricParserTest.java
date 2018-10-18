@@ -1,12 +1,12 @@
 package timely.model.parse;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 import timely.model.Metric;
 import timely.model.Tag;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MetricParserTest {
 

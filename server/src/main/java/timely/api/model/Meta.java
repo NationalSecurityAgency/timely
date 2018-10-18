@@ -57,8 +57,8 @@ public class Meta implements Comparable<Meta> {
 
     public static Meta parse(Key k, Value v) {
         if (k.getColumnQualifier().getLength() > 0) {
-            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), k.getColumnFamily().toString(), k
-                    .getColumnQualifier().toString());
+            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), k.getColumnFamily().toString(),
+                    k.getColumnQualifier().toString());
         } else if (k.getColumnFamily().getLength() > 0) {
             return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), k.getColumnFamily().toString(),
                     null);

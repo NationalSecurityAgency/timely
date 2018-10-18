@@ -14,8 +14,8 @@ import timely.netty.Constants;
 import timely.netty.http.TimelyHttpHandler;
 import timely.util.JsonUtil;
 
-public class HttpAggregatorsRequestHandler extends SimpleChannelInboundHandler<AggregatorsRequest> implements
-        TimelyHttpHandler {
+public class HttpAggregatorsRequestHandler extends SimpleChannelInboundHandler<AggregatorsRequest>
+        implements TimelyHttpHandler {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, AggregatorsRequest msg) throws Exception {

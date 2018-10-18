@@ -10,6 +10,7 @@ import javax.net.ssl.SSLContext;
 import javax.websocket.DeploymentException;
 import javax.websocket.Session;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -27,12 +28,9 @@ import org.glassfish.tyrus.client.ClientProperties;
 import org.glassfish.tyrus.client.SslEngineConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.BasicAuthLogin;
 import timely.client.http.HttpClient;
 import timely.serialize.JsonSerializer;
-
-import com.google.common.base.Preconditions;
 
 public class WebSocketClient implements AutoCloseable {
 
@@ -69,18 +67,17 @@ public class WebSocketClient implements AutoCloseable {
         Preconditions.checkNotNull(timelyHttpsPort, "%s must be supplied", "Timely HTTPS port");
         Preconditions.checkNotNull(timelyWssPort, "%s must be supplied", "Timely WSS port");
 
-        if (doLogin
-                && ((StringUtils.isEmpty(timelyUsername) && !StringUtils.isEmpty(timelyPassword) || (!StringUtils
-                        .isEmpty(timelyUsername) && StringUtils.isEmpty(timelyPassword))))) {
+        if (doLogin && ((StringUtils.isEmpty(timelyUsername) && !StringUtils.isEmpty(timelyPassword)
+                || (!StringUtils.isEmpty(timelyUsername) && StringUtils.isEmpty(timelyPassword))))) {
             throw new IllegalArgumentException("Both Timely username and password must be empty or non-empty");
         }
 
     }
 
     protected WebSocketClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean doLogin,
-            String timelyUsername, String timelyPassword, String keyStoreFile, String keyStoreType,
-            String keyStorePass, String trustStoreFile, String trustStoreType, String trustStorePass,
-            boolean hostVerificationEnabled, int bufferSize) {
+            String timelyUsername, String timelyPassword, String keyStoreFile, String keyStoreType, String keyStorePass,
+            String trustStoreFile, String trustStoreType, String trustStorePass, boolean hostVerificationEnabled,
+            int bufferSize) {
         this(HttpClient.getSSLContext(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType,
                 keyStorePass), timelyHostname, timelyHttpsPort, timelyWssPort, doLogin, timelyUsername, timelyPassword,
                 hostVerificationEnabled, bufferSize);
@@ -116,8 +113,8 @@ public class WebSocketClient implements AutoCloseable {
                 try {
                     response = client.execute(request);
                     if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-                        throw new HttpResponseException(response.getStatusLine().getStatusCode(), response
-                                .getStatusLine().getReasonPhrase());
+                        throw new HttpResponseException(response.getStatusLine().getStatusCode(),
+                                response.getStatusLine().getReasonPhrase());
                     }
                     for (Cookie c : cookieJar.getCookies()) {
                         if (c.getName().equals("TSESSIONID")) {
@@ -143,8 +140,8 @@ public class WebSocketClient implements AutoCloseable {
         webSocketClient.getProperties().put(ClientProperties.SSL_ENGINE_CONFIGURATOR, sslEngine);
         webSocketClient.getProperties().put(ClientProperties.INCOMING_BUFFER_SIZE, bufferSize);
         String wssPath = "wss://" + timelyHostname + ":" + timelyWssPort + "/websocket";
-        session = webSocketClient.connectToServer(clientEndpoint, new TimelyEndpointConfig(sessionCookie), new URI(
-                wssPath));
+        session = webSocketClient.connectToServer(clientEndpoint, new TimelyEndpointConfig(sessionCookie),
+                new URI(wssPath));
 
         final ByteBuffer pingData = ByteBuffer.allocate(0);
         webSocketClient.getScheduledExecutorService().scheduleAtFixedRate(() -> {

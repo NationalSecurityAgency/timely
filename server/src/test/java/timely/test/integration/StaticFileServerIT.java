@@ -2,7 +2,6 @@ package timely.test.integration;
 
 import org.junit.*;
 import org.junit.experimental.categories.Category;
-
 import timely.Server;
 import timely.test.IntegrationTest;
 

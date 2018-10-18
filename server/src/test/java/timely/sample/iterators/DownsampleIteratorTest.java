@@ -17,14 +17,12 @@ import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
-
 import timely.Configuration;
 import timely.adapter.accumulo.MetricAdapter;
+import timely.auth.VisibilityCache;
 import timely.model.Metric;
 import timely.model.ObjectSizeOf;
 import timely.model.Tag;
-import timely.auth.VisibilityCache;
-import timely.model.parse.TagListParser;
 import timely.sample.Downsample;
 import timely.sample.Sample;
 import timely.sample.aggregators.Avg;

@@ -2,7 +2,6 @@ package timely.store;
 
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getMemoryInBytes;
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
-import io.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -31,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
@@ -56,7 +56,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.Configuration;
 import timely.Server;
 import timely.adapter.accumulo.MetricAdapter;
@@ -140,8 +139,8 @@ public class DataStoreImpl implements DataStore {
             apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
             final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
             final Instance instance = new ZooKeeperInstance(aconf);
-            connector = instance
-                    .getConnector(accumuloConf.getUsername(), new PasswordToken(accumuloConf.getPassword()));
+            connector = instance.getConnector(accumuloConf.getUsername(),
+                    new PasswordToken(accumuloConf.getPassword()));
             bwConfig = new BatchWriterConfig();
             bwConfig.setMaxLatency(getTimeInMillis(accumuloConf.getWrite().getLatency()), TimeUnit.MILLISECONDS);
             bwConfig.setMaxMemory(getMemoryInBytes(accumuloConf.getWrite().getBufferSize()) / numWriteThreads);
@@ -384,8 +383,8 @@ public class DataStoreImpl implements DataStore {
             }
         } catch (Exception ex) {
             LOG.error("Error during suggest: " + ex.getMessage(), ex);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during suggest: "
-                    + ex.getMessage(), ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                    "Error during suggest: " + ex.getMessage(), ex.getMessage(), ex);
         }
         return result;
     }
@@ -444,8 +443,8 @@ public class DataStoreImpl implements DataStore {
             result.setTime((int) (System.currentTimeMillis() - startMillis));
         } catch (Exception ex) {
             LOG.error("Error during lookup: " + ex.getMessage(), ex);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during lookup: "
-                    + ex.getMessage(), ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                    "Error during lookup: " + ex.getMessage(), ex.getMessage(), ex);
         }
         return result;
     }
@@ -486,8 +485,9 @@ public class DataStoreImpl implements DataStore {
                     LOG.trace("Downsample period {}", downsample);
                     long startOfFirstPeriod = startTs - (startTs % downsample);
                     long endDistanceFromDownSample = endTs % downsample;
-                    long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsample
-                            - endDistanceFromDownSample : endTs);
+                    long endOfLastPeriod = (endDistanceFromDownSample > 0
+                            ? endTs + downsample - endDistanceFromDownSample
+                            : endTs);
 
                     List<String> tagOrder = prioritizeTags(query.getMetric(), query.getTags());
                     Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
@@ -564,8 +564,8 @@ public class DataStoreImpl implements DataStore {
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
             LOG.error("Error during query: " + ex.getMessage(), ex);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: "
-                    + ex.getMessage(), ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                    "Error during query: " + ex.getMessage(), ex.getMessage(), ex);
         }
     }
 
@@ -724,8 +724,8 @@ public class DataStoreImpl implements DataStore {
             throws TimelyException {
 
         if (colFamValues.size() == 0) {
-            throw new TimelyException(HttpResponseStatus.BAD_REQUEST.code(), "No matching tags", "No tags were found "
-                    + " that matched the submitted tags. Please fix and retry");
+            throw new TimelyException(HttpResponseStatus.BAD_REQUEST.code(), "No matching tags",
+                    "No tags were found " + " that matched the submitted tags. Please fix and retry");
         }
         LOG.trace("Found matching tags: {}", colFamValues);
         for (Tag tag : colFamValues) {
@@ -794,7 +794,8 @@ public class DataStoreImpl implements DataStore {
         if (colFamValues.isEmpty()) {
             final byte[] start_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
             Key startKey = new Key(new Text(start_row));
-            LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeRounded, startKey.toStringNoTime());
+            LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeRounded,
+                    startKey.toStringNoTime());
             final byte[] end_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
             Key endKey = new Key(new Text(end_row));
             LOG.trace("End key for metric {} and time {} is {}", metric, MetricAdapter.roundTimestampToNextHour(end),
@@ -808,15 +809,17 @@ public class DataStoreImpl implements DataStore {
                 while (beginRangeRounded <= lastBeginRangeRounded) {
                     // use end timestamp of begin + 1 hour and one msec
                     // except the last range where we use end + 1 msec
-                    long endRangeTimestamp = (beginRangeRounded == lastBeginRangeRounded) ? end + 1 : beginRangeRounded
-                            + (1000 * 60 * 60) + 1;
-                    long beginRangeTimestamp = (beginRangeRounded == MetricAdapter.roundTimestampToLastHour(start)) ? start
+                    long endRangeTimestamp = (beginRangeRounded == lastBeginRangeRounded) ? end + 1
+                            : beginRangeRounded + (1000 * 60 * 60) + 1;
+                    long beginRangeTimestamp = (beginRangeRounded == MetricAdapter.roundTimestampToLastHour(start))
+                            ? start
                             : beginRangeRounded;
                     for (Tag t : colFamValues) {
                         final byte[] start_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
-                        Key startKey = new Key(new Text(start_row), new Text(t.join()
-                                .getBytes(Charset.forName("UTF-8"))), new Text(MetricAdapter.encodeColQual(
-                                beginRangeTimestamp, "")), new Text(new byte[0]), beginRangeTimestamp);
+                        Key startKey = new Key(new Text(start_row),
+                                new Text(t.join().getBytes(Charset.forName("UTF-8"))),
+                                new Text(MetricAdapter.encodeColQual(beginRangeTimestamp, "")), new Text(new byte[0]),
+                                beginRangeTimestamp);
                         LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeTimestamp,
                                 startKey.toStringNoTime());
                         final byte[] end_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
@@ -939,8 +942,8 @@ public class DataStoreImpl implements DataStore {
             return s;
         } catch (IllegalArgumentException | TableNotFoundException ex) {
             LOG.error("Error during lookup: " + ex.getMessage(), ex);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during lookup: "
-                    + ex.getMessage(), ex.getMessage(), ex);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                    "Error during lookup: " + ex.getMessage(), ex.getMessage(), ex);
         }
     }
 

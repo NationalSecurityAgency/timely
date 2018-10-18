@@ -1,26 +1,23 @@
 package timely.netty.websocket;
 
-import io.netty.channel.Channel;
-import io.netty.channel.local.LocalChannel;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import io.netty.channel.Channel;
+import io.netty.channel.local.LocalChannel;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
 import timely.Configuration;
 import timely.api.request.MetricRequest;
-import timely.model.Metric;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
@@ -32,6 +29,7 @@ import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;
 import timely.auth.AuthCache;
+import timely.model.Metric;
 import timely.subscription.SubscriptionRegistry;
 import timely.test.CaptureChannelHandlerContext;
 import timely.test.TestConfiguration;

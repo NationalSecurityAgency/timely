@@ -14,7 +14,6 @@ import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.SortedMapIterator;
 import org.junit.Assert;
 import org.junit.Test;
-
 import timely.adapter.accumulo.MetricAdapter;
 
 public class MetricAgeOffIteratorTest {
@@ -147,8 +146,8 @@ public class MetricAgeOffIteratorTest {
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
-            Assert.assertTrue(k.getTimestamp() >= (TEST_TIME - (2 * ONE_DAY))
-                    && k.getTimestamp() <= TEST_TIME + (2 * ONE_DAY));
+            Assert.assertTrue(
+                    k.getTimestamp() >= (TEST_TIME - (2 * ONE_DAY)) && k.getTimestamp() <= TEST_TIME + (2 * ONE_DAY));
             seen++;
             iter.next();
         }
@@ -177,10 +176,10 @@ public class MetricAgeOffIteratorTest {
         HashMap<String, String> options = new HashMap<>();
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1));
         iter.init(source, options, null);
-        iter.seek(
-                new Range(new Key("sys.cpu.user"), true, new Key(MetricAdapter.encodeRowKey("sys.cpu.user",
-                        TEST_TIME + 3), new byte[0], new byte[0], new byte[0], TEST_TIME + 3), true), columnFamilies,
-                true);
+        iter.seek(new Range(new Key("sys.cpu.user"), true,
+                new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME + 3), new byte[0], new byte[0],
+                        new byte[0], TEST_TIME + 3),
+                true), columnFamilies, true);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();

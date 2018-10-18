@@ -1,11 +1,11 @@
 package timely.model.parse;
 
-import timely.model.Tag;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import timely.model.Tag;
 
 /**
  * Parses tag1=val1,tag2=val2,tag3=val3 into a {@code List} of {@code Tag}
@@ -44,8 +44,8 @@ public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag
     }
 
     /**
-     * An alternative combiner for a map of string to string instead of a list
-     * of tags
+     * An alternative combiner for a map of string to string instead of a list of
+     * tags
      * 
      * @param tags
      * @return string representation

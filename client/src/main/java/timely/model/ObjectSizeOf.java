@@ -56,12 +56,11 @@ public interface ObjectSizeOf {
         public static final short NUMBER_SIZE = 16;
 
         /**
-         * Get the size of an object. Note that we want something relatively
-         * fast that gives us an order of magnitude here. The java
-         * Instrumentation agent mechanism is a little too costly for general
-         * use here. This will look for the ObjectSizeOf interface and if
-         * implemented on the object will use that. Otherwise it will do a
-         * simple navigation of the fields using reflection.
+         * Get the size of an object. Note that we want something relatively fast that
+         * gives us an order of magnitude here. The java Instrumentation agent mechanism
+         * is a little too costly for general use here. This will look for the
+         * ObjectSizeOf interface and if implemented on the object will use that.
+         * Otherwise it will do a simple navigation of the fields using reflection.
          *
          * @param o
          * @return an approximation of the object size
@@ -104,10 +103,8 @@ public interface ObjectSizeOf {
                             // the hard way...
                             // do not include Class related objects or
                             // reflection objects
-                            if ((o instanceof Class)
-                                    || (o instanceof ClassLoader)
-                                    || (o.getClass().getPackage() != null && o.getClass().getPackage().getName()
-                                            .startsWith("java.lang.reflect"))) {
+                            if ((o instanceof Class) || (o instanceof ClassLoader) || (o.getClass().getPackage() != null
+                                    && o.getClass().getPackage().getName().startsWith("java.lang.reflect"))) {
                                 size = 0;
                             } else if (o instanceof Number || o instanceof Boolean || o instanceof Character) {
                                 size = NUMBER_SIZE;

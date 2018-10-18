@@ -10,8 +10,8 @@ import timely.api.request.WebSocketRequest;
 
 @Http(path = "/api/aggregators")
 @WebSocket(operation = "aggregators")
-public class AggregatorsRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest,
-        WebSocketRequest {
+public class AggregatorsRequest extends AuthenticatedRequest
+        implements HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
     @Override
     public String toString() {

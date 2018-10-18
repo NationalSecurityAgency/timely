@@ -1,23 +1,20 @@
 package timely.auth;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-
 import timely.Configuration;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.Request;
 import timely.api.response.TimelyException;
-
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 public class AuthCache {
 

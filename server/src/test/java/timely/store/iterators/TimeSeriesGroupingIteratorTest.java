@@ -17,7 +17,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
 import timely.model.Tag;
@@ -40,8 +39,8 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
-                    ""), new byte[0], ts);
+            Key k = new Key(row, tags.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
         }
@@ -90,14 +89,14 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
-                    ""), new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             Metric m2 = new Metric("sys.cpu.user", ts, i * 2.0D, tags2);
             byte[] row2 = MetricAdapter.encodeRowKey(m2);
-            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(
-                    ts, ""), new byte[0], ts);
+            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
             Value v2 = new Value(MetricAdapter.encodeValue(m2.getValue().getMeasure()));
             table.put(k2, v2);
         }
@@ -132,8 +131,8 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
-                    ""), new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             if (i < 50) {
@@ -179,8 +178,8 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
-                    ""), new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             if (i > 50) {
@@ -227,21 +226,21 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags1);
             byte[] row = MetricAdapter.encodeRowKey(m);
-            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(ts,
-                    ""), new byte[0], ts);
+            Key k = new Key(row, tags1.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
             Value v = new Value(MetricAdapter.encodeValue(m.getValue().getMeasure()));
             table.put(k, v);
             // jitter the time on the second time series
             Metric m2 = new Metric("sys.cpu.user", ts + 50, i * 2.0D, tags2);
             byte[] row2 = MetricAdapter.encodeRowKey(m2);
-            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(
-                    ts, ""), new byte[0], ts + 50);
+            Key k2 = new Key(row2, tags2.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts + 50);
             Value v2 = new Value(MetricAdapter.encodeValue(m2.getValue().getMeasure()));
             table.put(k2, v2);
             Metric m3 = new Metric("sys.cpu.user", ts, i * 3.0D, tags3);
             byte[] row3 = MetricAdapter.encodeRowKey(m3);
-            Key k3 = new Key(row3, tags3.get(0).join().getBytes(StandardCharsets.UTF_8), MetricAdapter.encodeColQual(
-                    ts, ""), new byte[0], ts);
+            Key k3 = new Key(row3, tags3.get(0).join().getBytes(StandardCharsets.UTF_8),
+                    MetricAdapter.encodeColQual(ts, ""), new byte[0], ts);
             Value v3 = new Value(MetricAdapter.encodeValue(m3.getValue().getMeasure()));
             table.put(k3, v3);
         }
@@ -299,7 +298,8 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
         iter.next();
     }
 
-    private void checkNextResult(TimeSeriesGroupingIterator iter, LinkedList<Double> expectedValues) throws IOException {
+    private void checkNextResult(TimeSeriesGroupingIterator iter, LinkedList<Double> expectedValues)
+            throws IOException {
         assertTrue(iter.hasTop());
         LOG.trace("Expected: {}", expectedValues);
         LOG.trace("Getting value for Key {}", iter.getTopKey());

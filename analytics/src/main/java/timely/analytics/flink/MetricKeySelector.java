@@ -1,7 +1,6 @@
 package timely.analytics.flink;
 
 import org.apache.flink.api.java.functions.KeySelector;
-
 import timely.api.response.MetricResponse;
 
 /**

@@ -1,16 +1,15 @@
 package timely.test.integration.http;
 
 import static org.junit.Assert.assertEquals;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
-
 import timely.Server;
 import timely.netty.http.StrictTransportHandler;
 import timely.test.IntegrationTest;

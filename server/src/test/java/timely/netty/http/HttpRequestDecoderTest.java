@@ -1,13 +1,5 @@
 package timely.netty.http;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -16,31 +8,36 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
 import timely.Configuration;
 import timely.api.request.MetricRequest;
-import timely.model.Metric;
-import timely.model.Tag;
+import timely.api.request.VersionRequest;
 import timely.api.request.timeseries.AggregatorsRequest;
 import timely.api.request.timeseries.QueryRequest;
-import timely.api.request.timeseries.SearchLookupRequest;
-import timely.api.request.timeseries.SuggestRequest;
 import timely.api.request.timeseries.QueryRequest.Filter;
 import timely.api.request.timeseries.QueryRequest.RateOption;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
-import timely.api.request.VersionRequest;
+import timely.api.request.timeseries.SearchLookupRequest;
+import timely.api.request.timeseries.SuggestRequest;
 import timely.auth.AuthCache;
+import timely.model.Metric;
+import timely.model.Tag;
 import timely.netty.Constants;
 import timely.test.TestConfiguration;
 import timely.util.JsonUtil;
-
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 public class HttpRequestDecoderTest {
 
@@ -516,9 +513,7 @@ public class HttpRequestDecoderTest {
     @Test(expected = IllegalArgumentException.class)
     public void testQueryWithNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1,
-                HttpMethod.GET,
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         decoder.decode(null, request, results);
     }
@@ -526,9 +521,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testQueryURIAllAnonAccess() throws Exception {
         decoder = new TestHttpQueryDecoder(anonConfig);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1,
-                HttpMethod.GET,
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -574,9 +567,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testQueryURIAllWithSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1,
-                HttpMethod.GET,
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         addCookie(request);
         decoder.decode(null, request, results);
@@ -640,7 +631,8 @@ public class HttpRequestDecoderTest {
                         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -712,7 +704,8 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -784,7 +777,8 @@ public class HttpRequestDecoderTest {
         + "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -823,7 +817,8 @@ public class HttpRequestDecoderTest {
         + "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);

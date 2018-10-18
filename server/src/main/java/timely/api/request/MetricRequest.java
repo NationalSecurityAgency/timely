@@ -1,5 +1,10 @@
 package timely.api.request;
 
+import java.nio.charset.StandardCharsets;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,10 +15,6 @@ import timely.api.annotation.WebSocket;
 import timely.model.Metric;
 import timely.model.parse.MetricParser;
 import timely.util.JsonUtil;
-
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.nio.charset.StandardCharsets;
 
 @Tcp(operation = "put")
 @Udp(operation = "put")

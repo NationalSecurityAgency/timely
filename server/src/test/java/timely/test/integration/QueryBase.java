@@ -2,7 +2,6 @@ package timely.test.integration;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -12,16 +11,15 @@ import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import com.fasterxml.jackson.databind.JavaType;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.util.JsonUtil;
-
-import com.fasterxml.jackson.databind.JavaType;
 
 public abstract class QueryBase extends MacITBase {
 
@@ -112,8 +110,8 @@ public abstract class QueryBase extends MacITBase {
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
             LOG.info("Result is {}", result);
-            JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
-                    .constructCollectionType(List.class, QueryResponse.class);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class,
+                    QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);
         } else {
             throw new NotSuccessfulException();
@@ -141,8 +139,8 @@ public abstract class QueryBase extends MacITBase {
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
             LOG.info("Result is {}", result);
-            JavaType type = JsonUtil.getObjectMapper().getTypeFactory()
-                    .constructCollectionType(List.class, QueryResponse.class);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class,
+                    QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);
         } else {
             throw new NotSuccessfulException();

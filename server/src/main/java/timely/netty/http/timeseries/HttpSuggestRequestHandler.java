@@ -8,10 +8,8 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.request.timeseries.SuggestRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
@@ -19,7 +17,8 @@ import timely.netty.http.TimelyHttpHandler;
 import timely.store.DataStore;
 import timely.util.JsonUtil;
 
-public class HttpSuggestRequestHandler extends SimpleChannelInboundHandler<SuggestRequest> implements TimelyHttpHandler {
+public class HttpSuggestRequestHandler extends SimpleChannelInboundHandler<SuggestRequest>
+        implements TimelyHttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpSuggestRequestHandler.class);
     private final DataStore dataStore;

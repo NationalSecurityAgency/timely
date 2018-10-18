@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.flink.streaming.util.serialization.SerializationSchema;
-
 import timely.model.Tag;
 
 public class MetricHistogram implements Serializable, SerializationSchema<MetricHistogram> {

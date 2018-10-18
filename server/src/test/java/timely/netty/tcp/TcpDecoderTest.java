@@ -1,22 +1,20 @@
 package timely.netty.tcp;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
 import timely.Configuration;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.MetricRequest;
-import timely.model.Metric;
-import timely.model.Tag;
 import timely.api.request.VersionRequest;
 import timely.auth.VisibilityCache;
+import timely.model.Metric;
+import timely.model.Tag;
 
 public class TcpDecoderTest {
 

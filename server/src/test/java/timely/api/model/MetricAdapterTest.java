@@ -15,7 +15,6 @@ import org.apache.accumulo.core.util.ComparablePair;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
 import timely.Configuration;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.response.MetricResponse;
@@ -118,8 +117,9 @@ public class MetricAdapterTest {
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
         PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
-        Key k = new Key(row, "tag1=value1".getBytes(), colQualCoder.encode(new ComparablePair<>(new Long(1000),
-                "tag2=value2,tag3=value3")), "(a&b)|(c&d)".getBytes(), 1000);
+        Key k = new Key(row, "tag1=value1".getBytes(),
+                colQualCoder.encode(new ComparablePair<>(new Long(1000), "tag2=value2,tag3=value3")),
+                "(a&b)|(c&d)".getBytes(), 1000);
         Value v = new Value(value);
         Metric m = MetricAdapter.parse(k, v);
         Assert.assertEquals("sys.cpu.user", m.getName());
@@ -139,8 +139,9 @@ public class MetricAdapterTest {
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
         PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
-        Key k = new Key(row, "tag1=value1".getBytes(), colQualCoder.encode(new ComparablePair<>(new Long(1000),
-                "tag2=test\\,value2,tag3=val\\=ue3")), "(a&b)|(c&d)".getBytes(), 1000);
+        Key k = new Key(row, "tag1=value1".getBytes(),
+                colQualCoder.encode(new ComparablePair<>(new Long(1000), "tag2=test\\,value2,tag3=val\\=ue3")),
+                "(a&b)|(c&d)".getBytes(), 1000);
         Value v = new Value(value);
         Metric m = MetricAdapter.parse(k, v);
         Assert.assertEquals("sys.cpu.user", m.getName());
@@ -160,8 +161,9 @@ public class MetricAdapterTest {
         byte[] value = new byte[Double.BYTES];
         ByteBuffer.wrap(value).putDouble(2.0D);
         PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
-        Key k = new Key(row, "tag1=value1".getBytes(), colQualCoder.encode(new ComparablePair<>(new Long(1000),
-                "tag2=value2,tag3=value3")), "(a&b)|(c&d)".getBytes(), 1000);
+        Key k = new Key(row, "tag1=value1".getBytes(),
+                colQualCoder.encode(new ComparablePair<>(new Long(1000), "tag2=value2,tag3=value3")),
+                "(a&b)|(c&d)".getBytes(), 1000);
         Value v = new Value(value);
         Metric m = MetricAdapter.parse(k, v, true);
         Assert.assertEquals("sys.cpu.user", m.getName());

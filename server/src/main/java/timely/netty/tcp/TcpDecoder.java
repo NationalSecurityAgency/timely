@@ -1,17 +1,16 @@
 package timely.netty.tcp;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.util.List;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-
-import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.api.annotation.AnnotationResolver;
 import timely.api.request.TcpRequest;
 

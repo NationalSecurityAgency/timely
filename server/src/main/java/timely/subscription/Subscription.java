@@ -1,17 +1,15 @@
 package timely.subscription;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.util.concurrent.ScheduledFuture;
-
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import timely.Configuration;
 import timely.api.response.TimelyException;
 import timely.store.DataStore;

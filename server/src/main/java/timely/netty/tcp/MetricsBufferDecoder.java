@@ -2,15 +2,14 @@ package timely.netty.tcp;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import timely.api.flatbuffer.Metrics;
-import timely.api.request.MetricRequest;
-import timely.model.Metric;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import timely.api.flatbuffer.Metrics;
+import timely.api.request.MetricRequest;
+import timely.model.Metric;
 import timely.model.Tag;
 
 public class MetricsBufferDecoder extends ByteToMessageDecoder {
@@ -54,8 +53,8 @@ public class MetricsBufferDecoder extends ByteToMessageDecoder {
     }
 
     public Metric parseFlatbuffer(timely.api.flatbuffer.Metric flatMetric) {
-        Metric.Builder builder = Metric.newBuilder().name(flatMetric.name())
-                .value(flatMetric.timestamp(), flatMetric.value());
+        Metric.Builder builder = Metric.newBuilder().name(flatMetric.name()).value(flatMetric.timestamp(),
+                flatMetric.value());
         for (int i = 0; i < flatMetric.tagsLength(); i++) {
             timely.api.flatbuffer.Tag t = flatMetric.tags(i);
             builder.tag(new Tag(t.key(), t.value()));

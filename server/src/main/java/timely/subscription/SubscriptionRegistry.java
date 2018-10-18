@@ -1,8 +1,8 @@
 package timely.subscription;
 
-import io.netty.util.AttributeKey;
-
 import java.util.concurrent.ConcurrentHashMap;
+
+import io.netty.util.AttributeKey;
 
 public class SubscriptionRegistry extends ConcurrentHashMap<String, Subscription> {
 
