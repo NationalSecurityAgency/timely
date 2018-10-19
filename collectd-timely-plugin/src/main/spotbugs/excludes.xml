@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
-  <Or>
+  <Match>
     <Bug pattern="DM_DEFAULT_ENCODING"/>
     <Method name="connect" />
     <Class name="timely.collectd.plugin.WriteTimelyPlugin"/>
-  </Or>
+  </Match>
 </FindBugsFilter>

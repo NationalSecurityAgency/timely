@@ -187,7 +187,6 @@
               <descriptors>
                 <descriptor>src/main/dist/assembly.xml</descriptor>
               </descriptors>
-              <tarLongFileMode>posix</tarLongFileMode>
             </configuration>
           </execution>
         </executions>
@@ -252,18 +251,6 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
-      </plugin>
     </plugins>
     <extensions>
       <!-- Use os-maven-plugin to initialize the "os.detected" properties -->
@@ -273,51 +260,6 @@
       </extension>
     </extensions>
   </build>
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${version.findbugs-maven}</version>
-        <configuration>
-          <effort>Max</effort>
-          <threshold>Medium</threshold>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-pmd-plugin</artifactId>
-        <configuration>
-          <targetJdk>1.8</targetJdk>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <version>${version.jacoco}</version>
-        <reportSets>
-          <reportSet>
-            <id>JaCoCo Unit Test Coverage</id>
-            <reports>
-              <report>report</report>
-            </reports>
-            <configuration>
-              <dataFile>${project.build.directory}/coverage/jacoco-ut.exec</dataFile>
-            </configuration>
-          </reportSet>
-          <reportSet>
-            <id>JaCoCo Integration Test Coverage</id>
-            <reports>
-              <report>report-integration</report>
-            </reports>
-            <configuration>
-              <dataFile>${project.build.directory}/coverage/jacoco-it.exec</dataFile>
-            </configuration>
-          </reportSet>
-        </reportSets>
-      </plugin>
-    </plugins>
-  </reporting>
   <profiles>
     <profile>
       <id>native-epoll-linux</id>

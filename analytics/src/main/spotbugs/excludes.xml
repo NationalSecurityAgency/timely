@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <Match>
+    <Class name="timely.analytics.flink.MetricHistogram" />
+    <Method name="serialize" />
+    <Bug pattern="DM_DEFAULT_ENCODING" />
+  </Match>
+  <Match>
+    <Class name="timely.analytics.flink.SortedStringAccumulator" />
+    <Method name="clone" />
+    <Bug pattern="CN_IDIOM_NO_SUPER_CALL" />
+  </Match>
+  <Match>
+    <Class name="timely.analytics.flink.SummarizationJobParameters" />
+    <Method name="getMetrics" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+</FindBugsFilter>

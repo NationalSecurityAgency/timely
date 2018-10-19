@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
-  <Or>
+  <Match>
     <Package name="timely.api.flatbuffer"/>
-  </Or>
+  </Match>
   <Match>
     <Class name="timely.Server" />
     <Method name="shutdown" />

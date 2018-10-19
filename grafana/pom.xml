@@ -7,6 +7,7 @@
     <version>1.0.1-SNAPSHOT</version>
   </parent>
   <artifactId>timely-app</artifactId>
+  <packaging>pom</packaging>
   <build>
     <plugins>
       <plugin>
@@ -23,14 +24,9 @@
               <descriptors>
                 <descriptor>assembly.xml</descriptor>
               </descriptors>
-              <tarLongFileMode>posix</tarLongFileMode>
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>

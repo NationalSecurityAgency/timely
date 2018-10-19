@@ -30,6 +30,7 @@
     <url>https://github.com/NationalSecurityAgency/timely/issues</url>
   </issueManagement>
   <properties>
+    <assembly.tarLongFileMode>posix</assembly.tarLongFileMode>
     <collectd-api-jar>/usr/share/collectd/java/collectd-api.jar</collectd-api-jar>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
@@ -39,7 +40,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <version.accumulo>1.7.4</version.accumulo>
-    <version.beanutils>1.9.3</version.beanutils>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
     <version.caffeine>2.3.3</version.caffeine>
     <version.collectd>5.5.1</version.collectd>
@@ -48,9 +48,7 @@
     <version.commons-pool2>2.4.2</version.commons-pool2>
     <version.disruptor>3.3.6</version.disruptor>
     <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
-    <version.fast-classpath-scanner>2.0.5</version.fast-classpath-scanner>
-    <version.findbugs-maven>3.0.3</version.findbugs-maven>
-    <version.formatter>2.8.0</version.formatter>
+    <version.flink>1.1.4</version.flink>
     <version.google-flatbuffers>1.10.0</version.google-flatbuffers>
     <version.guava>19.0</version.guava>
     <version.hadoop>2.7.3</version.hadoop>
@@ -77,7 +75,9 @@
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.4</version.powermock>
     <version.slf4j>1.7.21</version.slf4j>
+    <version.spotbugs-maven>3.1.7</version.spotbugs-maven>
     <version.spring-boot>1.4.1.RELEASE</version.spring-boot>
+    <version.tyrus>1.13</version.tyrus>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -119,12 +119,12 @@
       <dependency>
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
-        <version>${version.beanutils}</version>
+        <version>1.9.3</version>
       </dependency>
       <dependency>
         <groupId>io.github.lukehutch</groupId>
         <artifactId>fast-classpath-scanner</artifactId>
-        <version>${version.fast-classpath-scanner}</version>
+        <version>2.0.5</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -161,6 +161,21 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-pool2</artifactId>
         <version>${version.commons-pool2}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-clients_2.11</artifactId>
+        <version>${version.flink}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-java</artifactId>
+        <version>${version.flink}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-streaming-java_2.11</artifactId>
+        <version>${version.flink}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -229,6 +244,16 @@
         <version>${version.httpcomponents}</version>
       </dependency>
       <dependency>
+        <groupId>org.glassfish.tyrus</groupId>
+        <artifactId>tyrus-client</artifactId>
+        <version>${version.tyrus}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.tyrus</groupId>
+        <artifactId>tyrus-container-grizzly-client</artifactId>
+        <version>${version.tyrus}</version>
+      </dependency>
+      <dependency>
         <groupId>org.jsoup</groupId>
         <artifactId>jsoup</artifactId>
         <version>${version.jsoup}</version>
@@ -237,6 +262,11 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${version.slf4j}</version>
+      </dependency>
+      <dependency>
+        <groupId>timely</groupId>
+        <artifactId>collectd-plugin-parent</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>timely</groupId>
@@ -320,7 +350,7 @@
         <plugin>
           <groupId>net.revelc.code.formatter</groupId>
           <artifactId>formatter-maven-plugin</artifactId>
-          <version>${version.formatter}</version>
+          <version>2.8.0</version>
           <configuration>
             <compilerCompliance>${maven.compiler.source}</compilerCompliance>
             <compilerSource>${maven.compiler.source}</compilerSource>
@@ -431,62 +461,21 @@
             <doCheck>false</doCheck>
             <doUpdate>false</doUpdate>
           </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>create</goal>
-              </goals>
-              <phase>validate</phase>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
-          <version>${version.findbugs-maven}</version>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>${version.spotbugs-maven}</version>
           <configuration>
             <effort>Max</effort>
             <threshold>Medium</threshold>
             <xmlOutput>true</xmlOutput>
-            <excludeFilterFile>src/main/resources/findbugs-excludes.xml</excludeFilterFile>
           </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>check</goal>
-              </goals>
-              <phase>prepare-package</phase>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>${version.jacoco}</version>
-          <executions>
-            <execution>
-              <id>jacoco-prepare-ut</id>
-              <goals>
-                <goal>prepare-agent</goal>
-              </goals>
-              <phase>process-test-classes</phase>
-              <configuration>
-                <destFile>${project.build.directory}/coverage/jacoco-ut.exec</destFile>
-                <propertyName>sureFireArgLine</propertyName>
-              </configuration>
-            </execution>
-            <execution>
-              <id>jacoco-prepare-it</id>
-              <goals>
-                <goal>prepare-agent-integration</goal>
-              </goals>
-              <phase>pre-integration-test</phase>
-              <configuration>
-                <destFile>${project.build.directory}/coverage/jacoco-it.exec</destFile>
-                <propertyName>failsafeArgLine</propertyName>
-              </configuration>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -510,6 +499,70 @@
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.0.0-M2</version>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.0.5</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>[${maven.compiler.target},)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create-buildnumber</id>
+            <goals>
+              <goal>create</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>jacoco-prepare-ut</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <phase>process-test-classes</phase>
+            <configuration>
+              <destFile>${project.build.directory}/coverage/jacoco-ut.exec</destFile>
+              <propertyName>sureFireArgLine</propertyName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>jacoco-prepare-it</id>
+            <goals>
+              <goal>prepare-agent-integration</goal>
+            </goals>
+            <phase>pre-integration-test</phase>
+            <configuration>
+              <destFile>${project.build.directory}/coverage/jacoco-it.exec</destFile>
+              <propertyName>failsafeArgLine</propertyName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>com.github.ekryd.sortpom</groupId>
         <artifactId>sortpom-maven-plugin</artifactId>
@@ -547,8 +600,62 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>spotbugs</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>prepare-package</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>${version.spotbugs-maven}</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-pmd-plugin</artifactId>
+        <configuration>
+          <targetJdk>${maven.compiler.target}</targetJdk>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${version.jacoco}</version>
+        <reportSets>
+          <reportSet>
+            <id>JaCoCo Unit Test Coverage</id>
+            <reports>
+              <report>report</report>
+            </reports>
+            <configuration>
+              <dataFile>${project.build.directory}/coverage/jacoco-ut.exec</dataFile>
+            </configuration>
+          </reportSet>
+          <reportSet>
+            <id>JaCoCo Integration Test Coverage</id>
+            <reports>
+              <report>report-integration</report>
+            </reports>
+            <configuration>
+              <dataFile>${project.build.directory}/coverage/jacoco-it.exec</dataFile>
+            </configuration>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
   <profiles>
     <profile>
       <id>collectd</id>
@@ -557,6 +664,17 @@
         <module>collectd-nsq-plugin</module>
         <module>collectd-plugin-parent</module>
       </modules>
+    </profile>
+    <profile>
+      <id>add-spotbugs-excludes</id>
+      <activation>
+        <file>
+          <exists>src/main/spotbugs/excludes.xml</exists>
+        </file>
+      </activation>
+      <properties>
+        <spotbugs.excludeFilterFile>src/main/spotbugs/excludes.xml</spotbugs.excludeFilterFile>
+      </properties>
     </profile>
     <profile>
       <id>m2e</id>

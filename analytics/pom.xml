@@ -7,9 +7,6 @@
     <version>1.0.1-SNAPSHOT</version>
   </parent>
   <artifactId>timely-analytics</artifactId>
-  <properties>
-    <flink.version>1.1.4</flink.version>
-  </properties>
   <!--
 
   Execute "mvn clean package -Pbuild-jar"
@@ -37,17 +34,14 @@
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-clients_2.11</artifactId>
-      <version>${flink.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-java</artifactId>
-      <version>${flink.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-streaming-java_2.11</artifactId>
-      <version>${flink.version}</version>
     </dependency>
     <dependency>
       <groupId>timely</groupId>
@@ -222,19 +216,16 @@
         <dependency>
           <groupId>org.apache.flink</groupId>
           <artifactId>flink-clients_2.11</artifactId>
-          <version>${flink.version}</version>
           <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.flink</groupId>
           <artifactId>flink-java</artifactId>
-          <version>${flink.version}</version>
           <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.flink</groupId>
           <artifactId>flink-streaming-java_2.11</artifactId>
-          <version>${flink.version}</version>
           <scope>provided</scope>
         </dependency>
       </dependencies>

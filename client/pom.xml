@@ -8,7 +8,7 @@
   </parent>
   <artifactId>timely-client</artifactId>
   <properties>
-    <!-- PEP 440 compliant version gets supstituted into src/main/python/template/setup.py -->
+    <!-- PEP 440 compliant version gets substituted into src/main/python/template/setup.py -->
     <python.client.version>0.0.7.dev0</python.client.version>
   </properties>
   <dependencies>
@@ -43,12 +43,10 @@
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-client</artifactId>
-      <version>1.13</version>
     </dependency>
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-container-grizzly-client</artifactId>
-      <version>1.13</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -83,18 +81,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <executions>
@@ -119,76 +105,6 @@
           </execution>
         </executions>
       </plugin>
-      <!--
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>python-dist</id>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <phase>package</phase>
-            <configuration>
-              <executable>python</executable>
-              <workingDirectory>${project.basedir}/src/main/python</workingDirectory>
-              <commandlineArgs>setup.py sdist - -dist-dir ${project.build.directory}</commandlineArgs>
-            </configuration>
-          </execution>
-          <execution>
-            <id>python-clean</id>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <phase>package</phase>
-            <configuration>
-              <executable>rm</executable>
-              <workingDirectory>${project.basedir}/src/main/python</workingDirectory>
-              <commandlineArgs>-rf timely.egg-info setup.py</commandlineArgs>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      -->
     </plugins>
   </build>
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${version.findbugs-maven}</version>
-        <configuration>
-          <effort>Max</effort>
-          <threshold>Medium</threshold>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <version>${version.jacoco}</version>
-        <reportSets>
-          <reportSet>
-            <id>JaCoCo Unit Test Coverage</id>
-            <reports>
-              <report>report</report>
-            </reports>
-            <configuration>
-              <dataFile>${project.build.directory}/coverage/jacoco-ut.exec</dataFile>
-            </configuration>
-          </reportSet>
-          <reportSet>
-            <id>JaCoCo Integration Test Coverage</id>
-            <reports>
-              <report>report-integration</report>
-            </reports>
-            <configuration>
-              <dataFile>${project.build.directory}/coverage/jacoco-it.exec</dataFile>
-            </configuration>
-          </reportSet>
-        </reportSets>
-      </plugin>
-    </plugins>
-  </reporting>
 </project>
