@@ -7,7 +7,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.request.MetricRequest;
-import timely.balancer.BalancerConfiguration;
+import timely.api.request.UdpRequest;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.udp.UdpClientPool;
 import timely.balancer.resolver.MetricResolver;
@@ -16,7 +16,7 @@ import timely.netty.Constants;
 
 import java.nio.charset.StandardCharsets;
 
-public class UdpRelayHandler extends SimpleChannelInboundHandler<MetricRequest> {
+public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
 
     private static final Logger LOG = LoggerFactory.getLogger(UdpRelayHandler.class);
     private static final String LOG_ERR_MSG = "Error storing put metric: {}";
@@ -31,15 +31,16 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<MetricRequest> 
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, MetricRequest msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, UdpRequest msg) throws Exception {
         LOG.trace("Received {}", msg);
         try {
-            String metricName = msg.getMetric().getName();
-            TimelyBalancedHost k = metricResolver.getHostPortKey(metricName);
+            MetricRequest metricRequest = (MetricRequest) msg;
+            String metricName = metricRequest.getMetric().getName();
+            TimelyBalancedHost k = metricResolver.getHostPortKeyIngest(metricName);
             UdpClient client = null;
             try {
                 client = udpClientPool.borrowObject(k);
-                client.write(msg.getLine() + "\n");
+                client.write(metricRequest.getLine() + "\n");
                 client.flush();
             } finally {
                 if (client != null) {

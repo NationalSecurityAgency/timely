@@ -112,6 +112,7 @@ public class MetricPutLoadTest {
                         String line = metricPut.generateTcpLine(ts);
                         System.out.println(line);
                         client.get().write(line);
+                        client.get().flush();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }

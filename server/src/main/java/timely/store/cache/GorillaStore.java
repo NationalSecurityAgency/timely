@@ -6,7 +6,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.*;
@@ -48,8 +47,8 @@ public class GorillaStore {
         return current;
     }
 
-    public int ageOffArchivedCompressors(long maxAge) {
-        int numRemoved = 0;
+    public long ageOffArchivedCompressors(long maxAge) {
+        long numRemoved = 0;
         long oldestRemainingTimestamp = Long.MAX_VALUE;
         synchronized (archivedCompressors) {
             if (archivedCompressors.size() > 0) {
@@ -57,7 +56,8 @@ public class GorillaStore {
                 long now = System.currentTimeMillis();
                 while (itr.hasNext()) {
                     WrappedGorillaCompressor c = itr.next();
-                    if (now - c.getNewestTimestamp() >= maxAge) {
+                    long timeSinceNewestTimestamp = now - c.getNewestTimestamp();
+                    if (timeSinceNewestTimestamp >= maxAge) {
                         itr.remove();
                         numRemoved++;
                     } else {
@@ -179,5 +179,25 @@ public class GorillaStore {
 
     public long getOldestTimestamp() {
         return oldestTimestamp;
+    }
+
+    public long getNumEntries() {
+
+        long numEntries = 0;
+        synchronized (this) {
+            if (current != null) {
+                numEntries += current.getNumEntries();
+            }
+        }
+        synchronized (archivedCompressors) {
+            if (archivedCompressors.size() > 0) {
+                Iterator<WrappedGorillaCompressor> itr = archivedCompressors.iterator();
+                while (itr.hasNext()) {
+                    WrappedGorillaCompressor c = itr.next();
+                    numEntries += c.getNumEntries();
+                }
+            }
+        }
+        return numEntries;
     }
 }

@@ -28,8 +28,7 @@ public class RegexMetricResolver implements MetricResolver {
         this.healthChecker = healthChecker;
     }
 
-    @Override
-    public TimelyBalancedHost getHostPortKey(String metric) {
+    public TimelyBalancedHost getHostPortKeyInternal(String metric) {
 
         TimelyBalancedHost tbh = null;
         if (StringUtils.isNotBlank(metric)) {
@@ -47,6 +46,16 @@ public class RegexMetricResolver implements MetricResolver {
         LOG.info("routing metric: " + metric + " to " + tbh.getHost() + ":" + tbh.getTcpPort());
         return tbh;
 
+    }
+
+    @Override
+    public TimelyBalancedHost getHostPortKeyIngest(String metric) {
+        return getHostPortKeyInternal(metric);
+    }
+
+    @Override
+    public TimelyBalancedHost getHostPortKey(String metric) {
+        return getHostPortKeyInternal(metric);
     }
 
     private TimelyBalancedHost getFallbackHost(String metric) {

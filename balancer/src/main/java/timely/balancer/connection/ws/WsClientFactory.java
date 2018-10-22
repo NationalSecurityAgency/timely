@@ -40,7 +40,11 @@ public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedH
 
     @Override
     public boolean validateObject(TimelyBalancedHost k, PooledObject<WebSocketSubscriptionClient> o) {
-        return true;
+        if (k.isUp()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override

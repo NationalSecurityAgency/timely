@@ -7,7 +7,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.request.MetricRequest;
-import timely.balancer.BalancerConfiguration;
+import timely.api.request.TcpRequest;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.tcp.TcpClientPool;
 import timely.balancer.resolver.MetricResolver;
@@ -16,7 +16,7 @@ import timely.netty.Constants;
 
 import java.nio.charset.StandardCharsets;
 
-public class TcpRelayHandler extends SimpleChannelInboundHandler<MetricRequest> {
+public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpRelayHandler.class);
     private static final String LOG_ERR_MSG = "Error storing put metric: {}";
@@ -31,15 +31,24 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<MetricRequest> 
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, MetricRequest msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, TcpRequest msg) throws Exception {
         LOG.trace("Received {}", msg);
         try {
-            String metricName = msg.getMetric().getName();
-            TimelyBalancedHost k = metricResolver.getHostPortKey(metricName);
+            TimelyBalancedHost k;
+            String line;
+            if (msg instanceof MetricRequest) {
+                String metricName = ((MetricRequest) msg).getMetric().getName();
+                line = ((MetricRequest) msg).getLine();
+                k = metricResolver.getHostPortKeyIngest(metricName);
+            } else {
+                // Version request
+                line = "version";
+                k = metricResolver.getHostPortKey(null);
+            }
             TcpClient client = null;
             try {
                 client = tcpClientPool.borrowObject(k);
-                client.write(msg.getLine() + "\n");
+                client.write(line + "\n");
                 client.flush();
             } finally {
                 if (client != null) {

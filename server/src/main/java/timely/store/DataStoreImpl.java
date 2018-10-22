@@ -117,7 +117,7 @@ public class DataStoreImpl implements DataStore {
     private final AtomicReference<SortedMap<MetricTagK, Integer>> metaCounts = new AtomicReference<>(new TreeMap<>());
     private final String metricsTable;
     private final String metaTable;
-    private final InternalMetrics internalMetrics = new InternalMetrics();
+    private final InternalMetrics internalMetrics;
     private final Timer internalMetricsTimer = new Timer(true);
     private final int scannerThreads;
     private final long maxDownsampleMemory;
@@ -189,11 +189,12 @@ public class DataStoreImpl implements DataStore {
             this.removeAgeOffIterators(connector, metaTable);
             this.applyAgeOffIterator(connector, metaTable, false);
 
+            internalMetrics = new InternalMetrics(conf);
             internalMetricsTimer.schedule(new TimerTask() {
 
                 @Override
                 public void run() {
-                    internalMetrics.getMetricsAndReset().forEach(m -> store(m));
+                    internalMetrics.getMetricsAndReset().forEach(m -> store(m, false));
                 }
 
             }, METRICS_PERIOD, METRICS_PERIOD);
@@ -248,9 +249,13 @@ public class DataStoreImpl implements DataStore {
 
     @Override
     public void store(Metric metric) {
+        store(metric, true);
+    }
+
+    public void store(Metric metric, boolean cacheEnabled) {
         LOG.trace("Received Store Request for: {}", metric);
 
-        if (cache != null) {
+        if (cache != null && cacheEnabled) {
             cache.store(metric);
         }
 
@@ -494,13 +499,40 @@ public class DataStoreImpl implements DataStore {
                 }
                 metricList.append(metric);
                 Map<Set<Tag>, List<Aggregation>> cachedMetrics = new HashMap<>();
-                long oldestTimestampFromCache = 0;
+                long oldestTimestampFromCache = Long.MAX_VALUE;
 
                 if (cache != null) {
                     long oldestCacheTimestamp = cache.getOldestTimestamp(query.getMetric());
                     if (requestedEndTs >= oldestCacheTimestamp) {
                         cachedMetrics = cache.subquery(msg, query);
-                        allSeries.putAll(cachedMetrics);
+
+                        int z = 0;
+                        for (Collection<Aggregation> c : cachedMetrics.values()) {
+                            z += c.size();
+                        }
+                        long totalRequestedTime = requestedEndTs - requestedStartTs;
+                        long percentServedFromCache = 0;
+                        if (!cachedMetrics.isEmpty() && oldestCacheTimestamp != Long.MAX_VALUE) {
+                            if (requestedStartTs < oldestCacheTimestamp && requestedEndTs < oldestCacheTimestamp) {
+                                percentServedFromCache = 0;
+                            } else if (requestedStartTs >= oldestCacheTimestamp
+                                    && requestedEndTs >= oldestCacheTimestamp) {
+                                percentServedFromCache = 100;
+                            } else {
+                                long timeAnsweredFromCache = requestedEndTs - oldestCacheTimestamp;
+                                percentServedFromCache = Math.round((double) timeAnsweredFromCache
+                                        / (double) totalRequestedTime * 100);
+                            }
+                            if (percentServedFromCache > 100) {
+                                percentServedFromCache = 100;
+                            }
+                            LOG.debug(
+                                    "Cache query time:{} duration (min):{} metrics:{} results:{} percentFromCache:{}",
+                                    (System.currentTimeMillis() - now),
+                                    ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList.toString(), z,
+                                    percentServedFromCache);
+                            allSeries.putAll(cachedMetrics);
+                        }
                     }
                     oldestTimestampFromCache = Math.max(oldestCacheTimestamp,
                             System.currentTimeMillis() - cache.getAgeOffForMetric(query.getMetric()) + 1);
@@ -509,7 +541,8 @@ public class DataStoreImpl implements DataStore {
                 if (cachedMetrics.isEmpty() || requestedStartTs < oldestTimestampFromCache) {
                     // we have already searched from oldestTimestampFromCache to
                     // requestedEndTs
-                    long endTs = (oldestTimestampFromCache == 0) ? requestedEndTs : oldestTimestampFromCache - 1;
+                    long endTs = (oldestTimestampFromCache == Long.MAX_VALUE) ? requestedEndTs
+                            : oldestTimestampFromCache - 1;
 
                     // Reset the start timestamp for the query to the
                     // beginning of the downsample period based on the epoch
@@ -600,8 +633,8 @@ public class DataStoreImpl implements DataStore {
                     result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
                 }
             }
-            LOG.debug("Query time: {} duration: {} metrics: {} results: {}", (System.currentTimeMillis() - now),
-                    (requestedEndTs - requestedStartTs), metricList.toString(), numResults);
+            LOG.debug("Query time:{} duration:{} metrics:{} results:{}", (System.currentTimeMillis() - now),
+                    ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList.toString(), numResults);
             internalMetrics.addQueryResponse(result.size(), (System.currentTimeMillis() - now));
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
@@ -626,7 +659,6 @@ public class DataStoreImpl implements DataStore {
 
     /**
      *
-     * @param query
      * @return ordered list of most specific to least specific tags in the query
      */
     private List<String> prioritizeTags(String metric, Map<String, String> tags) {

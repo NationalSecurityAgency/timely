@@ -2,6 +2,7 @@ package timely.store.cache;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -48,39 +49,40 @@ public class OrderedTags {
     }
 
     public boolean matches(Map<String, String> tags) {
-        // default to false in case no tags match
-        boolean matches = false;
+        int matches = 0;
         if (tags.isEmpty()) {
-            matches = true;
+            return true;
         } else {
-            done: for (Map.Entry<String, String> entry : tags.entrySet()) {
-                for (Pair<String, String> p : tagSet) {
+            Iterator<Map.Entry<String, String>> requestedTagItr = tags.entrySet().iterator();
+            boolean matchFailure = false;
+            while (requestedTagItr.hasNext() && !matchFailure) {
+                Map.Entry<String, String> entry = requestedTagItr.next();
+                Iterator<Pair<String, String>> storedTagItr = tagSet.iterator();
+                boolean matchSuccess = false;
+                while (storedTagItr.hasNext() && !matchSuccess && !matchFailure) {
+                    Pair<String, String> p = storedTagItr.next();
                     if (entry.getKey().equals(p.getLeft())) {
                         boolean regex = isTagValueRegex(entry.getValue());
                         if (regex) {
                             if (p.getRight().matches(entry.getValue())) {
-                                // at least one match
-                                matches = true;
+                                matches++;
+                                matchSuccess = true;
                             } else {
-                                // failure to match - return false
-                                matches = false;
-                                break done;
+                                matchFailure = true;
                             }
                         } else {
                             if (p.getRight().equals(entry.getValue())) {
-                                // at least one match
-                                matches = true;
+                                matches++;
+                                matchSuccess = true;
                             } else {
-                                // failure to match - return false
-                                matches = false;
-                                break done;
+                                matchFailure = true;
                             }
                         }
                     }
                 }
             }
+            return matches == tags.size();
         }
-        return matches;
     }
 
     private boolean isTagValueRegex(String value) {

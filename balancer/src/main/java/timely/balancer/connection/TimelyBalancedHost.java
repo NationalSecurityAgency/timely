@@ -1,8 +1,13 @@
 package timely.balancer.connection;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import timely.balancer.ArrivalRate;
 import timely.balancer.BalancerConfiguration;
 
 public class TimelyBalancedHost {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TimelyBalancedHost.class);
 
     private String regex;
     private String host;
@@ -14,6 +19,7 @@ public class TimelyBalancedHost {
     private BalancerConfiguration config;
     private int failures = 0;
     private int successes = 0;
+    private ArrivalRate arrivalRate = new ArrivalRate();
 
     public TimelyBalancedHost() {
 
@@ -58,6 +64,7 @@ public class TimelyBalancedHost {
                 if (++successes >= serverSuccessesBeforeUp) {
                     isUp = true;
                     successes = 0;
+                    LOG.info("host up host:{} port:{}", host, tcpPort);
                 }
             }
         }
@@ -70,6 +77,7 @@ public class TimelyBalancedHost {
                 if (++failures >= serverFailuresBeforeDown) {
                     isUp = false;
                     failures = 0;
+                    LOG.info("host down host:{} port:{}", host, tcpPort);
                 }
             }
         }
@@ -121,5 +129,17 @@ public class TimelyBalancedHost {
 
     public void setWsPort(int wsPort) {
         this.wsPort = wsPort;
+    }
+
+    public void arrived() {
+        arrivalRate.arrived();
+    }
+
+    public double getArrivalRate() {
+        return arrivalRate.getRate();
+    }
+
+    public void calculateRate() {
+        arrivalRate.calculateRate();
     }
 }

@@ -29,6 +29,7 @@ public class Configuration {
     private String metaTable = "timely.meta";
     private HashMap<String, Integer> metricAgeOffDays = new HashMap<>();
     private List<String> metricsReportIgnoredTags = new ArrayList<>();
+    private String instance = null;
 
     @Valid
     @NestedConfigurationProperty
@@ -71,6 +72,14 @@ public class Configuration {
     public Configuration setMetaTable(String metaTable) {
         this.metaTable = metaTable;
         return this;
+    }
+
+    public void setInstance(String instance) {
+        this.instance = instance;
+    }
+
+    public String getInstance() {
+        return instance;
     }
 
     public HashMap<String, Integer> getMetricAgeOffDays() {

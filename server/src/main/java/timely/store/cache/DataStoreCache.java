@@ -8,7 +8,6 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.collections.map.LRUMap;
-import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,16 +30,13 @@ import timely.store.iterators.RateIterator;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -55,35 +51,88 @@ public class DataStoreCache {
     private Map<String, String> minimumAgeOffForIterator;
 
     private Timer maintenanceTimer = new Timer();
+    private Timer statsTimer = new Timer();
 
     public DataStoreCache(Configuration conf) {
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
+        LOG.info("cacheAgeOff:{} accumuloAgeOff:{}", cacheAgeOff, accumuloAgeOff);
         minimumAgeOff = getMinimumAgeOffs(accumuloAgeOff, cacheAgeOff);
+
+        for (Map.Entry<String, Long> e : minimumAgeOff.entrySet()) {
+            LOG.info("minimumAgeOff key:{} value:{}", e.getKey(), e.getValue());
+        }
+
         minimumAgeOffForIterator = getAgeOffForIterator(minimumAgeOff);
 
-        Calendar now = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-        int hour = now.get(Calendar.HOUR_OF_DAY);
-        // archive compressors and age off every 2 hours (on the even GMT hour)
-        Date firstExecution = DateUtils.addHours(now.getTime(), hour % 2 == 0 ? 2 : 1);
         maintenanceTimer.schedule(new TimerTask() {
 
             @Override
             public void run() {
-                ageOffGorillaStores();
-                archiveGorillaStoreCurrentCompressors();
+                try {
+                    ageOffGorillaStores();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
             }
-        }, firstExecution, (2 * 3600 * 1000));
+        }, (600 * 1000), (600 * 1000));
+
+        maintenanceTimer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                try {
+                    archiveGorillaStoreCurrentCompressors();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, (3600 * 1000), (3600 * 100));
+
+        statsTimer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                try {
+                    printStats();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, (600 * 1000), (600 * 100));
+    }
+
+    private void printStats() {
+        if (LOG.isTraceEnabled()) {
+            synchronized (gorillaMap) {
+                for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
+                    int numberTagVariations = entry1.getValue().size();
+                    long numEntries = 0;
+                    for (Map.Entry<TaggedMetric, GorillaStore> entry2 : entry1.getValue().entrySet()) {
+                        numEntries += entry2.getValue().getNumEntries();
+                    }
+                    LOG.trace("printStats - Cache of metric {} has {} tag variations and {} entries", entry1.getKey(),
+                            numberTagVariations, numEntries);
+                }
+            }
+        }
     }
 
     private void ageOffGorillaStores() {
         synchronized (gorillaMap) {
+            long numRemoved = 0;
             for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
                 long maxAge = getAgeOffForMetric(entry1.getKey());
-                for (GorillaStore store : entry1.getValue().values()) {
-                    store.ageOffArchivedCompressors(maxAge);
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("ageOffGorillaStores metric:{} maxAge:{}", entry1.getKey(), maxAge);
                 }
+                for (GorillaStore store : entry1.getValue().values()) {
+                    numRemoved += store.ageOffArchivedCompressors(maxAge);
+                }
+            }
+            if (numRemoved > 0) {
+                LOG.debug("ageOffGorillaStores - Aged off {} archived Gorilla compressors", numRemoved);
             }
         }
     }
@@ -228,7 +277,7 @@ public class DataStoreCache {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: "
                     + e.getMessage(), e.getMessage(), e);
         } finally {
-            LOG.info("Time for cache subquery for {} - {}ms", query.toString(), System.currentTimeMillis() - start);
+            LOG.trace("Time for cache subquery for {} - {}ms", query.toString(), System.currentTimeMillis() - start);
         }
     }
 

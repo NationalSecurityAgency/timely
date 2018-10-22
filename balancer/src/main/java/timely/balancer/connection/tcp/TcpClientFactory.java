@@ -31,7 +31,11 @@ public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
 
     @Override
     public boolean validateObject(TimelyBalancedHost k, PooledObject<TcpClient> o) {
-        return true;
+        if (k.isUp()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override

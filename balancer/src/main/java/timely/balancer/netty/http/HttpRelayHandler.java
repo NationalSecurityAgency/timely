@@ -80,9 +80,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
             try {
                 request = msg.getHttpRequest();
                 String originalURI = request.getUri();
-                LOG.info("uri=" + originalURI);
                 originalURI = encodeURI(originalURI);
-                // originalURI = URLEncoder.encode(originalURI, "UTF-8");
 
                 String metric = null;
                 if (msg instanceof QueryRequest) {
@@ -93,9 +91,12 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                             metric = itr.next().getMetric();
                         }
                     }
-                }
-                if (msg instanceof MetricRequest) {
+                    k = metricResolver.getHostPortKey(metric);
+                } else if (msg instanceof MetricRequest) {
                     metric = ((MetricRequest) msg).getMetric().getName();
+                    k = metricResolver.getHostPortKeyIngest(metric);
+                } else {
+                    k = metricResolver.getHostPortKey(null);
                 }
                 k = metricResolver.getHostPortKey(metric);
                 client = httpClientPool.borrowObject(k);
@@ -113,7 +114,6 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
 
                 String relayURI = "https://" + k.getHost() + ":" + k.getHttpPort() + originalURI;
                 if (request.getMethod().equals(HttpMethod.GET)) {
-                    LOG.info("Get request");
                     HttpUriRequest relayedRequest = new HttpGet(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
@@ -121,7 +121,6 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                     relayedResponse = client.execute(relayedRequest);
 
                 } else if (request.getMethod().equals(HttpMethod.POST)) {
-                    LOG.info("Post request");
                     HttpPost relayedRequest = new HttpPost(relayURI);
 
                     String content = request.content().toString(StandardCharsets.UTF_8);

@@ -9,6 +9,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
@@ -37,6 +38,7 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +55,8 @@ import timely.balancer.netty.http.HttpRelayHandler;
 import timely.balancer.netty.tcp.TcpRelayHandler;
 import timely.balancer.netty.udp.UdpRelayHandler;
 import timely.balancer.netty.ws.WsRelayHandler;
-import timely.balancer.resolver.HashMetricResolver;
+import timely.balancer.resolver.BalancedMetricResolver;
 import timely.balancer.resolver.MetricResolver;
-import timely.balancer.resolver.RegexMetricResolver;
 import timely.client.http.HttpClient;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.NonSslRedirectHandler;
@@ -107,8 +108,14 @@ public class Balancer {
     protected Channel tcpChannelHandle = null;
     protected Channel httpChannelHandle = null;
     protected Channel wsChannelHandle = null;
-    protected Channel udpChannelHandle = null;
+    protected List<Channel> udpChannelHandleList = new ArrayList<>();
     protected volatile boolean shutdown = false;
+    private static final int DEFAULT_EVENT_LOOP_THREADS;
+
+    static {
+        DEFAULT_EVENT_LOOP_THREADS = Math.max(1,
+                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+    }
 
     public Balancer(Configuration conf, BalancerConfiguration balancerConf) throws Exception {
         this.config = conf;
@@ -148,9 +155,9 @@ public class Balancer {
             channelFutures.add(wsChannelHandle.close());
         }
 
-        if (udpChannelHandle != null) {
+        for (Channel c : udpChannelHandleList) {
             LOG.info("Closing udpChannelHandle");
-            channelFutures.add(udpChannelHandle.close());
+            channelFutures.add(c.close());
         }
 
         // wait for the channels to shutdown
@@ -310,9 +317,6 @@ public class Balancer {
 
     public void run() throws Exception {
 
-        // int nettyThreads = Math.max(1,
-        // SystemPropertyUtil.getInt("io.netty.eventLoopThreads",
-        // Runtime.getRuntime().availableProcessors() * 2));
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;
@@ -343,7 +347,7 @@ public class Balancer {
 
         TcpClientPool tcpClientPool = new TcpClientPool(this.balancerConfig);
         HealthChecker healthChecker = new HealthChecker(this.balancerConfig, tcpClientPool);
-        this.metricResolver = new RegexMetricResolver(this.balancerConfig, healthChecker);
+        this.metricResolver = new BalancedMetricResolver(this.balancerConfig, healthChecker);
 
         final ServerBootstrap tcpServer = new ServerBootstrap();
         tcpServer.group(tcpBossGroup, tcpWorkerGroup);
@@ -403,19 +407,21 @@ public class Balancer {
 
         final int udpPort = config.getServer().getUdpPort();
         final String udpIp = config.getServer().getIp();
-        final Bootstrap udpServer = new Bootstrap();
-        udpServer.group(udpBossGroup);
-        udpServer.channel(datagramChannelClass);
         UdpClientPool udpClientPool = new UdpClientPool(balancerConfig);
-        udpServer.handler(setupUdpChannel(metricResolver, udpClientPool));
-        udpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        udpChannelHandle = udpServer.bind(udpIp, udpPort).sync().channel();
-        final String udpAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
-
+        for (int n = 1; n < DEFAULT_EVENT_LOOP_THREADS; n++) {
+            final Bootstrap udpServer = new Bootstrap();
+            udpServer.group(udpBossGroup);
+            udpServer.channel(datagramChannelClass);
+            udpServer.handler(setupUdpChannel(metricResolver, udpClientPool));
+            udpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+            udpServer.option(EpollChannelOption.SO_REUSEADDR, true);
+            udpServer.option(EpollChannelOption.SO_REUSEPORT, true);
+            udpChannelHandleList.add(udpServer.bind(udpIp, udpPort).sync().channel());
+        }
         shutdownHook();
         LOG.info(
                 "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
-                tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, udpAddress, udpPort);
+                tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
     }
 
     public static void main(String[] args) throws Exception {
@@ -476,8 +482,7 @@ public class Balancer {
                 ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new UdpDecoder());
-                ch.pipeline().addLast(udpWorkerGroup, "udpRelayHandler",
-                        new UdpRelayHandler(metricResolver, udpClientPool));
+                ch.pipeline().addLast("udpRelayHandler", new UdpRelayHandler(metricResolver, udpClientPool));
             }
         };
     }
