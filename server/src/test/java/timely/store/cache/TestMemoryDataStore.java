@@ -54,6 +54,7 @@ public class TestMemoryDataStore {
             mmStore.store(createMetric("mymetric", tags, d, timestamp));
             timestamp += 1000;
         }
+        mmStore.flushCaches(-1);
         return mmStore;
 
     }
@@ -80,6 +81,7 @@ public class TestMemoryDataStore {
             }
         }
         System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
+        mmStore.flushCaches(-1);
         return mmStore;
     }
 
@@ -164,6 +166,7 @@ public class TestMemoryDataStore {
 
             Metric m = createMetric("test.metric", tags, 2.0, timestamp);
             mmStore.store(m);
+            mmStore.flushCaches(-1);
             timestamp = timestamp + 60000;
 
             QueryRequest query = new QueryRequest();

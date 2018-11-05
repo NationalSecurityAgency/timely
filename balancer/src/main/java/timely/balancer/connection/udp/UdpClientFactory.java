@@ -41,8 +41,8 @@ public class UdpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
     public void activateObject(TimelyBalancedHost k, PooledObject<UdpClient> o) throws Exception {
         try {
             o.getObject().open();
-        } catch (IOException e) {
-            throw new IOException("Unable to connect to " + k.getHost() + ":" + k.getUdpPort());
+        } catch (Exception e) {
+            throw new IOException("Unable to connect to " + k.getHost() + ":" + k.getUdpPort(), e);
         }
     }
 

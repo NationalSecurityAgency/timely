@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
@@ -118,7 +119,7 @@ public class DataStoreImpl implements DataStore {
     private final String metricsTable;
     private final String metaTable;
     private final InternalMetrics internalMetrics;
-    private final Timer internalMetricsTimer = new Timer(true);
+    private final Timer internalMetricsTimer = new Timer("InternalMatricsTimer", true);
     private final int scannerThreads;
     private final long maxDownsampleMemory;
     private final BatchWriterConfig bwConfig;
@@ -174,8 +175,18 @@ public class DataStoreImpl implements DataStore {
                     // don't care
                 }
             }
-            this.removeAgeOffIterators(connector, metricsTable);
-            this.applyAgeOffIterator(connector, metricsTable, true);
+            try {
+                this.removeAgeOffIterators(connector, metricsTable);
+                this.applyAgeOffIterator(connector, metricsTable, true);
+            } catch (AccumuloException e1) {
+                Throwable cause = e1.getCause();
+                if (cause instanceof IllegalArgumentException
+                        && cause.getMessage().startsWith("iterator name conflict")) {
+                    LOG.info("ignoring iterator name conflict due to multiple instances starting up");
+                } else {
+                    throw e1;
+                }
+            }
 
             metaTable = conf.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
@@ -200,9 +211,9 @@ public class DataStoreImpl implements DataStore {
             }, METRICS_PERIOD, METRICS_PERIOD);
 
             this.metaCache = MetaCacheFactory.getCache(conf);
-        } catch (Exception e) {
+        } catch (Exception e2) {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStoreImpl",
-                    e.getMessage(), e);
+                    e2.getMessage(), e2);
         }
     }
 
@@ -552,6 +563,8 @@ public class DataStoreImpl implements DataStore {
                     long endDistanceFromDownSample = endTs % downsample;
                     long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsample
                             - endDistanceFromDownSample : endTs);
+
+                    LOG.debug("startOfFirstPeriod:{} endOfLastPeriod:{}", startOfFirstPeriod, endOfLastPeriod);
 
                     if (endOfLastPeriod > startOfFirstPeriod) {
                         BatchScanner scanner = null;

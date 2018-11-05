@@ -34,26 +34,36 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.StampedLock;
 
 public class DataStoreCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreCache.class);
     public static final String DEFAULT_AGEOFF_KEY = "default";
 
-    private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = Collections.synchronizedMap(new HashMap<>());
+    private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
+    private StampedLock gorillaMapLock = new StampedLock();
+
+    private Set<String> nonCachedMetrics = Collections.synchronizedSet(new HashSet<>());
+    private long maxUniqueTagSets;
     private boolean anonAccessAllowed;
     private Map<String, Long> minimumAgeOff;
     private Map<String, String> minimumAgeOffForIterator;
+    private int flushBatch = 0;
+    private int numBatches = 5;
 
-    private Timer maintenanceTimer = new Timer();
+    private Timer maintenanceTimer = new Timer("DataStoreCacheTimer");
     private Timer statsTimer = new Timer();
 
     public DataStoreCache(Configuration conf) {
+        nonCachedMetrics.addAll(conf.getCache().getNonCachedMetrics());
+        maxUniqueTagSets = conf.getCache().getMaxUniqueTagSets();
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
@@ -65,6 +75,18 @@ public class DataStoreCache {
         }
 
         minimumAgeOffForIterator = getAgeOffForIterator(minimumAgeOff);
+
+        maintenanceTimer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                try {
+                    flushCaches(flushBatch);
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, conf.getCache().getFlushInterval(), conf.getCache().getFlushInterval());
 
         maintenanceTimer.schedule(new TimerTask() {
 
@@ -88,14 +110,14 @@ public class DataStoreCache {
                     LOG.error(e.getMessage(), e);
                 }
             }
-        }, (3600 * 1000), (3600 * 100));
+        }, (7200 * 1000), (3600 * 100));
 
         statsTimer.schedule(new TimerTask() {
 
             @Override
             public void run() {
                 try {
-                    printStats();
+                    pruneStats();
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
@@ -103,24 +125,29 @@ public class DataStoreCache {
         }, (600 * 1000), (600 * 100));
     }
 
-    private void printStats() {
-        if (LOG.isTraceEnabled()) {
-            synchronized (gorillaMap) {
-                for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
-                    int numberTagVariations = entry1.getValue().size();
-                    long numEntries = 0;
-                    for (Map.Entry<TaggedMetric, GorillaStore> entry2 : entry1.getValue().entrySet()) {
-                        numEntries += entry2.getValue().getNumEntries();
-                    }
-                    LOG.trace("printStats - Cache of metric {} has {} tag variations and {} entries", entry1.getKey(),
-                            numberTagVariations, numEntries);
+    private void pruneStats() {
+        long stamp = gorillaMapLock.writeLock();
+        try {
+            Iterator<Map.Entry<String, Map<TaggedMetric, GorillaStore>>> metricItr = gorillaMap.entrySet().iterator();
+
+            while (metricItr.hasNext()) {
+                Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 = metricItr.next();
+                int numberTagVariations = entry1.getValue().size();
+                if (numberTagVariations > maxUniqueTagSets) {
+                    LOG.info("Cache of metric {} has {] tag variations.  Discontinuing cache.", entry1.getKey(),
+                            numberTagVariations);
+                    metricItr.remove();
+                    nonCachedMetrics.add(entry1.getKey());
                 }
             }
+        } finally {
+            gorillaMapLock.unlockWrite(stamp);
         }
     }
 
     private void ageOffGorillaStores() {
-        synchronized (gorillaMap) {
+        long stamp = gorillaMapLock.readLock();
+        try {
             long numRemoved = 0;
             for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
                 long maxAge = getAgeOffForMetric(entry1.getKey());
@@ -134,16 +161,46 @@ public class DataStoreCache {
             if (numRemoved > 0) {
                 LOG.debug("ageOffGorillaStores - Aged off {} archived Gorilla compressors", numRemoved);
             }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
+        }
+    }
+
+    protected void flushCaches(int flushBatch) {
+        long stamp = gorillaMapLock.readLock();
+        try {
+            int x = 0;
+            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
+                if (flushBatch == -1 || x % numBatches == flushBatch) {
+                    for (GorillaStore store : entry.getValue().values()) {
+                        try {
+                            store.flush();
+                        } catch (Exception e) {
+                            LOG.error(e.getMessage(), e);
+                        }
+                    }
+                }
+                x++;
+            }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
+            flushBatch++;
+            if (flushBatch == numBatches) {
+                flushBatch = 0;
+            }
         }
     }
 
     private void archiveGorillaStoreCurrentCompressors() {
-        synchronized (gorillaMap) {
+        long stamp = gorillaMapLock.readLock();
+        try {
             for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
                 for (GorillaStore store : entry.getValue().values()) {
                     store.archiveCurrentCompressor();
                 }
             }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
         }
     }
 
@@ -192,35 +249,86 @@ public class DataStoreCache {
 
     public Map<TaggedMetric, GorillaStore> getGorillaStores(String metric) {
         Map<TaggedMetric, GorillaStore> returnedMap = new HashMap<>();
-        synchronized (gorillaMap) {
-            Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(metric);
+        Map<TaggedMetric, GorillaStore> metricMap;
+        long stamp = gorillaMapLock.readLock();
+        try {
+            metricMap = gorillaMap.get(metric);
             if (metricMap == null) {
                 metricMap = new HashMap<>();
+                long writeStamp = gorillaMapLock.tryConvertToWriteLock(stamp);
+                if (writeStamp == 0) {
+                    gorillaMapLock.unlockRead(stamp);
+                    stamp = gorillaMapLock.writeLock();
+                } else {
+                    stamp = writeStamp;
+                }
                 gorillaMap.put(metric, metricMap);
             }
-            returnedMap.putAll(metricMap);
+        } finally {
+            gorillaMapLock.unlock(stamp);
         }
+        returnedMap.putAll(metricMap);
         return returnedMap;
     }
 
     public GorillaStore getGorillaStore(String metric, TaggedMetric taggedMetric) {
-        Map<TaggedMetric, GorillaStore> metricMap = gorillaMap.get(metric);
-        if (metricMap == null) {
-            metricMap = new HashMap<>();
-            gorillaMap.put(metric, metricMap);
-        }
-        GorillaStore gStore = metricMap.get(taggedMetric);
-        if (gStore == null) {
-            gStore = new GorillaStore();
-            metricMap.put(taggedMetric, gStore);
+
+        Map<TaggedMetric, GorillaStore> metricMap;
+        GorillaStore gStore;
+        boolean needWrite = false;
+        long stamp = gorillaMapLock.readLock();
+        try {
+            metricMap = gorillaMap.get(metric);
+            if (metricMap == null) {
+                metricMap = new HashMap<>();
+                needWrite = true;
+            }
+            gStore = metricMap.get(taggedMetric);
+            if (gStore == null) {
+                gStore = new GorillaStore();
+                needWrite = true;
+            }
+            if (needWrite) {
+                long writeStamp = gorillaMapLock.tryConvertToWriteLock(stamp);
+                if (writeStamp == 0) {
+                    gorillaMapLock.unlockRead(stamp);
+                    stamp = gorillaMapLock.writeLock();
+                } else {
+                    stamp = writeStamp;
+                }
+                metricMap.put(taggedMetric, gStore);
+                gorillaMap.put(metric, metricMap);
+            }
+        } finally {
+            gorillaMapLock.unlock(stamp);
         }
         return gStore;
     }
 
+    private boolean shouldCache(Metric metric) {
+
+        String metricName = metric.getName();
+        if (nonCachedMetrics.contains(metricName)) {
+            return false;
+        }
+        synchronized (nonCachedMetrics) {
+            for (String r : nonCachedMetrics) {
+                if (metricName.matches(r)) {
+                    LOG.info("Adding {} to list of non-cached metrics", metricName);
+                    nonCachedMetrics.add(metricName);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public void store(Metric metric) {
-        TaggedMetric taggedMetric = new TaggedMetric(metric.getName(), metric.getTags());
-        GorillaStore gs = getGorillaStore(metric.getName(), taggedMetric);
-        gs.addValue(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
+        if (shouldCache(metric)) {
+            TaggedMetric taggedMetric = new TaggedMetric(metric.getName(), metric.getTags());
+            GorillaStore gs = getGorillaStore(metric.getName(), taggedMetric);
+            gs.addValue(metric);
+        }
     }
 
     public List<QueryResponse> query(QueryRequest msg) throws TimelyException {
@@ -251,11 +359,11 @@ public class DataStoreCache {
         try {
             SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
             itr = setupIterator(msg, query, getSessionAuthorizations(msg), getAgeOffForMetric(query.getMetric()));
-            LRUMap tagMap = new LRUMap(500);
+            Map<Set<Tag>, Set<Tag>> matchingTagCache = new HashMap<>();
             while (itr.hasTop()) {
                 Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(itr.getTopValue());
                 for (Map.Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
-                    Set<Tag> allMatchingTags = (Set<Tag>) tagMap.get(entry.getKey());
+                    Set<Tag> allMatchingTags = (Set<Tag>) matchingTagCache.get(entry.getKey());
                     if (allMatchingTags == null) {
                         allMatchingTags = new HashSet<>();
                         for (Tag tag : entry.getKey()) {
@@ -263,7 +371,7 @@ public class DataStoreCache {
                                 allMatchingTags.add(tag);
                             }
                         }
-                        tagMap.put(entry.getKey(), allMatchingTags);
+                        matchingTagCache.put(entry.getKey(), allMatchingTags);
                     }
                     List<Aggregation> aggregations = aggregationList.getOrDefault(allMatchingTags, new ArrayList<>());
                     aggregations.add(entry.getValue());
@@ -408,24 +516,34 @@ public class DataStoreCache {
     public long getNewestTimestamp(String metric) {
 
         long newest = 0;
-        Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
-        for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
-            if (entry.getValue().getNewestTimestamp() > newest) {
-                newest = entry.getValue().getNewestTimestamp();
+        long stamp = gorillaMapLock.readLock();
+        try {
+            Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
+            for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
+                if (entry.getValue().getNewestTimestamp() > newest) {
+                    newest = entry.getValue().getNewestTimestamp();
+                }
             }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
         }
         return newest;
     }
 
     public long getOldestTimestamp(String metric) {
         long oldest = Long.MAX_VALUE;
-        Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
-        if (gorillaStoreMap != null) {
-            for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
-                if (entry.getValue().getOldestTimestamp() < oldest) {
-                    oldest = entry.getValue().getOldestTimestamp();
+        long stamp = gorillaMapLock.readLock();
+        try {
+            Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
+            if (gorillaStoreMap != null) {
+                for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
+                    if (entry.getValue().getOldestTimestamp() < oldest) {
+                        oldest = entry.getValue().getOldestTimestamp();
+                    }
                 }
             }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
         }
         return oldest;
     }
@@ -433,26 +551,32 @@ public class DataStoreCache {
     public long getNewestTimestamp() {
 
         long newest = 0;
-        synchronized (gorillaMap) {
+        long stamp = gorillaMapLock.readLock();
+        try {
             for (String metric : gorillaMap.keySet()) {
                 Long newestForMetric = getNewestTimestamp(metric);
                 if (newestForMetric > newest) {
                     newest = newestForMetric;
                 }
             }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
         }
         return newest;
     }
 
     public long getOldestTimestamp() {
         long oldest = Long.MAX_VALUE;
-        synchronized (gorillaMap) {
+        long stamp = gorillaMapLock.readLock();
+        try {
             for (String metric : gorillaMap.keySet()) {
                 Long oldestForMetric = getOldestTimestamp(metric);
                 if (oldestForMetric < oldest) {
                     oldest = oldestForMetric;
                 }
             }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
         }
         return oldest;
     }
@@ -461,7 +585,12 @@ public class DataStoreCache {
         CacheResponse response = new CacheResponse();
         response.setOldestTimestamp(getOldestTimestamp());
         response.setNewestTimestamp(getNewestTimestamp());
-        response.setMetrics(new ArrayList<>(gorillaMap.keySet()));
+        long stamp = gorillaMapLock.readLock();
+        try {
+            response.setMetrics(new ArrayList<>(gorillaMap.keySet()));
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
+        }
         return response;
     }
 }

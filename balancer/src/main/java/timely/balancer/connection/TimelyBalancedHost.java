@@ -59,12 +59,18 @@ public class TimelyBalancedHost {
 
     public void reportSuccess() {
         int serverSuccessesBeforeUp = config.getServerSuccessesBeforeUp();
+        String h = host;
+        int p = tcpPort;
         synchronized (this) {
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("success reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}",
+                        h, p, isUp, (successes + 1), serverSuccessesBeforeUp);
+            }
             if (!isUp) {
                 if (++successes >= serverSuccessesBeforeUp) {
                     isUp = true;
                     successes = 0;
-                    LOG.info("host up host:{} port:{}", host, tcpPort);
+                    LOG.info("host up host:{} port:{}", h, p);
                 }
             }
         }
@@ -72,12 +78,18 @@ public class TimelyBalancedHost {
 
     public void reportFailure() {
         int serverFailuresBeforeDown = config.getServerFailuresBeforeDown();
+        String h = host;
+        int p = tcpPort;
         synchronized (this) {
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("failure reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}",
+                        h, p, isUp, (failures + 1), serverFailuresBeforeDown);
+            }
             if (isUp) {
                 if (++failures >= serverFailuresBeforeDown) {
                     isUp = false;
                     failures = 0;
-                    LOG.info("host down host:{} port:{}", host, tcpPort);
+                    LOG.info("host down host:{} port:{}", h, p);
                 }
             }
         }

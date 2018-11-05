@@ -4,6 +4,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.request.MetricRequest;
@@ -36,15 +37,14 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
         try {
             MetricRequest metricRequest = (MetricRequest) msg;
             String metricName = metricRequest.getMetric().getName();
-            TimelyBalancedHost k = metricResolver.getHostPortKeyIngest(metricName);
-            UdpClient client = null;
+            Pair<TimelyBalancedHost, UdpClient> keyClientPair = null;
             try {
-                client = udpClientPool.borrowObject(k);
-                client.write(metricRequest.getLine() + "\n");
-                client.flush();
+                keyClientPair = getClient(metricName, true);
+                keyClientPair.getRight().write(metricRequest.getLine() + "\n");
+                keyClientPair.getRight().flush();
             } finally {
-                if (client != null) {
-                    udpClientPool.returnObject(k, client);
+                if (keyClientPair != null && keyClientPair.getLeft() != null && keyClientPair.getRight() != null) {
+                    udpClientPool.returnObject(keyClientPair.getLeft(), keyClientPair.getRight());
                 }
             }
 
@@ -58,4 +58,25 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
         }
     }
 
+    private Pair<TimelyBalancedHost, UdpClient> getClient(String metric, boolean metricRequest) {
+        UdpClient client = null;
+        TimelyBalancedHost k = null;
+        int failures = 0;
+        while (client == null) {
+            try {
+                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver.getHostPortKey(metric);
+                client = udpClientPool.borrowObject(k);
+            } catch (Exception e1) {
+                failures++;
+                client = null;
+                LOG.error(e1.getMessage(), e1);
+                try {
+                    Thread.sleep(failures < 10 ? 500 : 60000);
+                } catch (InterruptedException e2) {
+                    // nothing
+                }
+            }
+        }
+        return Pair.of(k, client);
+    }
 }

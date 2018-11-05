@@ -26,7 +26,7 @@ public class BalancedMetricResolver implements MetricResolver {
     private Random r = new Random();
     final private HealthChecker healthChecker;
     private Timer timer = new Timer("RebalanceTimer", true);
-    private long balanceUntil = System.currentTimeMillis() + 600000l;
+    private long balanceUntil = System.currentTimeMillis() + 1800000l;
 
     public BalancedMetricResolver(BalancerConfiguration config, HealthChecker healthChecker) {
         int n = 0;
@@ -37,6 +37,18 @@ public class BalancedMetricResolver implements MetricResolver {
             }
         }
         this.healthChecker = healthChecker;
+
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    rebalanceAllMetrics();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, 300000);
+
         timer.schedule(new TimerTask() {
 
             @Override
@@ -49,7 +61,7 @@ public class BalancedMetricResolver implements MetricResolver {
                     }
                 }
             }
-        }, 60000, 120000);
+        }, 600000, 120000);
     }
 
     private TimelyBalancedHost getLeastUsedHost() {
@@ -94,6 +106,18 @@ public class BalancedMetricResolver implements MetricResolver {
             return tbh;
         } else {
             return getRandomHost(null);
+        }
+    }
+
+    synchronized public void rebalanceAllMetrics() {
+
+        Map<Double, String> rateSortedMetrics = new TreeMap<>();
+        for (Map.Entry<String, ArrivalRate> e : metricMap.entrySet()) {
+            rateSortedMetrics.put(e.getValue().getRate(), e.getKey());
+        }
+        metricToHostMap.clear();
+        for (String m : rateSortedMetrics.values()) {
+            metricToHostMap.put(m, getRoundRobinHost());
         }
     }
 
@@ -143,17 +167,26 @@ public class BalancedMetricResolver implements MetricResolver {
             double desiredDeltaLowest = (averageArrivalRate - lowestArrivalRate) * 0.1;
             Iterator<Map.Entry<Double, String>> metricItr = rateSortedMetrics.entrySet().iterator();
             boolean done = false;
-            while (!done && metricItr.hasNext() && numReassigned < 10) {
+            LOG.info("rebalancing: desiredDeltaHighest:{} desiredDeltaLowest:{} rateSortedMetrics.size():{}",
+                    desiredDeltaHighest, desiredDeltaLowest, rateSortedMetrics.size());
+            // advance to halfway
+            for (int numMetric=0; metricItr.hasNext() && numMetric <= rateSortedMetrics.size() / 2; numMetric++) {
+                metricItr.next();
+            }
+            long maxToReassign = Math.round(((double) metricMap.size() / serverMap.size()) * 0.20);
+            while (!done && metricItr.hasNext() && numReassigned < maxToReassign) {
                 Map.Entry<Double, String> current = metricItr.next();
                 Double currentRate = current.getKey();
                 String currentMetric = current.getValue();
 
                 if (desiredDeltaHighest > 0) {
                     if (metricToHostMap.get(currentMetric).equals(mostUsed)) {
+                        LOG.debug("rebalancing: trying to reassign metric {} from server {}:{}", currentMetric,
+                                mostUsed.getHost(), mostUsed.getTcpPort());
                         if (desiredDeltaHighest > 0) {
                             numReassigned++;
                             metricToHostMap.put(currentMetric, leastUsed);
-                            LOG.info("rebalancing: reassigning metric {} from server {}:{} to {}:{}", currentMetric,
+                            LOG.debug("rebalancing: reassigning metric {} from server {}:{} to {}:{}", currentMetric,
                                     mostUsed.getHost(), mostUsed.getTcpPort(), leastUsed.getHost(),
                                     leastUsed.getTcpPort());
                             desiredDeltaLowest -= currentRate;
@@ -167,6 +200,9 @@ public class BalancedMetricResolver implements MetricResolver {
                                         currentMetric, mostUsed.getHost(), mostUsed.getTcpPort(), tbh.getHost(),
                                         tbh.getTcpPort());
                                 desiredDeltaHighest -= currentRate;
+                            } else {
+                                LOG.debug("rebalancing: unable to reassign metric {} from server {}:{} - getRandomHost returned null",
+                                        currentMetric, mostUsed.getHost(), mostUsed.getTcpPort());
                             }
                         }
                     }
@@ -180,7 +216,7 @@ public class BalancedMetricResolver implements MetricResolver {
 
     @Override
     public TimelyBalancedHost getHostPortKeyIngest(String metric) {
-        if (metric != null) {
+        if (StringUtils.isNotBlank(metric)) {
             ArrivalRate rate;
             rate = metricMap.get(metric);
             if (rate == null) {
@@ -199,7 +235,10 @@ public class BalancedMetricResolver implements MetricResolver {
                 tbh = getRoundRobinHost();
                 metricToHostMap.put(metric, tbh);
             } else if (!tbh.isUp()) {
+                TimelyBalancedHost oldTbh = tbh;
                 tbh = getLeastUsedHost();
+                LOG.debug("rebalancing from host that is down: reassigning metric {} from server {}:{} to {}:{}",
+                        metric, oldTbh.getHost(), oldTbh.getTcpPort(), tbh.getHost(), tbh.getTcpPort());
                 metricToHostMap.put(metric, tbh);
             }
         }

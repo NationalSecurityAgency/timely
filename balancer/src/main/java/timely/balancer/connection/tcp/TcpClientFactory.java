@@ -42,8 +42,8 @@ public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
     public void activateObject(TimelyBalancedHost k, PooledObject<TcpClient> o) throws Exception {
         try {
             o.getObject().open();
-        } catch (IOException e) {
-            throw new IOException("Unable to connect to " + k.getHost() + ":" + k.getTcpPort());
+        } catch (Exception e) {
+            throw new IOException("Unable to connect to " + k.getHost() + ":" + k.getTcpPort(), e);
         }
     }
 

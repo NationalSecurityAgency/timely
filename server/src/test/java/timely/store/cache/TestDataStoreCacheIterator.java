@@ -63,6 +63,7 @@ public class TestDataStoreCacheIterator {
                 mmStore.store(createMetric("metric.number.5", tags, value, baseTime + (x * 1000)));
             }
         }
+        mmStore.flushCaches(-1);
         return mmStore;
     }
 
@@ -92,6 +93,7 @@ public class TestDataStoreCacheIterator {
                 mmStore.store(createMetric("metric.number.5", tags, value, baseTime + (x * 1000)));
             }
         }
+        mmStore.flushCaches(-1);
         return mmStore;
     }
 

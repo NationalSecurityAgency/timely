@@ -14,11 +14,13 @@ import timely.api.request.timeseries.QueryRequest;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value> {
@@ -34,6 +36,7 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
     private WrappedGorillaDecompressorIterator decompressors = null;
     private KeyValue currentKeyValue = null;
     private Queue<KeyValue> kvQueue = new LinkedList<>();
+    private Set<TaggedMetric> matchingTaggedMetrics = new HashSet<>();
 
     public DataStoreCacheIterator(DataStoreCache store, VisibilityFilter visibilityFilter, QueryRequest.SubQuery query,
             long startTs, long endTs) {
@@ -43,15 +46,18 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
         this.query = query;
         this.startTs = startTs;
         this.endTs = endTs;
-        this.storeItr = this.store.getGorillaStores(query.getMetric()).entrySet().iterator();
+        Map<TaggedMetric, GorillaStore> storeMap = this.store.getGorillaStores(query.getMetric());
+        this.storeItr = storeMap.entrySet().iterator();
         this.decompressors = getNextDecompressorIterable();
 
         long start = System.currentTimeMillis();
-        for (Map.Entry<Key, Value> entry : getEntries().entrySet()) {
+        Map<Key, Value> entries = getEntries();
+        for (Map.Entry<Key, Value> entry : entries.entrySet()) {
             kvQueue.add(new KeyValue(entry.getKey(), entry.getValue()));
         }
-        LOG.info("Time to initialize cache iterator for {} - {}ms", query.toString(), System.currentTimeMillis()
-                - start);
+        LOG.info(
+                "Time to initialize cache iterator for {} with {} TaggedMetric/GorillaStore pairs and {} K/V entries - {}ms",
+                query.toString(), storeMap.size(), entries.size(), System.currentTimeMillis() - start);
     }
 
     private WrappedGorillaDecompressorIterator getNextDecompressorIterable() {
@@ -59,10 +65,23 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
         WrappedGorillaDecompressorIterator nextPair = null;
         while (nextPair == null && storeItr.hasNext()) {
             Map.Entry<TaggedMetric, GorillaStore> entry = storeItr.next();
-            if (entry.getKey().matches(requestedTags) && entry.getKey().isVisible(visibilityFilter)) {
+            TaggedMetric currentTaggedMetric = entry.getKey();
+
+            // keep a cache of tagged metrics that match
+            boolean addCurrent = false;
+            if (matchingTaggedMetrics.contains(currentTaggedMetric)) {
+                addCurrent = true;
+            } else {
+                if (currentTaggedMetric.matches(requestedTags) && entry.getKey().isVisible(visibilityFilter)) {
+                    addCurrent = true;
+                    matchingTaggedMetrics.add(currentTaggedMetric);
+                }
+            }
+
+            if (addCurrent) {
                 List<WrappedGorillaDecompressor> listDecompressors = entry.getValue().getDecompressors(startTs, endTs);
                 if (listDecompressors.size() > 0) {
-                    nextPair = new WrappedGorillaDecompressorIterator(entry.getKey(), listDecompressors);
+                    nextPair = new WrappedGorillaDecompressorIterator(currentTaggedMetric, listDecompressors);
                 }
             }
         }
@@ -91,9 +110,10 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
                         }
                     }
                 } else {
-                    if (gPair.getTimestamp() >= startTs && gPair.getTimestamp() <= endTs) {
-                        entries.put(MetricAdapter.toKey(this.query.getMetric(), tm.getTags(), gPair.getTimestamp()),
-                                new Value(MetricAdapter.encodeValue(gPair.getDoubleValue())));
+                    long ts = gPair.getTimestamp();
+                    if (ts >= startTs && ts <= endTs) {
+                        entries.put(MetricAdapter.toKey(this.query.getMetric(), tm.getTags(), ts), new Value(
+                                MetricAdapter.encodeValue(gPair.getDoubleValue())));
                     }
                 }
             }
