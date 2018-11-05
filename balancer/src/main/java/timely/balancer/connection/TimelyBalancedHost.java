@@ -63,8 +63,8 @@ public class TimelyBalancedHost {
         int p = tcpPort;
         synchronized (this) {
             if (LOG.isTraceEnabled()) {
-                LOG.trace("success reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}",
-                        h, p, isUp, (successes + 1), serverSuccessesBeforeUp);
+                LOG.trace("success reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}", h, p,
+                        isUp, (successes + 1), serverSuccessesBeforeUp);
             }
             if (!isUp) {
                 if (++successes >= serverSuccessesBeforeUp) {
@@ -82,8 +82,8 @@ public class TimelyBalancedHost {
         int p = tcpPort;
         synchronized (this) {
             if (LOG.isTraceEnabled()) {
-                LOG.trace("failure reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}",
-                        h, p, isUp, (failures + 1), serverFailuresBeforeDown);
+                LOG.trace("failure reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}", h, p,
+                        isUp, (failures + 1), serverFailuresBeforeDown);
             }
             if (isUp) {
                 if (++failures >= serverFailuresBeforeDown) {

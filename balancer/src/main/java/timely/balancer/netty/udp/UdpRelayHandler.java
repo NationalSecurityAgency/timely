@@ -64,7 +64,8 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
         int failures = 0;
         while (client == null) {
             try {
-                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver.getHostPortKey(metric);
+                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver
+                        .getHostPortKey(metric);
                 client = udpClientPool.borrowObject(k);
             } catch (Exception e1) {
                 failures++;

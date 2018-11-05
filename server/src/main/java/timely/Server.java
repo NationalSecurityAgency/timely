@@ -130,12 +130,7 @@ public class Server {
     protected DataStore dataStore = null;
     protected DataStoreCache dataStoreCache = null;
     protected volatile boolean shutdown = false;
-    private static final int DEFAULT_EVENT_LOOP_THREADS;
-
-    static {
-        DEFAULT_EVENT_LOOP_THREADS = Math.max(1,
-                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
-    }
+    private final int DEFAULT_EVENT_LOOP_THREADS;
 
     private static boolean useEpoll() {
 
@@ -323,8 +318,16 @@ public class Server {
         LOG.info("Server shut down.");
     }
 
+    public Server(Configuration conf, int eventLoopThreads) throws Exception {
+
+        DEFAULT_EVENT_LOOP_THREADS = eventLoopThreads;
+        this.config = conf;
+    }
+
     public Server(Configuration conf) throws Exception {
 
+        DEFAULT_EVENT_LOOP_THREADS = Math.max(1,
+                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
         this.config = conf;
     }
 
@@ -427,7 +430,7 @@ public class Server {
         final int udpPort = config.getServer().getUdpPort();
         final String udpIp = config.getServer().getIp();
 
-        for (int n = 1; n < DEFAULT_EVENT_LOOP_THREADS; n++) {
+        for (int n = 0; n < DEFAULT_EVENT_LOOP_THREADS; n++) {
             final Bootstrap udpServer = new Bootstrap();
             udpServer.group(udpBossGroup);
             udpServer.channel(datagramChannelClass);

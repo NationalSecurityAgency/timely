@@ -25,7 +25,7 @@ public class TestServer extends Server {
     private final TestCaptureRequestHandler udpRequests = new TestCaptureRequestHandler();
 
     public TestServer(Configuration conf) throws Exception {
-        super(conf);
+        super(conf, 1);
     }
 
     @Override

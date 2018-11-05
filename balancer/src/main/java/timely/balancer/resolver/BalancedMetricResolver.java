@@ -39,6 +39,7 @@ public class BalancedMetricResolver implements MetricResolver {
         this.healthChecker = healthChecker;
 
         timer.schedule(new TimerTask() {
+
             @Override
             public void run() {
                 try {
@@ -170,7 +171,7 @@ public class BalancedMetricResolver implements MetricResolver {
             LOG.info("rebalancing: desiredDeltaHighest:{} desiredDeltaLowest:{} rateSortedMetrics.size():{}",
                     desiredDeltaHighest, desiredDeltaLowest, rateSortedMetrics.size());
             // advance to halfway
-            for (int numMetric=0; metricItr.hasNext() && numMetric <= rateSortedMetrics.size() / 2; numMetric++) {
+            for (int numMetric = 0; metricItr.hasNext() && numMetric <= rateSortedMetrics.size() / 2; numMetric++) {
                 metricItr.next();
             }
             long maxToReassign = Math.round(((double) metricMap.size() / serverMap.size()) * 0.20);
@@ -201,7 +202,8 @@ public class BalancedMetricResolver implements MetricResolver {
                                         tbh.getTcpPort());
                                 desiredDeltaHighest -= currentRate;
                             } else {
-                                LOG.debug("rebalancing: unable to reassign metric {} from server {}:{} - getRandomHost returned null",
+                                LOG.debug(
+                                        "rebalancing: unable to reassign metric {} from server {}:{} - getRandomHost returned null",
                                         currentMetric, mostUsed.getHost(), mostUsed.getTcpPort());
                             }
                         }

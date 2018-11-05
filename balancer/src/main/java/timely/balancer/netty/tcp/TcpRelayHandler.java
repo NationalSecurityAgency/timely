@@ -55,7 +55,6 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
                 }
             }
 
-
         } catch (Exception e) {
             LOG.error(LOG_ERR_MSG, msg, e);
             ChannelFuture cf = ctx.writeAndFlush(Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n")
@@ -72,7 +71,8 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
         int failures = 0;
         while (client == null) {
             try {
-                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver.getHostPortKey(metric);
+                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver
+                        .getHostPortKey(metric);
                 client = tcpClientPool.borrowObject(k);
             } catch (Exception e1) {
                 failures++;
