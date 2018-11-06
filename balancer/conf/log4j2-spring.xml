@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" monitorInterval="60">
+  <Properties>
+    <Property name="PID">????</Property>
+    <Property name="LOG_PATTERN">%clr{%d{yyyy-MM-dd HH:mm:ss.SSS}}{faint} %clr{%5p} %clr{${sys:PID}}{magenta} %clr{---}{faint} %clr{[%15.15t]}{faint} %clr{%-40.40c{1.}}{cyan} %clr{:}{faint} %m%n%wEx</Property>
+  </Properties>
+  <Appenders>
+    <RollingRandomAccessFile name="Rolling" fileName="/srv/logs/timely/timely-balancer.log"
+    						 filePattern="/srv/logs/timely/$${date:yyyy-MM}/timely-balancer-%d{MM-dd-yyyy}-%i.log.gz">
+      <PatternLayout pattern="${LOG_PATTERN}"/>
+      <Policies>
+      	<SizeBasedTriggeringPolicy size="1024 MB" />
+      </Policies>
+      <DefaultRolloverStrategy max="10" />
+    </RollingRandomAccessFile>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="${LOG_PATTERN}"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="trace" includeLocation="false">
+      <AppenderRef ref="Console" level="warn" />
+      <AppenderRef ref="Rolling" level="trace" />
+    </Root>
+  </Loggers>
+</Configuration>

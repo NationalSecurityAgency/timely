@@ -1,0 +1,91 @@
+timely:
+  balancer:
+    timelyHosts:
+      -
+        regex: ^[a-g].*
+        host: localhost
+        tcpPort: 4242
+        httpPort: 4243
+        wsPort: 4244
+        udpPort: 4245
+      -
+        regex: ^[h-n].*
+        host: localhost
+        tcpPort: 4342
+        httpPort: 4343
+        wsPort: 4244
+        udpPort: 4245
+      -
+        regex: ^[o-z].*
+        host: localhost
+        tcpPort: 4442
+        httpPort: 4443
+        wsPort: 4444
+        udpPort: 4445
+    tcpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    httpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    wsClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    udpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 8
+      maxTotalPerKey: 8
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+    clientSsl:
+      keyFile: 
+      keyType: pkcs12
+      keyPassword: 
+      trustStoreFile: 
+      trustStoreType: jks
+      trustStorePassword: 

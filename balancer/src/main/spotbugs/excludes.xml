@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <Match>
+    <Class name="timely.balancer.Balancer" />
+    <Method name="shutdown" />
+    <Bug pattern="UC_USELESS_OBJECT" />
+  </Match>
+  <Match>
+    <Class name="timely.balancer.netty.http.HttpRelayHandler$MyByteArrayOutputStream" />
+    <Method name="getBuf" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+</FindBugsFilter>
