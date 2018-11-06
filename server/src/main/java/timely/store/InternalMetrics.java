@@ -8,6 +8,7 @@ import java.util.List;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import timely.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 
@@ -35,14 +36,19 @@ public class InternalMetrics {
 
     private List<Tag> tags = new ArrayList<Tag>();
 
-    public InternalMetrics() {
+    public InternalMetrics(Configuration conf) {
         super();
         try {
             hostName = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
             LOG.error("Error getting hostname", e);
         }
-        tags.add(new Tag(HOSTNAME_TAG, hostName));
+        String instance = conf.getInstance();
+        if (instance == null) {
+            tags.add(new Tag(HOSTNAME_TAG, hostName));
+        } else {
+            tags.add(new Tag(HOSTNAME_TAG, hostName + "_" + instance));
+        }
     }
 
     public void incrementMetricsReceived(long num) {

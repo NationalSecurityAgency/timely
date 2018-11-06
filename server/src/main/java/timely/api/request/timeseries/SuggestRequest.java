@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import timely.api.annotation.Http;
@@ -21,6 +22,7 @@ import timely.util.JsonUtil;
 public class SuggestRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
     private static List<String> validTypes = new ArrayList<>();
+    private FullHttpRequest httpRequest = null;
     static {
         validTypes.add("metrics");
         validTypes.add("tagk");
@@ -101,4 +103,11 @@ public class SuggestRequest extends AuthenticatedRequest implements HttpGetReque
         return suggest;
     }
 
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
+    }
 }

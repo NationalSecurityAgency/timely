@@ -3,6 +3,10 @@ timely:
   meta-table: timely.meta
   metric-age-off-days:
     default: 7
+  cache:
+    enabled:
+    age-off-hours:
+      default: 30
   metrics-report-ignored-tags:
   accumulo:
     instance-name:

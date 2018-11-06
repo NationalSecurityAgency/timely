@@ -63,7 +63,7 @@ public class TcpClient implements AutoCloseable {
      */
     @Override
     public void close() throws IOException {
-        LOG.info("Shutting down connection to Timely at {}:{}", host, port);
+        LOG.trace("Shutting down connection to Timely at {}:{}", host, port);
         if (null != sock) {
             try {
                 if (null != out) {
@@ -86,13 +86,13 @@ public class TcpClient implements AutoCloseable {
                     sock = new Socket(host, port);
                     out = new PrintWriter(sock.getOutputStream(), false);
                     backoff = 2000;
-                    LOG.info("Connected to Timely at {}:{}", host, port);
+                    LOG.trace("Connected to Timely at {}:{}", host, port);
                 } catch (IOException e) {
                     LOG.error("Error connecting to Timely at {}:" + host + ":" + port + ". Error: " + e.getMessage());
                     backoff = backoff * 2;
                     sock = null;
                     out = null;
-                    LOG.warn("Will retry connection in {} ms.", backoff);
+                    LOG.info("Will retry connection in {} ms.", backoff);
                     return -1;
                 }
             } else {

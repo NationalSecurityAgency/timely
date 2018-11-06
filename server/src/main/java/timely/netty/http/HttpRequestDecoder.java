@@ -19,7 +19,7 @@ import timely.api.annotation.AnnotationResolver;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpGetRequest;
 import timely.api.request.HttpPostRequest;
-import timely.api.request.Request;
+import timely.api.request.timeseries.HttpRequest;
 import timely.api.response.StrictTransportResponse;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
@@ -77,7 +77,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
         final String sessionId = getSessionId(msg, this.anonymousAccessAllowed);
         LOG.trace("SessionID: " + sessionId);
 
-        Request request;
+        HttpRequest request;
         try {
             if (msg.getMethod().equals(HttpMethod.GET)) {
                 HttpGetRequest get = AnnotationResolver.getClassForHttpGet(decoder.path());
@@ -101,6 +101,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
                 ((AuthenticatedRequest) request).setSessionId(sessionId);
                 ((AuthenticatedRequest) request).addHeaders(msg.headers().entries());
             }
+            request.setHttpRequest(msg.copy());
             LOG.trace(LOG_PARSED_REQUEST, request);
             request.validate();
             out.add(request);

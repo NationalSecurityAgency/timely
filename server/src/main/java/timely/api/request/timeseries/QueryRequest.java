@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -363,6 +364,8 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
     private boolean showSummary = false;
     private boolean showQuery = false;
     private boolean delete = false;
+    @JsonIgnore
+    private FullHttpRequest httpRequest = null;
 
     public boolean isGlobalAnnotations() {
         return globalAnnotations;
@@ -606,5 +609,13 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
             });
         }
         return query;
+    }
+
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
     }
 }

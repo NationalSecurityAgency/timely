@@ -15,6 +15,7 @@ import org.hibernate.validator.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
+import timely.store.cache.DataStoreCache;
 import timely.validator.NotEmptyIfFieldSet;
 
 @Component
@@ -25,6 +26,7 @@ public class Configuration {
     private String metaTable = "timely.meta";
     private HashMap<String, Integer> metricAgeOffDays = new HashMap<>();
     private List<String> metricsReportIgnoredTags = new ArrayList<>();
+    private String instance = null;
 
     @Valid
     @NestedConfigurationProperty
@@ -41,6 +43,9 @@ public class Configuration {
     @Valid
     @NestedConfigurationProperty
     private MetaCache metaCache = new MetaCache();
+    @Valid
+    @NestedConfigurationProperty
+    private Cache cache = new Cache();
     @Valid
     @NestedConfigurationProperty
     private VisibilityCache visibilityCache = new VisibilityCache();
@@ -64,6 +69,14 @@ public class Configuration {
     public Configuration setMetaTable(String metaTable) {
         this.metaTable = metaTable;
         return this;
+    }
+
+    public void setInstance(String instance) {
+        this.instance = instance;
+    }
+
+    public String getInstance() {
+        return instance;
     }
 
     public HashMap<String, Integer> getMetricAgeOffDays() {
@@ -105,6 +118,10 @@ public class Configuration {
 
     public MetaCache getMetaCache() {
         return metaCache;
+    }
+
+    public Cache getCache() {
+        return cache;
     }
 
     public VisibilityCache getVisibilityCache() {
@@ -646,6 +663,61 @@ public class Configuration {
         public Configuration setMaxCapacity(long maxCapacity) {
             this.maxCapacity = maxCapacity;
             return Configuration.this;
+        }
+    }
+
+    public class Cache {
+
+        private boolean enabled = false;
+        private HashMap<String, Integer> metricAgeOffHours = new HashMap<>();
+        private List<String> nonCachedMetrics = new ArrayList<>();
+        private long maxUniqueTagSets = 50000;
+        private long flushInterval = 5000;
+
+        public HashMap<String, Integer> getMetricAgeOffHours() {
+            return metricAgeOffHours;
+        }
+
+        public Configuration setMetricAgeOffHours(HashMap<String, Integer> metricAgeOffHours) {
+            this.metricAgeOffHours = metricAgeOffHours;
+            return Configuration.this;
+        }
+
+        public void setDefaultAgeOffHours(int defaultAgeOffHours) {
+            this.metricAgeOffHours.put(DataStoreCache.DEFAULT_AGEOFF_KEY, defaultAgeOffHours);
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public Configuration setEnabled(boolean enabled) {
+            this.enabled = enabled;
+            return Configuration.this;
+        }
+
+        public List<String> getNonCachedMetrics() {
+            return nonCachedMetrics;
+        }
+
+        public void setNonCachedMetrics(List<String> nonCachedMetrics) {
+            this.nonCachedMetrics = nonCachedMetrics;
+        }
+
+        public long getMaxUniqueTagSets() {
+            return maxUniqueTagSets;
+        }
+
+        public void setMaxUniqueTagSets(long maxUniqueTagSets) {
+            this.maxUniqueTagSets = maxUniqueTagSets;
+        }
+
+        public long getFlushInterval() {
+            return flushInterval;
+        }
+
+        public void setFlushInterval(long flushInterval) {
+            this.flushInterval = flushInterval;
         }
     }
 

@@ -6,6 +6,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import io.netty.handler.codec.http.FullHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.annotation.Http;
@@ -24,10 +25,13 @@ import timely.util.JsonUtil;
 public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequest, UdpRequest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricRequest.class);
+    private FullHttpRequest httpRequest = null;
 
     @XmlElement
     @JsonUnwrapped
     private Metric metric;
+
+    private String line;
 
     private static final MetricParser metricParser = new MetricParser();
 
@@ -56,7 +60,8 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     public void parse(String line) {
         LOG.trace("Parsing Line: {}", line);
         try {
-            metric = metricParser.parse(line);
+            this.metric = metricParser.parse(line);
+            this.line = line;
         } catch (Exception e) {
             LOG.error("Error parsing metric: {}", line);
             throw e;
@@ -66,6 +71,10 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     @Override
     public String toString() {
         return metric.toString();
+    }
+
+    public String getLine() {
+        return line;
     }
 
     @Override
@@ -84,5 +93,13 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
     @Override
     public int hashCode() {
         return metric != null ? metric.hashCode() : 0;
+    }
+
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
     }
 }

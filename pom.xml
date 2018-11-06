@@ -44,10 +44,13 @@
     <version.caffeine>2.3.3</version.caffeine>
     <version.collectd>5.5.1</version.collectd>
     <version.commons-collections4>4.1</version.commons-collections4>
+    <version.commons-configuration>1.10</version.commons-configuration>
+    <version.commons-io>2.6</version.commons-io>
     <version.commons-lang3>3.5</version.commons-lang3>
-    <version.commons-pool2>2.4.2</version.commons-pool2>
+    <version.commons-pool2>2.5.0</version.commons-pool2>
     <version.disruptor>3.3.6</version.disruptor>
     <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
+    <version.fast-classpath-scanner>2.0.5</version.fast-classpath-scanner>
     <version.flink>1.1.4</version.flink>
     <version.google-flatbuffers>1.10.0</version.google-flatbuffers>
     <version.guava>19.0</version.guava>
@@ -70,8 +73,8 @@
     <version.maven-rpm>2.1.4</version.maven-rpm>
     <version.maven-shade>2.4.2</version.maven-shade>
     <version.maven-surefire>2.19.1</version.maven-surefire>
-    <version.netty>4.0.46.Final</version.netty>
-    <version.netty-tcnative>2.0.1.Final</version.netty-tcnative>
+    <version.netty>4.0.56.Final</version.netty>
+    <version.netty-tcnative>2.0.7.Final</version.netty-tcnative>
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.4</version.powermock>
     <version.slf4j>1.7.21</version.slf4j>
@@ -120,6 +123,11 @@
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
         <version>1.9.3</version>
+      </dependency>
+      <dependency>
+        <groupId>fi.iki.yak</groupId>
+        <artifactId>compression-gorilla</artifactId>
+        <version>2.1.1</version>
       </dependency>
       <dependency>
         <groupId>io.github.lukehutch</groupId>
@@ -276,6 +284,11 @@
       <dependency>
         <groupId>timely</groupId>
         <artifactId>timely-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>timely</groupId>
+        <artifactId>timely-server</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

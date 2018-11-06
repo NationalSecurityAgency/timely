@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
@@ -77,9 +78,9 @@ import timely.model.Tag;
 import timely.sample.Aggregation;
 import timely.sample.Aggregator;
 import timely.sample.Sample;
-import timely.sample.aggregators.Avg;
 import timely.sample.iterators.AggregationIterator;
 import timely.sample.iterators.DownsampleIterator;
+import timely.store.cache.DataStoreCache;
 import timely.store.iterators.RateIterator;
 import timely.util.MetaKeySet;
 
@@ -88,8 +89,6 @@ public class DataStoreImpl implements DataStore {
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreImpl.class);
 
     private static final long METRICS_PERIOD = 30000;
-    private static final long DEFAULT_DOWNSAMPLE_MS = 1;
-    private static final String DEFAULT_DOWNSAMPLE_AGGREGATOR = Avg.class.getSimpleName().toLowerCase();
     private static final Pattern REGEX_TEST = Pattern.compile("^\\w+$");
 
     /*
@@ -118,8 +117,8 @@ public class DataStoreImpl implements DataStore {
     private final AtomicReference<SortedMap<MetricTagK, Integer>> metaCounts = new AtomicReference<>(new TreeMap<>());
     private final String metricsTable;
     private final String metaTable;
-    private final InternalMetrics internalMetrics = new InternalMetrics();
-    private final Timer internalMetricsTimer = new Timer(true);
+    private final InternalMetrics internalMetrics;
+    private final Timer internalMetricsTimer = new Timer("InternalMatricsTimer", true);
     private final int scannerThreads;
     private final long maxDownsampleMemory;
     private final BatchWriterConfig bwConfig;
@@ -128,7 +127,8 @@ public class DataStoreImpl implements DataStore {
     private final ThreadLocal<BatchWriter> batchWriter = new ThreadLocal<>();
     private boolean anonAccessAllowed = false;
     private final Map<String, String> ageOff;
-    private final long defaultAgeOff;
+    private final long defaultAgeOffMilliSec;
+    private DataStoreCache cache = null;
 
     public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
 
@@ -163,7 +163,7 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             ageOff = getAgeOff(conf);
-            defaultAgeOff = this.getAgeOffForMetric(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY);
+            defaultAgeOffMilliSec = this.getAgeOffForMetric(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY);
 
             final Map<String, String> tableIdMap = connector.tableOperations().tableIdMap();
             if (!tableIdMap.containsKey(metricsTable)) {
@@ -174,8 +174,18 @@ public class DataStoreImpl implements DataStore {
                     // don't care
                 }
             }
-            this.removeAgeOffIterators(connector, metricsTable);
-            this.applyAgeOffIterator(connector, metricsTable, true);
+            try {
+                this.removeAgeOffIterators(connector, metricsTable);
+                this.applyAgeOffIterator(connector, metricsTable, true);
+            } catch (AccumuloException e1) {
+                Throwable cause = e1.getCause();
+                if (cause instanceof IllegalArgumentException
+                        && cause.getMessage().startsWith("iterator name conflict")) {
+                    LOG.info("ignoring iterator name conflict due to multiple instances starting up");
+                } else {
+                    throw e1;
+                }
+            }
 
             metaTable = conf.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
@@ -189,19 +199,31 @@ public class DataStoreImpl implements DataStore {
             this.removeAgeOffIterators(connector, metaTable);
             this.applyAgeOffIterator(connector, metaTable, false);
 
+            internalMetrics = new InternalMetrics(conf);
             internalMetricsTimer.schedule(new TimerTask() {
 
                 @Override
                 public void run() {
-                    internalMetrics.getMetricsAndReset().forEach(m -> store(m));
+                    internalMetrics.getMetricsAndReset().forEach(m -> store(m, false));
                 }
 
             }, METRICS_PERIOD, METRICS_PERIOD);
+
             this.metaCache = MetaCacheFactory.getCache(conf);
-        } catch (Exception e) {
+        } catch (Exception e2) {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStoreImpl",
-                    e.getMessage(), e);
+                    e2.getMessage(), e2);
         }
+    }
+
+    @Override
+    public void setCache(DataStoreCache cache) {
+        this.cache = cache;
+    }
+
+    @Override
+    public DataStoreCache getCache() {
+        return cache;
     }
 
     private static final EnumSet<IteratorScope> AGEOFF_SCOPES = EnumSet.allOf(IteratorScope.class);
@@ -237,7 +259,16 @@ public class DataStoreImpl implements DataStore {
 
     @Override
     public void store(Metric metric) {
+        store(metric, true);
+    }
+
+    public void store(Metric metric, boolean cacheEnabled) {
         LOG.trace("Received Store Request for: {}", metric);
+
+        if (cache != null && cacheEnabled) {
+            cache.store(metric);
+        }
+
         if (null == metaWriter.get()) {
             try {
                 BatchWriter w = connector.createBatchWriter(metaTable, bwConfig);
@@ -461,10 +492,12 @@ public class DataStoreImpl implements DataStore {
     @Override
     public List<QueryResponse> query(QueryRequest msg) throws TimelyException {
         List<QueryResponse> result = new ArrayList<>();
+
         LOG.debug("Query request {}", msg);
-        long startTs = msg.getStart();
-        long endTs = msg.getEnd();
+        long requestedStartTs = msg.getStart();
+        long requestedEndTs = msg.getEnd();
         StringBuilder metricList = new StringBuilder();
+
         try {
             long numResults = 0;
             long now = System.currentTimeMillis();
@@ -475,80 +508,134 @@ public class DataStoreImpl implements DataStore {
                     metricList.append(",");
                 }
                 metricList.append(metric);
-                BatchScanner scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
-                        scannerThreads);
-                try {
+                Map<Set<Tag>, List<Aggregation>> cachedMetrics = new HashMap<>();
+                long oldestTimestampFromCache = Long.MAX_VALUE;
+
+                if (cache != null) {
+                    long oldestCacheTimestamp = cache.getOldestTimestamp(query.getMetric());
+                    if (requestedEndTs >= oldestCacheTimestamp) {
+                        cachedMetrics = cache.subquery(msg, query);
+
+                        int z = 0;
+                        for (Collection<Aggregation> c : cachedMetrics.values()) {
+                            z += c.size();
+                        }
+                        long totalRequestedTime = requestedEndTs - requestedStartTs;
+                        long percentServedFromCache = 0;
+                        if (!cachedMetrics.isEmpty() && oldestCacheTimestamp != Long.MAX_VALUE) {
+                            if (requestedStartTs < oldestCacheTimestamp && requestedEndTs < oldestCacheTimestamp) {
+                                percentServedFromCache = 0;
+                            } else if (requestedStartTs >= oldestCacheTimestamp
+                                    && requestedEndTs >= oldestCacheTimestamp) {
+                                percentServedFromCache = 100;
+                            } else {
+                                long timeAnsweredFromCache = requestedEndTs - oldestCacheTimestamp;
+                                percentServedFromCache = Math
+                                        .round((double) timeAnsweredFromCache / (double) totalRequestedTime * 100);
+                            }
+                            if (percentServedFromCache > 100) {
+                                percentServedFromCache = 100;
+                            }
+                            LOG.debug("Cache query time:{} duration (min):{} metrics:{} results:{} percentFromCache:{}",
+                                    (System.currentTimeMillis() - now),
+                                    ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList.toString(), z,
+                                    percentServedFromCache);
+                            allSeries.putAll(cachedMetrics);
+                        }
+                    }
+                    oldestTimestampFromCache = Math.max(oldestCacheTimestamp,
+                            System.currentTimeMillis() - cache.getAgeOffForMetric(query.getMetric()) + 1);
+                }
+
+                if (cachedMetrics.isEmpty() || requestedStartTs < oldestTimestampFromCache) {
+                    // we have already searched from oldestTimestampFromCache to
+                    // requestedEndTs
+                    long endTs = (oldestTimestampFromCache == Long.MAX_VALUE) ? requestedEndTs
+                            : oldestTimestampFromCache - 1;
 
                     // Reset the start timestamp for the query to the
                     // beginning of the downsample period based on the epoch
-                    long downsample = getDownsamplePeriod(query);
+                    long downsample = DownsampleIterator.getDownsamplePeriod(query);
                     LOG.trace("Downsample period {}", downsample);
-                    long startOfFirstPeriod = startTs - (startTs % downsample);
+                    long startOfFirstPeriod = requestedStartTs - (requestedStartTs % downsample);
                     long endDistanceFromDownSample = endTs % downsample;
                     long endOfLastPeriod = (endDistanceFromDownSample > 0
                             ? endTs + downsample - endDistanceFromDownSample
                             : endTs);
 
-                    List<String> tagOrder = prioritizeTags(query.getMetric(), query.getTags());
-                    Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
-                    Set<Tag> colFamValues = getColumnFamilies(metric, orderedTags);
-                    List<Range> ranges = getQueryRanges(metric, startOfFirstPeriod, endOfLastPeriod, colFamValues);
-                    scanner.setRanges(ranges);
-                    setQueryColumns(scanner, metric, orderedTags, colFamValues);
+                    LOG.debug("startOfFirstPeriod:{} endOfLastPeriod:{}", startOfFirstPeriod, endOfLastPeriod);
 
-                    if (query.isRate()) {
-                        LOG.trace("Adding rate iterator");
-                        IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
-                        RateIterator.setRateOptions(rate, query.getRateOptions());
-                        scanner.addScanIterator(rate);
-                    }
+                    if (endOfLastPeriod > startOfFirstPeriod) {
+                        BatchScanner scanner = null;
+                        try {
+                            scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
+                                    scannerThreads);
+                            List<String> tagOrder = prioritizeTags(query.getMetric(), query.getTags());
+                            Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
+                            Set<Tag> colFamValues = getColumnFamilies(metric, orderedTags);
+                            List<Range> ranges = getQueryRanges(metric, startOfFirstPeriod, endOfLastPeriod,
+                                    colFamValues);
+                            scanner.setRanges(ranges);
+                            setQueryColumns(scanner, metric, orderedTags, colFamValues);
 
-                    Class<? extends Aggregator> daggClass = getDownsampleAggregator(query);
-                    if (daggClass == null) {
-                        // we should always have a downsample iterator in the
-                        // stack.
-                        throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                                "Error during query: programming error", "daggClass == null");
-                    } else {
-                        LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
-                        IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
-                        DownsampleIterator.setDownsampleOptions(is, startOfFirstPeriod, endOfLastPeriod, downsample,
-                                maxDownsampleMemory, daggClass.getName());
-                        scanner.addScanIterator(is);
-                    }
+                            if (query.isRate()) {
+                                LOG.trace("Adding rate iterator");
+                                IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
+                                RateIterator.setRateOptions(rate, query.getRateOptions());
+                                scanner.addScanIterator(rate);
+                            }
 
-                    Class<? extends Aggregator> aggClass = getAggregator(query);
-                    // the aggregation iterator is optional
-                    if (aggClass != null) {
-                        LOG.trace("Aggregator type {}", aggClass.getSimpleName());
-                        IteratorSetting is = new IteratorSetting(501, AggregationIterator.class);
-                        AggregationIterator.setAggregationOptions(is, query.getTags(), aggClass.getName());
-                        scanner.addScanIterator(is);
-                    }
+                            Class<? extends Aggregator> daggClass = DownsampleIterator.getDownsampleAggregator(query);
+                            if (daggClass == null) {
+                                // we should always have a downsample iterator
+                                // in the stack.
+                                throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
+                                        "Error during query: programming error", "daggClass == null");
+                            } else {
+                                LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
+                                IteratorSetting is = new IteratorSetting(500, DownsampleIterator.class);
+                                DownsampleIterator.setDownsampleOptions(is, startOfFirstPeriod, endOfLastPeriod,
+                                        downsample, maxDownsampleMemory, daggClass.getName());
+                                scanner.addScanIterator(is);
+                            }
 
-                    // tag -> array of results by period starting at start
-                    for (Entry<Key, Value> encoded : scanner) {
-                        // we can decode the value as a Map<Set<Tag>,
-                        // Aggregation> even if an AggregationIterator
-                        // is not used because Downsample is a subclass of
-                        // Aggregation
-                        Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(encoded.getValue());
-                        for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
-                            numResults++;
-                            Set<Tag> key = new HashSet<>();
-                            for (Tag tag : entry.getKey()) {
-                                if (query.getTags().keySet().contains(tag.getKey())) {
-                                    key.add(tag);
+                            Class<? extends Aggregator> aggClass = getAggregator(query);
+                            // the aggregation iterator is optional
+                            if (aggClass != null) {
+                                LOG.trace("Aggregator type {}", aggClass.getSimpleName());
+                                IteratorSetting is = new IteratorSetting(501, AggregationIterator.class);
+                                AggregationIterator.setAggregationOptions(is, query.getTags(), aggClass.getName());
+                                scanner.addScanIterator(is);
+                            }
+
+                            // tag -> array of results by period starting at
+                            // start
+                            for (Entry<Key, Value> encoded : scanner) {
+                                // we can decode the value as a Map<Set<Tag>,
+                                // Aggregation> even if an AggregationIterator
+                                // is not used because Downsample is a subclass
+                                // of Aggregation
+                                Map<Set<Tag>, Aggregation> samples = AggregationIterator
+                                        .decodeValue(encoded.getValue());
+                                for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
+                                    Set<Tag> key = new HashSet<>();
+                                    for (Tag tag : entry.getKey()) {
+                                        if (query.getTags().keySet().contains(tag.getKey())) {
+                                            key.add(tag);
+                                        }
+                                    }
+                                    List<Aggregation> aggregations = allSeries.getOrDefault(key, new ArrayList<>());
+                                    aggregations.add(entry.getValue());
+                                    allSeries.put(key, aggregations);
                                 }
                             }
-                            List<Aggregation> aggregations = allSeries.getOrDefault(key, new ArrayList<>());
-                            aggregations.add(entry.getValue());
-                            allSeries.put(key, aggregations);
+                            LOG.trace("allSeries: {}", allSeries);
+                        } finally {
+                            if (scanner != null) {
+                                scanner.close();
+                            }
                         }
                     }
-                    LOG.trace("allSeries: {}", allSeries);
-                } finally {
-                    scanner.close();
                 }
 
                 // TODO groupby here?
@@ -558,8 +645,8 @@ public class DataStoreImpl implements DataStore {
                     result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
                 }
             }
-            LOG.debug("Query time: {} duration: {} metrics: {} results: {}", (System.currentTimeMillis() - now),
-                    (endTs - startTs), metricList.toString(), numResults);
+            LOG.debug("Query time:{} duration:{} metrics:{} results:{}", (System.currentTimeMillis() - now),
+                    ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList.toString(), numResults);
             internalMetrics.addQueryResponse(result.size(), (System.currentTimeMillis() - now));
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
@@ -584,7 +671,6 @@ public class DataStoreImpl implements DataStore {
 
     /**
      *
-     * @param query
      * @return ordered list of most specific to least specific tags in the query
      */
     private List<String> prioritizeTags(String metric, Map<String, String> tags) {
@@ -846,32 +932,6 @@ public class DataStoreImpl implements DataStore {
         return Aggregator.getAggregator(query.getAggregator());
     }
 
-    private Class<? extends Aggregator> getDownsampleAggregator(SubQuery query) {
-        String aggregatorName = Aggregator.NONE;
-        if (query.getDownsample().isPresent()) {
-            String parts[] = query.getDownsample().get().split("-");
-            aggregatorName = parts[1];
-        }
-        // disabling the downsampling OR setting the aggregation to none are
-        // both considered to be disabling
-        if (aggregatorName.equals(Aggregator.NONE)) {
-            // we need a downsampling iterator, so default to max to ensure we
-            // return something
-            aggregatorName = DEFAULT_DOWNSAMPLE_AGGREGATOR;
-        }
-        return Aggregator.getAggregator(aggregatorName);
-    }
-
-    private long getDownsamplePeriod(SubQuery query) {
-        // disabling the downsampling OR setting the aggregation to none are
-        // both considered to be disabling
-        if (!query.getDownsample().isPresent() || query.getDownsample().get().endsWith("-none")) {
-            return DEFAULT_DOWNSAMPLE_MS;
-        }
-        String parts[] = query.getDownsample().get().split("-");
-        return getTimeInMillis(parts[0]);
-    }
-
     private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
         return getSessionAuthorizations(request.getSessionId());
     }
@@ -903,7 +963,7 @@ public class DataStoreImpl implements DataStore {
     public long getAgeOffForMetric(String metricName) {
         String age = this.ageOff.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
         if (null == age) {
-            return this.defaultAgeOff;
+            return this.defaultAgeOffMilliSec;
         } else {
             return Long.parseLong(age);
         }

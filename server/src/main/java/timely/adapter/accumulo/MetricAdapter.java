@@ -4,10 +4,13 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Joiner;
 import org.apache.accumulo.core.client.lexicoder.LongLexicoder;
 import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
 import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
@@ -39,6 +42,7 @@ public class MetricAdapter {
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
+    public static final Joiner equalsJoiner = Joiner.on("=");
 
     public static long roundTimestampToLastHour(long timestamp) {
         return timestamp - (timestamp % 3600000);
@@ -64,7 +68,24 @@ public class MetricAdapter {
         return newTags;
     }
 
+    private static Map<String, String> escapeDelimiters(Map<String, String> tags) {
+        Map<String, String> newTags = new LinkedHashMap<>();
+        for (Map.Entry<String, String> t : tags.entrySet()) {
+            // escape all commas and equals in the tag key and value since they
+            // are used as a delimiter
+            String k = t.getKey();
+            String v = t.getValue();
+            k = k.replaceAll("=", "\\=");
+            k = k.replaceAll(",", "\\,");
+            v = v.replaceAll("=", "\\=");
+            v = v.replaceAll(",", "\\,");
+            newTags.put(k, v);
+        }
+        return newTags;
+    }
+
     public static Mutation toMutation(Metric metric) {
+
         final Mutation mutation = new Mutation(encodeRowKey(metric));
         List<Tag> tags = metric.getTags();
         tags = escapeDelimiters(tags);
@@ -88,6 +109,30 @@ public class MetricAdapter {
         return mutation;
     }
 
+    public static Key toKey(String metric, Map<String, String> tags, long timestamp) {
+        byte[] row = encodeRowKey(metric, timestamp);
+
+        tags = escapeDelimiters(tags);
+        StringBuilder colQualSb = new StringBuilder();
+        String cf = null;
+        for (Map.Entry<String, String> entry : tags.entrySet()) {
+            if (entry.getKey().equals(VISIBILITY_TAG))
+                continue;
+
+            if (cf == null) {
+                cf = equalsJoiner.join(entry.getKey(), entry.getValue());
+                continue;
+            }
+            if (colQualSb.length() > 0) {
+                colQualSb.append(",");
+            }
+            colQualSb.append(equalsJoiner.join(entry.getKey(), entry.getValue()));
+        }
+        byte[] cqBytes = encodeColQual(timestamp, colQualSb.toString());
+        ColumnVisibility colVis = extractVisibility(tags);
+        return new Key(new Text(row), new Text(cf), new Text(cqBytes), colVis, timestamp);
+    }
+
     private static Value extractValue(Metric metric) {
         return new Value(encodeValue(metric.getValue().getMeasure()));
     }
@@ -104,13 +149,21 @@ public class MetricAdapter {
         return bb.getDouble();
     }
 
-    private static ColumnVisibility extractVisibility(List<Tag> tags) {
+    public static ColumnVisibility extractVisibility(List<Tag> tags) {
         // @formatter:off
         Optional<Tag> visTag = tags.stream()
                 .filter(t -> t.getKey().equals(VISIBILITY_TAG))
                 .findFirst();
         return visTag.isPresent() ? new ColumnVisibility(visTag.get().getValue()) : EMPTY_VISIBILITY;
         // @formatter:on
+    }
+
+    public static ColumnVisibility extractVisibility(Map<String, String> tags) {
+        if (tags.containsKey(VISIBILITY_TAG)) {
+            return new ColumnVisibility(tags.get(VISIBILITY_TAG));
+        } else {
+            return EMPTY_VISIBILITY;
+        }
     }
 
     public static Metric parse(Key k, Value v, boolean includeVizTag) {

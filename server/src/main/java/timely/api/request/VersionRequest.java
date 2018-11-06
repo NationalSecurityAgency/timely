@@ -1,5 +1,6 @@
 package timely.api.request;
 
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import timely.api.annotation.Http;
 import timely.api.annotation.Tcp;
@@ -10,6 +11,7 @@ import timely.api.annotation.WebSocket;
 @WebSocket(operation = "version")
 public class VersionRequest implements TcpRequest, HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
+    private FullHttpRequest httpRequest = null;
     public static final String VERSION;
     static {
         String ver = VersionRequest.class.getPackage().getImplementationVersion();
@@ -40,4 +42,11 @@ public class VersionRequest implements TcpRequest, HttpGetRequest, HttpPostReque
         return new VersionRequest();
     }
 
+    public void setHttpRequest(FullHttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public FullHttpRequest getHttpRequest() {
+        return httpRequest;
+    }
 }

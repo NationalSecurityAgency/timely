@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
@@ -50,6 +51,7 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +60,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
+import timely.netty.http.HttpCacheRequestHandler;
 import timely.netty.http.HttpMetricPutHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.HttpVersionRequestHandler;
@@ -94,6 +97,7 @@ import timely.netty.websocket.timeseries.WSSuggestRequestHandler;
 import timely.store.DataStore;
 import timely.store.DataStoreFactory;
 import timely.store.MetaCacheFactory;
+import timely.store.cache.DataStoreCache;
 
 public class Server {
 
@@ -120,9 +124,11 @@ public class Server {
     protected Channel tcpChannelHandle = null;
     protected Channel httpChannelHandle = null;
     protected Channel wsChannelHandle = null;
-    protected Channel udpChannelHandle = null;
+    protected List<Channel> udpChannelHandleList = new ArrayList<>();
     protected DataStore dataStore = null;
+    protected DataStoreCache dataStoreCache = null;
     protected volatile boolean shutdown = false;
+    private final int DEFAULT_EVENT_LOOP_THREADS;
 
     private static boolean useEpoll() {
 
@@ -213,9 +219,9 @@ public class Server {
             channelFutures.add(wsChannelHandle.close());
         }
 
-        if (udpChannelHandle != null) {
+        for (Channel c : udpChannelHandleList) {
             LOG.info("Closing udpChannelHandle");
-            channelFutures.add(udpChannelHandle.close());
+            channelFutures.add(c.close());
         }
 
         // wait for the channels to shutdown
@@ -310,8 +316,16 @@ public class Server {
         LOG.info("Server shut down.");
     }
 
+    public Server(Configuration conf, int eventLoopThreads) throws Exception {
+
+        DEFAULT_EVENT_LOOP_THREADS = eventLoopThreads;
+        this.config = conf;
+    }
+
     public Server(Configuration conf) throws Exception {
 
+        DEFAULT_EVENT_LOOP_THREADS = Math.max(1,
+                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
         this.config = conf;
     }
 
@@ -320,6 +334,10 @@ public class Server {
         int nettyThreads = Math.max(1,
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
         dataStore = DataStoreFactory.create(config, nettyThreads);
+        if (config.getCache().isEnabled()) {
+            dataStoreCache = new DataStoreCache(config);
+            dataStore.setCache(dataStoreCache);
+        }
         // Initialize the MetaCache
         MetaCacheFactory.getCache(config);
         // initialize the auth cache
@@ -409,18 +427,21 @@ public class Server {
 
         final int udpPort = config.getServer().getUdpPort();
         final String udpIp = config.getServer().getIp();
-        final Bootstrap udpServer = new Bootstrap();
-        udpServer.group(udpBossGroup);
-        udpServer.channel(datagramChannelClass);
-        udpServer.handler(setupUdpChannel());
-        udpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        udpChannelHandle = udpServer.bind(udpIp, udpPort).sync().channel();
-        final String udpAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 
+        for (int n = 0; n < DEFAULT_EVENT_LOOP_THREADS; n++) {
+            final Bootstrap udpServer = new Bootstrap();
+            udpServer.group(udpBossGroup);
+            udpServer.channel(datagramChannelClass);
+            udpServer.handler(setupUdpChannel());
+            udpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+            udpServer.option(EpollChannelOption.SO_REUSEADDR, true);
+            udpServer.option(EpollChannelOption.SO_REUSEPORT, true);
+            udpChannelHandleList.add(udpServer.bind(udpIp, udpPort).sync().channel());
+        }
         shutdownHook();
         LOG.info(
                 "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
-                tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, udpAddress, udpPort);
+                tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
     }
 
     protected SslContext createSSLContext(Configuration config) throws Exception {
@@ -507,6 +528,7 @@ public class Server {
                 ch.pipeline().addLast("search", new HttpSearchLookupRequestHandler(dataStore));
                 ch.pipeline().addLast("suggest", new HttpSuggestRequestHandler(dataStore));
                 ch.pipeline().addLast("version", new HttpVersionRequestHandler());
+                ch.pipeline().addLast("cache", new HttpCacheRequestHandler(dataStoreCache));
                 ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler());
             }
@@ -523,7 +545,7 @@ public class Server {
                 ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new UdpDecoder());
-                ch.pipeline().addLast(udpWorkerGroup, "putHandler", new TcpPutHandler(dataStore));
+                ch.pipeline().addLast("putHandler", new TcpPutHandler(dataStore));
             }
         };
     }
