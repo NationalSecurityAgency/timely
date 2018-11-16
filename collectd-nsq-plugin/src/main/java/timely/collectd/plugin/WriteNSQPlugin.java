@@ -13,7 +13,6 @@ import org.apache.http.client.entity.EntityBuilder;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.collectd.api.Collectd;
 import org.collectd.api.CollectdConfigInterface;
@@ -29,8 +28,8 @@ import org.collectd.api.ValueList;
  * set the statsd prefix in NSQ to 'nsq'.
  *
  */
-public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConfigInterface, CollectdShutdownInterface,
-        CollectdWriteInterface {
+public class WriteNSQPlugin extends CollectDPluginParent
+        implements CollectdConfigInterface, CollectdShutdownInterface, CollectdWriteInterface {
 
     private String host = null;
     private int port = 0;

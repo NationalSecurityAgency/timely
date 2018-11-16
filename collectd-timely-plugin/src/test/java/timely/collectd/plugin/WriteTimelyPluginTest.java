@@ -8,7 +8,6 @@ import java.net.Socket;
 import java.util.Collections;
 
 import net.jcip.annotations.NotThreadSafe;
-
 import org.collectd.api.Collectd;
 import org.collectd.api.DataSet;
 import org.collectd.api.DataSource;
@@ -165,7 +164,7 @@ public class WriteTimelyPluginTest {
             return (s != null && s.isConnected());
         }
 
-        public boolean messageReceived() {
+        synchronized public boolean messageReceived() {
             try {
                 return Boolean.valueOf(this.received);
             } finally {
@@ -189,9 +188,11 @@ public class WriteTimelyPluginTest {
                         return;
                     }
                     if (null != line) {
-                        this.received = true;
+                        synchronized (this) {
+                            this.received = true;
+                        }
+                        System.out.println(line);
                     }
-                    System.out.println(line);
                 }
             } catch (IOException e) {
                 Assert.fail(e.getMessage());

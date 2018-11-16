@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.util.Collections;
 
 import net.jcip.annotations.NotThreadSafe;
-
 import org.collectd.api.Collectd;
 import org.collectd.api.DataSet;
 import org.collectd.api.DataSource;

@@ -2,8 +2,10 @@ package timely.collectd.plugin;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -19,8 +21,8 @@ import org.collectd.api.ValueList;
  * CollectD plugin that writes metrics collected by the StatsD plugin to Timely.
  *
  */
-public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdConfigInterface,
-        CollectdShutdownInterface, CollectdWriteInterface {
+public class WriteTimelyPlugin extends CollectDPluginParent
+        implements CollectdConfigInterface, CollectdShutdownInterface, CollectdWriteInterface {
 
     private GenericObjectPool<Socket> socketPool = null;
 
@@ -48,7 +50,9 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
             try {
                 // close socket so that the object pool will discard it and
                 // reconnect
-                socket.close();
+                if (socket != null) {
+                    socket.close();
+                }
             } catch (IOException e1) {
                 Collectd.logError(e1.getMessage());
             }
@@ -63,7 +67,7 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
 
     @Override
     public void write(String metric, OutputStream out) {
-        PrintWriter printWriter = new PrintWriter(out, false);
+        PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8), false);
         printWriter.write(metric);
         printWriter.flush();
         if (printWriter.checkError()) {

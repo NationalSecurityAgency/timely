@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
@@ -17,6 +17,15 @@
       <artifactId>commons-pool2</artifactId>
     </dependency>
     <dependency>
+      <groupId>timely</groupId>
+      <artifactId>collectd-plugin-parent</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>net.jcip</groupId>
       <artifactId>jcip-annotations</artifactId>
       <scope>test</scope>
@@ -27,19 +36,10 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-easymock-release-full</artifactId>
       <classifier>full</classifier>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>timely</groupId>
-      <artifactId>collectd-plugin-parent</artifactId>
     </dependency>
   </dependencies>
   <build>
@@ -49,8 +49,7 @@
         <artifactId>maven-shade-plugin</artifactId>
         <configuration>
           <artifactSet>
-            <includes>
-            </includes>
+            <includes />
           </artifactSet>
           <createDependencyReducedPom>false</createDependencyReducedPom>
         </configuration>

@@ -1,5 +1,7 @@
 package timely.collectd.plugin;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
@@ -7,8 +9,6 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.collectd.api.OConfigItem;
-
-import java.util.concurrent.TimeUnit;
 
 public class PooledCloseableHttpClientFactory implements PooledObjectFactory {
 

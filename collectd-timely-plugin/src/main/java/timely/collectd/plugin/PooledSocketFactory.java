@@ -1,12 +1,12 @@
 package timely.collectd.plugin;
 
+import java.net.Socket;
+
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.collectd.api.Collectd;
 import org.collectd.api.OConfigItem;
-
-import java.net.Socket;
 
 public class PooledSocketFactory implements PooledObjectFactory {
 
@@ -63,8 +63,8 @@ public class PooledSocketFactory implements PooledObjectFactory {
                 if (socketTimeout > -1) {
                     socket.setSoTimeout(socketTimeout);
                 }
-                Collectd.logInfo("Connected to Timely at " + host + ":" + port + " from local port:"
-                        + socket.getLocalPort());
+                Collectd.logInfo(
+                        "Connected to Timely at " + host + ":" + port + " from local port:" + socket.getLocalPort());
             } catch (Exception e) {
                 Collectd.logError("Error connecting to Timely at " + host + ":" + port + ". Error: " + e.getMessage()
                         + ".  Will retry connection in " + currentBackoff + " ms.");
@@ -94,8 +94,8 @@ public class PooledSocketFactory implements PooledObjectFactory {
                 socket.close();
             }
         } catch (Exception e) {
-            Collectd.logError("Error closing connection to Timely at " + host + ":" + port + ". Error: "
-                    + e.getMessage());
+            Collectd.logError(
+                    "Error closing connection to Timely at " + host + ":" + port + ". Error: " + e.getMessage());
         } finally {
             pooledObject.invalidate();
             ;
@@ -105,7 +105,7 @@ public class PooledSocketFactory implements PooledObjectFactory {
     @Override
     public boolean validateObject(PooledObject pooledObject) {
         if (connectionTimeToLive > -1) {
-            if (pooledObject.getCreateTime() + connectionTimeToLive > System.currentTimeMillis()) {
+            if (System.currentTimeMillis() > pooledObject.getCreateTime() + connectionTimeToLive) {
                 return false;
             }
         }
