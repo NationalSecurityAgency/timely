@@ -31,7 +31,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
@@ -177,11 +176,10 @@ public class DataStoreImpl implements DataStore {
             try {
                 this.removeAgeOffIterators(connector, metricsTable);
                 this.applyAgeOffIterator(connector, metricsTable, true);
-            } catch (AccumuloException e1) {
+            } catch (Exception e1) {
                 Throwable cause = e1.getCause();
-                if (cause instanceof IllegalArgumentException
-                        && cause.getMessage().startsWith("iterator name conflict")) {
-                    LOG.info("ignoring iterator name conflict due to multiple instances starting up");
+                if (cause.getMessage().contains("conflict")) {
+                    LOG.info("ignoring iterator conflict due to multiple instances starting up");
                 } else {
                     throw e1;
                 }

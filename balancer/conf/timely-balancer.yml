@@ -2,26 +2,24 @@ timely:
   balancer:
     timelyHosts:
       -
-        regex: ^[a-g].*
         host: localhost
         tcpPort: 4242
         httpPort: 4243
         wsPort: 4244
         udpPort: 4245
       -
-        regex: ^[h-n].*
         host: localhost
         tcpPort: 4342
         httpPort: 4343
         wsPort: 4244
         udpPort: 4245
       -
-        regex: ^[o-z].*
         host: localhost
         tcpPort: 4442
         httpPort: 4443
         wsPort: 4444
         udpPort: 4445
+    assignmentFile: /tmp/assignments.csv
     tcpClientPool:
       minIdlePerKey: 0
       maxIdlePerKey: 8

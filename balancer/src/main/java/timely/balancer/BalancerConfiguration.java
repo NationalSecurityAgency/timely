@@ -47,6 +47,8 @@ public class BalancerConfiguration {
 
     private int serverSuccessesBeforeUp = 3;
 
+    public String assignmentFile;
+
     @Valid
     @NestedConfigurationProperty
     private List<TimelyBalancedHost> wsHosts = new ArrayList<>();
@@ -105,6 +107,14 @@ public class BalancerConfiguration {
 
     public List<TimelyBalancedHost> getTimelyHosts() {
         return timelyHosts;
+    }
+
+    public String getAssignmentFile() {
+        return assignmentFile;
+    }
+
+    public void setAssignmentFile(String assignmentFile) {
+        this.assignmentFile = assignmentFile;
     }
 
     public class ClientSsl {

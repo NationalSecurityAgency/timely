@@ -2,10 +2,10 @@
 
 if [[ `uname` == "Darwin" ]]; then
         THIS_SCRIPT=`python -c 'import os,sys; print os.path.realpath(sys.argv[1])' $0`
-        TCNATIVE_SUFFIX="tcnative.jnilib"
+        TCNATIVE_SUFFIX="jnilib"
 else
         THIS_SCRIPT=`readlink -f $0`
-        TCNATIVE_SUFFIX="tcnative.so"
+        TCNATIVE_SUFFIX="so"
 fi
 
 # netty tcnative file reference
@@ -32,14 +32,15 @@ fi
 mkdir -p ${NATIVE_DIR}
 
 pushd ${BASE_DIR}/bin
-$JAVA_HOME/bin/jar xf ${LIB_DIR}/netty-tcnative*.jar META-INF/native/libnetty_${TCNATIVE_SUFFIX}
+$JAVA_HOME/bin/jar xf ${LIB_DIR}/netty-tcnative*.jar META-INF/native/libnetty_tcnative.${NATIVE_SUFFIX}
+$JAVA_HOME/bin/jar xf ${LIB_DIR}/netty-transport-native-epoll*.jar META-INF/native/libnetty_transport_native_epoll_x86_64.${NATIVE_SUFFIX}
 popd
 
 export CLASSPATH="${CONF_DIR}:${LIB_DIR}/*"
-JVM_ARGS="-Xmx256m -Xms256m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS}"
+JVM_ARGS="-Xmx1G -Xms1G -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS}"
 JVM_ARGS="${JVM_ARGS} -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
-JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}/libnetty_${TCNATIVE_SUFFIX}"
-JVM_ARGS="${JVM_ARGS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
+JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
+#JVM_ARGS="${JVM_ARGS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
 
 echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.balancer.Balancer --spring.config.name=timely --spring.profiles.active=balancer"
 $JAVA_HOME/bin/java ${JVM_ARGS} timely.balancer.Balancer --spring.config.name=timely --spring.profiles.active=balancer

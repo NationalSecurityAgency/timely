@@ -60,6 +60,7 @@
     <version.impsort>1.2.0</version.impsort>
     <version.jackson>2.9.7</version.jackson>
     <version.jacoco>0.7.6.201602180812</version.jacoco>
+    <version.javacsv>2.0</version.javacsv>
     <version.javassist>3.21.0-GA</version.javassist>
     <version.jcip-annotations>1.0</version.jcip-annotations>
     <version.jsoup>1.9.2</version.jsoup>
@@ -139,6 +140,11 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
         <version>${version.netty}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.sourceforge.javacsv</groupId>
+        <artifactId>javacsv</artifactId>
+        <version>${version.javacsv}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.accumulo</groupId>
