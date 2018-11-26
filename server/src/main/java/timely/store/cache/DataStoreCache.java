@@ -83,6 +83,11 @@ public class DataStoreCache {
                     flushCaches(flushBatch);
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
+                } finally {
+                    flushBatch++;
+                    if (flushBatch == numBatches) {
+                        flushBatch = 0;
+                    }
                 }
             }
         }, conf.getCache().getFlushInterval(), conf.getCache().getFlushInterval());
@@ -109,7 +114,7 @@ public class DataStoreCache {
                     LOG.error(e.getMessage(), e);
                 }
             }
-        }, (7200 * 1000), (3600 * 100));
+        }, (3600 * 1000), (3600 * 1000));
 
         statsTimer.schedule(new TimerTask() {
 
@@ -121,7 +126,7 @@ public class DataStoreCache {
                     LOG.error(e.getMessage(), e);
                 }
             }
-        }, (600 * 1000), (600 * 100));
+        }, (600 * 1000), (600 * 1000));
     }
 
     private void pruneStats() {
@@ -183,10 +188,6 @@ public class DataStoreCache {
             }
         } finally {
             gorillaMapLock.unlockRead(stamp);
-            flushBatch++;
-            if (flushBatch == numBatches) {
-                flushBatch = 0;
-            }
         }
     }
 
@@ -304,11 +305,20 @@ public class DataStoreCache {
     }
 
     private boolean shouldCache(Metric metric) {
-
         String metricName = metric.getName();
+        long stamp = gorillaMapLock.readLock();
+        try {
+            if (gorillaMap.containsKey(metricName)) {
+                return true;
+            }
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
+        }
+
         if (nonCachedMetrics.contains(metricName)) {
             return false;
         }
+
         synchronized (nonCachedMetrics) {
             for (String r : nonCachedMetrics) {
                 if (metricName.matches(r)) {

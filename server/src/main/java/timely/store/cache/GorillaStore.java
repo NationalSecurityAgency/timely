@@ -46,7 +46,7 @@ public class GorillaStore {
 
     private WrappedGorillaCompressor getCompressor(long timestamp, long lockStamp) {
         if (current == null) {
-            if (oldestTimestamp == -1) {
+            if (oldestTimestamp == Long.MAX_VALUE) {
                 oldestTimestamp = timestamp;
             }
             newestTimestamp = timestamp;

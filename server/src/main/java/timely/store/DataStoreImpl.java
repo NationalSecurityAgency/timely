@@ -194,8 +194,17 @@ public class DataStoreImpl implements DataStore {
                     // don't care
                 }
             }
-            this.removeAgeOffIterators(connector, metaTable);
-            this.applyAgeOffIterator(connector, metaTable, false);
+            try {
+                this.removeAgeOffIterators(connector, metaTable);
+                this.applyAgeOffIterator(connector, metaTable, false);
+            } catch (Exception e1) {
+                Throwable cause = e1.getCause();
+                if (cause.getMessage().contains("conflict")) {
+                    LOG.info("ignoring iterator conflict due to multiple instances starting up");
+                } else {
+                    throw e1;
+                }
+            }
 
             internalMetrics = new InternalMetrics(conf);
             internalMetricsTimer.schedule(new TimerTask() {

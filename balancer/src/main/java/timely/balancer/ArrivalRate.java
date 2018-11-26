@@ -27,14 +27,14 @@ public class ArrivalRate {
     public ArrivalRate() {
         shortTermLastReset = mediumTermLastReset = longTermLastReset = System.currentTimeMillis();
 
-        // 5 minute
+        // 2 minute
         timer.schedule(new TimerTask() {
 
             @Override
             public void run() {
                 resetShort();
             }
-        }, 300000, 300000);
+        }, 120000, 120000);
 
         // 5 minute
         timer.schedule(new TimerTask() {
@@ -43,16 +43,16 @@ public class ArrivalRate {
             public void run() {
                 resetMedium();
             }
-        }, 900000, 900000);
+        }, 300000, 300000);
 
-        // 5 minute
+        // 15 minute
         timer.schedule(new TimerTask() {
 
             @Override
             public void run() {
                 resetLong();
             }
-        }, 3600000, 3600000);
+        }, 900000, 900000);
     }
 
     synchronized private void resetShort() {
@@ -120,16 +120,16 @@ public class ArrivalRate {
             shortTermRate = 0;
         }
         // 3 minute
-        if (now - mediumTermLastReset > 180000) {
+        if (now - mediumTermLastReset > 120000) {
             // use live
             mediumTermRate = 0;
         }
         // 12 minute
-        if (now - longTermLastReset > 720000) {
+        if (now - longTermLastReset > 300000) {
             // use live
             longTermRate = 0;
         }
-        rate = 0.50 * getLongRate(now) + 0.30 * getMediumRate(now) + 0.20 * getShortRate(now);
+        rate = 0.10 * getLongRate(now) + 0.10 * getMediumRate(now) + 0.80 * getShortRate(now);
     }
 
     synchronized public double getRate() {
