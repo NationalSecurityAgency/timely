@@ -56,7 +56,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
 import timely.Server;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.model.Meta;
@@ -72,6 +71,8 @@ import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
+import timely.configuration.Accumulo;
+import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
@@ -133,7 +134,7 @@ public class DataStoreImpl implements DataStore {
 
         try {
             final BaseConfiguration apacheConf = new BaseConfiguration();
-            Configuration.Accumulo accumuloConf = conf.getAccumulo();
+            Accumulo accumuloConf = conf.getAccumulo();
             apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
             apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
             final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
@@ -221,6 +222,11 @@ public class DataStoreImpl implements DataStore {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStoreImpl",
                     e2.getMessage(), e2);
         }
+    }
+
+    @Override
+    public InternalMetrics getInternalMetrics() {
+        return internalMetrics;
     }
 
     @Override

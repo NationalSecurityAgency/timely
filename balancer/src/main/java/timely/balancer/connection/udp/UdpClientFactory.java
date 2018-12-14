@@ -30,11 +30,7 @@ public class UdpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
 
     @Override
     public boolean validateObject(TimelyBalancedHost k, PooledObject<UdpClient> o) {
-        if (k.isUp()) {
-            return true;
-        } else {
-            return false;
-        }
+        return true;
     }
 
     @Override

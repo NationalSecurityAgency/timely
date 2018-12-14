@@ -14,7 +14,6 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
 import timely.api.annotation.AnnotationResolver;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpGetRequest;
@@ -23,6 +22,8 @@ import timely.api.request.timeseries.HttpRequest;
 import timely.api.response.StrictTransportResponse;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
+import timely.configuration.Http;
+import timely.configuration.Security;
 import timely.netty.Constants;
 
 public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest> implements TimelyHttpHandler {
@@ -32,14 +33,13 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
     private static final String LOG_PARSED_REQUEST = "Parsed request {}";
     private static final String NO_AUTHORIZATIONS = "";
 
-    private final Configuration conf;
-    private boolean anonymousAccessAllowed = false;
+    private final Security security;
     private final String nonSecureRedirectAddress;
 
-    public HttpRequestDecoder(Configuration config) {
-        this.conf = config;
-        this.anonymousAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
-        this.nonSecureRedirectAddress = conf.getHttp().getRedirectPath();
+    public HttpRequestDecoder(Security security, Http http) {
+
+        this.security = security;
+        this.nonSecureRedirectAddress = http.getRedirectPath();
     }
 
     public static String getSessionId(FullHttpRequest msg, boolean anonymousAccessAllowed) {
@@ -74,7 +74,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
             return;
         }
 
-        final String sessionId = getSessionId(msg, this.anonymousAccessAllowed);
+        final String sessionId = getSessionId(msg, this.security.isAllowAnonymousAccess());
         LOG.trace("SessionID: " + sessionId);
 
         HttpRequest request;
@@ -113,7 +113,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
             return;
         }
         try {
-            AuthCache.enforceAccess(conf, request);
+            AuthCache.enforceAccess(security, request);
         } catch (Exception e) {
             out.clear();
             throw e;

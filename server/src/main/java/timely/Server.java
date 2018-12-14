@@ -1,7 +1,9 @@
 package timely;
 
 import java.io.File;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
@@ -53,6 +55,15 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.RetryForever;
+import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceInstanceBuilder;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -60,6 +71,10 @@ import org.springframework.context.ConfigurableApplicationContext;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
+import timely.configuration.Configuration;
+import timely.configuration.Cors;
+import timely.configuration.ServerSsl;
+import timely.configuration.SpringBootstrap;
 import timely.netty.http.HttpCacheRequestHandler;
 import timely.netty.http.HttpMetricPutHandler;
 import timely.netty.http.HttpStaticFileServerHandler;
@@ -101,6 +116,7 @@ import timely.store.cache.DataStoreCache;
 
 public class Server {
 
+    final public static String SERVICE_DISCOVERY_PATH = "/timely/server/instances";
     private static final Logger LOG = LoggerFactory.getLogger(Server.class);
     private static final int EPOLL_MIN_MAJOR_VERSION = 2;
     private static final int EPOLL_MIN_MINOR_VERSION = 6;
@@ -156,6 +172,51 @@ public class Server {
             }
         } else {
             return false;
+        }
+    }
+
+    public void registerService() {
+        try {
+            RetryPolicy retryPolicy = new RetryForever(1000);
+            CuratorFramework curatorFramework = CuratorFrameworkFactory.newClient(config.getAccumulo().getZookeepers(),
+                    30000, 10000, retryPolicy);
+            curatorFramework.start();
+
+            try {
+                Stat stat = curatorFramework.checkExists().forPath(SERVICE_DISCOVERY_PATH);
+                if (stat == null) {
+                    curatorFramework.create().creatingParentContainersIfNeeded().forPath(SERVICE_DISCOVERY_PATH);
+                }
+            } catch (Exception e) {
+                LOG.error(e.getMessage());
+            }
+
+            ServerDetails payload = new ServerDetails();
+            String host = config.getServer().getIp();
+            try {
+                InetAddress inetAddr = InetAddress.getByName(host);
+                host = inetAddr.getCanonicalHostName();
+            } catch (UnknownHostException e) {
+                LOG.error(e.getMessage(), e);
+            }
+            payload.setHost(host);
+            payload.setTcpPort(config.getServer().getTcpPort());
+            payload.setHttpPort(config.getHttp().getPort());
+            payload.setWsPort(config.getWebsocket().getPort());
+            payload.setUdpPort(config.getServer().getUdpPort());
+
+            ServiceInstanceBuilder builder = ServiceInstance.builder();
+            String serviceName = host + ":" + config.getServer().getTcpPort();
+            ServiceInstance serviceInstance = builder.id(serviceName).name("timely-server")
+                    .address(config.getServer().getIp()).port(config.getServer().getTcpPort()).payload(payload).build();
+
+            ServiceDiscovery discovery = ServiceDiscoveryBuilder.builder(ServerDetails.class).client(curatorFramework)
+                    .basePath(SERVICE_DISCOVERY_PATH).build();
+            discovery.start();
+            discovery.registerService(serviceInstance);
+
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
         }
     }
 
@@ -336,6 +397,7 @@ public class Server {
         dataStore = DataStoreFactory.create(config, nettyThreads);
         if (config.getCache().isEnabled()) {
             dataStoreCache = new DataStoreCache(config);
+            dataStoreCache.setInternalMetrics(dataStore.getInternalMetrics());
             dataStore.setCache(dataStoreCache);
         }
         // Initialize the MetaCache
@@ -438,6 +500,7 @@ public class Server {
             udpServer.option(EpollChannelOption.SO_REUSEPORT, true);
             udpChannelHandleList.add(udpServer.bind(udpIp, udpPort).sync().channel());
         }
+        registerService();
         shutdownHook();
         LOG.info(
                 "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
@@ -446,7 +509,7 @@ public class Server {
 
     protected SslContext createSSLContext(Configuration config) throws Exception {
 
-        Configuration.Ssl sslCfg = config.getSecurity().getSsl();
+        ServerSsl sslCfg = config.getSecurity().getServerSsl();
         Boolean generate = sslCfg.isUseGeneratedKeypair();
         SslContextBuilder ssl;
         if (generate) {
@@ -492,14 +555,14 @@ public class Server {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
 
-                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(config, sslCtx));
+                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(config.getHttp(), sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
-                final Configuration.Cors corsCfg = config.getHttp().getCors();
+                final Cors corsCfg = config.getHttp().getCors();
                 final CorsConfig.Builder ccb;
                 if (corsCfg.isAllowAnyOrigin()) {
                     ccb = new CorsConfig.Builder();
@@ -517,11 +580,13 @@ public class Server {
                 CorsConfig cors = ccb.build();
                 LOG.trace("Cors configuration: {}", cors);
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
-                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config));
+                ch.pipeline().addLast("queryDecoder",
+                        new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
                 ch.pipeline().addLast("strict", new StrictTransportHandler(config));
-                ch.pipeline().addLast("login", new X509LoginRequestHandler(config));
-                ch.pipeline().addLast("doLogin", new BasicAuthLoginRequestHandler(config));
+                ch.pipeline().addLast("login", new X509LoginRequestHandler(config.getSecurity(), config.getHttp()));
+                ch.pipeline().addLast("doLogin",
+                        new BasicAuthLoginRequestHandler(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("aggregators", new HttpAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new HttpMetricsRequestHandler(config));
                 ch.pipeline().addLast("query", new HttpQueryRequestHandler(dataStore));
@@ -572,11 +637,11 @@ public class Server {
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config));
+                ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config.getSecurity()));
                 ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol",
                         new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, true));
-                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
+                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config.getSecurity()));
                 ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new WSMetricsRequestHandler(config));
                 ch.pipeline().addLast("query", new WSQueryRequestHandler(dataStore));

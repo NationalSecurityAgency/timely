@@ -14,7 +14,7 @@ import io.netty.handler.ssl.OptionalSslHandler;
 import io.netty.handler.ssl.SslContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
+import timely.configuration.Http;
 import timely.netty.Constants;
 
 public class NonSslRedirectHandler extends OptionalSslHandler implements TimelyHttpHandler {
@@ -22,11 +22,11 @@ public class NonSslRedirectHandler extends OptionalSslHandler implements TimelyH
     private static final Logger LOG = LoggerFactory.getLogger(NonSslRedirectHandler.class);
     private final String redirectAddress;
 
-    public NonSslRedirectHandler(Configuration conf, SslContext sslContext) {
+    public NonSslRedirectHandler(Http http, SslContext sslContext) {
         super(sslContext);
-        String timelyHost = conf.getHttp().getHost();
-        int timelyPort = conf.getHttp().getPort();
-        String path = conf.getHttp().getRedirectPath();
+        String timelyHost = http.getHost();
+        int timelyPort = http.getPort();
+        String path = http.getRedirectPath();
         redirectAddress = "https://" + timelyHost + ":" + timelyPort + path;
     }
 

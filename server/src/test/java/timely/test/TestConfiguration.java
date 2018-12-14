@@ -2,7 +2,7 @@ package timely.test;
 
 import java.util.HashMap;
 
-import timely.Configuration;
+import timely.configuration.Configuration;
 
 public class TestConfiguration {
 
@@ -12,23 +12,23 @@ public class TestConfiguration {
 
     public static Configuration createMinimalConfigurationForTest() {
         // @formatter:off
-        Configuration cfg = new Configuration()
-                .getServer().setIp("127.0.0.1")
-                .getServer().setTcpPort(54321)
-                .getServer().setUdpPort(54325)
-                .getServer().setShutdownQuietPeriod(0)
-                .getHttp().setIp("127.0.0.1")
-                .getHttp().setPort(54322)
-                .getHttp().setHost("localhost")
-                .getWebsocket().setIp("127.0.0.1")
-                .getWebsocket().setPort(54323)
-                .getWebsocket().setTimeout(20)
-                .getAccumulo().setZookeepers("localhost:2181")
-                .getAccumulo().setInstanceName("test")
-                .getAccumulo().setUsername("root")
-                .getAccumulo().setPassword("secret")
-                .getAccumulo().getWrite().setLatency("100ms")
-                .getSecurity().getSsl().setUseGeneratedKeypair(true);
+        Configuration cfg = new Configuration();
+        cfg.getServer().setIp("127.0.0.1");
+        cfg.getServer().setTcpPort(54321);
+        cfg.getServer().setUdpPort(54325);
+        cfg.getServer().setShutdownQuietPeriod(0);
+        cfg.getHttp().setIp("127.0.0.1");
+        cfg.getHttp().setPort(54322);
+        cfg.getHttp().setHost("localhost");
+        cfg.getWebsocket().setIp("127.0.0.1");
+        cfg.getWebsocket().setPort(54323);
+        cfg.getWebsocket().setTimeout(20);
+        cfg.getAccumulo().setZookeepers("localhost:2181");
+        cfg.getAccumulo().setInstanceName("test");
+        cfg.getAccumulo().setUsername("root");
+        cfg.getAccumulo().setPassword("secret");
+        cfg.getAccumulo().getWrite().setLatency("100ms");
+        cfg.getSecurity().getServerSsl().setUseGeneratedKeypair(true);
         HashMap<String,Integer> ageoff = new HashMap<>();
         ageoff.put("default", 10);
         cfg.setMetricAgeOffDays(ageoff);

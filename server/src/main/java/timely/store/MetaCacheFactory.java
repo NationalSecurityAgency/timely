@@ -1,6 +1,6 @@
 package timely.store;
 
-import timely.Configuration;
+import timely.configuration.Configuration;
 
 public class MetaCacheFactory {
 

@@ -18,14 +18,13 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
 import timely.api.request.subscription.CreateSubscription;
 import timely.api.request.subscription.RemoveSubscription;
 import timely.api.request.subscription.SubscriptionRequest;
 import timely.api.response.TimelyException;
-import timely.balancer.BalancerConfiguration;
+import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.ws.WsClientPool;
 import timely.balancer.resolver.MetricResolver;
@@ -37,7 +36,6 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
     private static final Logger LOG = LoggerFactory.getLogger(WsRelayHandler.class);
 
     private final BalancerConfiguration balancerConfig;
-    private final Configuration config;
     private final WsClientPool wsClientPool;
     private MetricResolver metricResolver;
     static private ObjectMapper mapper;
@@ -52,10 +50,9 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
         mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, true);
     }
 
-    public WsRelayHandler(BalancerConfiguration balancerConfig, Configuration config, MetricResolver metricResolver,
+    public WsRelayHandler(BalancerConfiguration balancerConfig, MetricResolver metricResolver,
             WsClientPool wsClientPool) {
         this.balancerConfig = balancerConfig;
-        this.config = config;
         this.metricResolver = metricResolver;
         this.wsClientPool = wsClientPool;
     }
@@ -121,7 +118,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                     if (hostClientHolder == null) {
                         k = metricResolver.getHostPortKey(metric);
                         client = wsClientPool.borrowObject(k);
-                        client.open(new WsClientHandler(origContext, (config.getWebsocket().getTimeout() / 2)));
+                        client.open(new WsClientHandler(origContext, (balancerConfig.getWebsocket().getTimeout() / 2)));
                         metricToClientMap.put(metric, new WsClientHolder(k, client));
                     } else {
                         client = hostClientHolder.getClient();

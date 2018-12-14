@@ -37,7 +37,7 @@ import timely.api.request.MetricRequest;
 import timely.api.request.timeseries.HttpRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
-import timely.balancer.BalancerConfiguration;
+import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.resolver.MetricResolver;
@@ -46,17 +46,13 @@ import timely.netty.http.TimelyHttpHandler;
 public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> implements TimelyHttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpRelayHandler.class);
-    private static final String LOG_RECEIVED_REQUEST = "Received HTTP request {}";
-    private static final String LOG_PARSED_REQUEST = "Parsed request {}";
-    private static final String NO_AUTHORIZATIONS = "";
-
-    private final BalancerConfiguration conf;
+    private final BalancerConfiguration balancerConf;
     private final HttpClientPool httpClientPool;
     private MetricResolver metricResolver;
 
-    public HttpRelayHandler(BalancerConfiguration config, MetricResolver metricResolver,
+    public HttpRelayHandler(BalancerConfiguration balancerConf, MetricResolver metricResolver,
             HttpClientPool httpClientPool) {
-        this.conf = config;
+        this.balancerConf = balancerConf;
         this.metricResolver = metricResolver;
         this.httpClientPool = httpClientPool;
     }

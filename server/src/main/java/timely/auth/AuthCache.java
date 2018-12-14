@@ -11,10 +11,11 @@ import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import timely.Configuration;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.Request;
 import timely.api.response.TimelyException;
+import timely.configuration.Configuration;
+import timely.configuration.Security;
 
 public class AuthCache {
 
@@ -63,8 +64,8 @@ public class AuthCache {
         }
     }
 
-    public static void enforceAccess(Configuration conf, Request r) throws Exception {
-        if (!conf.getSecurity().isAllowAnonymousAccess() && (r instanceof AuthenticatedRequest)) {
+    public static void enforceAccess(Security security, Request r) throws Exception {
+        if (!security.isAllowAnonymousAccess() && (r instanceof AuthenticatedRequest)) {
             AuthenticatedRequest ar = (AuthenticatedRequest) r;
             if (StringUtils.isEmpty(ar.getSessionId())) {
                 throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",

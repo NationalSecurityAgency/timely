@@ -3,8 +3,8 @@ package timely.store;
 import java.util.Collection;
 import java.util.Iterator;
 
-import timely.Configuration;
 import timely.api.model.Meta;
+import timely.configuration.Configuration;
 
 public interface MetaCache extends Iterable<Meta> {
 

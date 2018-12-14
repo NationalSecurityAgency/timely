@@ -30,11 +30,7 @@ public class HttpClientFactory implements KeyedPooledObjectFactory<TimelyBalance
 
     @Override
     public boolean validateObject(TimelyBalancedHost k, PooledObject<CloseableHttpClient> o) {
-        if (k.isUp()) {
-            return true;
-        } else {
-            return false;
-        }
+        return true;
     }
 
     @Override

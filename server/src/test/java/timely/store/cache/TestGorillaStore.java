@@ -6,7 +6,7 @@ import fi.iki.yak.ts.compression.gorilla.Pair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import timely.Configuration;
+import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.Value;

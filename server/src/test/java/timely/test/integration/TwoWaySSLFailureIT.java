@@ -31,9 +31,9 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import timely.Configuration;
 import timely.Server;
 import timely.auth.AuthCache;
+import timely.configuration.Configuration;
 import timely.netty.Constants;
 import timely.test.TestConfiguration;
 
@@ -74,12 +74,12 @@ public class TwoWaySSLFailureIT extends QueryBase {
     }
 
     protected static void setupSSL(Configuration config) throws Exception {
-        config.getSecurity().getSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
-        config.getSecurity().getSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
+        config.getSecurity().getServerSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getServerSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
         // Needed for 2way SSL
-        config.getSecurity().getSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
-        config.getSecurity().getSsl().setUseOpenssl(false);
-        config.getSecurity().getSsl().setUseGeneratedKeypair(false);
+        config.getSecurity().getServerSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getServerSsl().setUseOpenssl(false);
+        config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
         config.getSecurity().setAllowAnonymousAccess(false);
     }
 

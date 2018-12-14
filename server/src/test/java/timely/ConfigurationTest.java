@@ -8,6 +8,8 @@ import org.junit.Test;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.test.util.EnvironmentTestUtils;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import timely.configuration.Configuration;
+import timely.configuration.SpringBootstrap;
 
 public class ConfigurationTest {
 
@@ -35,7 +37,7 @@ public class ConfigurationTest {
                 "timely.accumulo.username:root",
                 "timely.accumulo.password:secret",
                 "timely.http.host:localhost",
-                "timely.security.ssl.use-generated-keypair:true",
+                "timely.security.serverSsl.use-generated-keypair:true",
                 "timely.metric-age-off-days[default]:7");
         // @formatter:on
         context.refresh();
@@ -50,7 +52,7 @@ public class ConfigurationTest {
         assertEquals("root", config.getAccumulo().getUsername());
         assertEquals("secret", config.getAccumulo().getPassword());
         assertEquals("localhost", config.getHttp().getHost());
-        assertTrue(config.getSecurity().getSsl().isUseGeneratedKeypair());
+        assertTrue(config.getSecurity().getServerSsl().isUseGeneratedKeypair());
         assertEquals(1, config.getMetricAgeOffDays().size());
         assertTrue(config.getMetricAgeOffDays().containsKey("default"));
         assertTrue(7 == config.getMetricAgeOffDays().get("default"));
@@ -94,8 +96,8 @@ public class ConfigurationTest {
                 "timely.accumulo.username:root",
                 "timely.accumulo.password:secret",
                 "timely.http.host:localhost",
-                "timely.security.ssl.certificate-file:/tmp/foo",
-                "timely.security.ssl.key-file:/tmp/bar");
+                "timely.security.serverSsl.certificate-file:/tmp/foo",
+                "timely.security.serverSsl.key-file:/tmp/bar");
         // @formatter:on
         context.refresh();
     }

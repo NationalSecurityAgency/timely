@@ -2,30 +2,31 @@ package timely.balancer;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicLong;
+
+import com.google.common.util.concurrent.AtomicDouble;
 
 public class ArrivalRate {
 
-    private long shortTermArrivals = 0l;
-    private double shortTermRate = 0;
-    private long shortTermLastReset = 0l;
+    private AtomicLong shortTermArrivals = new AtomicLong(0);
+    private AtomicDouble shortTermRate = new AtomicDouble(0);
+    private AtomicLong shortTermLastReset = new AtomicLong(0);
 
-    private long mediumTermArrivals = 0l;
-    private double mediumTermRate = 0;
-    private long mediumTermLastReset = 0l;
+    private AtomicLong mediumTermArrivals = new AtomicLong(0);
+    private AtomicDouble mediumTermRate = new AtomicDouble(0);
+    private AtomicLong mediumTermLastReset = new AtomicLong(0);
 
-    private long longTermArrivals = 0l;
-    private double longTermRate = 0;
-    private long longTermLastReset = 0l;
-
-    private double rate = 0;
-
-    private boolean recalculateEveryUpdate = true;
-    private long created = System.currentTimeMillis();
+    private AtomicLong longTermArrivals = new AtomicLong(0);
+    private AtomicDouble longTermRate = new AtomicDouble(0);
+    private AtomicLong longTermLastReset = new AtomicLong(0);
 
     private Timer timer = new Timer("ArrivalRateTimer");
 
     public ArrivalRate() {
-        shortTermLastReset = mediumTermLastReset = longTermLastReset = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        shortTermLastReset.set(now);
+        mediumTermLastReset.set(now);
+        longTermLastReset.set(now);
 
         // 2 minute
         timer.schedule(new TimerTask() {
@@ -55,87 +56,80 @@ public class ArrivalRate {
         }, 900000, 900000);
     }
 
-    synchronized private void resetShort() {
+    private void resetShort() {
         long now = System.currentTimeMillis();
-        shortTermRate = shortTermArrivals / (((double) (now - shortTermLastReset)) / 1000);
-        shortTermArrivals = 0;
-        shortTermLastReset = now;
-    }
-
-    synchronized private void resetMedium() {
-        long now = System.currentTimeMillis();
-        mediumTermRate = mediumTermArrivals / (((double) (now - mediumTermLastReset)) / 1000);
-        mediumTermArrivals = 0;
-        mediumTermLastReset = now;
-    }
-
-    synchronized private void resetLong() {
-        long now = System.currentTimeMillis();
-        longTermRate = longTermArrivals / (((double) (now - longTermLastReset)) / 1000);
-        longTermArrivals = 0;
-        longTermLastReset = now;
-    }
-
-    synchronized public void arrived() {
-        shortTermArrivals++;
-        mediumTermArrivals++;
-        longTermArrivals++;
-        if (recalculateEveryUpdate) {
-            calculateRate();
-            if ((System.currentTimeMillis() - created) > 600000) {
-                recalculateEveryUpdate = false;
-            }
-        }
-    }
-
-    synchronized private double getShortRate(long now) {
-        if (shortTermRate > 0) {
-            return shortTermRate;
+        long lastReset = shortTermLastReset.get();
+        if (now == lastReset) {
+            shortTermRate.set(0);
         } else {
-            return shortTermArrivals / (((double) (now - shortTermLastReset)) / 1000);
+            shortTermRate.set(shortTermArrivals.get() / (((double) (now - lastReset)) / 1000));
         }
+        shortTermArrivals.set(0);
+        shortTermLastReset.set(now);
     }
 
-    synchronized private double getMediumRate(long now) {
-        if (mediumTermRate > 0) {
-            return mediumTermRate;
-        } else {
-            return mediumTermArrivals / (((double) (now - mediumTermLastReset)) / 1000);
-        }
-    }
-
-    synchronized private double getLongRate(long now) {
-        if (longTermRate > 0) {
-            return longTermRate;
-        } else {
-            return longTermArrivals / (((double) (now - longTermLastReset)) / 1000);
-        }
-    }
-
-    synchronized public void calculateRate() {
+    private void resetMedium() {
         long now = System.currentTimeMillis();
-        // 1 minute
-        if (now - shortTermLastReset > 60000) {
-            // use live
-            shortTermRate = 0;
+        long lastReset = mediumTermLastReset.get();
+        if (now == lastReset) {
+            mediumTermRate.set(0);
+        } else {
+            mediumTermRate.set(mediumTermArrivals.get() / (((double) (now - lastReset)) / 1000));
         }
-        // 3 minute
-        if (now - mediumTermLastReset > 120000) {
-            // use live
-            mediumTermRate = 0;
-        }
-        // 12 minute
-        if (now - longTermLastReset > 300000) {
-            // use live
-            longTermRate = 0;
-        }
-        rate = 0.10 * getLongRate(now) + 0.10 * getMediumRate(now) + 0.80 * getShortRate(now);
+        mediumTermArrivals.set(0);
+        mediumTermLastReset.set(now);
     }
 
-    synchronized public double getRate() {
-        if (rate == 0) {
-            calculateRate();
+    private void resetLong() {
+        long now = System.currentTimeMillis();
+        long lastReset = longTermLastReset.get();
+        if (now == lastReset) {
+            longTermRate.set(0);
+        } else {
+            longTermRate.set(longTermArrivals.get() / (((double) (now - lastReset)) / 1000));
         }
-        return rate;
+        longTermArrivals.set(0);
+        longTermLastReset.set(now);
+    }
+
+    public void arrived() {
+        shortTermArrivals.incrementAndGet();
+        mediumTermArrivals.incrementAndGet();
+        longTermArrivals.incrementAndGet();
+    }
+
+    private double getShortRate(long now) {
+        double rate = shortTermRate.get();
+        long lastReset = shortTermLastReset.get();
+        if (rate > 0 || now == lastReset) {
+            return rate;
+        } else {
+            return shortTermArrivals.get() / (((double) (now - lastReset)) / 1000);
+        }
+    }
+
+    private double getMediumRate(long now) {
+        double rate = mediumTermRate.get();
+        long lastReset = mediumTermLastReset.get();
+        if (rate > 0 || now == lastReset) {
+            return rate;
+        } else {
+            return mediumTermArrivals.get() / (((double) (now - lastReset)) / 1000);
+        }
+    }
+
+    private double getLongRate(long now) {
+        double rate = longTermRate.get();
+        long lastReset = longTermLastReset.get();
+        if (rate > 0 || now == lastReset) {
+            return rate;
+        } else {
+            return longTermArrivals.get() / (((double) (now - lastReset)) / 1000);
+        }
+    }
+
+    public double getRate() {
+        long now = System.currentTimeMillis();
+        return 0.10 * getLongRate(now) + 0.10 * getMediumRate(now) + 0.80 * getShortRate(now);
     }
 }

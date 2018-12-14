@@ -10,13 +10,15 @@ import timely.client.tcp.TcpClient;
 
 public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, TcpClient> {
 
-    public TcpClientFactory() {
+    private int bufferSize;
 
+    public TcpClientFactory(int bufferSize) {
+        this.bufferSize = bufferSize;
     }
 
     @Override
     public PooledObject<TcpClient> makeObject(TimelyBalancedHost k) throws Exception {
-        return new DefaultPooledObject<>(new TcpClient(k.getHost(), k.getTcpPort()));
+        return new DefaultPooledObject<>(new TcpClient(k.getHost(), k.getTcpPort(), bufferSize));
     }
 
     @Override
@@ -31,11 +33,7 @@ public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalanced
 
     @Override
     public boolean validateObject(TimelyBalancedHost k, PooledObject<TcpClient> o) {
-        if (k.isUp()) {
-            return true;
-        } else {
-            return false;
-        }
+        return true;
     }
 
     @Override

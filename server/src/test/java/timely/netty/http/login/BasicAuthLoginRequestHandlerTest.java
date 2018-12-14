@@ -19,9 +19,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import timely.Configuration;
 import timely.api.request.auth.BasicAuthLoginRequest;
 import timely.auth.AuthCache;
+import timely.configuration.Configuration;
 import timely.netty.Constants;
 import timely.netty.http.HttpRequestDecoder;
 import timely.netty.http.auth.BasicAuthLoginRequestHandler;
@@ -33,7 +33,7 @@ public class BasicAuthLoginRequestHandlerTest {
     private static class TestHttpQueryDecoder extends HttpRequestDecoder {
 
         public TestHttpQueryDecoder(Configuration config) {
-            super(config);
+            super(config.getSecurity(), config.getHttp());
         }
 
         @Override
@@ -80,7 +80,7 @@ public class BasicAuthLoginRequestHandlerTest {
         Object result = results.iterator().next();
         Assert.assertEquals(BasicAuthLoginRequest.class, result.getClass());
 
-        BasicAuthLoginRequestHandler handler = new BasicAuthLoginRequestHandler(config);
+        BasicAuthLoginRequestHandler handler = new BasicAuthLoginRequestHandler(config.getSecurity(), config.getHttp());
         CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
         handler.channelRead(ctx, result);
         Assert.assertNotNull(ctx.msg);
@@ -119,7 +119,7 @@ public class BasicAuthLoginRequestHandlerTest {
         Object result = results.iterator().next();
         Assert.assertEquals(BasicAuthLoginRequest.class, result.getClass());
 
-        BasicAuthLoginRequestHandler handler = new BasicAuthLoginRequestHandler(config);
+        BasicAuthLoginRequestHandler handler = new BasicAuthLoginRequestHandler(config.getSecurity(), config.getHttp());
         CaptureChannelHandlerContext ctx = new CaptureChannelHandlerContext();
         handler.channelRead(ctx, result);
         Assert.assertNotNull(ctx.msg);

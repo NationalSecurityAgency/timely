@@ -24,11 +24,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import timely.Configuration;
 import timely.Server;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
+import timely.configuration.Configuration;
 import timely.netty.Constants;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
@@ -72,12 +72,12 @@ public class TwoWaySSLOpenSSLIT extends QueryBase {
     }
 
     protected static void setupSSL(Configuration config) throws Exception {
-        config.getSecurity().getSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
-        config.getSecurity().getSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
+        config.getSecurity().getServerSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getServerSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
         // Needed for 2way SSL
-        config.getSecurity().getSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
-        config.getSecurity().getSsl().setUseOpenssl(false);
-        config.getSecurity().getSsl().setUseGeneratedKeypair(false);
+        config.getSecurity().getServerSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getServerSsl().setUseOpenssl(false);
+        config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
         config.getSecurity().setAllowAnonymousAccess(false);
     }
 

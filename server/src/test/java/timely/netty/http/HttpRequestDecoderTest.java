@@ -22,7 +22,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import timely.Configuration;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;
 import timely.api.request.timeseries.AggregatorsRequest;
@@ -33,6 +32,7 @@ import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;
 import timely.auth.AuthCache;
+import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.netty.Constants;
@@ -44,7 +44,7 @@ public class HttpRequestDecoderTest {
     public static class TestHttpQueryDecoder extends HttpRequestDecoder {
 
         public TestHttpQueryDecoder(Configuration config) {
-            super(config);
+            super(config.getSecurity(), config.getHttp());
         }
 
         @Override

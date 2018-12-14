@@ -6,8 +6,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import timely.Configuration;
 import timely.api.model.Meta;
+import timely.configuration.Configuration;
 
 public class MetaCacheImpl implements MetaCache {
 

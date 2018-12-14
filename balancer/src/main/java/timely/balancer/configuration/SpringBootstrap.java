@@ -1,8 +1,7 @@
-package timely.balancer;
+package timely.balancer.configuration;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import timely.SpringBootstrap;
 
 @SpringBootApplication(scanBasePackageClasses = { SpringBootstrap.class })
-public class BalancerSpringBootstrap {
+public class SpringBootstrap {
 }

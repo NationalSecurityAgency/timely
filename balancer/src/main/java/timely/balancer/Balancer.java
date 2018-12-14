@@ -56,8 +56,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-import timely.Configuration;
-import timely.SpringBootstrap;
+import timely.balancer.configuration.BalancerConfiguration;
+import timely.balancer.configuration.ClientSsl;
 import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.connection.tcp.TcpClientPool;
 import timely.balancer.connection.udp.UdpClientPool;
@@ -70,6 +70,8 @@ import timely.balancer.netty.ws.WsRelayHandler;
 import timely.balancer.resolver.BalancedMetricResolver;
 import timely.balancer.resolver.MetricResolver;
 import timely.client.http.HttpClient;
+import timely.configuration.ServerSsl;
+import timely.configuration.SpringBootstrap;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.NonSslRedirectHandler;
 import timely.netty.http.TimelyExceptionHandler;
@@ -85,6 +87,10 @@ import timely.netty.websocket.subscription.WSTimelyExceptionHandler;
 
 public class Balancer {
 
+    final public static String LEADER_LATCH_PATH = "/timely/balancer/leader";
+    final public static String ASSIGNMENTS_LOCK_PATH = "/timely/balancer/assignments/lock";
+    final public static String ASSIGNMENTS_LAST_UPDATED_PATH = "/timely/balancer/assignments/lastUpdated";
+
     private static final Logger LOG = LoggerFactory.getLogger(Balancer.class);
     private static final int EPOLL_MIN_MAJOR_VERSION = 2;
     private static final int EPOLL_MIN_MINOR_VERSION = 6;
@@ -95,7 +101,6 @@ public class Balancer {
     protected static final CountDownLatch LATCH = new CountDownLatch(1);
     static ConfigurableApplicationContext applicationContext;
 
-    private final Configuration config;
     private final BalancerConfiguration balancerConfig;
     private EventLoopGroup tcpWorkerGroup = null;
     private EventLoopGroup tcpBossGroup = null;
@@ -118,8 +123,7 @@ public class Balancer {
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
     }
 
-    public Balancer(Configuration conf, BalancerConfiguration balancerConf) throws Exception {
-        this.config = conf;
+    public Balancer(BalancerConfiguration balancerConf) throws Exception {
         this.balancerConfig = balancerConf;
     }
 
@@ -172,7 +176,7 @@ public class Balancer {
             }
         });
 
-        Integer quietPeriod = config.getServer().getShutdownQuietPeriod();
+        Integer quietPeriod = balancerConfig.getServer().getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
         if (tcpBossGroup != null) {
             LOG.info("Shutting down tcpBossGroup");
@@ -268,9 +272,9 @@ public class Balancer {
         }
     }
 
-    protected SslContext createSSLContext(Configuration config) throws Exception {
+    protected SslContext createSSLContext(BalancerConfiguration config) throws Exception {
 
-        Configuration.Ssl sslCfg = config.getSecurity().getSsl();
+        ServerSsl sslCfg = config.getSecurity().getServerSsl();
         Boolean generate = sslCfg.isUseGeneratedKeypair();
         SslContextBuilder ssl;
         if (generate) {
@@ -311,7 +315,7 @@ public class Balancer {
 
     protected SSLContext createSSLClientContext(BalancerConfiguration config) throws Exception {
 
-        BalancerConfiguration.ClientSsl ssl = config.getClientSsl();
+        ClientSsl ssl = config.getSecurity().getClientSsl();
         return HttpClient.getSSLContext(ssl.getTrustStoreFile(), ssl.getTrustStoreType(), ssl.getTrustStorePassword(),
                 ssl.getKeyFile(), ssl.getKeyType(), ssl.getKeyPassword());
     }
@@ -346,26 +350,29 @@ public class Balancer {
         }
         LOG.info("Using channel class {}", channelClass.getSimpleName());
 
-        TcpClientPool tcpClientPool = new TcpClientPool(this.balancerConfig);
-        HealthChecker healthChecker = new HealthChecker(this.balancerConfig, tcpClientPool);
+        List<TcpClientPool> tcpClientPools = new ArrayList<>();
+        for (int x = 0; x < balancerConfig.getServer().getNumTcpPools(); x++) {
+            tcpClientPools.add(new TcpClientPool(this.balancerConfig));
+        }
+        HealthChecker healthChecker = new HealthChecker(this.balancerConfig, tcpClientPools.get(0));
         this.metricResolver = new BalancedMetricResolver(this.balancerConfig, healthChecker);
 
         final ServerBootstrap tcpServer = new ServerBootstrap();
         tcpServer.group(tcpBossGroup, tcpWorkerGroup);
         tcpServer.channel(channelClass);
         tcpServer.handler(new LoggingHandler());
-        tcpServer.childHandler(setupTcpChannel(metricResolver, tcpClientPool));
+        tcpServer.childHandler(setupTcpChannel(metricResolver, tcpClientPools));
         tcpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         tcpServer.option(ChannelOption.SO_BACKLOG, 128);
         tcpServer.option(ChannelOption.SO_KEEPALIVE, true);
-        final int tcpPort = config.getServer().getTcpPort();
-        final String tcpIp = config.getServer().getIp();
+        final int tcpPort = balancerConfig.getServer().getTcpPort();
+        final String tcpIp = balancerConfig.getServer().getIp();
         tcpChannelHandle = tcpServer.bind(tcpIp, tcpPort).sync().channel();
         final String tcpAddress = ((InetSocketAddress) tcpChannelHandle.localAddress()).getAddress().getHostAddress();
 
-        final int httpPort = config.getHttp().getPort();
-        final String httpIp = config.getHttp().getIp();
-        SslContext sslCtx = createSSLContext(config);
+        final int httpPort = balancerConfig.getHttp().getPort();
+        final String httpIp = balancerConfig.getHttp().getIp();
+        SslContext sslCtx = createSSLContext(balancerConfig);
         if (sslCtx instanceof OpenSslServerContext) {
             OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
             String application = "Timely_" + httpPort;
@@ -373,7 +380,7 @@ public class Balancer {
             opensslCtx.setSessionCacheEnabled(true);
             opensslCtx.setSessionCacheSize(128);
             opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
-            opensslCtx.setSessionTimeout(config.getSecurity().getSessionMaxAge());
+            opensslCtx.setSessionTimeout(balancerConfig.getSecurity().getSessionMaxAge());
         }
         SSLContext clientSSLContext = createSSLClientContext(balancerConfig);
         final ServerBootstrap httpServer = new ServerBootstrap();
@@ -381,21 +388,21 @@ public class Balancer {
         httpServer.channel(channelClass);
         httpServer.handler(new LoggingHandler());
         HttpClientPool httpClientPool = new HttpClientPool(balancerConfig, clientSSLContext);
-        httpServer.childHandler(setupHttpChannel(config, balancerConfig, sslCtx, metricResolver, httpClientPool));
+        httpServer.childHandler(setupHttpChannel(balancerConfig, sslCtx, metricResolver, httpClientPool));
         httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         httpServer.option(ChannelOption.SO_BACKLOG, 128);
         httpServer.option(ChannelOption.SO_KEEPALIVE, true);
         httpChannelHandle = httpServer.bind(httpIp, httpPort).sync().channel();
         final String httpAddress = ((InetSocketAddress) httpChannelHandle.localAddress()).getAddress().getHostAddress();
 
-        final int wsPort = config.getWebsocket().getPort();
-        final String wsIp = config.getWebsocket().getIp();
+        final int wsPort = balancerConfig.getWebsocket().getPort();
+        final String wsIp = balancerConfig.getWebsocket().getIp();
         final ServerBootstrap wsServer = new ServerBootstrap();
         wsServer.group(wsBossGroup, wsWorkerGroup);
         wsServer.channel(channelClass);
         wsServer.handler(new LoggingHandler());
-        WsClientPool wsClientPool = new WsClientPool(config, balancerConfig, clientSSLContext);
-        wsServer.childHandler(setupWSChannel(config, balancerConfig, sslCtx, metricResolver, wsClientPool));
+        WsClientPool wsClientPool = new WsClientPool(balancerConfig, clientSSLContext);
+        wsServer.childHandler(setupWSChannel(balancerConfig, sslCtx, metricResolver, wsClientPool));
         wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         wsServer.option(ChannelOption.SO_BACKLOG, 128);
         wsServer.option(ChannelOption.SO_KEEPALIVE, true);
@@ -406,8 +413,8 @@ public class Balancer {
         wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 
-        final int udpPort = config.getServer().getUdpPort();
-        final String udpIp = config.getServer().getIp();
+        final int udpPort = balancerConfig.getServer().getUdpPort();
+        final String udpIp = balancerConfig.getServer().getIp();
         UdpClientPool udpClientPool = new UdpClientPool(balancerConfig);
         for (int n = 1; n < DEFAULT_EVENT_LOOP_THREADS; n++) {
             final Bootstrap udpServer = new Bootstrap();
@@ -428,10 +435,9 @@ public class Balancer {
     public static void main(String[] args) throws Exception {
 
         Balancer.applicationContext = Balancer.initializeConfiguration(args);
-        Configuration conf = applicationContext.getBean(Configuration.class);
         BalancerConfiguration balancerConf = applicationContext.getBean(BalancerConfiguration.class);
 
-        Balancer b = new Balancer(conf, balancerConf);
+        Balancer b = new Balancer(balancerConf);
         try {
             b.run();
             LATCH.await();
@@ -448,24 +454,26 @@ public class Balancer {
         }
     }
 
-    protected ChannelHandler setupHttpChannel(Configuration config, BalancerConfiguration balancerConfig,
-            SslContext sslCtx, MetricResolver metricResolver, HttpClientPool httpClientPool) {
+    protected ChannelHandler setupHttpChannel(BalancerConfiguration balancerConfig, SslContext sslCtx,
+            MetricResolver metricResolver, HttpClientPool httpClientPool) {
 
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
 
-                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(config, sslCtx));
+                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(balancerConfig.getHttp(), sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
-                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config));
+                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(
+                        balancerConfig.getSecurity(), balancerConfig.getHttp()));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
-                ch.pipeline().addLast("login", new X509LoginRequestHandler(config));
+                ch.pipeline().addLast("login",
+                        new X509LoginRequestHandler(balancerConfig.getSecurity(), balancerConfig.getHttp()));
                 ch.pipeline().addLast("httpRelay",
                         new HttpRelayHandler(balancerConfig, metricResolver, httpClientPool));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler());
@@ -488,7 +496,7 @@ public class Balancer {
         };
     }
 
-    protected ChannelHandler setupTcpChannel(MetricResolver metricResolver, TcpClientPool tcpClientPool) {
+    protected ChannelHandler setupTcpChannel(MetricResolver metricResolver, List<TcpClientPool> tcpClientPools) {
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
@@ -496,13 +504,13 @@ public class Balancer {
                 ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new TcpDecoder());
-                ch.pipeline().addLast("tcpRelayHandler", new TcpRelayHandler(metricResolver, tcpClientPool));
+                ch.pipeline().addLast("tcpRelayHandler", new TcpRelayHandler(metricResolver, tcpClientPools));
                 ch.pipeline().addLast("versionHandler", new TcpVersionHandler());
             }
         };
     }
 
-    protected ChannelHandler setupWSChannel(Configuration conf, BalancerConfiguration balancerConfig, SslContext sslCtx,
+    protected ChannelHandler setupWSChannel(BalancerConfiguration balancerConfig, SslContext sslCtx,
             MetricResolver metricResolver, WsClientPool wsClientPool) {
         return new ChannelInitializer<SocketChannel>() {
 
@@ -511,14 +519,14 @@ public class Balancer {
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config));
+                ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(balancerConfig.getSecurity()));
 
-                ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
+                ch.pipeline().addLast("idle-handler",
+                        new IdleStateHandler(balancerConfig.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol",
                         new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, true));
-                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config));
-                ch.pipeline().addLast("httpRelay",
-                        new WsRelayHandler(balancerConfig, config, metricResolver, wsClientPool));
+                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(balancerConfig.getSecurity()));
+                ch.pipeline().addLast("httpRelay", new WsRelayHandler(balancerConfig, metricResolver, wsClientPool));
                 ch.pipeline().addLast("error", new WSTimelyExceptionHandler());
             }
         };

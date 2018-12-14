@@ -10,8 +10,8 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
 import timely.api.response.TimelyException;
+import timely.configuration.Configuration;
 import timely.store.DataStore;
 
 public class Subscription {

@@ -11,11 +11,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import timely.Configuration;
 import timely.Server;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
+import timely.configuration.Configuration;
 import timely.store.MetricAgeOffIterator;
 import timely.store.cache.DataStoreCache;
 import timely.test.IntegrationTest;

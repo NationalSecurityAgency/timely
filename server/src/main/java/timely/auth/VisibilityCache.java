@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.accumulo.core.security.ColumnVisibility;
-import timely.Configuration;
+import timely.configuration.Configuration;
 
 public class VisibilityCache {
 

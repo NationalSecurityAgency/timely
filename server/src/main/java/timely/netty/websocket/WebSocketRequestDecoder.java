@@ -13,11 +13,11 @@ import io.netty.handler.timeout.IdleStateEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.WebSocketRequest;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
+import timely.configuration.Security;
 import timely.subscription.SubscriptionRegistry;
 import timely.util.JsonUtil;
 
@@ -25,10 +25,10 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
 
     private static final Logger LOG = LoggerFactory.getLogger(WebSocketRequestDecoder.class);
 
-    private final Configuration conf;
+    private Security security;
 
-    public WebSocketRequestDecoder(Configuration conf) {
-        this.conf = conf;
+    public WebSocketRequestDecoder(Security security) {
+        this.security = security;
     }
 
     @Override
@@ -55,7 +55,7 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
                 return;
             }
             try {
-                AuthCache.enforceAccess(conf, request);
+                AuthCache.enforceAccess(security, request);
             } catch (TimelyException e) {
                 out.clear();
                 LOG.error("Error during access enforcment: " + e.getMessage());

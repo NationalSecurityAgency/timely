@@ -17,10 +17,17 @@ public class TcpClient implements AutoCloseable {
     private PrintWriter out = null;
     private long connectTime = 0L;
     private long backoff = 2000;
+    private int bufferSize = -1;
+    private int writesSinceFlush = 0;
 
     public TcpClient(String hostname, int port) {
+        this(hostname, port, -1);
+    }
+
+    public TcpClient(String hostname, int port, int bufferSize) {
         this.host = hostname;
         this.port = port;
+        this.bufferSize = bufferSize;
     }
 
     /**
@@ -47,11 +54,16 @@ public class TcpClient implements AutoCloseable {
             throw new IOException();
         }
         out.write(metric);
+        writesSinceFlush++;
+        if (bufferSize > 0 && writesSinceFlush >= bufferSize) {
+            flush();
+        }
     }
 
     public synchronized void flush() {
         if (null != out) {
             out.flush();
+            writesSinceFlush = 0;
         }
     }
 
@@ -67,6 +79,9 @@ public class TcpClient implements AutoCloseable {
         if (null != sock) {
             try {
                 if (null != out) {
+                    if (bufferSize > 0) {
+                        flush();
+                    }
                     out.close();
                 }
                 sock.close();

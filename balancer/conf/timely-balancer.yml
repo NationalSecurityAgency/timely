@@ -1,29 +1,43 @@
-timely:
-  balancer:
-    timelyHosts:
-      -
-        host: localhost
-        tcpPort: 4242
-        httpPort: 4243
-        wsPort: 4244
-        udpPort: 4245
-      -
-        host: localhost
-        tcpPort: 4342
-        httpPort: 4343
-        wsPort: 4244
-        udpPort: 4245
-      -
-        host: localhost
-        tcpPort: 4442
-        httpPort: 4443
-        wsPort: 4444
-        udpPort: 4445
-    assignmentFile: /tmp/assignments.csv
+timely-balancer:
+  zooKeeper:
+    servers: localhost:2181
+    timeout: 30s
+  checkServerHealthInterval: 10000
+  serverFailuresBeforeDown: 6
+  serverSuccessesBeforeUp: 1
+  assignmentFile: /timely/balancer/assignments.csv
+  security:
+    session-max-age: 86400
+    allow-anonymous-access: true
+    serverSsl:
+      certificate-file:
+      key-file:
+      #key-password:
+      use-generated-keypair: false
+      trust-store-file:
+      use-openssl: true
+      #use-ciphers:
+    clientSsl:
+      keyFile:
+      keyType: pkcs12
+      #keyPassword:
+      trustStoreFile:
+      trustStoreType: jks
+      #trustStorePassword:
+  cache:
+    enabled: false
+    metric-age-off-hours:
+      default: 26
+    nonCachedMetrics:
+  server:
+    ip: 127.0.0.1
+    tcp-port: 4242
+    numTcpPools: 1
+    tcpBufferSize: 100
     tcpClientPool:
       minIdlePerKey: 0
-      maxIdlePerKey: 8
-      maxTotalPerKey: 8
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
       maxTotal: -1
       lifo: true
       fairness: false
@@ -35,40 +49,13 @@ timely:
       timeBetweenEvictionRunsMillis: -1
       blockWhenExhausted: true
       jmxEnabled: true
-    httpClientPool:
-      minIdlePerKey: 0
-      maxIdlePerKey: 8
-      maxTotalPerKey: 8
-      maxTotal: -1
-      lifo: true
-      fairness: false
-      maxWaitMillis: -1
-      minEvictableIdleTimeMillis: 1800000
-      evictorShutdownTimeoutMillis: 10000
-      softMinEvictableIdleTimeMillis: -1
-      numTestsPerEvictionRun: 3
-      timeBetweenEvictionRunsMillis: -1
-      blockWhenExhausted: true
-      jmxEnabled: true
-    wsClientPool:
-      minIdlePerKey: 0
-      maxIdlePerKey: 8
-      maxTotalPerKey: 8
-      maxTotal: -1
-      lifo: true
-      fairness: false
-      maxWaitMillis: -1
-      minEvictableIdleTimeMillis: 1800000
-      evictorShutdownTimeoutMillis: 10000
-      softMinEvictableIdleTimeMillis: -1
-      numTestsPerEvictionRun: 3
-      timeBetweenEvictionRunsMillis: -1
-      blockWhenExhausted: true
-      jmxEnabled: true
+      testOnBorrow: false
+      testOnReturn: false
+    udp-port: 4245
     udpClientPool:
       minIdlePerKey: 0
-      maxIdlePerKey: 8
-      maxTotalPerKey: 8
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
       maxTotal: -1
       lifo: true
       fairness: false
@@ -80,10 +67,61 @@ timely:
       timeBetweenEvictionRunsMillis: -1
       blockWhenExhausted: true
       jmxEnabled: true
-    clientSsl:
-      keyFile: 
-      keyType: pkcs12
-      keyPassword: 
-      trustStoreFile: 
-      trustStoreType: jks
-      trustStorePassword: 
+      testOnBorrow: false
+      testOnReturn: false
+  http:
+    host: localhost
+    ip: 127.0.0.1
+    port: 4243
+    redirect-path: /secure-me
+    strict-transport-max-age: 608400
+    cors:
+      allow-any-origin: false
+      allow-null-origin: false
+      allow-credentials: true
+      allowed-origins:
+      allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+      allowed-headers: content-type
+    httpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+      testOnBorrow: false
+      testOnReturn: false
+  websocket:
+    ip: 127.0.0.1
+    port: 5244
+    timeout: 60
+    subscription-lag: 120
+    scanner-batch-size: 10000
+    flush-interval-seconds: 30
+    scanner-read-ahead: 1
+    subscription-batch-size: 5000
+    wsClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+      testOnBorrow: false
+      testOnReturn: false

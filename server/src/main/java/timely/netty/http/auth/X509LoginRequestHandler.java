@@ -6,14 +6,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.ssl.SslHandler;
 import org.springframework.security.core.Authentication;
-import timely.Configuration;
 import timely.api.request.auth.X509LoginRequest;
 import timely.auth.AuthenticationService;
+import timely.configuration.Http;
+import timely.configuration.Security;
 
 public class X509LoginRequestHandler extends TimelyLoginRequestHandler<X509LoginRequest> {
 
-    public X509LoginRequestHandler(Configuration conf) {
-        super(conf);
+    public X509LoginRequestHandler(Security security, Http http) {
+        super(security, http);
     }
 
     @Override

@@ -7,7 +7,7 @@ import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.FullHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
+import timely.configuration.Security;
 import timely.netty.http.HttpRequestDecoder;
 import timely.subscription.SubscriptionRegistry;
 
@@ -16,9 +16,9 @@ public class WebSocketHttpCookieHandler extends MessageToMessageCodec<FullHttpRe
     private static final Logger LOG = LoggerFactory.getLogger(WebSocketHttpCookieHandler.class);
     private boolean anonymousAccessAllowed;
 
-    public WebSocketHttpCookieHandler(Configuration config) {
+    public WebSocketHttpCookieHandler(Security security) {
         super();
-        this.anonymousAccessAllowed = config.getSecurity().isAllowAnonymousAccess();
+        this.anonymousAccessAllowed = security.isAllowAnonymousAccess();
     }
 
     @Override

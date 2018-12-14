@@ -12,8 +12,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import timely.Configuration;
 import timely.auth.AuthCache;
+import timely.configuration.Configuration;
 
 /**
  * Base test class for SSL with anonymous access
@@ -37,11 +37,11 @@ public class OneWaySSLBase extends QueryBase {
 
     protected static void setupSSL(Configuration config) throws Exception {
         SelfSignedCertificate serverCert = new SelfSignedCertificate();
-        config.getSecurity().getSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
+        config.getSecurity().getServerSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
         clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
-        config.getSecurity().getSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
-        config.getSecurity().getSsl().setUseOpenssl(false);
-        config.getSecurity().getSsl().setUseGeneratedKeypair(false);
+        config.getSecurity().getServerSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
+        config.getSecurity().getServerSsl().setUseOpenssl(false);
+        config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
         config.getSecurity().setAllowAnonymousAccess(true);
     }
 

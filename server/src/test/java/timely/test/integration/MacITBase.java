@@ -12,7 +12,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
+import timely.configuration.Configuration;
 import timely.store.MetricAgeOffIterator;
 import timely.test.TestConfiguration;
 
@@ -49,8 +49,8 @@ public class MacITBase {
             conf = TestConfiguration.createMinimalConfigurationForTest();
             conf.getAccumulo().setInstanceName(mac.getInstanceName());
             conf.getAccumulo().setZookeepers(mac.getZooKeepers());
-            conf.getSecurity().getSsl().setUseOpenssl(false);
-            conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
+            conf.getSecurity().getServerSsl().setUseOpenssl(false);
+            conf.getSecurity().getServerSsl().setUseGeneratedKeypair(true);
             conf.getWebsocket().setFlushIntervalSeconds(TestConfiguration.WAIT_SECONDS);
             HashMap<String, Integer> ageOffSettings = new HashMap<>();
             ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 7);
@@ -75,8 +75,8 @@ public class MacITBase {
         conf = TestConfiguration.createMinimalConfigurationForTest();
         conf.getAccumulo().setInstanceName(mac.getInstanceName());
         conf.getAccumulo().setZookeepers(mac.getZooKeepers());
-        conf.getSecurity().getSsl().setUseOpenssl(false);
-        conf.getSecurity().getSsl().setUseGeneratedKeypair(true);
+        conf.getSecurity().getServerSsl().setUseOpenssl(false);
+        conf.getSecurity().getServerSsl().setUseGeneratedKeypair(true);
         conf.getWebsocket().setFlushIntervalSeconds(TestConfiguration.WAIT_SECONDS);
         HashMap<String, Integer> ageOffSettings = new HashMap<>();
         ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 7);

@@ -8,7 +8,7 @@ import java.util.List;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
+import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 
@@ -23,6 +23,9 @@ public class InternalMetrics {
     private static final String QUERY_RETURN_TIME = "timely.query.return.time";
     private static final String METRICS_RETURNED = "timely.query.metrics.returned";
     private static final String METRIC_RETURN_RATE = "timely.query.metrics.returned.rate";
+    private static final String CACHE_METRIC_RECEIVED = "timely.cache.metric.received";
+    private static final String CACHE_METRIC_TOTAL = "timely.cache.metric.total";
+    private static final String CACHE_METRIC_OLDEST = "timely.cache.metric.oldest.age";
 
     private static final String HOSTNAME_TAG = "host";
 
@@ -33,6 +36,9 @@ public class InternalMetrics {
     private AtomicDouble numQueriesCompleted = new AtomicDouble(0);
     private AtomicDouble numMetricsReturned = new AtomicDouble(0);
     private AtomicDouble elapsedQueryTime = new AtomicDouble(0);
+    private AtomicDouble numCachedMetricsReceived = new AtomicDouble(0);
+    private AtomicDouble numCachedMetricsTotal = new AtomicDouble(0);
+    private AtomicDouble ageOfOldestCachedMetric = new AtomicDouble(0);
 
     private List<Tag> tags = new ArrayList<Tag>();
 
@@ -69,11 +75,27 @@ public class InternalMetrics {
         elapsedQueryTime.addAndGet(elapsedTime);
     }
 
+    public void incrementMetricsCached(long num) {
+        numCachedMetricsReceived.addAndGet(num);
+    }
+
+    public void setNumCachedMetricsTotal(long num) {
+        numCachedMetricsTotal.set(num);
+    }
+
+    public void setAgeOfOldestCachedMetric(long ageInMs) {
+        ageOfOldestCachedMetric.set(ageInMs);
+    }
+
     public List<Metric> getMetricsAndReset() {
         List<Metric> metrics = new ArrayList<Metric>();
         long ts = System.currentTimeMillis();
         metrics.add(new Metric(METRICS_RECEIVED_METRIC, ts, numMetricsReceived.get(), tags));
         numMetricsReceived.set(0);
+        metrics.add(new Metric(CACHE_METRIC_RECEIVED, ts, numCachedMetricsReceived.get(), tags));
+        numCachedMetricsReceived.set(0);
+        metrics.add(new Metric(CACHE_METRIC_TOTAL, ts, numCachedMetricsTotal.get(), tags));
+        metrics.add(new Metric(CACHE_METRIC_OLDEST, ts, ageOfOldestCachedMetric.get(), tags));
         metrics.add(new Metric(META_KEYS_METRIC, ts, numMetaKeysInserted.get(), tags));
         numMetaKeysInserted.set(0);
         metrics.add(new Metric(METRIC_KEYS_METRIC, ts, numMetricKeysInserted.get(), tags));

@@ -16,8 +16,9 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
-import timely.Configuration;
 import timely.auth.AuthCache;
+import timely.configuration.Http;
+import timely.configuration.Security;
 import timely.netty.Constants;
 import timely.netty.http.TimelyHttpHandler;
 
@@ -28,9 +29,9 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
     private final long maxAge;
     private final String domain;
 
-    public TimelyLoginRequestHandler(Configuration conf) {
-        maxAge = conf.getSecurity().getSessionMaxAge();
-        domain = conf.getHttp().getHost();
+    public TimelyLoginRequestHandler(Security security, Http http) {
+        maxAge = security.getSessionMaxAge();
+        domain = http.getHost();
     }
 
     @Override

@@ -1,6 +1,8 @@
 package timely.balancer.netty.tcp;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -13,6 +15,7 @@ import timely.api.request.MetricRequest;
 import timely.api.request.TcpRequest;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.tcp.TcpClientPool;
+import timely.balancer.resolver.BalancedMetricResolver;
 import timely.balancer.resolver.MetricResolver;
 import timely.client.tcp.TcpClient;
 import timely.netty.Constants;
@@ -23,12 +26,17 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
     private static final String LOG_ERR_MSG = "Error storing put metric: {}";
     private static final String ERR_MSG = "Error storing put metric: ";
 
-    private MetricResolver metricResolver;
-    private TcpClientPool tcpClientPool;
+    private BalancedMetricResolver metricResolver;
+    private List<TcpClientPool> tcpClientPools;
 
-    public TcpRelayHandler(MetricResolver metricResolver, TcpClientPool tcpClientPool) {
-        this.metricResolver = metricResolver;
-        this.tcpClientPool = tcpClientPool;
+    public TcpRelayHandler(MetricResolver metricResolver, List<TcpClientPool> tcpClientPools) {
+        this.metricResolver = (BalancedMetricResolver) metricResolver;
+        this.tcpClientPools = tcpClientPools;
+    }
+
+    private TcpClientPool tcpClientPool() {
+        int x = Math.toIntExact(Thread.currentThread().getId() % tcpClientPools.size());
+        return tcpClientPools.get(x);
     }
 
     @Override
@@ -48,14 +56,13 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
                     keyClientPair = getClient(null, false);
                 }
                 keyClientPair.getRight().write(line + "\n");
-                keyClientPair.getRight().flush();
             } finally {
                 if (keyClientPair != null && keyClientPair.getLeft() != null && keyClientPair.getRight() != null) {
-                    tcpClientPool.returnObject(keyClientPair.getLeft(), keyClientPair.getRight());
+                    tcpClientPool().returnObject(keyClientPair.getLeft(), keyClientPair.getRight());
                 }
             }
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOG.error(LOG_ERR_MSG, msg, e);
             ChannelFuture cf = ctx.writeAndFlush(
                     Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
@@ -73,11 +80,13 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
             try {
                 k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric)
                         : metricResolver.getHostPortKey(metric);
-                client = tcpClientPool.borrowObject(k);
+                client = tcpClientPool().borrowObject(k);
             } catch (Exception e1) {
                 failures++;
                 client = null;
-                LOG.error(e1.getMessage(), e1);
+                if (failures % 10 == 0) {
+                    LOG.error(e1.getMessage(), e1);
+                }
                 try {
                     Thread.sleep(failures < 10 ? 500 : 60000);
                 } catch (InterruptedException e2) {

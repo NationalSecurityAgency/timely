@@ -42,4 +42,6 @@ public interface DataStore {
     void setCache(DataStoreCache cache);
 
     DataStoreCache getCache();
+
+    InternalMetrics getInternalMetrics();
 }

@@ -1,7 +1,7 @@
 package timely.store;
 
-import timely.Configuration;
 import timely.api.response.TimelyException;
+import timely.configuration.Configuration;
 
 public class DataStoreFactory {
 

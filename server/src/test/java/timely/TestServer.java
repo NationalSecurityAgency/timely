@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
+import timely.configuration.Configuration;
 import timely.netty.http.NonSslRedirectHandler;
 import timely.netty.tcp.MetricsBufferDecoder;
 import timely.netty.tcp.TcpDecoder;
@@ -34,11 +35,12 @@ public class TestServer extends Server {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(config, sslCtx));
+                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(config.getHttp(), sslCtx));
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config));
+                ch.pipeline().addLast("queryDecoder",
+                        new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("capture", httpRequests);
             }
         };

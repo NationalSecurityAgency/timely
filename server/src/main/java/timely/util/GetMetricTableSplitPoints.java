@@ -16,9 +16,10 @@ import org.apache.commons.configuration.BaseConfiguration;
 import org.springframework.boot.Banner.Mode;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-import timely.Configuration;
-import timely.SpringBootstrap;
 import timely.api.model.Meta;
+import timely.configuration.Accumulo;
+import timely.configuration.Configuration;
+import timely.configuration.SpringBootstrap;
 
 public class GetMetricTableSplitPoints {
 
@@ -29,7 +30,7 @@ public class GetMetricTableSplitPoints {
             Configuration conf = ctx.getBean(Configuration.class);
 
             final BaseConfiguration apacheConf = new BaseConfiguration();
-            Configuration.Accumulo accumuloConf = conf.getAccumulo();
+            Accumulo accumuloConf = conf.getAccumulo();
             apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
             apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
             final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));

@@ -1,9 +1,12 @@
 package timely.balancer.connection;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.balancer.ArrivalRate;
-import timely.balancer.BalancerConfiguration;
+import timely.balancer.configuration.BalancerConfiguration;
 
 public class TimelyBalancedHost {
 
@@ -15,7 +18,7 @@ public class TimelyBalancedHost {
     private int wsPort;
     private int udpPort;
     private boolean isUp = true;
-    private BalancerConfiguration config;
+    private BalancerConfiguration balancerConfig;
     private int failures = 0;
     private int successes = 0;
     private ArrivalRate arrivalRate = new ArrivalRate();
@@ -48,8 +51,8 @@ public class TimelyBalancedHost {
         return new TimelyBalancedHost(host, basePort);
     }
 
-    public void setConfig(BalancerConfiguration config) {
-        this.config = config;
+    public void setBalancerConfig(BalancerConfiguration balancerConfig) {
+        this.balancerConfig = balancerConfig;
     }
 
     synchronized public boolean isUp() {
@@ -57,7 +60,7 @@ public class TimelyBalancedHost {
     }
 
     public void reportSuccess() {
-        int serverSuccessesBeforeUp = config.getServerSuccessesBeforeUp();
+        int serverSuccessesBeforeUp = balancerConfig.getServerSuccessesBeforeUp();
         String h = host;
         int p = tcpPort;
         synchronized (this) {
@@ -76,13 +79,13 @@ public class TimelyBalancedHost {
     }
 
     public void reportFailure() {
-        int serverFailuresBeforeDown = config.getServerFailuresBeforeDown();
+        int serverFailuresBeforeDown = balancerConfig.getServerFailuresBeforeDown();
         String h = host;
         int p = tcpPort;
         synchronized (this) {
             if (LOG.isTraceEnabled()) {
-                LOG.trace("failure reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}", h, p,
-                        isUp, (failures + 1), serverFailuresBeforeDown);
+                LOG.trace("failure reported host:{} port:{} isUp:{} failures:{} serverFailuresBeforeUp:{}", h, p, isUp,
+                        (failures + 1), serverFailuresBeforeDown);
             }
             if (isUp) {
                 if (++failures >= serverFailuresBeforeDown) {
@@ -142,7 +145,42 @@ public class TimelyBalancedHost {
         return arrivalRate.getRate();
     }
 
-    public void calculateRate() {
-        arrivalRate.calculateRate();
+    @Override
+    public int hashCode() {
+        HashCodeBuilder builder = new HashCodeBuilder();
+        builder.append(host);
+        builder.append(tcpPort);
+        builder.append(httpPort);
+        builder.append(wsPort);
+        builder.append(udpPort);
+        return builder.toHashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof TimelyBalancedHost) {
+            TimelyBalancedHost other = (TimelyBalancedHost) o;
+            EqualsBuilder builder = new EqualsBuilder();
+            builder.append(host, other.host);
+            builder.append(tcpPort, other.tcpPort);
+            builder.append(httpPort, other.httpPort);
+            builder.append(wsPort, other.wsPort);
+            builder.append(udpPort, other.udpPort);
+            return builder.isEquals();
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public String toString() {
+        ToStringBuilder builder = new ToStringBuilder(this);
+        builder.append(host);
+        builder.append(tcpPort);
+        builder.append(httpPort);
+        builder.append(wsPort);
+        builder.append(udpPort);
+        builder.append(isUp);
+        return builder.toString();
     }
 }

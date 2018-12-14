@@ -3,9 +3,9 @@ package timely.netty.http;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import timely.Configuration;
 import timely.api.response.StrictTransportResponse;
 import timely.api.response.TimelyException;
+import timely.configuration.Configuration;
 
 public class StrictTransportHandler extends SimpleChannelInboundHandler<StrictTransportResponse> {
 

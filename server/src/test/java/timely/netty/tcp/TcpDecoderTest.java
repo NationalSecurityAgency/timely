@@ -8,11 +8,11 @@ import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import timely.Configuration;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;
 import timely.auth.VisibilityCache;
+import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 

@@ -24,13 +24,13 @@ import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Configuration;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.CacheResponse;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
+import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
@@ -38,6 +38,7 @@ import timely.sample.Aggregator;
 import timely.sample.Sample;
 import timely.sample.iterators.AggregationIterator;
 import timely.sample.iterators.DownsampleIterator;
+import timely.store.InternalMetrics;
 import timely.store.MetricAgeOffIterator;
 import timely.store.iterators.RateIterator;
 
@@ -56,9 +57,9 @@ public class DataStoreCache {
     private Map<String, String> minimumAgeOffForIterator;
     private int flushBatch = 0;
     private int numBatches = 5;
+    private InternalMetrics internalMetrics;
 
     private Timer maintenanceTimer = new Timer("DataStoreCacheTimer");
-    private Timer statsTimer = new Timer();
 
     public DataStoreCache(Configuration conf) {
         nonCachedMetrics.addAll(conf.getCache().getNonCachedMetrics());
@@ -116,7 +117,7 @@ public class DataStoreCache {
             }
         }, (3600 * 1000), (3600 * 1000));
 
-        statsTimer.schedule(new TimerTask() {
+        maintenanceTimer.schedule(new TimerTask() {
 
             @Override
             public void run() {
@@ -127,6 +128,49 @@ public class DataStoreCache {
                 }
             }
         }, (600 * 1000), (600 * 1000));
+
+        maintenanceTimer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                try {
+                    reportInternalMetrics();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, (60 * 1000), (60 * 1000));
+    }
+
+    public void setInternalMetrics(InternalMetrics internalMetrics) {
+        this.internalMetrics = internalMetrics;
+    }
+
+    private void reportInternalMetrics() {
+        if (internalMetrics != null) {
+            long stamp = gorillaMapLock.readLock();
+            try {
+                long cachedEntries = 0;
+                long oldestCacheEntry = Long.MAX_VALUE;
+                for (Map<TaggedMetric, GorillaStore> e1 : gorillaMap.values()) {
+                    for (Map.Entry<TaggedMetric, GorillaStore> e2 : e1.entrySet()) {
+                        cachedEntries += e2.getValue().getNumEntries();
+                        long oldestTimestamp = e2.getValue().getOldestTimestamp();
+                        if (oldestTimestamp < oldestCacheEntry) {
+                            oldestCacheEntry = oldestTimestamp;
+                        }
+                    }
+                }
+                internalMetrics.setNumCachedMetricsTotal(cachedEntries);
+                if (oldestCacheEntry == Long.MAX_VALUE) {
+                    internalMetrics.setAgeOfOldestCachedMetric(0);
+                } else {
+                    internalMetrics.setAgeOfOldestCachedMetric(System.currentTimeMillis() - oldestCacheEntry);
+                }
+            } finally {
+                gorillaMapLock.unlockRead(stamp);
+            }
+        }
     }
 
     private void pruneStats() {
@@ -138,7 +182,7 @@ public class DataStoreCache {
                 Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 = metricItr.next();
                 int numberTagVariations = entry1.getValue().size();
                 if (numberTagVariations > maxUniqueTagSets) {
-                    LOG.info("Cache of metric {} has {] tag variations.  Discontinuing cache.", entry1.getKey(),
+                    LOG.info("Cache of metric {} has {} tag variations.  Discontinuing cache.", entry1.getKey(),
                             numberTagVariations);
                     metricItr.remove();
                     nonCachedMetrics.add(entry1.getKey());
@@ -333,6 +377,9 @@ public class DataStoreCache {
 
     public void store(Metric metric) {
         if (shouldCache(metric)) {
+            if (internalMetrics != null) {
+                internalMetrics.incrementMetricsCached(1);
+            }
             TaggedMetric taggedMetric = new TaggedMetric(metric.getName(), metric.getTags());
             GorillaStore gs = getGorillaStore(metric.getName(), taggedMetric);
             gs.addValue(metric);
