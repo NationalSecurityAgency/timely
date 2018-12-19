@@ -35,6 +35,7 @@ import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.retry.RetryUntilElapsed;
@@ -95,11 +96,11 @@ public class BalancedMetricResolver implements MetricResolver {
                 retryPolicy);
         curatorFramework.start();
         ensureZkPaths(curatorFramework, zkPaths);
+        assignmentsLock = new InterProcessReadWriteLock(curatorFramework, ASSIGNMENTS_LOCK_PATH);
         startLeaderLatch(curatorFramework);
         startServiceListener(curatorFramework);
         assignmentsLastUpdatedInHdfs = new DistributedAtomicLong(curatorFramework, ASSIGNMENTS_LAST_UPDATED_PATH,
                 retryPolicy);
-        assignmentsLock = new InterProcessReadWriteLock(curatorFramework, ASSIGNMENTS_LOCK_PATH);
 
         TreeCacheListener listener = new TreeCacheListener() {
 
@@ -191,6 +192,20 @@ public class BalancedMetricResolver implements MetricResolver {
     private void startLeaderLatch(CuratorFramework curatorFramework) {
         try {
             this.leaderLatch = new LeaderLatch(curatorFramework, LEADER_LATCH_PATH);
+            this.leaderLatch.start();
+            this.leaderLatch.addListener(new LeaderLatchListener() {
+                @Override
+                public void isLeader() {
+                    LOG.info("this balancer is the leader");
+                    isLeader.set(true);
+                }
+
+                @Override
+                public void notLeader() {
+                    LOG.info("this balancer is not the leader");
+                    isLeader.set(false);
+                }
+            });
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
@@ -812,7 +827,6 @@ public class BalancedMetricResolver implements MetricResolver {
             writer.write("metric");
             writer.write("host");
             writer.write("tcpPort");
-            writer.write("rate");
             writer.endRecord();
 
             balancerLock.readLock().lock();
@@ -821,7 +835,6 @@ public class BalancedMetricResolver implements MetricResolver {
                     writer.write(e.getKey());
                     writer.write(e.getValue().getHost());
                     writer.write(Integer.toString(e.getValue().getTcpPort()));
-                    writer.write(Double.toString(metricMap.get(e.getKey()).getRate()));
                     writer.endRecord();
                     LOG.trace("Saving assigment: {} to {}:{}", e.getKey(), e.getValue().getHost(),
                             e.getValue().getTcpPort());
