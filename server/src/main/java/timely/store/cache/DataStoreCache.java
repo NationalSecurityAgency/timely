@@ -152,12 +152,16 @@ public class DataStoreCache {
             try {
                 long cachedEntries = 0;
                 long oldestCacheEntry = Long.MAX_VALUE;
-                for (Map<TaggedMetric, GorillaStore> e1 : gorillaMap.values()) {
+                String oldestMetric = "";
+                for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> e : gorillaMap.entrySet()) {
+                    String metric = e.getKey();
+                    Map<TaggedMetric, GorillaStore> e1 = e.getValue();
                     for (Map.Entry<TaggedMetric, GorillaStore> e2 : e1.entrySet()) {
                         cachedEntries += e2.getValue().getNumEntries();
                         long oldestTimestamp = e2.getValue().getOldestTimestamp();
                         if (oldestTimestamp < oldestCacheEntry) {
                             oldestCacheEntry = oldestTimestamp;
+                            oldestMetric = metric;
                         }
                     }
                 }
@@ -166,6 +170,7 @@ public class DataStoreCache {
                     internalMetrics.setAgeOfOldestCachedMetric(0);
                 } else {
                     internalMetrics.setAgeOfOldestCachedMetric(System.currentTimeMillis() - oldestCacheEntry);
+                    LOG.trace("oldest metric:{} age:{}", oldestMetric, (System.currentTimeMillis() - oldestCacheEntry));
                 }
             } finally {
                 gorillaMapLock.unlockRead(stamp);

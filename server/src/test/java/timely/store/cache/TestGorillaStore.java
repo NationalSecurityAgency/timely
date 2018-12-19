@@ -112,7 +112,21 @@ public class TestGorillaStore {
             Assert.assertEquals("Unexpected number of total observations", x, totalObservations);
 
         }
-
     }
 
+    @Test
+    public void testArchive() {
+
+        GorillaStore gStore = new GorillaStore();
+
+        gStore.addValue(1, 1.123);
+        gStore.addValue(2, 2.314);
+        gStore.archiveCurrentCompressor();
+        Assert.assertEquals(1, gStore.getOldestTimestamp());
+        gStore.addValue(3, 3.856);
+        gStore.addValue(4, 4.7678);
+        gStore.archiveCurrentCompressor();
+        gStore.ageOffArchivedCompressors(2, 5);
+        Assert.assertEquals(3, gStore.getOldestTimestamp());
+    }
 }

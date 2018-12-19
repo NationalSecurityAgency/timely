@@ -60,7 +60,6 @@ import timely.balancer.healthcheck.HealthChecker;
 public class BalancedMetricResolver implements MetricResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(BalancedMetricResolver.class);
-
     private Map<String, TimelyBalancedHost> metricToHostMap = new TreeMap<>();
     private Map<String, ArrivalRate> metricMap = new HashMap<>();
     private ReentrantReadWriteLock balancerLock = new ReentrantReadWriteLock();
@@ -68,7 +67,6 @@ public class BalancedMetricResolver implements MetricResolver {
     private Random r = new Random();
     final private HealthChecker healthChecker;
     private Timer timer = new Timer("RebalanceTimer", true);
-    private long balanceUntil = System.currentTimeMillis() + 1800000l;
     private int roundRobinCounter = 0;
     private Set<String> nonCachedMetrics = new HashSet<>();
     private ReentrantReadWriteLock nonCachedMetricsLock = new ReentrantReadWriteLock();
@@ -748,8 +746,7 @@ public class BalancedMetricResolver implements MetricResolver {
             Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
             FSDataInputStream iStream = fs.open(assignmentFile);
 
-            CsvReader reader = null;
-            reader = new CsvReader(iStream, ',', Charset.forName("UTF-8"));
+            CsvReader reader = new CsvReader(iStream, ',', Charset.forName("UTF-8"));
             reader.setUseTextQualifier(false);
 
             // skip the headers

@@ -72,13 +72,17 @@ public class GorillaStore {
     }
 
     public long ageOffArchivedCompressors(long maxAge) {
+        long now = System.currentTimeMillis();
+        return ageOffArchivedCompressors(maxAge, now);
+    }
+
+    public long ageOffArchivedCompressors(long maxAge, long now) {
         long numRemoved = 0;
         long oldestRemainingTimestamp = Long.MAX_VALUE;
         long stamp = archivedCompressorLock.writeLock();
         try {
             if (archivedCompressors.size() > 0) {
                 Iterator<WrappedGorillaCompressor> itr = archivedCompressors.iterator();
-                long now = System.currentTimeMillis();
                 while (itr.hasNext()) {
                     WrappedGorillaCompressor c = itr.next();
                     long timeSinceNewestTimestamp = now - c.getNewestTimestamp();
