@@ -194,10 +194,12 @@ public class BalancedMetricResolver implements MetricResolver {
             this.leaderLatch = new LeaderLatch(curatorFramework, LEADER_LATCH_PATH);
             this.leaderLatch.start();
             this.leaderLatch.addListener(new LeaderLatchListener() {
+
                 @Override
                 public void isLeader() {
                     LOG.info("this balancer is the leader");
                     isLeader.set(true);
+                    writeAssigmentsToHdfs();
                 }
 
                 @Override
@@ -248,6 +250,7 @@ public class BalancedMetricResolver implements MetricResolver {
                             ServerDetails pl = (ServerDetails) si.getPayload();
                             TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(),
                                     pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort());
+                            tbh.setBalancerConfig(balancerConfig);
                             availableHosts.add(tbh);
                         }
 

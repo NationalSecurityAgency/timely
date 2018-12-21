@@ -22,11 +22,11 @@ public class TcpDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         ByteBuf buf = in.readBytes(in.readableBytes());
+        String input = "";
         try {
             if (buf == Unpooled.EMPTY_BUFFER) {
                 return;
             }
-            final String input;
             if (buf.hasArray()) {
                 input = new String(buf.array(), UTF_8);
             } else {
@@ -52,12 +52,14 @@ public class TcpDecoder extends ByteToMessageDecoder {
                 LOG.error("Error getting class for operation: " + operation, e);
             }
             if (null == tcp) {
-                LOG.error("Unknown tcp operation: " + parts[0]);
+                LOG.error("Unknown tcp operation:[{}] in input:[{}]", parts[0], input);
                 return;
             }
             tcp.parse(input);
             out.add(tcp);
             LOG.trace("Converted {} to {}", input, tcp);
+        } catch (Exception e) {
+            LOG.error("{} parsing line:[{}]", e.getMessage(), input);
         } finally {
             buf.release();
         }

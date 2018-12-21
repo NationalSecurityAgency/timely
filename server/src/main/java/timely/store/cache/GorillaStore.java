@@ -23,10 +23,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import timely.model.Metric;
 
 public class GorillaStore {
 
+    private static final Logger LOG = LoggerFactory.getLogger(GorillaStore.class);
     private Queue<WrappedGorillaCompressor> archivedCompressors = new LinkedList<WrappedGorillaCompressor>();
     private StampedLock archivedCompressorLock = new StampedLock();
     private StampedLock currentCompressorLock = new StampedLock();
@@ -36,12 +39,17 @@ public class GorillaStore {
 
     private long oldestTimestamp = Long.MAX_VALUE;
     private long newestTimestamp = -1;
+    private long maxAge;
+    private String metric;
 
-    public GorillaStore() {
-
+    public GorillaStore(String metric, long maxAge) {
+        this.metric = metric;
+        this.maxAge = maxAge;
     }
 
-    public GorillaStore(FileSystem fs, String metric, timely.configuration.Configuration conf) throws IOException {
+    public GorillaStore(FileSystem fs, String metric, long maxAge) throws IOException {
+        this.metric = metric;
+        this.maxAge = maxAge;
         String baseDir = "/timely/cache";
         Path directory = new Path(baseDir + "/" + metric);
         List<WrappedGorillaCompressor> compressors = readCompressors(fs, directory);
@@ -71,9 +79,27 @@ public class GorillaStore {
         return current;
     }
 
-    public long ageOffArchivedCompressors(long maxAge) {
-        long now = System.currentTimeMillis();
-        return ageOffArchivedCompressors(maxAge, now);
+    public boolean isEmpty() {
+        int compressors;
+        long stamp = archivedCompressorLock.readLock();
+        try {
+            compressors = archivedCompressors.size();
+        } finally {
+            archivedCompressorLock.unlockRead(stamp);
+        }
+        stamp = currentCompressorLock.readLock();
+        try {
+            if (current != null) {
+                compressors++;
+            }
+        } finally {
+            currentCompressorLock.unlockRead(stamp);
+        }
+        return compressors == 0;
+    }
+
+    public long ageOffArchivedCompressors() {
+        return ageOffArchivedCompressors(maxAge, System.currentTimeMillis());
     }
 
     public long ageOffArchivedCompressors(long maxAge, long now) {
@@ -87,20 +113,55 @@ public class GorillaStore {
                     WrappedGorillaCompressor c = itr.next();
                     long timeSinceNewestTimestamp = now - c.getNewestTimestamp();
                     if (timeSinceNewestTimestamp >= maxAge) {
+                        LOG.trace("removing archive for {} maxAgeMin:{} oldestInMin:{} youngestInMin:{}", metric,
+                                maxAge / (1000 * 60), (now - c.getOldestTimestamp()) / (1000 * 60),
+                                (now - c.getNewestTimestamp()) / (1000 * 60));
                         itr.remove();
                         numRemoved++;
                     } else {
+                        LOG.trace("keeping archive for {} maxAgeMin:{} oldestInMin:{} youngestInMin:{}", metric,
+                                maxAge / (1000 * 60), (now - c.getOldestTimestamp()) / (1000 * 60),
+                                (now - c.getNewestTimestamp()) / (1000 * 60));
                         if (c.getOldestTimestamp() < oldestRemainingTimestamp) {
+                            if (oldestRemainingTimestamp == Long.MAX_VALUE) {
+                                LOG.trace("changing {} oldestInMin from Long.MAX_VALUE to {}", metric,
+                                        (now - c.getOldestTimestamp()) / (1000 * 60));
+                            } else {
+                                LOG.trace("changing {} oldestInMin from {} to {}", metric,
+                                        (now - oldestRemainingTimestamp) / (1000 * 60),
+                                        (now - c.getOldestTimestamp()) / (1000 * 60));
+                            }
                             oldestRemainingTimestamp = c.getOldestTimestamp();
                         }
                     }
                 }
-                if (oldestRemainingTimestamp < Long.MAX_VALUE) {
-                    oldestTimestamp = oldestRemainingTimestamp;
-                }
             }
         } finally {
             archivedCompressorLock.unlockWrite(stamp);
+        }
+
+        if (oldestRemainingTimestamp == Long.MAX_VALUE) {
+            stamp = currentCompressorLock.readLock();
+            try {
+                if (current != null) {
+                    LOG.trace("changing {} oldestInMin from Long.MAX_VALUE to {} (no archives, using current)", metric,
+                            (now - current.getOldestTimestamp()) / (1000 * 60));
+                    oldestRemainingTimestamp = current.getOldestTimestamp();
+                }
+            } finally {
+                currentCompressorLock.unlockRead(stamp);
+            }
+        }
+
+        if (oldestRemainingTimestamp < Long.MAX_VALUE) {
+            oldestTimestamp = oldestRemainingTimestamp;
+            LOG.trace("Setting oldestTimestamp for {} to {} ageInMin:{}", metric, oldestTimestamp,
+                    (now - oldestTimestamp) / (1000 * 60));
+        } else {
+            // reset oldestTimestamp to Long.MAX_VALUE since we don't have any of that
+            // metric left
+            oldestTimestamp = Long.MAX_VALUE;
+            LOG.trace("No archives and no current for {}", metric);
         }
         return numRemoved;
     }
@@ -217,10 +278,11 @@ public class GorillaStore {
         long stamp = currentCompressorLock.writeLock();
         try {
             WrappedGorillaCompressor c = null;
+            long now = System.currentTimeMillis();
             for (Metric m : tempCache) {
                 long ts = m.getValue().getTimestamp();
                 double v = m.getValue().getMeasure();
-                if (ts > newestTimestamp) {
+                if (ts > newestTimestamp && (now - ts) < maxAge) {
                     newestTimestamp = ts;
                     if (c == null) {
                         c = getCompressor(ts, stamp);
@@ -234,15 +296,20 @@ public class GorillaStore {
     }
 
     public void addValue(Metric metric) {
-        synchronized (metricCache) {
-            metricCache.add(metric);
+        long now = System.currentTimeMillis();
+        long ts = metric.getValue().getTimestamp();
+        if ((now - ts) < maxAge) {
+            synchronized (metricCache) {
+                metricCache.add(metric);
+            }
         }
     }
 
     public void addValue(long timestamp, double value) {
 
+        long now = System.currentTimeMillis();
         // values must be inserted in order
-        if (timestamp >= newestTimestamp) {
+        if (timestamp >= newestTimestamp && (now - timestamp) < maxAge) {
             newestTimestamp = timestamp;
             long stamp = currentCompressorLock.writeLock();
             try {

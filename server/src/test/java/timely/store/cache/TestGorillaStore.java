@@ -24,7 +24,7 @@ public class TestGorillaStore {
     @Test
     public void testOne() {
 
-        GorillaStore gStore = new GorillaStore();
+        GorillaStore gStore = new GorillaStore("", Long.MAX_VALUE);
 
         long now = System.currentTimeMillis();
         gStore.addValue(now += 100, 1.123);
@@ -75,7 +75,7 @@ public class TestGorillaStore {
     @Test
     public void testExtentOfStorage() {
 
-        GorillaStore gStore = new GorillaStore();
+        GorillaStore gStore = new GorillaStore("", Long.MAX_VALUE);
 
         HashMap<String, String> tags = new HashMap<>();
         tags.put("host", "localhost");
@@ -117,7 +117,7 @@ public class TestGorillaStore {
     @Test
     public void testArchive() {
 
-        GorillaStore gStore = new GorillaStore();
+        GorillaStore gStore = new GorillaStore("", Long.MAX_VALUE);
 
         gStore.addValue(1, 1.123);
         gStore.addValue(2, 2.314);

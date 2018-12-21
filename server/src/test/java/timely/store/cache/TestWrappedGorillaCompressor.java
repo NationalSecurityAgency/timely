@@ -62,7 +62,7 @@ public class TestWrappedGorillaCompressor {
         try {
             Configuration configuration = new Configuration();
             FileSystem fs = FileSystem.get(new URI("hdfs://localhost:8020"), configuration);
-            GorillaStore store = new GorillaStore(fs, "mymetric", new timely.configuration.Configuration());
+            GorillaStore store = new GorillaStore(fs, "mymetric", Long.MAX_VALUE);
 
             long start = System.currentTimeMillis();
             WrappedGorillaCompressor originalCompressor = new WrappedGorillaCompressor(start);

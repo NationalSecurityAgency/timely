@@ -150,6 +150,7 @@ public class DataStoreCache {
         if (internalMetrics != null) {
             long stamp = gorillaMapLock.readLock();
             try {
+                long now = System.currentTimeMillis();
                 long cachedEntries = 0;
                 long oldestCacheEntry = Long.MAX_VALUE;
                 String oldestMetric = "";
@@ -160,18 +161,31 @@ public class DataStoreCache {
                         cachedEntries += e2.getValue().getNumEntries();
                         long oldestTimestamp = e2.getValue().getOldestTimestamp();
                         if (oldestTimestamp < oldestCacheEntry) {
+                            if (LOG.isTraceEnabled()) {
+                                String oldestCacheEntryAge;
+                                if (oldestCacheEntry == Long.MAX_VALUE) {
+                                    oldestCacheEntryAge = "Long.MAX_VALUE";
+                                } else {
+                                    oldestCacheEntryAge = Long.toString((now - oldestCacheEntry) / (60 * 1000));
+                                }
+                                LOG.trace("setInternalMetrics changng {} oldestCacheEntry from ageMin:{} to ageMin:{}",
+                                        metric, oldestCacheEntryAge, (now - oldestTimestamp) / (60 * 1000));
+                            }
                             oldestCacheEntry = oldestTimestamp;
                             oldestMetric = metric;
                         }
                     }
                 }
                 internalMetrics.setNumCachedMetricsTotal(cachedEntries);
+                long oldestCachedMetricAge;
                 if (oldestCacheEntry == Long.MAX_VALUE) {
-                    internalMetrics.setAgeOfOldestCachedMetric(0);
+                    oldestCachedMetricAge = 0;
                 } else {
-                    internalMetrics.setAgeOfOldestCachedMetric(System.currentTimeMillis() - oldestCacheEntry);
-                    LOG.trace("oldest metric:{} age:{}", oldestMetric, (System.currentTimeMillis() - oldestCacheEntry));
+                    oldestCachedMetricAge = System.currentTimeMillis() - oldestCacheEntry;
                 }
+                internalMetrics.setAgeOfOldestCachedMetric(oldestCachedMetricAge);
+                LOG.trace("reporting oldest cached metric as metric:{} ageMin:{}", oldestMetric,
+                        oldestCachedMetricAge / (60 * 1000));
             } finally {
                 gorillaMapLock.unlockRead(stamp);
             }
@@ -201,19 +215,46 @@ public class DataStoreCache {
     private void ageOffGorillaStores() {
         long stamp = gorillaMapLock.readLock();
         try {
-            long numRemoved = 0;
-            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 : gorillaMap.entrySet()) {
-                long maxAge = getAgeOffForMetric(entry1.getKey());
+            long numRemovedTotal = 0;
+            long now = System.currentTimeMillis();
+            Iterator<Map.Entry<String, Map<TaggedMetric, GorillaStore>>> metricIterator = gorillaMap.entrySet()
+                    .iterator();
+            while (metricIterator.hasNext()) {
+                Map.Entry<String, Map<TaggedMetric, GorillaStore>> metricEntry = metricIterator.next();
+                String metric = metricEntry.getKey();
+                long maxAge = getAgeOffForMetric(metric);
+                long oldestTs = Long.MAX_VALUE;
+                long numRemovedMetric = 0;
+                Iterator<Map.Entry<TaggedMetric, GorillaStore>> taggedMetricIterator = metricEntry.getValue().entrySet()
+                        .iterator();
+                while (taggedMetricIterator.hasNext()) {
+                    Map.Entry<TaggedMetric, GorillaStore> taggedMetricEntry = taggedMetricIterator.next();
+                    GorillaStore store = taggedMetricEntry.getValue();
+                    numRemovedMetric += store.ageOffArchivedCompressors();
+                    long oldestTimestampInStore = store.getOldestTimestamp();
+                    if (oldestTimestampInStore < oldestTs) {
+                        oldestTs = oldestTimestampInStore;
+                    }
+                    if (oldestTimestampInStore == Long.MAX_VALUE && store.isEmpty()) {
+                        LOG.trace("Gorilla store for {}:{} empty, removing", metric,
+                                taggedMetricEntry.getKey().getTags());
+                        taggedMetricIterator.remove();
+                    }
+                }
+                numRemovedTotal += numRemovedMetric;
                 if (LOG.isTraceEnabled()) {
-                    LOG.trace("ageOffGorillaStores metric:{} maxAge:{}", entry1.getKey(), maxAge);
-                }
-                for (GorillaStore store : entry1.getValue().values()) {
-                    numRemoved += store.ageOffArchivedCompressors(maxAge);
+                    String oldestAgeMin;
+                    if (oldestTs == Long.MAX_VALUE) {
+                        oldestAgeMin = "Long.MAX_VALUE";
+                    } else {
+                        oldestAgeMin = Long.toString((now - oldestTs) / (60 * 1000));
+                    }
+                    LOG.trace(
+                            "ageOffGorillaStores metric:{} with maxAgeMin:{}, oldestAgeMin:{} after aging off {} archived Gorilla compressors",
+                            metric, (maxAge / (60 * 1000)), oldestAgeMin, numRemovedTotal);
                 }
             }
-            if (numRemoved > 0) {
-                LOG.debug("ageOffGorillaStores - Aged off {} archived Gorilla compressors", numRemoved);
-            }
+            LOG.trace("ageOffGorillaStores aged off {} archived Gorilla compressors", numRemovedTotal);
         } finally {
             gorillaMapLock.unlockRead(stamp);
         }
@@ -312,10 +353,10 @@ public class DataStoreCache {
                 }
                 gorillaMap.put(metric, metricMap);
             }
+            returnedMap.putAll(metricMap);
         } finally {
             gorillaMapLock.unlock(stamp);
         }
-        returnedMap.putAll(metricMap);
         return returnedMap;
     }
 
@@ -333,7 +374,7 @@ public class DataStoreCache {
             }
             gStore = metricMap.get(taggedMetric);
             if (gStore == null) {
-                gStore = new GorillaStore();
+                gStore = new GorillaStore(metric, getAgeOffForMetric(metric));
                 needWrite = true;
             }
             if (needWrite) {
@@ -468,18 +509,10 @@ public class DataStoreCache {
                 : endTs);
 
         try {
-            // create DataStoreCacheIterator which is the base iterator of
-            // the stack
+            // create DataStoreCacheIterator which is the base iterator of the stack
             VisibilityFilter visFilter = new VisibilityFilter(authorizations);
 
             itr = new DataStoreCacheIterator(this, visFilter, subQuery, startOfFirstPeriod, endOfLastPeriod);
-
-            // IteratorSetting ageOffIteratorSettings = new IteratorSetting(100,
-            // "ageoff", MetricAgeOffIterator.class,
-            // this.minimumAgeOffForIterator);
-            // MetricAgeOffIterator ageOff = new MetricAgeOffIterator();
-            // ageOff.init(itr, ageOffIteratorSettings.getOptions(), null);
-            // itr = ageOff;
 
             // create RateIterator if necessary
             if (subQuery.isRate()) {
