@@ -23,7 +23,7 @@ timely:
   security:
     session-max-age: 86400
     allow-anonymous-access: true
-    serverSsl:
+    server-ssl:
       certificate-file:
       key-file:
       key-password:

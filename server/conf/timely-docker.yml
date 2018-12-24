@@ -19,7 +19,7 @@ timely:
   security:
     session-max-age: 86400
     allow-anonymous-access: true
-    ssl:
+    server-ssl:
       certificate-file: /timely-server-src/server/pki/timely.csr
       key-file: /timely-server-src/server/pki/timely-pkcs8.key
       key-password: password
