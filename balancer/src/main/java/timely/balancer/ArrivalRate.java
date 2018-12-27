@@ -20,9 +20,7 @@ public class ArrivalRate {
     private AtomicDouble longTermRate = new AtomicDouble(0);
     private AtomicLong longTermLastReset = new AtomicLong(0);
 
-    private Timer timer = new Timer("ArrivalRateTimer");
-
-    public ArrivalRate() {
+    public ArrivalRate(Timer timer) {
         long now = System.currentTimeMillis();
         shortTermLastReset.set(now);
         mediumTermLastReset.set(now);

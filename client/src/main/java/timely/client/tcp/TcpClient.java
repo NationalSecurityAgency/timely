@@ -118,4 +118,7 @@ public class TcpClient implements AutoCloseable {
         return 0;
     }
 
+    public long getConnectTime() {
+        return connectTime;
+    }
 }

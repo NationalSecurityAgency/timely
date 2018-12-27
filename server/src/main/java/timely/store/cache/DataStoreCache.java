@@ -168,7 +168,7 @@ public class DataStoreCache {
                                 } else {
                                     oldestCacheEntryAge = Long.toString((now - oldestCacheEntry) / (60 * 1000));
                                 }
-                                LOG.trace("setInternalMetrics changng {} oldestCacheEntry from ageMin:{} to ageMin:{}",
+                                LOG.trace("setInternalMetrics changing {} oldestCacheEntry from ageMin:{} to ageMin:{}",
                                         metric, oldestCacheEntryAge, (now - oldestTimestamp) / (60 * 1000));
                             }
                             oldestCacheEntry = oldestTimestamp;
@@ -225,10 +225,10 @@ public class DataStoreCache {
                 long maxAge = getAgeOffForMetric(metric);
                 long oldestTs = Long.MAX_VALUE;
                 long numRemovedMetric = 0;
-                Iterator<Map.Entry<TaggedMetric, GorillaStore>> taggedMetricIterator = metricEntry.getValue().entrySet()
+                Iterator<Map.Entry<TaggedMetric, GorillaStore>> taggedMetricItr = metricEntry.getValue().entrySet()
                         .iterator();
-                while (taggedMetricIterator.hasNext()) {
-                    Map.Entry<TaggedMetric, GorillaStore> taggedMetricEntry = taggedMetricIterator.next();
+                while (taggedMetricItr.hasNext()) {
+                    Map.Entry<TaggedMetric, GorillaStore> taggedMetricEntry = taggedMetricItr.next();
                     GorillaStore store = taggedMetricEntry.getValue();
                     numRemovedMetric += store.ageOffArchivedCompressors();
                     long oldestTimestampInStore = store.getOldestTimestamp();
@@ -238,7 +238,7 @@ public class DataStoreCache {
                     if (oldestTimestampInStore == Long.MAX_VALUE && store.isEmpty()) {
                         LOG.trace("Gorilla store for {}:{} empty, removing", metric,
                                 taggedMetricEntry.getKey().getTags());
-                        taggedMetricIterator.remove();
+                        taggedMetricItr.remove();
                     }
                 }
                 numRemovedTotal += numRemovedMetric;

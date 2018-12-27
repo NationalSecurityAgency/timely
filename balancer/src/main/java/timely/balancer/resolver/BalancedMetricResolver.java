@@ -68,6 +68,7 @@ public class BalancedMetricResolver implements MetricResolver {
     private Random r = new Random();
     final private HealthChecker healthChecker;
     private Timer timer = new Timer("RebalanceTimer", true);
+    private Timer arrivalRateTimer = new Timer("AriivalRateTimerTBH", true);
     private int roundRobinCounter = 0;
     private Set<String> nonCachedMetrics = new HashSet<>();
     private ReentrantReadWriteLock nonCachedMetricsLock = new ReentrantReadWriteLock();
@@ -191,6 +192,7 @@ public class BalancedMetricResolver implements MetricResolver {
 
     private void startLeaderLatch(CuratorFramework curatorFramework) {
         try {
+
             this.leaderLatch = new LeaderLatch(curatorFramework, LEADER_LATCH_PATH);
             this.leaderLatch.start();
             this.leaderLatch.addListener(new LeaderLatchListener() {
@@ -630,7 +632,7 @@ public class BalancedMetricResolver implements MetricResolver {
             if (chooseMetricSpecificHost) {
                 ArrivalRate rate = metricMap.get(metric);
                 if (rate == null) {
-                    rate = new ArrivalRate();
+                    rate = new ArrivalRate(arrivalRateTimer);
                     if (!balancerLock.isWriteLockedByCurrentThread()) {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
@@ -715,6 +717,13 @@ public class BalancedMetricResolver implements MetricResolver {
                         tbh = null;
                     }
                 }
+                if (tbh != null && StringUtils.isNotBlank(metric)) {
+                    if (!balancerLock.isWriteLockedByCurrentThread()) {
+                        balancerLock.readLock().unlock();
+                        balancerLock.writeLock().lock();
+                    }
+                    assignMetric(metric, tbh);
+                }
             }
 
             // if all else fails
@@ -774,7 +783,7 @@ public class BalancedMetricResolver implements MetricResolver {
             while (success) {
                 success = reader.readRecord();
                 String[] nextLine = reader.getValues();
-                if (nextLine.length > 3) {
+                if (nextLine.length >= 3) {
                     String metric = nextLine[0];
                     String host = nextLine[1];
                     int tcpPort = Integer.parseInt(nextLine[2]);
@@ -800,7 +809,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 balancerLock.writeLock().unlock();
             }
             assignmentsLastUpdatedLocal.set(assignmentsLastUpdatedInHdfs.get().postValue());
-            LOG.info("Read assignments from hdfs lastHdfsUpdate = lastLocalUpdate ({})",
+            LOG.info("Read {} assignments from hdfs lastHdfsUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
                     new Date(assignmentsLastUpdatedLocal.get()));
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -818,41 +827,43 @@ public class BalancedMetricResolver implements MetricResolver {
         CsvWriter writer = null;
         try {
             assignmentsLock.writeLock().acquire();
-            Configuration configuration = new Configuration();
-            FileSystem fs = FileSystem.get(configuration);
-            Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
-            if (!fs.exists(assignmentFile.getParent())) {
-                fs.mkdirs(assignmentFile.getParent());
-            }
-            FSDataOutputStream oStream = fs.create(assignmentFile, true);
-            writer = new CsvWriter(oStream, ',', Charset.forName("UTF-8"));
-            writer.setUseTextQualifier(false);
-            writer.write("metric");
-            writer.write("host");
-            writer.write("tcpPort");
-            writer.endRecord();
-
             balancerLock.readLock().lock();
             try {
-                for (Map.Entry<String, TimelyBalancedHost> e : metricToHostMap.entrySet()) {
-                    writer.write(e.getKey());
-                    writer.write(e.getValue().getHost());
-                    writer.write(Integer.toString(e.getValue().getTcpPort()));
+                if (!metricToHostMap.isEmpty()) {
+                    Configuration configuration = new Configuration();
+                    FileSystem fs = FileSystem.get(configuration);
+                    Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
+                    if (!fs.exists(assignmentFile.getParent())) {
+                        fs.mkdirs(assignmentFile.getParent());
+                    }
+                    FSDataOutputStream oStream = fs.create(assignmentFile, true);
+                    writer = new CsvWriter(oStream, ',', Charset.forName("UTF-8"));
+                    writer.setUseTextQualifier(false);
+                    writer.write("metric");
+                    writer.write("host");
+                    writer.write("tcpPort");
                     writer.endRecord();
-                    LOG.trace("Saving assigment: {} to {}:{}", e.getKey(), e.getValue().getHost(),
-                            e.getValue().getTcpPort());
+                    for (Map.Entry<String, TimelyBalancedHost> e : metricToHostMap.entrySet()) {
+                        writer.write(e.getKey());
+                        writer.write(e.getValue().getHost());
+                        writer.write(Integer.toString(e.getValue().getTcpPort()));
+                        writer.endRecord();
+                        LOG.trace("Saving assigment: {} to {}:{}", e.getKey(), e.getValue().getHost(),
+                                e.getValue().getTcpPort());
+                    }
+
+                    long now = System.currentTimeMillis();
+                    assignmentsLastUpdatedLocal.set(now);
+                    assignmentsLastUpdatedInHdfs.trySet(now);
+                    if (!assignmentsLastUpdatedInHdfs.get().succeeded()) {
+                        assignmentsLastUpdatedInHdfs.forceSet(now);
+                    }
+                    LOG.info("Wrote {} assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})",
+                            metricToHostMap.size(), new Date(assignmentsLastUpdatedLocal.get()));
                 }
             } finally {
                 balancerLock.readLock().unlock();
             }
-            long now = System.currentTimeMillis();
-            assignmentsLastUpdatedLocal.set(now);
-            assignmentsLastUpdatedInHdfs.trySet(now);
-            if (!assignmentsLastUpdatedInHdfs.get().succeeded()) {
-                assignmentsLastUpdatedInHdfs.forceSet(now);
-            }
-            LOG.info("Wrote assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})",
-                    new Date(assignmentsLastUpdatedLocal.get()));
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         } finally {

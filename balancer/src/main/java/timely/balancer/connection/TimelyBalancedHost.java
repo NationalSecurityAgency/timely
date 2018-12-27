@@ -1,5 +1,7 @@
 package timely.balancer.connection;
 
+import java.util.Timer;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -11,6 +13,7 @@ import timely.balancer.configuration.BalancerConfiguration;
 public class TimelyBalancedHost {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyBalancedHost.class);
+    static private Timer arrivalRateTimer = new Timer("ArrivalRateTimerTBH", true);
 
     private String host;
     private int tcpPort;
@@ -21,7 +24,7 @@ public class TimelyBalancedHost {
     private BalancerConfiguration balancerConfig;
     private int failures = 0;
     private int successes = 0;
-    private ArrivalRate arrivalRate = new ArrivalRate();
+    private ArrivalRate arrivalRate = new ArrivalRate(arrivalRateTimer);
 
     public TimelyBalancedHost() {
 
