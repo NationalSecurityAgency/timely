@@ -1,7 +1,5 @@
 package timely.balancer.connection;
 
-import java.util.Timer;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -9,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.balancer.ArrivalRate;
 import timely.balancer.configuration.BalancerConfiguration;
+
+import java.util.Timer;
 
 public class TimelyBalancedHost {
 
