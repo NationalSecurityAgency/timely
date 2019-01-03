@@ -4,14 +4,14 @@ timely:
   metric-age-off-days:
     default: 7
   cache:
-    enabled:
+    enabled: true
     age-off-hours:
-      default: 30
+      default: 26
   metrics-report-ignored-tags:
   accumulo:
-    instance-name:
-    zookeepers:
-    username:
+    instance-name: accumulo
+    zookeepers: localhost:2181
+    username: root
     password:
     write:
       latency: 5s
@@ -22,23 +22,23 @@ timely:
       max-downsample-memory: 10000000
   security:
     session-max-age: 86400
-    allow-anonymous-access: false
-    ssl:
+    allow-anonymous-access: true
+    serverSsl:
       certificate-file:
       key-file:
       key-password:
-      use-generated-keypair: false
+      use-generated-keypair: true
       trust-store-file:
       use-openssl: true
       #use-ciphers:
   server:
-    ip:
-    tcp-port:
-    udp-port:
+    ip: 0.0.0.0
+    tcp-port: 4242
+    udp-port: 4542
   http:
-    host:
-    ip:
-    port:
+    host: localhost
+    ip: 0.0.0.0
+    port: 4243
     redirect-path: /secure-me
     strict-transport-max-age: 608400
     cors:
@@ -49,8 +49,8 @@ timely:
       allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
       allowed-headers: content-type
   websocket:
-    ip:
-    port:
+    ip: 0.0.0.0
+    port: 4244
     timeout: 60
     subscription-lag: 120
     scanner-batch-size: 10000

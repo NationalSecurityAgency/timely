@@ -27,7 +27,7 @@ public class TestMemoryDataStore {
 
     private DataStoreCache getMetricMemoryStore1(long baseTimestamp) throws TimelyException {
 
-        DataStoreCache mmStore = new DataStoreCache(configuration);
+        DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
         long timestamp = baseTimestamp + 10000;
         Map<String, String> tags = new HashMap<>();
@@ -61,7 +61,7 @@ public class TestMemoryDataStore {
 
     private DataStoreCache getMetricMemoryStore2(long baseTimestamp) throws TimelyException {
 
-        DataStoreCache mmStore = new DataStoreCache(configuration);
+        DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
         Map<String, String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -154,7 +154,7 @@ public class TestMemoryDataStore {
 
     @Test
     public void TestExtentOfStorage() {
-        DataStoreCache mmStore = new DataStoreCache(configuration);
+        DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
         HashMap<String, String> tags = new HashMap<>();
         tags.put("host", "localhost");

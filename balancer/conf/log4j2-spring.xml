@@ -22,5 +22,8 @@
       <AppenderRef ref="Console" level="warn" />
       <AppenderRef ref="Rolling" level="trace" />
     </Root>
+    <Logger name="timely" additivity="false">
+      <AppenderRef ref="Console" level="debug" />
+    </Logger>
   </Loggers>
 </Configuration>

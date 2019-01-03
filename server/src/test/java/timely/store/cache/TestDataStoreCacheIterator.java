@@ -43,7 +43,7 @@ public class TestDataStoreCacheIterator {
 
     private DataStoreCache getMetricMemoryStore1(long baseTime) throws TimelyException {
 
-        DataStoreCache mmStore = new DataStoreCache(configuration);
+        DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
         Map<String, String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -69,7 +69,7 @@ public class TestDataStoreCacheIterator {
 
     private DataStoreCache getMetricMemoryStore2(long baseTime) throws TimelyException {
 
-        DataStoreCache mmStore = new DataStoreCache(configuration);
+        DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
         int increment = 10;
         Map<String, String> tags = new HashMap<>();

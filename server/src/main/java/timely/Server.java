@@ -1,5 +1,8 @@
 package timely;
 
+import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
+import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
+
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -63,6 +66,7 @@ import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceInstanceBuilder;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +129,7 @@ public class Server {
     private static final String OS_VERSION = "os.version";
     private static final String WS_PATH = "/websocket";
 
+    private CuratorFramework curatorFramework;
     protected static final CountDownLatch LATCH = new CountDownLatch(1);
     static ConfigurableApplicationContext applicationContext;
 
@@ -145,6 +150,9 @@ public class Server {
     protected DataStoreCache dataStoreCache = null;
     protected volatile boolean shutdown = false;
     private final int DEFAULT_EVENT_LOOP_THREADS;
+
+    private String[] zkPaths = new String[] { SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS,
+            NON_CACHED_METRICS_LOCK_PATH };
 
     private static boolean useEpoll() {
 
@@ -175,13 +183,8 @@ public class Server {
         }
     }
 
-    public void registerService() {
+    public void registerService(CuratorFramework curatorFramework) {
         try {
-            RetryPolicy retryPolicy = new RetryForever(1000);
-            CuratorFramework curatorFramework = CuratorFrameworkFactory.newClient(config.getAccumulo().getZookeepers(),
-                    30000, 10000, retryPolicy);
-            curatorFramework.start();
-
             try {
                 Stat stat = curatorFramework.checkExists().forPath(SERVICE_DISCOVERY_PATH);
                 if (stat == null) {
@@ -369,6 +372,10 @@ public class Server {
             LOG.error("Error closing WebSocketRequestDecoder during shutdown", e);
         }
 
+        if (curatorFramework != null) {
+            curatorFramework.close();
+        }
+
         if (applicationContext != null) {
             LOG.info("Closing applicationContext");
             applicationContext.close();
@@ -390,13 +397,33 @@ public class Server {
         this.config = conf;
     }
 
+    private void ensureZkPaths(CuratorFramework curatorFramework, String[] paths) {
+        for (String s : paths) {
+            try {
+                Stat stat = curatorFramework.checkExists().forPath(s);
+                if (stat == null) {
+                    curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
+                            .forPath(s);
+                }
+            } catch (Exception e) {
+                LOG.info(e.getMessage());
+            }
+        }
+    }
+
     public void run() throws Exception {
+
+        RetryPolicy retryPolicy = new RetryForever(1000);
+        curatorFramework = CuratorFrameworkFactory.newClient(config.getAccumulo().getZookeepers(), 30000, 10000,
+                retryPolicy);
+        curatorFramework.start();
+        ensureZkPaths(curatorFramework, zkPaths);
 
         int nettyThreads = Math.max(1,
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
         dataStore = DataStoreFactory.create(config, nettyThreads);
         if (config.getCache().isEnabled()) {
-            dataStoreCache = new DataStoreCache(config);
+            dataStoreCache = new DataStoreCache(curatorFramework, config);
             dataStoreCache.setInternalMetrics(dataStore.getInternalMetrics());
             dataStore.setCache(dataStoreCache);
         }
@@ -500,7 +527,7 @@ public class Server {
             udpServer.option(EpollChannelOption.SO_REUSEPORT, true);
             udpChannelHandleList.add(udpServer.bind(udpIp, udpPort).sync().channel());
         }
-        registerService();
+        registerService(curatorFramework);
         shutdownHook();
         LOG.info(
                 "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",

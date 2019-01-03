@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -21,7 +23,16 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.atomic.DistributedAtomicValue;
+import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
+import org.apache.curator.retry.RetryForever;
+import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.request.AuthenticatedRequest;
@@ -45,12 +56,17 @@ import timely.store.iterators.RateIterator;
 public class DataStoreCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreCache.class);
+    public static final String NON_CACHED_METRICS = "/timely/server/non_cached_metrics/data";
+    public static final String NON_CACHED_METRICS_LOCK_PATH = "/timely/server/non_cached_metrics/lock";
+
     public static final String DEFAULT_AGEOFF_KEY = "default";
 
     private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
     private StampedLock gorillaMapLock = new StampedLock();
 
     private Set<String> nonCachedMetrics = Collections.synchronizedSet(new HashSet<>());
+    private DistributedAtomicValue nonCachedMetricsIP = null;
+    private InterProcessReadWriteLock nonCachedMetricsIPRWLock;
     private long maxUniqueTagSets;
     private boolean anonAccessAllowed;
     private Map<String, Long> minimumAgeOff;
@@ -58,11 +74,16 @@ public class DataStoreCache {
     private int flushBatch = 0;
     private int numBatches = 5;
     private InternalMetrics internalMetrics;
-
     private Timer maintenanceTimer = new Timer("DataStoreCacheTimer");
 
-    public DataStoreCache(Configuration conf) {
-        nonCachedMetrics.addAll(conf.getCache().getNonCachedMetrics());
+    public DataStoreCache(CuratorFramework curatorFramework, Configuration conf) {
+        if (curatorFramework != null) {
+            addNonCachedMetricsListener(curatorFramework);
+        }
+        LOG.info("Adding initial values from configuration");
+        addNonCachedMetrics(conf.getCache().getNonCachedMetrics());
+        LOG.info("Reading initial values from nonCachedMetricsIP");
+        readNonCachedMetricsIP();
         maxUniqueTagSets = conf.getCache().getMaxUniqueTagSets();
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
@@ -142,6 +163,124 @@ public class DataStoreCache {
         }, (60 * 1000), (60 * 1000));
     }
 
+    private void addNonCachedMetrics(Collection<String> nonCachedMetricsUpdate) {
+        if (!nonCachedMetricsUpdate.isEmpty()) {
+            try {
+                LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
+                nonCachedMetrics.addAll(nonCachedMetricsUpdate);
+                if (nonCachedMetricsIP != null) {
+                    try {
+                        nonCachedMetricsIPRWLock.writeLock().acquire();
+                        byte[] currentNonCachedMetricsDistributedBytes = nonCachedMetricsIP.get().postValue();
+                        Set<String> currentNonCachedMetricsIP;
+                        if (currentNonCachedMetricsDistributedBytes == null) {
+                            currentNonCachedMetricsIP = new TreeSet<>();
+                        } else {
+                            try {
+                                currentNonCachedMetricsIP = SerializationUtils
+                                        .deserialize(currentNonCachedMetricsDistributedBytes);
+                            } catch (Exception e) {
+                                LOG.error(e.getMessage());
+                                currentNonCachedMetricsIP = new TreeSet<>();
+                            }
+                        }
+                        if (currentNonCachedMetricsIP.containsAll(nonCachedMetricsUpdate)) {
+                            LOG.info("nonCachedMetricsIP already contains {}", nonCachedMetricsUpdate);
+                        } else {
+                            nonCachedMetricsUpdate.removeAll(currentNonCachedMetricsIP);
+                            LOG.info("Adding {} to nonCachedMetricsIP", nonCachedMetricsUpdate);
+                            TreeSet<String> updateSet = new TreeSet<>();
+                            updateSet.addAll(currentNonCachedMetricsIP);
+                            updateSet.addAll(nonCachedMetricsUpdate);
+                            byte[] updateValue = SerializationUtils.serialize(updateSet);
+                            nonCachedMetricsIP.trySet(updateValue);
+                            if (!nonCachedMetricsIP.get().succeeded()) {
+                                nonCachedMetricsIP.forceSet(updateValue);
+                            }
+                        }
+                    } finally {
+                        nonCachedMetricsIPRWLock.writeLock().release();
+                    }
+                }
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
+        }
+    }
+
+    private void addNonCachedMetricsListener(CuratorFramework curatorFramework) {
+        nonCachedMetricsIPRWLock = new InterProcessReadWriteLock(curatorFramework, NON_CACHED_METRICS_LOCK_PATH);
+        testIPRWLock(curatorFramework, nonCachedMetricsIPRWLock, NON_CACHED_METRICS_LOCK_PATH);
+        nonCachedMetricsIP = new DistributedAtomicValue(curatorFramework, NON_CACHED_METRICS, new RetryForever(1000));
+        TreeCacheListener nonCachedMetricsListener = new TreeCacheListener() {
+
+            @Override
+            public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
+                if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
+                    LOG.info("Handling nonCachedMetricsIP event {}", event.getType().toString());
+                    readNonCachedMetricsIP();
+                }
+            }
+        };
+
+        try {
+            TreeCache nonCachedMetricsTreeCache = new TreeCache(curatorFramework, NON_CACHED_METRICS);
+            nonCachedMetricsTreeCache.getListenable().addListener(nonCachedMetricsListener);
+            nonCachedMetricsTreeCache.start();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
+    private void readNonCachedMetricsIP() {
+        try {
+            nonCachedMetricsIPRWLock.readLock().acquire();
+            byte[] nonCachedMetricsUpdateBytes = nonCachedMetricsIP.get().postValue();
+            Set<String> nonCachedMetricsUpdate;
+            if (nonCachedMetricsUpdateBytes == null) {
+                nonCachedMetricsUpdate = new TreeSet<>();
+            } else {
+                nonCachedMetricsUpdate = SerializationUtils.deserialize(nonCachedMetricsIP.get().postValue());
+            }
+
+            if (nonCachedMetrics.containsAll(nonCachedMetricsUpdate)) {
+                LOG.info("local nonCachedMetrics already contains {}", nonCachedMetricsUpdate);
+            } else {
+                nonCachedMetricsUpdate.removeAll(nonCachedMetrics);
+                LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
+                nonCachedMetrics.addAll(nonCachedMetricsUpdate);
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        } finally {
+            try {
+                nonCachedMetricsIPRWLock.readLock().release();
+            } catch (Exception e) {
+                LOG.error(e.getMessage());
+            }
+        }
+    }
+
+    private void testIPRWLock(CuratorFramework curatorFramework, InterProcessReadWriteLock lock, String path) {
+        try {
+            lock.readLock().acquire(10, TimeUnit.SECONDS);
+        } catch (Exception e1) {
+            try {
+                curatorFramework.delete().deletingChildrenIfNeeded().forPath(path);
+                curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
+                        .forPath(path);
+            } catch (Exception e2) {
+                LOG.info(e2.getMessage());
+            }
+        } finally {
+            try {
+                lock.readLock().release();
+            } catch (Exception e3) {
+                LOG.error(e3.getMessage());
+            }
+        }
+    }
+
     public void setInternalMetrics(InternalMetrics internalMetrics) {
         this.internalMetrics = internalMetrics;
     }
@@ -204,7 +343,7 @@ public class DataStoreCache {
                     LOG.info("Cache of metric {} has {} tag variations.  Discontinuing cache.", entry1.getKey(),
                             numberTagVariations);
                     metricItr.remove();
-                    nonCachedMetrics.add(entry1.getKey());
+                    addNonCachedMetrics(Collections.singleton(entry1.getKey()));
                 }
             }
         } finally {
@@ -412,8 +551,7 @@ public class DataStoreCache {
         synchronized (nonCachedMetrics) {
             for (String r : nonCachedMetrics) {
                 if (metricName.matches(r)) {
-                    LOG.info("Adding {} to list of non-cached metrics", metricName);
-                    nonCachedMetrics.add(metricName);
+                    addNonCachedMetrics(Collections.singleton(metricName));
                     return false;
                 }
             }
