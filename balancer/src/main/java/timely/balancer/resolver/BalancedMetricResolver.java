@@ -4,6 +4,7 @@ import static timely.Server.SERVICE_DISCOVERY_PATH;
 import static timely.balancer.Balancer.ASSIGNMENTS_LAST_UPDATED_PATH;
 import static timely.balancer.Balancer.ASSIGNMENTS_LOCK_PATH;
 import static timely.balancer.Balancer.LEADER_LATCH_PATH;
+import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -20,17 +21,19 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
+import org.apache.commons.collections.SetUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.curator.RetryPolicy;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicLong;
+import org.apache.curator.framework.recipes.atomic.DistributedAtomicValue;
 import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.apache.curator.framework.recipes.cache.TreeCacheListener;
@@ -38,7 +41,7 @@ import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.framework.state.ConnectionState;
-import org.apache.curator.retry.RetryUntilElapsed;
+import org.apache.curator.retry.RetryForever;
 import org.apache.curator.x.discovery.ServiceCache;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
@@ -49,7 +52,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.ServerDetails;
@@ -71,39 +73,31 @@ public class BalancedMetricResolver implements MetricResolver {
     private Timer arrivalRateTimer = new Timer("AriivalRateTimerResolver", true);
     private int roundRobinCounter = 0;
     private Set<String> nonCachedMetrics = new HashSet<>();
+    private DistributedAtomicValue nonCachedMetricsDistributed;
     private ReentrantReadWriteLock nonCachedMetricsLock = new ReentrantReadWriteLock();
     private BalancerConfiguration balancerConfig;
-    private CuratorFramework curatorFramework;
-    private RetryPolicy retryPolicy = new RetryUntilElapsed(60000, 1000);
     private LeaderLatch leaderLatch;
     private AtomicBoolean isLeader = new AtomicBoolean(false);
     private InterProcessReadWriteLock assignmentsLock;
     private DistributedAtomicLong assignmentsLastUpdatedInHdfs;
     private AtomicLong assignmentsLastUpdatedLocal = new AtomicLong(0);
 
-    private String[] zkPaths = new String[] { LEADER_LATCH_PATH, ASSIGNMENTS_LAST_UPDATED_PATH, ASSIGNMENTS_LOCK_PATH,
-            SERVICE_DISCOVERY_PATH };
-
     private enum BalanceType {
-        HIGH_LOW, HIGH_AVG, AVG_LOW;
+        HIGH_LOW, HIGH_AVG, AVG_LOW
     }
 
-    public BalancedMetricResolver(BalancerConfiguration balancerConfig, HealthChecker healthChecker) {
+    public BalancedMetricResolver(CuratorFramework curatorFramework, BalancerConfiguration balancerConfig,
+            HealthChecker healthChecker) {
         this.balancerConfig = balancerConfig;
         this.healthChecker = healthChecker;
 
-        // start curator framework
-        curatorFramework = CuratorFrameworkFactory.newClient(balancerConfig.getZooKeeper().getServers(), 30000, 1000,
-                retryPolicy);
-        curatorFramework.start();
-        ensureZkPaths(curatorFramework, zkPaths);
         assignmentsLock = new InterProcessReadWriteLock(curatorFramework, ASSIGNMENTS_LOCK_PATH);
         startLeaderLatch(curatorFramework);
         startServiceListener(curatorFramework);
         assignmentsLastUpdatedInHdfs = new DistributedAtomicLong(curatorFramework, ASSIGNMENTS_LAST_UPDATED_PATH,
-                retryPolicy);
+                new RetryForever(1000));
 
-        TreeCacheListener listener = new TreeCacheListener() {
+        TreeCacheListener assignmentListener = new TreeCacheListener() {
 
             @Override
             public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
@@ -125,16 +119,75 @@ public class BalancedMetricResolver implements MetricResolver {
         };
 
         try {
-            TreeCache treeCache = new TreeCache(curatorFramework, ASSIGNMENTS_LAST_UPDATED_PATH);
-            treeCache.getListenable().addListener(listener);
-            treeCache.start();
+            TreeCache assignmentTreeCache = new TreeCache(curatorFramework, ASSIGNMENTS_LAST_UPDATED_PATH);
+            assignmentTreeCache.getListenable().addListener(assignmentListener);
+            assignmentTreeCache.start();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+
+        nonCachedMetricsDistributed = new DistributedAtomicValue(curatorFramework, NON_CACHED_METRICS,
+                new RetryForever(1000));
+        TreeCacheListener nonCachedMetricsListener = new TreeCacheListener() {
+
+            @Override
+            public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
+                if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
+                    LOG.info("Handling event {}. nonCachedMetrics");
+                    nonCachedMetricsLock.readLock().lock();
+                    try {
+                        byte[] currentNonCachedMetricsDistributedBytes = nonCachedMetricsDistributed.get().postValue();
+                        Set<String> currentNonCachedMetricsDistributed;
+                        if (currentNonCachedMetricsDistributedBytes == null) {
+                            currentNonCachedMetricsDistributed = new TreeSet<>();
+                        } else {
+                            try {
+                                currentNonCachedMetricsDistributed = SerializationUtils
+                                        .deserialize(nonCachedMetricsDistributed.get().postValue());
+                            } catch (Exception e) {
+                                LOG.error(e.getMessage());
+                                currentNonCachedMetricsDistributed = new TreeSet<>();
+                            }
+                        }
+                        currentNonCachedMetricsDistributed.removeAll(nonCachedMetrics);
+                        if (!currentNonCachedMetricsDistributed.isEmpty()) {
+                            nonCachedMetricsLock.readLock().unlock();
+                            nonCachedMetricsLock.writeLock().lock();
+                            LOG.info("Adding {} to nonCachedMetrics", currentNonCachedMetricsDistributed);
+                            nonCachedMetrics.addAll(currentNonCachedMetricsDistributed);
+                            balancerLock.writeLock().lock();
+                            try {
+                                for (String m : currentNonCachedMetricsDistributed) {
+                                    metricToHostMap.remove(m);
+                                }
+                            } finally {
+                                balancerLock.writeLock().unlock();
+                            }
+                        }
+                    } catch (Exception e) {
+                        LOG.error(e.getMessage(), e);
+                    } finally {
+                        if (nonCachedMetricsLock.isWriteLockedByCurrentThread()) {
+                            nonCachedMetricsLock.writeLock().unlock();
+                        } else {
+                            nonCachedMetricsLock.readLock().unlock();
+                        }
+                    }
+                }
+            }
+        };
+
+        try {
+            TreeCache nonCachedMetricsTreeCache = new TreeCache(curatorFramework, NON_CACHED_METRICS);
+            nonCachedMetricsTreeCache.getListenable().addListener(nonCachedMetricsListener);
+            nonCachedMetricsTreeCache.start();
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
 
         nonCachedMetricsLock.writeLock().lock();
         try {
-            nonCachedMetrics.addAll(balancerConfig.getCache().getNonCachedMetrics());
+            addNonCachedMetrics(balancerConfig.getCache().getNonCachedMetrics());
         } finally {
             nonCachedMetricsLock.writeLock().unlock();
         }
@@ -174,20 +227,6 @@ public class BalancedMetricResolver implements MetricResolver {
                 }
             }
         }, 10000, 60000);
-    }
-
-    private void ensureZkPaths(CuratorFramework curatorFramework, String[] paths) {
-        for (String s : paths) {
-            try {
-                Stat stat = curatorFramework.checkExists().forPath(s);
-                if (stat == null) {
-                    curatorFramework.create().creatingParentContainersIfNeeded().forPath(s);
-                }
-            } catch (Exception e) {
-                LOG.info(e.getMessage());
-            }
-
-        }
     }
 
     private void startLeaderLatch(CuratorFramework curatorFramework) {
@@ -582,6 +621,51 @@ public class BalancedMetricResolver implements MetricResolver {
         return numReassigned;
     }
 
+    private void addNonCachedMetrics(Collection<String> nonCachedMetricsUpdate) {
+        try {
+            LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
+            nonCachedMetricsLock.writeLock().lock();
+            try {
+                nonCachedMetrics.addAll(nonCachedMetricsUpdate);
+            } finally {
+                nonCachedMetricsLock.writeLock().unlock();
+            }
+            balancerLock.writeLock().lock();
+            try {
+                for (String m : nonCachedMetricsUpdate) {
+                    metricToHostMap.remove(m);
+                }
+            } finally {
+                balancerLock.writeLock().unlock();
+            }
+
+            byte[] currentNonCachedMetricsDistributedBytes = nonCachedMetricsDistributed.get().postValue();
+            Set<String> currentNonCachedMetricsDistributed;
+            if (currentNonCachedMetricsDistributedBytes == null) {
+                currentNonCachedMetricsDistributed = new TreeSet<>();
+            } else {
+                currentNonCachedMetricsDistributed = SerializationUtils
+                        .deserialize(nonCachedMetricsDistributed.get().postValue());
+            }
+            if (SetUtils.isEqualSet(nonCachedMetricsUpdate, currentNonCachedMetricsDistributed)) {
+                LOG.info("nonCachedMetricsDistrubuted already contains {}", nonCachedMetricsUpdate);
+            } else {
+                nonCachedMetricsUpdate.removeAll(currentNonCachedMetricsDistributed);
+                LOG.info("Adding {} to nonCachedMetricsDistrubuted", nonCachedMetricsUpdate);
+                TreeSet<String> updateSet = new TreeSet<>();
+                updateSet.addAll(currentNonCachedMetricsDistributed);
+                updateSet.addAll(nonCachedMetricsUpdate);
+                byte[] updateValue = SerializationUtils.serialize(updateSet);
+                nonCachedMetricsDistributed.trySet(updateValue);
+                if (!nonCachedMetricsDistributed.get().succeeded()) {
+                    nonCachedMetricsDistributed.forceSet(updateValue);
+                }
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
     private boolean shouldCache(String metricName) {
 
         if (StringUtils.isBlank(metricName)) {
@@ -607,7 +691,7 @@ public class BalancedMetricResolver implements MetricResolver {
                         LOG.info("Adding {} to list of non-cached metrics", metricName);
                         nonCachedMetricsLock.readLock().unlock();
                         nonCachedMetricsLock.writeLock().lock();
-                        nonCachedMetrics.add(metricName);
+                        addNonCachedMetrics(Collections.singleton(metricName));
                         return false;
                     }
                 }

@@ -1,5 +1,8 @@
 package timely.balancer;
 
+import static timely.Server.SERVICE_DISCOVERY_PATH;
+import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
+
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -52,6 +55,12 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.RetryForever;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -115,8 +124,12 @@ public class Balancer {
     protected Channel httpChannelHandle = null;
     protected Channel wsChannelHandle = null;
     protected List<Channel> udpChannelHandleList = new ArrayList<>();
+    private CuratorFramework curatorFramework;
     protected volatile boolean shutdown = false;
     private static final int DEFAULT_EVENT_LOOP_THREADS;
+
+    private String[] zkPaths = new String[] { LEADER_LATCH_PATH, ASSIGNMENTS_LAST_UPDATED_PATH, ASSIGNMENTS_LOCK_PATH,
+            SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS };
 
     static {
         DEFAULT_EVENT_LOOP_THREADS = Math.max(1,
@@ -239,6 +252,10 @@ public class Balancer {
             LOG.info("Closing applicationContext");
             applicationContext.close();
         }
+
+        if (curatorFramework != null) {
+            curatorFramework.close();
+        }
         this.shutdown = true;
         LOG.info("Server shut down.");
     }
@@ -320,7 +337,29 @@ public class Balancer {
                 ssl.getKeyFile(), ssl.getKeyType(), ssl.getKeyPassword());
     }
 
+    private void ensureZkPaths(CuratorFramework curatorFramework, String[] paths) {
+        for (String s : paths) {
+            try {
+                Stat stat = curatorFramework.checkExists().forPath(s);
+                if (stat == null) {
+                    curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
+                            .forPath(s);
+                }
+            } catch (Exception e) {
+                LOG.info(e.getMessage());
+            }
+
+        }
+    }
+
     public void run() throws Exception {
+
+        // start curator framework
+        RetryPolicy retryPolicy = new RetryForever(1000);
+        curatorFramework = CuratorFrameworkFactory.newClient(balancerConfig.getZooKeeper().getServers(), 30000, 1000,
+                retryPolicy);
+        curatorFramework.start();
+        ensureZkPaths(curatorFramework, zkPaths);
 
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
@@ -355,7 +394,7 @@ public class Balancer {
             tcpClientPools.add(new TcpClientPool(this.balancerConfig));
         }
         HealthChecker healthChecker = new HealthChecker(this.balancerConfig, tcpClientPools.get(0));
-        this.metricResolver = new BalancedMetricResolver(this.balancerConfig, healthChecker);
+        this.metricResolver = new BalancedMetricResolver(curatorFramework, this.balancerConfig, healthChecker);
 
         final ServerBootstrap tcpServer = new ServerBootstrap();
         tcpServer.group(tcpBossGroup, tcpWorkerGroup);

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeSet;
 import java.util.concurrent.locks.StampedLock;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -21,7 +22,15 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.commons.collections.SetUtils;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.atomic.DistributedAtomicValue;
+import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import org.apache.curator.retry.RetryForever;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.request.AuthenticatedRequest;
@@ -45,12 +54,14 @@ import timely.store.iterators.RateIterator;
 public class DataStoreCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreCache.class);
+    public static final String NON_CACHED_METRICS = "/timely/server/non_cached_metrics";
     public static final String DEFAULT_AGEOFF_KEY = "default";
 
     private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
     private StampedLock gorillaMapLock = new StampedLock();
 
     private Set<String> nonCachedMetrics = Collections.synchronizedSet(new HashSet<>());
+    private DistributedAtomicValue nonCachedMetricsDistributed = null;
     private long maxUniqueTagSets;
     private boolean anonAccessAllowed;
     private Map<String, Long> minimumAgeOff;
@@ -58,11 +69,13 @@ public class DataStoreCache {
     private int flushBatch = 0;
     private int numBatches = 5;
     private InternalMetrics internalMetrics;
-
     private Timer maintenanceTimer = new Timer("DataStoreCacheTimer");
 
-    public DataStoreCache(Configuration conf) {
-        nonCachedMetrics.addAll(conf.getCache().getNonCachedMetrics());
+    public DataStoreCache(CuratorFramework curatorFramework, Configuration conf) {
+        if (curatorFramework != null) {
+            addNonCachedMetricsListener(curatorFramework);
+        }
+        addNonCachedMetrics(conf.getCache().getNonCachedMetrics());
         maxUniqueTagSets = conf.getCache().getMaxUniqueTagSets();
         anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
@@ -142,6 +155,83 @@ public class DataStoreCache {
         }, (60 * 1000), (60 * 1000));
     }
 
+    private void addNonCachedMetrics(Collection<String> nonCachedMetricsUpdate) {
+        try {
+            LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
+            nonCachedMetrics.addAll(nonCachedMetricsUpdate);
+            if (nonCachedMetricsDistributed != null) {
+                byte[] currentNonCachedMetricsDistributedBytes = nonCachedMetricsDistributed.get().postValue();
+                Set<String> currentNonCachedMetricsDistributed;
+                if (currentNonCachedMetricsDistributedBytes == null) {
+                    currentNonCachedMetricsDistributed = new TreeSet<>();
+                } else {
+                    try {
+                        currentNonCachedMetricsDistributed = SerializationUtils
+                                .deserialize(nonCachedMetricsDistributed.get().postValue());
+                    } catch (Exception e) {
+                        LOG.error(e.getMessage());
+                        currentNonCachedMetricsDistributed = new TreeSet<>();
+                    }
+                }
+                if (SetUtils.isEqualSet(nonCachedMetricsUpdate, currentNonCachedMetricsDistributed)) {
+                    LOG.info("nonCachedMetricsDistrubuted already contains {}", nonCachedMetricsUpdate);
+                } else {
+                    nonCachedMetricsUpdate.removeAll(currentNonCachedMetricsDistributed);
+                    LOG.info("Adding {} to nonCachedMetricsDistrubuted", nonCachedMetricsUpdate);
+                    TreeSet<String> updateSet = new TreeSet<>();
+                    updateSet.addAll(currentNonCachedMetricsDistributed);
+                    updateSet.addAll(nonCachedMetricsUpdate);
+                    byte[] updateValue = SerializationUtils.serialize(updateSet);
+                    nonCachedMetricsDistributed.trySet(updateValue);
+                    if (!nonCachedMetricsDistributed.get().succeeded()) {
+                        nonCachedMetricsDistributed.forceSet(updateValue);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
+    private void addNonCachedMetricsListener(CuratorFramework curatorFramework) {
+        nonCachedMetricsDistributed = new DistributedAtomicValue(curatorFramework, NON_CACHED_METRICS,
+                new RetryForever(1000));
+        TreeCacheListener nonCachedMetricsListener = new TreeCacheListener() {
+
+            @Override
+            public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
+                if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
+                    LOG.info("Handling event {}. nonCachedMetrics");
+                    try {
+                        byte[] nonCachedMetricsUpdateBytes = nonCachedMetricsDistributed.get().postValue();
+                        Set<String> nonCachedMetricsUpdate;
+                        if (nonCachedMetricsUpdateBytes == null) {
+                            nonCachedMetricsUpdate = new TreeSet<>();
+                        } else {
+                            nonCachedMetricsUpdate = SerializationUtils
+                                    .deserialize(nonCachedMetricsDistributed.get().postValue());
+                        }
+                        nonCachedMetricsUpdate.removeAll(nonCachedMetrics);
+                        if (!nonCachedMetricsUpdate.isEmpty()) {
+                            LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
+                            nonCachedMetrics.addAll(nonCachedMetricsUpdate);
+                        }
+                    } catch (Exception e) {
+                        LOG.error(e.getMessage(), e);
+                    }
+                }
+            }
+        };
+
+        try {
+            TreeCache nonCachedMetricsTreeCache = new TreeCache(curatorFramework, NON_CACHED_METRICS);
+            nonCachedMetricsTreeCache.getListenable().addListener(nonCachedMetricsListener);
+            nonCachedMetricsTreeCache.start();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
     public void setInternalMetrics(InternalMetrics internalMetrics) {
         this.internalMetrics = internalMetrics;
     }
@@ -204,7 +294,7 @@ public class DataStoreCache {
                     LOG.info("Cache of metric {} has {} tag variations.  Discontinuing cache.", entry1.getKey(),
                             numberTagVariations);
                     metricItr.remove();
-                    nonCachedMetrics.add(entry1.getKey());
+                    addNonCachedMetrics(Collections.singleton(entry1.getKey()));
                 }
             }
         } finally {
@@ -412,8 +502,7 @@ public class DataStoreCache {
         synchronized (nonCachedMetrics) {
             for (String r : nonCachedMetrics) {
                 if (metricName.matches(r)) {
-                    LOG.info("Adding {} to list of non-cached metrics", metricName);
-                    nonCachedMetrics.add(metricName);
+                    addNonCachedMetrics(Collections.singleton(metricName));
                     return false;
                 }
             }
