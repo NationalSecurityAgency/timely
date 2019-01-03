@@ -627,8 +627,9 @@ public class BalancedMetricResolver implements MetricResolver {
 
         TimelyBalancedHost tbh = null;
         balancerLock.readLock().lock();
+        boolean chooseMetricSpecificHost;
         try {
-            boolean chooseMetricSpecificHost = shouldCache(metric) ? true : false;
+            chooseMetricSpecificHost = shouldCache(metric) ? true : false;
             if (chooseMetricSpecificHost) {
                 ArrivalRate rate = metricMap.get(metric);
                 if (rate == null) {
@@ -691,7 +692,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 balancerLock.readLock().unlock();
             }
         }
-        if (tbh != null) {
+        if (tbh != null && chooseMetricSpecificHost) {
             tbh.arrived();
         }
         return tbh;
