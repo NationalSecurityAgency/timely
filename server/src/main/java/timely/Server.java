@@ -1,6 +1,7 @@
 package timely;
 
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
+import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -150,7 +151,8 @@ public class Server {
     protected volatile boolean shutdown = false;
     private final int DEFAULT_EVENT_LOOP_THREADS;
 
-    private String[] zkPaths = new String[] { SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS };
+    private String[] zkPaths = new String[] { SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS,
+            NON_CACHED_METRICS_LOCK_PATH };
 
     private static boolean useEpoll() {
 
@@ -406,7 +408,6 @@ public class Server {
             } catch (Exception e) {
                 LOG.info(e.getMessage());
             }
-
         }
     }
 

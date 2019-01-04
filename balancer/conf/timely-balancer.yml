@@ -13,7 +13,7 @@ timely-balancer:
       certificate-file:
       key-file:
       #key-password:
-      use-generated-keypair: false
+      use-generated-keypair: true
       trust-store-file:
       use-openssl: true
       #use-ciphers:

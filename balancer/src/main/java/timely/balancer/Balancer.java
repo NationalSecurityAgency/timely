@@ -2,6 +2,7 @@ package timely.balancer;
 
 import static timely.Server.SERVICE_DISCOVERY_PATH;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
+import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -129,7 +130,7 @@ public class Balancer {
     private static final int DEFAULT_EVENT_LOOP_THREADS;
 
     private String[] zkPaths = new String[] { LEADER_LATCH_PATH, ASSIGNMENTS_LAST_UPDATED_PATH, ASSIGNMENTS_LOCK_PATH,
-            SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS };
+            SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS, NON_CACHED_METRICS_LOCK_PATH };
 
     static {
         DEFAULT_EVENT_LOOP_THREADS = Math.max(1,

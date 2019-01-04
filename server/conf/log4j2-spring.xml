@@ -26,12 +26,12 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="timely.subscription" level="trace" additivity="false">
-      <AppenderRef ref="Subscription" />
-    </Logger>
-    <Root level="trace" includeLocation="false">
+    <Root level="debug" includeLocation="false">
       <AppenderRef ref="Console" level="warn" />
-      <AppenderRef ref="Rolling" level="trace" />
+      <AppenderRef ref="Rolling" level="debug" />
     </Root>
+    <Logger name="timely" additivity="false">
+      <AppenderRef ref="Console" level="debug" />
+    </Logger>
   </Loggers>
 </Configuration>
