@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -263,18 +264,18 @@ public class DataStoreCache {
 
     private void testIPRWLock(CuratorFramework curatorFramework, InterProcessReadWriteLock lock, String path) {
         try {
-            lock.readLock().acquire(10, TimeUnit.SECONDS);
+            lock.writeLock().acquire(10, TimeUnit.SECONDS);
         } catch (Exception e1) {
             try {
                 curatorFramework.delete().deletingChildrenIfNeeded().forPath(path);
                 curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
                         .forPath(path);
             } catch (Exception e2) {
-                LOG.info(e2.getMessage());
+                LOG.info(e2.getMessage(), e2);
             }
         } finally {
             try {
-                lock.readLock().release();
+                lock.writeLock().release();
             } catch (Exception e3) {
                 LOG.error(e3.getMessage());
             }
@@ -535,6 +536,10 @@ public class DataStoreCache {
 
     private boolean shouldCache(Metric metric) {
         String metricName = metric.getName();
+        if (nonCachedMetrics.contains(metricName)) {
+            return false;
+        }
+
         long stamp = gorillaMapLock.readLock();
         try {
             if (gorillaMap.containsKey(metricName)) {
@@ -544,18 +549,17 @@ public class DataStoreCache {
             gorillaMapLock.unlockRead(stamp);
         }
 
-        if (nonCachedMetrics.contains(metricName)) {
-            return false;
-        }
-
+        Set<String> tempNonCachedMetrics = new LinkedHashSet<>();
         synchronized (nonCachedMetrics) {
-            for (String r : nonCachedMetrics) {
-                if (metricName.matches(r)) {
-                    addNonCachedMetrics(Collections.singleton(metricName));
-                    return false;
-                }
+            tempNonCachedMetrics.addAll(nonCachedMetrics);
+        }
+        for (String r : tempNonCachedMetrics) {
+            if (metricName.matches(r)) {
+                addNonCachedMetrics(Collections.singleton(metricName));
+                return false;
             }
         }
+
         return true;
     }
 

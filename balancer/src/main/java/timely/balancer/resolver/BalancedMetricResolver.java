@@ -693,18 +693,18 @@ public class BalancedMetricResolver implements MetricResolver {
 
     private void testIPRWLock(CuratorFramework curatorFramework, InterProcessReadWriteLock lock, String path) {
         try {
-            lock.readLock().acquire(10, TimeUnit.SECONDS);
+            lock.writeLock().acquire(10, TimeUnit.SECONDS);
         } catch (Exception e1) {
             try {
                 curatorFramework.delete().deletingChildrenIfNeeded().forPath(path);
                 curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
                         .forPath(path);
             } catch (Exception e2) {
-                LOG.info(e2.getMessage());
+                LOG.info(e2.getMessage(), e2);
             }
         } finally {
             try {
-                lock.readLock().release();
+                lock.writeLock().release();
             } catch (Exception e3) {
                 LOG.error(e3.getMessage());
             }
@@ -718,6 +718,14 @@ public class BalancedMetricResolver implements MetricResolver {
         } else {
             balancerLock.readLock().lock();
             try {
+                nonCachedMetricsLocalLock.readLock().lock();
+                try {
+                    if (nonCachedMetrics.contains(metricName)) {
+                        return false;
+                    }
+                } finally {
+                    nonCachedMetricsLocalLock.readLock().unlock();
+                }
                 if (metricToHostMap.containsKey(metricName)) {
                     return true;
                 }
@@ -725,27 +733,17 @@ public class BalancedMetricResolver implements MetricResolver {
                 balancerLock.readLock().unlock();
             }
 
-            nonCachedMetricsLocalLock.readLock().lock();
+            nonCachedMetricsLocalLock.writeLock().lock();
             try {
-                if (nonCachedMetrics.contains(metricName)) {
-                    return false;
-                }
-
                 for (String r : nonCachedMetrics) {
                     if (metricName.matches(r)) {
                         LOG.info("Adding {} to list of non-cached metrics", metricName);
-                        nonCachedMetricsLocalLock.readLock().unlock();
-                        nonCachedMetricsLocalLock.writeLock().lock();
                         addNonCachedMetrics(Collections.singleton(metricName));
                         return false;
                     }
                 }
             } finally {
-                if (nonCachedMetricsLocalLock.isWriteLockedByCurrentThread()) {
-                    nonCachedMetricsLocalLock.writeLock().unlock();
-                } else {
-                    nonCachedMetricsLocalLock.readLock().unlock();
-                }
+                nonCachedMetricsLocalLock.writeLock().unlock();
             }
             return true;
         }
@@ -898,6 +896,7 @@ public class BalancedMetricResolver implements MetricResolver {
         Map<String, TimelyBalancedHost> assignedMetricToHostMap = new TreeMap<>();
         try {
             assignmentsIPRWLock.readLock().acquire();
+            balancerLock.writeLock().lock();
             Configuration configuration = new Configuration();
             FileSystem fs = FileSystem.get(configuration);
             Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
@@ -927,16 +926,24 @@ public class BalancedMetricResolver implements MetricResolver {
                 }
             }
 
-            balancerLock.writeLock().lock();
+            metricToHostMap.clear();
+            for (Map.Entry<String, TimelyBalancedHost> e : assignedMetricToHostMap.entrySet()) {
+                if (shouldCache(e.getKey())) {
+                    metricToHostMap.put(e.getKey(), e.getValue());
+                }
+            }
+
+            nonCachedMetricsLocalLock.readLock().lock();
             try {
-                metricToHostMap.clear();
-                for (Map.Entry<String, TimelyBalancedHost> e : assignedMetricToHostMap.entrySet()) {
-                    if (shouldCache(e.getKey())) {
-                        metricToHostMap.put(e.getKey(), e.getValue());
+                Iterator<Map.Entry<String, TimelyBalancedHost>> itr = metricToHostMap.entrySet().iterator();
+                while (itr.hasNext()) {
+                    Map.Entry<String, TimelyBalancedHost> e = itr.next();
+                    if (nonCachedMetrics.contains(e.getKey())) {
+                        itr.remove();
                     }
                 }
             } finally {
-                balancerLock.writeLock().unlock();
+                nonCachedMetricsLocalLock.readLock().unlock();
             }
             assignmentsLastUpdatedLocal.set(assignmentsLastUpdatedInHdfs.get().postValue());
             LOG.info("Read {} assignments from hdfs lastHdfsUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
@@ -944,6 +951,7 @@ public class BalancedMetricResolver implements MetricResolver {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         } finally {
+            balancerLock.writeLock().unlock();
             try {
                 assignmentsIPRWLock.readLock().release();
             } catch (Exception e) {
@@ -958,6 +966,7 @@ public class BalancedMetricResolver implements MetricResolver {
         try {
             assignmentsIPRWLock.writeLock().acquire();
             balancerLock.readLock().lock();
+            nonCachedMetricsLocalLock.readLock().lock();
             try {
                 if (!metricToHostMap.isEmpty()) {
                     Configuration configuration = new Configuration();
@@ -974,12 +983,14 @@ public class BalancedMetricResolver implements MetricResolver {
                     writer.write("tcpPort");
                     writer.endRecord();
                     for (Map.Entry<String, TimelyBalancedHost> e : metricToHostMap.entrySet()) {
-                        writer.write(e.getKey());
-                        writer.write(e.getValue().getHost());
-                        writer.write(Integer.toString(e.getValue().getTcpPort()));
-                        writer.endRecord();
-                        LOG.trace("Saving assigment: {} to {}:{}", e.getKey(), e.getValue().getHost(),
-                                e.getValue().getTcpPort());
+                        if (!nonCachedMetrics.contains(e.getKey())) {
+                            writer.write(e.getKey());
+                            writer.write(e.getValue().getHost());
+                            writer.write(Integer.toString(e.getValue().getTcpPort()));
+                            writer.endRecord();
+                            LOG.trace("Saving assigment: {} to {}:{}", e.getKey(), e.getValue().getHost(),
+                                    e.getValue().getTcpPort());
+                        }
                     }
 
                     long now = System.currentTimeMillis();
@@ -992,6 +1003,7 @@ public class BalancedMetricResolver implements MetricResolver {
                             metricToHostMap.size(), new Date(assignmentsLastUpdatedLocal.get()));
                 }
             } finally {
+                nonCachedMetricsLocalLock.readLock().unlock();
                 balancerLock.readLock().unlock();
             }
         } catch (Exception e) {
