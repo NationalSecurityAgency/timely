@@ -59,7 +59,7 @@
     <version.hadoop>2.7.3</version.hadoop>
     <version.httpcomponents>4.5.2</version.httpcomponents>
     <version.impsort>1.2.0</version.impsort>
-    <version.jackson>2.9.7</version.jackson>
+    <version.jackson>2.9.8</version.jackson>
     <version.jacoco>0.7.6.201602180812</version.jacoco>
     <version.javacsv>2.0</version.javacsv>
     <version.javassist>3.21.0-GA</version.javassist>

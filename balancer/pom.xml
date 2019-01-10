@@ -201,11 +201,6 @@
       <artifactId>spring-boot-test-autoconfigure</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>timely</groupId>
-      <artifactId>timely-common</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
