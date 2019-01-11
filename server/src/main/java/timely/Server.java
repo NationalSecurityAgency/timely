@@ -676,7 +676,8 @@ public class Server {
                 ch.pipeline().addLast("suggest", new WSSuggestRequestHandler(dataStore));
                 ch.pipeline().addLast("version", new WSVersionRequestHandler());
                 ch.pipeline().addLast("put", new WSMetricPutHandler(dataStore));
-                ch.pipeline().addLast("create", new WSCreateSubscriptionRequestHandler(dataStore, config));
+                ch.pipeline().addLast("create",
+                        new WSCreateSubscriptionRequestHandler(dataStore, dataStoreCache, config));
                 ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
                 ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());
                 ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());

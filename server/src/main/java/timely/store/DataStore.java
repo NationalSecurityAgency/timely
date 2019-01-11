@@ -36,8 +36,8 @@ public interface DataStore {
 
     Set<Tag> getColumnFamilies(String metric, Map<String, String> tags) throws TableNotFoundException;
 
-    Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
-            long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException;
+    Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, int scannerBatchSize,
+            int scannerReadAhead) throws TimelyException;
 
     void setCache(DataStoreCache cache);
 

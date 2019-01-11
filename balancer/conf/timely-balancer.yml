@@ -31,7 +31,7 @@ timely-balancer:
     nonCachedMetrics:
   server:
     ip: 127.0.0.1
-    tcp-port: 4242
+    tcpPort: 4242
     numTcpPools: 1
     tcpBufferSize: 100
     tcpClientPool:
@@ -51,7 +51,7 @@ timely-balancer:
       jmxEnabled: true
       testOnBorrow: false
       testOnReturn: false
-    udp-port: 4245
+    udpPort: 4245
     udpClientPool:
       minIdlePerKey: 0
       maxIdlePerKey: 40

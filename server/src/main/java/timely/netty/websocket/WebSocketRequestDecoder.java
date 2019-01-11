@@ -7,6 +7,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.ssl.SslCompletionEvent;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -99,10 +100,11 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
                 }
             }
         } else if (evt instanceof SslCompletionEvent) {
-            SslCompletionEvent ssl = (SslCompletionEvent) evt;
-            if (!ssl.isSuccess()) {
-                LOG.error("SSL error: {}", ssl.getClass().getSimpleName(), ssl.cause());
-            }
+            LOG.debug("{}", ((SslCompletionEvent) evt).getClass().getSimpleName());
+        } else if (evt instanceof WebSocketServerProtocolHandler.ServerHandshakeStateEvent) {
+            // The handshake completed succesfully and the channel was upgraded to
+            // websockets
+            LOG.trace("SSL handshake completed successfully, upgraded channel to websockets");
         } else {
             LOG.warn("Received unhandled user event {}", evt);
         }

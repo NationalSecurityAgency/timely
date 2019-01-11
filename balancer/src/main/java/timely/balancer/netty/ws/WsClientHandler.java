@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -33,7 +32,7 @@ public class WsClientHandler extends ClientHandler {
 
     @Override
     public void onOpen(Session session, EndpointConfig config) {
-        session.addMessageHandler((MessageHandler.Whole<String>) message -> {
+        session.addMessageHandler(String.class, message -> {
             ctx.writeAndFlush(new TextWebSocketFrame(message));
             LOG.debug("Message received on Websocket session {}: {}", session.getId(), message);
         });

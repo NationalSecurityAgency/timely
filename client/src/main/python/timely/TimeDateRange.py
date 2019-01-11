@@ -2,7 +2,6 @@ import time
 from datetime import datetime
 from datetime import timedelta
 from datetime import tzinfo
-from pandas.tslib import Timedelta
 import pandas
 
 class TimeDateError(ValueError):

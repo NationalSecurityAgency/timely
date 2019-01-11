@@ -36,9 +36,11 @@ import org.apache.curator.retry.RetryForever;
 import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.CacheResponse;
+import timely.api.response.MetricResponse;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
@@ -629,6 +631,39 @@ public class DataStoreCache {
         } finally {
             LOG.trace("Time for cache subquery for {} - {}ms", query.toString(), System.currentTimeMillis() - start);
         }
+    }
+
+    public List<MetricResponse> getMetricsFromCache(String metric, Map<String, String> tags, long begin, long end,
+            String sessionId) {
+
+        List<MetricResponse> metricResponses = new ArrayList<>();
+        QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
+        subQuery.setMetric(metric);
+        if (tags != null) {
+            for (Map.Entry<String, String> t : tags.entrySet()) {
+                subQuery.addTag(t.getKey(), t.getValue());
+            }
+        }
+        VisibilityFilter visFilter = new VisibilityFilter(getSessionAuthorizations(sessionId));
+        DataStoreCacheIterator itr = new DataStoreCacheIterator(this, visFilter, subQuery, begin, end);
+        try {
+            itr.seek(new Range(subQuery.getMetric()), null, true);
+            while (itr.hasTop()) {
+                Key k = itr.getTopKey();
+                Value v = itr.getTopValue();
+                Metric m = MetricAdapter.parse(k, v);
+                MetricResponse mr = new MetricResponse();
+                mr.setMetric(metric);
+                mr.setTags(m.getTags());
+                mr.setTimestamp(m.getValue().getTimestamp());
+                mr.setValue(m.getValue().getMeasure());
+                metricResponses.add(mr);
+                itr.next();
+            }
+        } catch (IOException e) {
+            LOG.error(e.getMessage(), e);
+        }
+        return metricResponses;
     }
 
     protected SortedKeyValueIterator<Key, Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery,

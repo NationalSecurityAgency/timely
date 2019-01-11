@@ -96,7 +96,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
             @Override
             public void onOpen(Session session, EndpointConfig config) {
-                session.addMessageHandler(new MessageHandler.Whole<String>() {
+                session.addMessageHandler(String.class, new MessageHandler.Whole<String>() {
 
                     private final SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HH");
                     private long lastWatermarkTime = 0L;

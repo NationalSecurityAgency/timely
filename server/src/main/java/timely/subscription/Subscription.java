@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import timely.api.response.TimelyException;
 import timely.configuration.Configuration;
 import timely.store.DataStore;
+import timely.store.cache.DataStoreCache;
 
 public class Subscription {
 
@@ -21,6 +22,7 @@ public class Subscription {
 
     private final String sessionId;
     private final DataStore store;
+    private final DataStoreCache cache;
     private final ChannelHandlerContext ctx;
     private final ScheduledFuture<?> ping;
     private final int lag;
@@ -31,11 +33,12 @@ public class Subscription {
     private final String subscriptionId;
     private LinkedList<String> deadMetricScannerQueue = new LinkedList<>();
 
-    public Subscription(String subscriptionId, String sessionId, DataStore store, ChannelHandlerContext ctx,
-            Configuration conf) {
+    public Subscription(String subscriptionId, String sessionId, DataStore store, DataStoreCache cache,
+            ChannelHandlerContext ctx, Configuration conf) {
         this.subscriptionId = subscriptionId;
         this.sessionId = sessionId;
         this.store = store;
+        this.cache = cache;
         this.ctx = ctx;
         this.lag = conf.getWebsocket().getSubscriptionLag();
         this.scannerBatchSize = conf.getWebsocket().getScannerBatchSize();
@@ -45,7 +48,7 @@ public class Subscription {
         // send a websocket ping at half the timeout interval.
         int rate = conf.getWebsocket().getTimeout() / 2;
         this.ping = this.ctx.executor().scheduleAtFixedRate(() -> {
-            LOG.trace("Sending ping on channel {}", ctx.channel());
+            LOG.trace("[{}] Sending ping on channel {}", subscriptionId, ctx.channel());
             ctx.writeAndFlush(new PingWebSocketFrame());
             cleanupCompletedMetrics();
         }, rate, rate, TimeUnit.SECONDS);
@@ -53,9 +56,9 @@ public class Subscription {
 
     public void addMetric(String metric, Map<String, String> tags, long startTime, long endTime, long delay)
             throws TimelyException {
-        LOG.debug("Adding metric scanner for subscription {}", this.subscriptionId);
-        MetricScanner m = new MetricScanner(this, this.subscriptionId, this.sessionId, store, metric, tags, startTime,
-                endTime, delay, lag, ctx, scannerBatchSize, flushIntervalSeconds, scannerReadAhead,
+        LOG.debug("[{}] Adding metric scanner", this.subscriptionId);
+        MetricScanner m = new MetricScanner(this, this.subscriptionId, this.sessionId, store, cache, metric, tags,
+                startTime, endTime, delay, lag, ctx, scannerBatchSize, flushIntervalSeconds, scannerReadAhead,
                 subscriptionBatchSize);
         METRICS.put(metric, m);
         m.start();
@@ -80,20 +83,20 @@ public class Subscription {
             try {
                 m.join();
             } catch (InterruptedException e) {
-                LOG.error("Error closing MetricScanner", e);
+                LOG.error("[" + this.subscriptionId + "] Error closing MetricScanner", e);
             }
         }
     }
 
     public void close() {
-        LOG.info("Closing subscriptions for {}", this.subscriptionId);
+        LOG.info("[{}] Closing subscriptions", this.subscriptionId);
         this.ping.cancel(false);
         METRICS.forEach((k, v) -> {
             v.close();
             try {
                 v.join();
             } catch (InterruptedException e) {
-                LOG.error("Error closing MetricScanner", e);
+                LOG.error("[" + this.subscriptionId + "] Error closing MetricScanner", e);
             }
         });
         METRICS.clear();

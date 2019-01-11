@@ -982,8 +982,8 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
-    public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, long startTime,
-            long endTime, int lag, int scannerBatchSize, int scannerReadAhead) throws TimelyException {
+    public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags,
+            int scannerBatchSize, int scannerReadAhead) throws TimelyException {
         try {
             Authorizations auths = null;
             try {
