@@ -72,7 +72,7 @@ public class BalancedMetricResolver implements MetricResolver {
     private Random r = new Random();
     final private HealthChecker healthChecker;
     private Timer timer = new Timer("RebalanceTimer", true);
-    private Timer arrivalRateTimer = new Timer("AriivalRateTimerResolver", true);
+    private Timer arrivalRateTimer = new Timer("ArrivalRateTimerResolver", true);
     private int roundRobinCounter = 0;
     private Set<String> nonCachedMetrics = new HashSet<>();
     private DistributedAtomicValue nonCachedMetricsIP;
