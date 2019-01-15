@@ -1,7 +1,7 @@
 {
   "name": "timely-app",
   "private": true,
-  "version": "0.0.2",
+  "version": "1.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
