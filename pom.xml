@@ -43,7 +43,7 @@
     <version.accumulo>1.7.4</version.accumulo>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
     <version.caffeine>2.3.3</version.caffeine>
-    <version.collectd>5.5.1</version.collectd>
+    <version.collectd>5.7.1</version.collectd>
     <version.commons-collections4>4.1</version.commons-collections4>
     <version.commons-configuration>1.10</version.commons-configuration>
     <version.commons-io>2.6</version.commons-io>
