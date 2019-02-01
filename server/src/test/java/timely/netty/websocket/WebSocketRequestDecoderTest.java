@@ -28,6 +28,9 @@ import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;
 import timely.auth.AuthCache;
+import timely.auth.TimelyPrincipal;
+import timely.auth.TimelyUser;
+import timely.auth.util.AuthenticationUtils;
 import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.subscription.SubscriptionRegistry;
@@ -60,10 +63,12 @@ public class WebSocketRequestDecoderTest {
     public static void before() throws Exception {
         config = TestConfiguration.createMinimalConfigurationForTest();
         anonConfig = TestConfiguration.createMinimalConfigurationForTest();
-        anonConfig.getSecurity().setAllowAnonymousAccess(true);
+        anonConfig.getSecurity().setAllowAnonymousWsAccess(true);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
-        AuthCache.setSessionMaxAge(config);
-        AuthCache.getCache().put(cookie, new UsernamePasswordAuthenticationToken("test", "test1"));
+        AuthCache.setSessionMaxAge(config.getSecurity());
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
+        AuthCache.getCache().put(cookie,
+                new TimelyPrincipal(new TimelyUser("ANONYMOUS", AuthenticationUtils.getAuthCollection(token))));
     }
 
     @AfterClass

@@ -1,5 +1,8 @@
 package timely.client.websocket;
 
+import java.util.List;
+import java.util.Map;
+
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
@@ -35,4 +38,6 @@ public abstract class ClientHandler extends Endpoint {
         LOG.error("Error occurred on Websocket session" + session.getId(), error);
     }
 
+    public void beforeRequest(Map<String, List<String>> headers) {
+    }
 }

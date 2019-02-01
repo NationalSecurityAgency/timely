@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.google.common.collect.Multimap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,6 +25,7 @@ import timely.api.request.subscription.CreateSubscription;
 import timely.api.request.subscription.RemoveSubscription;
 import timely.api.request.subscription.SubscriptionRequest;
 import timely.api.response.TimelyException;
+import timely.auth.util.ProxiedEntityUtils;
 import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.ws.WsClientPool;
@@ -64,6 +66,10 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
         String subscriptionId;
         try {
             String metric = null;
+
+            Multimap<String, String> headers = msg.getRequestHeaders();
+            ProxiedEntityUtils.addProxyHeaders(headers, msg.getToken().getClientCert());
+
             if (msg instanceof CreateSubscription) {
                 CreateSubscription create = (CreateSubscription) msg;
                 final String currentSubscriptionId = create.getSubscriptionId();
@@ -118,7 +124,8 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                     if (hostClientHolder == null) {
                         k = metricResolver.getHostPortKey(metric);
                         client = wsClientPool.borrowObject(k);
-                        client.open(new WsClientHandler(origContext, (balancerConfig.getWebsocket().getTimeout() / 2)));
+                        client.open(new WsClientHandler(origContext, add.getToken(),
+                                (balancerConfig.getWebsocket().getTimeout() / 2)));
                         metricToClientMap.put(metric, new WsClientHolder(k, client));
                     } else {
                         client = hostClientHolder.getClient();

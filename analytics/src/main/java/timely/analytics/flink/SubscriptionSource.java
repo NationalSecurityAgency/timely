@@ -66,7 +66,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
         LOG.info("Opening summarization job.");
         super.open(parameters);
         client = new WebSocketSubscriptionClient(jp.getTimelyHostname(), jp.getTimelyHttpsPort(), jp.getTimelyWssPort(),
-                jp.isDoLogin(), jp.getTimelyUsername(), jp.getTimelyPassword(), jp.getKeyStoreFile(),
+                jp.isClientAuth(), jp.isDoLogin(), jp.getTimelyUsername(), jp.getTimelyPassword(), jp.getKeyStoreFile(),
                 jp.getKeyStoreType(), jp.getKeyStorePass(), jp.getTrustStoreFile(), jp.getTrustStoreType(),
                 jp.getTrustStorePass(), jp.isHostVerificationEnabled(), jp.getBufferSize());
     }

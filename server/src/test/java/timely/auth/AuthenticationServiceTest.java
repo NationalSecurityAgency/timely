@@ -16,13 +16,13 @@ public class AuthenticationServiceTest {
     @Test(expected = BadCredentialsException.class)
     public void testBasicAuthenticationFailure() {
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test2");
-        AuthenticationService.getAuthenticationManager().authenticate(token);
+        AuthenticationService.authenticate(token);
     }
 
     @Test
     public void testBasicAuthenticationLogin() {
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
-        Authentication auth = AuthenticationService.getAuthenticationManager().authenticate(token);
+        Authentication auth = AuthenticationService.authenticate(token);
         Collection<? extends GrantedAuthority> authorizations = auth.getAuthorities();
         authorizations.forEach(a -> {
             Assert.assertTrue(
@@ -32,9 +32,9 @@ public class AuthenticationServiceTest {
 
     @Test
     public void testX509AuthenticationLogin() {
-        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("example.com",
+        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("CN=example.com",
                 "doesn't matter what I put here");
-        Authentication auth = AuthenticationService.getAuthenticationManager().authenticate(token);
+        Authentication auth = AuthenticationService.authenticate(token);
         Collection<? extends GrantedAuthority> authorizations = auth.getAuthorities();
         authorizations.forEach(a -> {
             Assert.assertTrue(
@@ -44,9 +44,9 @@ public class AuthenticationServiceTest {
 
     @Test(expected = UsernameNotFoundException.class)
     public void testX509AuthenticationLoginFailed() {
-        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("bad.example.com",
+        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("CN=bad.example.com",
                 "doesn't matter what I put here");
-        Authentication auth = AuthenticationService.getAuthenticationManager().authenticate(token);
+        Authentication auth = AuthenticationService.authenticate(token);
         Collection<? extends GrantedAuthority> authorizations = auth.getAuthorities();
         authorizations.forEach(a -> {
             Assert.assertTrue(

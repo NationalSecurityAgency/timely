@@ -15,8 +15,8 @@ import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
 import timely.auth.AuthCache;
+import timely.auth.TimelyPrincipal;
 import timely.configuration.Http;
 import timely.configuration.Security;
 import timely.netty.Constants;
@@ -38,14 +38,16 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
     protected final void channelRead0(ChannelHandlerContext ctx, T loginRequest) throws Exception {
         try {
             LOG.trace("Authenticating {}", loginRequest);
-            Authentication auth = authenticate(ctx, loginRequest);
-            LOG.trace("Authenticated {}", auth);
-            String sessionId = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
-            AuthCache.getCache().put(sessionId, auth);
+            TimelyPrincipal principal = authenticate(ctx, loginRequest);
+            String sessionId = UUID.randomUUID().toString();
+            AuthCache.getCache().put(sessionId, principal);
+            LOG.trace("Authenticated new sessionId {} for user {}", sessionId,
+                    principal.getPrimaryUser().getDn().subjectDN());
+            String sessionIdEncoded = URLEncoder.encode(sessionId, StandardCharsets.UTF_8.name());
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
             response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
-            DefaultCookie cookie = new DefaultCookie(Constants.COOKIE_NAME, sessionId);
+            DefaultCookie cookie = new DefaultCookie(Constants.COOKIE_NAME, sessionIdEncoded);
             cookie.setDomain(domain);
             cookie.setMaxAge(maxAge);
             cookie.setPath("/");
@@ -64,5 +66,5 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
 
     }
 
-    protected abstract Authentication authenticate(ChannelHandlerContext ctx, T loginRequest) throws Exception;
+    protected abstract TimelyPrincipal authenticate(ChannelHandlerContext ctx, T loginRequest) throws Exception;
 }

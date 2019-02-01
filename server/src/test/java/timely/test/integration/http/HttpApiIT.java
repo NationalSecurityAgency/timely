@@ -517,7 +517,7 @@ public class HttpApiIT extends OneWaySSLBase {
             AtomicInteger rack1Count = new AtomicInteger(0);
             AtomicInteger rack2Count = new AtomicInteger(0);
             for(QueryResponse response: responses){
-                assertTrue("Found incorrect metric", "sys.cpu.idle".equals(response.getMetric()));
+                assertEquals("Found incorrect metric", "sys.cpu.idle", response.getMetric());
                 response.getTags().forEach((tagk, tagv) -> {
                    switch (tagk){
                        case "rack":

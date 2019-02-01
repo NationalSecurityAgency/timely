@@ -13,7 +13,7 @@ public class HttpClientPool extends GenericKeyedObjectPool<TimelyBalancedHost, C
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpClientPool.class);
 
-    public HttpClientPool(BalancerConfiguration config, SSLContext sslContext) {
-        super(new HttpClientFactory(sslContext), config.getHttp().getHttpClientPool());
+    public HttpClientPool(BalancerConfiguration balancerConfig, SSLContext sslContext) {
+        super(new HttpClientFactory(balancerConfig, sslContext), balancerConfig.getHttp().getHttpClientPool());
     }
 }

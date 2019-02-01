@@ -18,7 +18,8 @@ timely:
       max-downsample-memory: 10000000
   security:
     session-max-age: 86400
-    allow-anonymous-access: true
+    allow-anonymous-http-access: true
+    allow-anonymous-ws-access: true
     ssl:
       certificate-file: /timely-server-src/server/pki/timely.csr
       key-file: /timely-server-src/server/pki/timely-pkcs8.key

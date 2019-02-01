@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Multimap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -33,15 +34,19 @@ import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StreamUtils;
+import timely.api.request.AuthenticatedRequest;
 import timely.api.request.MetricRequest;
 import timely.api.request.timeseries.HttpRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
+import timely.auth.util.HttpHeaderUtils;
+import timely.auth.util.ProxiedEntityUtils;
 import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.resolver.MetricResolver;
 import timely.netty.http.TimelyHttpHandler;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 
 public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> implements TimelyHttpHandler {
 
@@ -89,10 +94,19 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 k = metricResolver.getHostPortKey(metric);
                 client = httpClientPool.borrowObject(k);
 
-                List<Map.Entry<String, String>> headerList = request.headers().entries();
-                List<Header> relayedHeaderList = new ArrayList<>();
+                Multimap<String, String> headers = HttpHeaderUtils.toMultimap(request.headers());
+                if (msg instanceof AuthenticatedRequest) {
+                    AuthenticatedRequest authenticatedRequest = (AuthenticatedRequest) msg;
+                    TimelyAuthenticationToken token = authenticatedRequest.getToken();
+                    if (token != null) {
+                        if (token.getClientCert() != null) {
+                            ProxiedEntityUtils.addProxyHeaders(headers, token.getClientCert());
+                        }
+                    }
+                }
 
-                for (Map.Entry<String, String> h : headerList) {
+                List<Header> relayedHeaderList = new ArrayList<>();
+                for (Map.Entry<String, String> h : headers.entries()) {
                     if (!h.getKey().equals(CONTENT_LENGTH)) {
                         relayedHeaderList.add(new BasicHeader(h.getKey(), h.getValue()));
                     }
@@ -143,7 +157,6 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
                         "Method not allowed", "Method not allowed"));
             } else {
-                // buf = JsonUtil.getObjectMapper().writeValueAsBytes(msg);
                 ByteArrayOutputStream baos = new MyByteArrayOutputStream();
                 StreamUtils.copy(relayedResponse.getEntity().getContent(), baos);
 
@@ -153,8 +166,6 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 for (Header h : relayedResponse.getAllHeaders()) {
                     response.headers().add(h.getName(), h.getValue());
                 }
-                // response.headers().set(HttpHeaders.Names.CONTENT_TYPE,
-                // Constants.JSON_TYPE);
                 response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
                 sendResponse(ctx, response);
             }

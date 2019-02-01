@@ -35,7 +35,7 @@ public class TestDataStoreCacheIterator {
     @BeforeClass
     public static void setup() {
         configuration = new Configuration();
-        configuration.getSecurity().setAllowAnonymousAccess(true);
+        configuration.getSecurity().setAllowAnonymousHttpAccess(true);
         HashMap<String, Integer> ageoffs = new HashMap<>();
         ageoffs.put(DataStoreCache.DEFAULT_AGEOFF_KEY, Integer.MAX_VALUE);
         configuration.getCache().setMetricAgeOffHours(ageoffs);
@@ -120,7 +120,8 @@ public class TestDataStoreCacheIterator {
             long firstTimestamp = -1;
             long lastTimestamp = -1;
             int numSamples = 0;
-            itr = mmStore.setupIterator(query, subQuery, new Authorizations(), Long.MAX_VALUE);
+            itr = mmStore.setupIterator(query, subQuery, Collections.singletonList(Authorizations.EMPTY),
+                    Long.MAX_VALUE);
             while (itr.hasTop()) {
                 itr.next();
                 Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
@@ -171,7 +172,8 @@ public class TestDataStoreCacheIterator {
             long firstTimestamp = -1;
             long lastTimestamp = -1;
             int numSamples = 0;
-            itr = mmStore.setupIterator(query, subQuery, new Authorizations(), Long.MAX_VALUE);
+            itr = mmStore.setupIterator(query, subQuery, Collections.singletonList(Authorizations.EMPTY),
+                    Long.MAX_VALUE);
             while (itr.hasTop()) {
                 itr.next();
                 Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());

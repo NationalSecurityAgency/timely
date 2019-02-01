@@ -50,7 +50,6 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import timely.Server;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
@@ -68,9 +67,11 @@ import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
 import timely.auth.AuthenticationService;
+import timely.auth.TimelyPrincipal;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.netty.Constants;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
@@ -195,7 +196,7 @@ public class WebSocketIT extends OneWaySSLBase {
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
 
         this.sessionId = UUID.randomUUID().toString();
-        AuthCache.getCache().put(sessionId, token);
+        AuthCache.getCache().put(sessionId, TimelyPrincipal.anonymousPrincipal());
         group = new NioEventLoopGroup();
         SslContext ssl = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
@@ -504,8 +505,9 @@ public class WebSocketIT extends OneWaySSLBase {
     @Test
     public void testSubscriptionWorkflowWithEndTimeAndVisibilities() throws Exception {
 
-        Authentication auth = AuthenticationService.getAuthenticationManager().authenticate(token);
-        AuthCache.getCache().put(sessionId, auth);
+        TimelyAuthenticationToken auth = AuthenticationService.authenticate(token);
+        TimelyPrincipal principal = auth.getTimelyPrincipal();
+        AuthCache.getCache().put(sessionId, principal);
 
         try {
             final String subscriptionId = "1234";
@@ -583,7 +585,7 @@ public class WebSocketIT extends OneWaySSLBase {
             close.setSubscriptionId(subscriptionId);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(close)));
         } finally {
-            AuthCache.getCache().asMap().remove(sessionId, auth);
+            AuthCache.getCache().asMap().remove(sessionId, principal);
             ch.close().sync();
             s.shutdown();
             group.shutdownGracefully();

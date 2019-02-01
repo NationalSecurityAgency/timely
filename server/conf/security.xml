@@ -16,7 +16,7 @@
     <beans:bean id="timelyUserDetailsService" class="timely.auth.UserDetailsService">
     	<beans:property name="users">
     		<util:map key-type="java.lang.String">
-    			<beans:entry key="example.com">
+    			<beans:entry key="CN=example.com">
    					<util:list>
    						<beans:value>D</beans:value>
    						<beans:value>E</beans:value>

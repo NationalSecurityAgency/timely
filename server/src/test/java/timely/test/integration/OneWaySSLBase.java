@@ -42,7 +42,7 @@ public class OneWaySSLBase extends QueryBase {
         config.getSecurity().getServerSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
         config.getSecurity().getServerSsl().setUseOpenssl(false);
         config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
-        config.getSecurity().setAllowAnonymousAccess(true);
+        config.getSecurity().setAllowAnonymousHttpAccess(true);
     }
 
     @Before

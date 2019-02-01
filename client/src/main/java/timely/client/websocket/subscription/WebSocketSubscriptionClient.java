@@ -27,21 +27,21 @@ public class WebSocketSubscriptionClient extends WebSocketClient {
     private final String subscriptionId;
 
     public WebSocketSubscriptionClient(SSLContext ssl, String timelyHostname, int timelyHttpsPort, int timelyWssPort,
-            boolean doLogin, String timelyUsername, String timelyPassword, boolean hostVerificationEnabled,
-            int bufferSize) {
-        super(ssl, timelyHostname, timelyHttpsPort, timelyWssPort, doLogin, timelyUsername, timelyPassword,
+            boolean clientAuth, boolean doLogin, String timelyUsername, String timelyPassword,
+            boolean hostVerificationEnabled, int bufferSize) {
+        super(ssl, timelyHostname, timelyHttpsPort, timelyWssPort, clientAuth, doLogin, timelyUsername, timelyPassword,
                 hostVerificationEnabled, bufferSize);
         subscriptionId = UUID.randomUUID().toString();
         LOG.trace("Created WebSocketClient with subscriptionId {}", this.subscriptionId);
     }
 
-    public WebSocketSubscriptionClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean doLogin,
-            String timelyUsername, String timelyPassword, String keyStoreFile, String keyStoreType, String keyStorePass,
-            String trustStoreFile, String trustStoreType, String trustStorePass, boolean hostVerificationEnabled,
-            int bufferSize) {
-        super(timelyHostname, timelyHttpsPort, timelyWssPort, doLogin, timelyUsername, timelyPassword, keyStoreFile,
-                keyStoreType, keyStorePass, trustStoreFile, trustStoreType, trustStorePass, hostVerificationEnabled,
-                bufferSize);
+    public WebSocketSubscriptionClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort,
+            boolean clientAuth, boolean doLogin, String timelyUsername, String timelyPassword, String keyStoreFile,
+            String keyStoreType, String keyStorePass, String trustStoreFile, String trustStoreType,
+            String trustStorePass, boolean hostVerificationEnabled, int bufferSize) {
+        super(timelyHostname, timelyHttpsPort, timelyWssPort, clientAuth, doLogin, timelyUsername, timelyPassword,
+                keyStoreFile, keyStoreType, keyStorePass, trustStoreFile, trustStoreType, trustStorePass,
+                hostVerificationEnabled, bufferSize);
         subscriptionId = UUID.randomUUID().toString();
         LOG.trace("Created WebSocketClient with subscriptionId {}", this.subscriptionId);
     }

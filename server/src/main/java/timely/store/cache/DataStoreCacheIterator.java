@@ -27,7 +27,7 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
 
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreCacheIterator.class);
     private DataStoreCache store;
-    private VisibilityFilter visibilityFilter;
+    private Collection<VisibilityFilter> visibilityFilters;
     private QueryRequest.SubQuery query;
     private long startTs;
     private long endTs;
@@ -38,11 +38,11 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
     private Queue<KeyValue> kvQueue = new LinkedList<>();
     private Set<TaggedMetric> matchingTaggedMetrics = new HashSet<>();
 
-    public DataStoreCacheIterator(DataStoreCache store, VisibilityFilter visibilityFilter, QueryRequest.SubQuery query,
-            long startTs, long endTs) {
+    public DataStoreCacheIterator(DataStoreCache store, Collection<VisibilityFilter> visibilityFilters,
+            QueryRequest.SubQuery query, long startTs, long endTs) {
 
         this.store = store;
-        this.visibilityFilter = visibilityFilter;
+        this.visibilityFilters = visibilityFilters;
         this.query = query;
         this.startTs = startTs;
         this.endTs = endTs;
@@ -72,9 +72,20 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
             if (matchingTaggedMetrics.contains(currentTaggedMetric)) {
                 addCurrent = true;
             } else {
-                if (currentTaggedMetric.matches(requestedTags) && entry.getKey().isVisible(visibilityFilter)) {
-                    addCurrent = true;
-                    matchingTaggedMetrics.add(currentTaggedMetric);
+                if (currentTaggedMetric.matches(requestedTags)) {
+                    boolean isVisible = false;
+                    for (VisibilityFilter v : visibilityFilters) {
+                        if (entry.getKey().isVisible(v)) {
+                            isVisible = true;
+                        } else {
+                            isVisible = false;
+                            break;
+                        }
+                    }
+                    if (isVisible) {
+                        addCurrent = true;
+                        matchingTaggedMetrics.add(currentTaggedMetric);
+                    }
                 }
             }
 

@@ -105,17 +105,17 @@ public class BalancedMetricResolver implements MetricResolver {
 
             @Override
             public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
-                LOG.info("Handling assignments event {}. assignmentsLastUpdatedInHdfs:{}", event.getType().toString(),
+                LOG.debug("Handling assignments event {}. assignmentsLastUpdatedInHdfs:{}", event.getType().toString(),
                         new Date(assignmentsLastUpdatedInHdfs.get().postValue()));
                 if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
                     long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
                     long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
                     if (lastHdfsUpdate > lastLocalUpdate) {
-                        LOG.info("Reading assignments from hdfs lastHdfsUpdate ({}) > lastLocalUpdate ({})",
+                        LOG.debug("Reading assignments from hdfs lastHdfsUpdate ({}) > lastLocalUpdate ({})",
                                 new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
                         readAssignmentsFromHdfs();
                     } else {
-                        LOG.info("Not reading assignments from hdfs lastHdfsUpdate ({}) <= lastLocalUpdate ({})",
+                        LOG.debug("Not reading assignments from hdfs lastHdfsUpdate ({}) <= lastLocalUpdate ({})",
                                 new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
                     }
                 }
@@ -138,7 +138,7 @@ public class BalancedMetricResolver implements MetricResolver {
             @Override
             public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
                 if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
-                    LOG.info("Handling nonCachedMetricsIP event {}", event.getType().toString());
+                    LOG.debug("Handling nonCachedMetricsIP event {}", event.getType().toString());
                     readNonCachedMetricsIP();
                 }
             }
@@ -185,7 +185,7 @@ public class BalancedMetricResolver implements MetricResolver {
                         long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
                         long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
                         if (lastLocalUpdate > lastHdfsUpdate) {
-                            LOG.info("Writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
+                            LOG.debug("Writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
                                     new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
                             writeAssigmentsToHdfs();
                         }
@@ -225,10 +225,10 @@ public class BalancedMetricResolver implements MetricResolver {
         nonCachedMetricsLocalLock.writeLock().lock();
         try {
             if (nonCachedMetrics.containsAll(currentNonCachedMetricsDistributed)) {
-                LOG.info("local nonCachedMetrics already contains {}", currentNonCachedMetricsDistributed);
+                LOG.debug("local nonCachedMetrics already contains {}", currentNonCachedMetricsDistributed);
             } else {
                 currentNonCachedMetricsDistributed.removeAll(nonCachedMetrics);
-                LOG.info("Adding {} to local nonCachedMetrics", currentNonCachedMetricsDistributed);
+                LOG.debug("Adding {} to local nonCachedMetrics", currentNonCachedMetricsDistributed);
                 nonCachedMetrics.addAll(currentNonCachedMetricsDistributed);
             }
         } catch (Exception e) {
@@ -505,21 +505,21 @@ public class BalancedMetricResolver implements MetricResolver {
             }
 
             if (highHosts.isEmpty() && lowHosts.isEmpty()) {
-                LOG.info("Host's arrival rates are within {} of the average", controlBandPercentage);
+                LOG.debug("Host's arrival rates are within {} of the average", controlBandPercentage);
             } else if (!highHosts.isEmpty() && !lowHosts.isEmpty()) {
-                LOG.info("begin rebalancing {}", BalanceType.HIGH_LOW);
+                LOG.debug("begin rebalancing {}", BalanceType.HIGH_LOW);
                 numReassigned = rebalance(highHosts, lowHosts, calculatedRates, averageArrivalRate,
                         BalanceType.HIGH_LOW);
-                LOG.info("end rebalancing {} - reassigned {}", BalanceType.HIGH_LOW, numReassigned);
+                LOG.debug("end rebalancing {} - reassigned {}", BalanceType.HIGH_LOW, numReassigned);
             } else if (lowHosts.isEmpty()) {
-                LOG.info("begin rebalancing {}", BalanceType.HIGH_AVG);
+                LOG.debug("begin rebalancing {}", BalanceType.HIGH_AVG);
                 numReassigned = rebalance(highHosts, avgHosts, calculatedRates, averageArrivalRate,
                         BalanceType.HIGH_AVG);
-                LOG.info("end rebalancing {} - reassigned {}", BalanceType.HIGH_AVG, numReassigned);
+                LOG.debug("end rebalancing {} - reassigned {}", BalanceType.HIGH_AVG, numReassigned);
             } else {
-                LOG.info("begin rebalancing {}", BalanceType.AVG_LOW);
+                LOG.debug("begin rebalancing {}", BalanceType.AVG_LOW);
                 numReassigned = rebalance(avgHosts, lowHosts, calculatedRates, averageArrivalRate, BalanceType.AVG_LOW);
-                LOG.info("end rebalancing {} - reassigned {}", BalanceType.AVG_LOW, numReassigned);
+                LOG.debug("end rebalancing {} - reassigned {}", BalanceType.AVG_LOW, numReassigned);
             }
         }
         return numReassigned;
@@ -633,7 +633,7 @@ public class BalancedMetricResolver implements MetricResolver {
     private void addNonCachedMetrics(Collection<String> nonCachedMetricsUpdate) {
         if (!nonCachedMetricsUpdate.isEmpty()) {
             try {
-                LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
+                LOG.debug("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
                 nonCachedMetricsLocalLock.writeLock().lock();
                 try {
                     nonCachedMetrics.addAll(nonCachedMetricsUpdate);
@@ -652,10 +652,10 @@ public class BalancedMetricResolver implements MetricResolver {
                                 .deserialize(currentNonCachedMetricsDistributedBytes);
                     }
                     if (currentNonCachedMetricsIP.containsAll(nonCachedMetricsUpdate)) {
-                        LOG.info("nonCachedMetricsIP already contains {}", nonCachedMetricsUpdate);
+                        LOG.debug("nonCachedMetricsIP already contains {}", nonCachedMetricsUpdate);
                     } else {
                         nonCachedMetricsUpdate.removeAll(currentNonCachedMetricsIP);
-                        LOG.info("Adding {} to nonCachedMetricsIP", nonCachedMetricsUpdate);
+                        LOG.debug("Adding {} to nonCachedMetricsIP", nonCachedMetricsUpdate);
                         TreeSet<String> updateSet = new TreeSet<>();
                         updateSet.addAll(currentNonCachedMetricsIP);
                         updateSet.addAll(nonCachedMetricsUpdate);
@@ -720,7 +720,7 @@ public class BalancedMetricResolver implements MetricResolver {
             try {
                 for (String r : nonCachedMetrics) {
                     if (metricName.matches(r)) {
-                        LOG.info("Adding {} to list of non-cached metrics", metricName);
+                        LOG.debug("Adding {} to list of non-cached metrics", metricName);
                         addNonCachedMetrics(Collections.singleton(metricName));
                         return false;
                     }
@@ -769,7 +769,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 } else if (!tbh.isUp()) {
                     TimelyBalancedHost oldTbh = tbh;
                     tbh = getLeastUsedHost();
-                    LOG.info("rebalancing from host that is down: reassigning metric {} from server {}:{} to {}:{}",
+                    LOG.debug("rebalancing from host that is down: reassigning metric {} from server {}:{} to {}:{}",
                             metric, oldTbh.getHost(), oldTbh.getTcpPort(), tbh.getHost(), tbh.getTcpPort());
                     if (!balancerLock.isWriteLockedByCurrentThread()) {
                         balancerLock.readLock().unlock();
@@ -982,7 +982,7 @@ public class BalancedMetricResolver implements MetricResolver {
                     if (!assignmentsLastUpdatedInHdfs.get().succeeded()) {
                         assignmentsLastUpdatedInHdfs.forceSet(now);
                     }
-                    LOG.info("Wrote {} assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})",
+                    LOG.debug("Wrote {} assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})",
                             metricToHostMap.size(), new Date(assignmentsLastUpdatedLocal.get()));
                 }
             } finally {

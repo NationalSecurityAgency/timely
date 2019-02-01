@@ -52,7 +52,7 @@ public class TwoWaySSLFailureIT extends QueryBase {
     static {
         try {
             // This fqdn does not match what is in security.xml
-            serverCert = new SelfSignedCertificate("bad.example.com");
+            serverCert = new SelfSignedCertificate("CN=bad.example.com");
             clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
         } catch (Exception e) {
             throw new RuntimeException("Error creating self signed certificate", e);
@@ -80,7 +80,7 @@ public class TwoWaySSLFailureIT extends QueryBase {
         config.getSecurity().getServerSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
         config.getSecurity().getServerSsl().setUseOpenssl(false);
         config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
-        config.getSecurity().setAllowAnonymousAccess(false);
+        config.getSecurity().setAllowAnonymousHttpAccess(false);
     }
 
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {

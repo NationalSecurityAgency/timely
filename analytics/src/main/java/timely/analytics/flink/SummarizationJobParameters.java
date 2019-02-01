@@ -18,6 +18,7 @@ public class SummarizationJobParameters extends GlobalJobParameters implements S
     private final int timelyTcpPort;
     private final int timelyHttpsPort;
     private final int timelyWssPort;
+    private final boolean clientAuth;
     private final boolean doLogin;
     private final String timelyUsername;
     private final String timelyPassword;
@@ -40,6 +41,7 @@ public class SummarizationJobParameters extends GlobalJobParameters implements S
         timelyTcpPort = params.getInt("timelyTcpPort", 4241);
         timelyHttpsPort = params.getInt("timelyHttpsPort", 4242);
         timelyWssPort = params.getInt("timelyWssPort", 4243);
+        clientAuth = params.getBoolean("clientAuth", false);
         doLogin = params.getBoolean("doLogin", false);
         timelyUsername = params.get("timelyUsername", null);
         timelyPassword = params.get("timelyPassword", null);
@@ -69,6 +71,7 @@ public class SummarizationJobParameters extends GlobalJobParameters implements S
         timelyTcpPort = conf.getInteger("timelyTcpPort", 4241);
         timelyHttpsPort = conf.getInteger("timelyHttpsPort", 4242);
         timelyWssPort = conf.getInteger("timelyWssPort", 4243);
+        clientAuth = conf.getBoolean("clientAuth", false);
         doLogin = conf.getBoolean("doLogin", false);
         timelyUsername = conf.getString("timelyUsername", null);
         timelyPassword = conf.getString("timelyPassword", null);
@@ -110,6 +113,10 @@ public class SummarizationJobParameters extends GlobalJobParameters implements S
 
     public int getTimelyWssPort() {
         return timelyWssPort;
+    }
+
+    public boolean isClientAuth() {
+        return clientAuth;
     }
 
     public boolean isDoLogin() {

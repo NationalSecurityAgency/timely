@@ -40,7 +40,7 @@
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <version.accumulo>1.7.4</version.accumulo>
+    <version.accumulo>1.9.2</version.accumulo>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
     <version.caffeine>2.3.3</version.caffeine>
     <version.collectd>5.7.1</version.collectd>
@@ -100,6 +100,11 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
+        <version>${version.jackson}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-guava</artifactId>
         <version>${version.jackson}</version>
       </dependency>
       <dependency>
