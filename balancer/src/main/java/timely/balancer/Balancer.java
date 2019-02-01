@@ -91,7 +91,7 @@ import timely.netty.tcp.TcpDecoder;
 import timely.netty.tcp.TcpVersionHandler;
 import timely.netty.udp.UdpDecoder;
 import timely.netty.udp.UdpPacketToByteBuf;
-import timely.netty.websocket.WebSocketHttpCookieHandler;
+import timely.netty.websocket.WebSocketFullRequestHandler;
 import timely.netty.websocket.WebSocketRequestDecoder;
 import timely.netty.websocket.subscription.WSTimelyExceptionHandler;
 
@@ -559,7 +559,7 @@ public class Balancer {
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(balancerConfig.getSecurity()));
+                ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler(balancerConfig.getSecurity()));
 
                 ch.pipeline().addLast("idle-handler",
                         new IdleStateHandler(balancerConfig.getWebsocket().getTimeout(), 0, 0));

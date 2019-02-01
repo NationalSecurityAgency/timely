@@ -101,7 +101,7 @@ import timely.netty.udp.UdpDecoder;
 import timely.netty.udp.UdpPacketToByteBuf;
 import timely.netty.websocket.WSMetricPutHandler;
 import timely.netty.websocket.WSVersionRequestHandler;
-import timely.netty.websocket.WebSocketHttpCookieHandler;
+import timely.netty.websocket.WebSocketFullRequestHandler;
 import timely.netty.websocket.WebSocketRequestDecoder;
 import timely.netty.websocket.subscription.WSAddSubscriptionRequestHandler;
 import timely.netty.websocket.subscription.WSCloseSubscriptionRequestHandler;
@@ -664,7 +664,7 @@ public class Server {
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("sessionExtractor", new WebSocketHttpCookieHandler(config.getSecurity()));
+                ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler(config.getSecurity()));
                 ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol",
                         new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, true));

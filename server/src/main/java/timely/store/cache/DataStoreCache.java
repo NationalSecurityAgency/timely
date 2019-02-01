@@ -88,7 +88,7 @@ public class DataStoreCache {
         LOG.info("Reading initial values from nonCachedMetricsIP");
         readNonCachedMetricsIP();
         maxUniqueTagSets = conf.getCache().getMaxUniqueTagSets();
-        anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
+        anonAccessAllowed = conf.getSecurity().isAllowAnonymousHttpAccess();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
         LOG.info("cacheAgeOff:{} accumuloAgeOff:{}", cacheAgeOff, accumuloAgeOff);

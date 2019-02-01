@@ -35,7 +35,7 @@ public class TestDataStoreCacheIterator {
     @BeforeClass
     public static void setup() {
         configuration = new Configuration();
-        configuration.getSecurity().setAllowAnonymousAccess(true);
+        configuration.getSecurity().setAllowAnonymousHttpAccess(true);
         HashMap<String, Integer> ageoffs = new HashMap<>();
         ageoffs.put(DataStoreCache.DEFAULT_AGEOFF_KEY, Integer.MAX_VALUE);
         configuration.getCache().setMetricAgeOffHours(ageoffs);

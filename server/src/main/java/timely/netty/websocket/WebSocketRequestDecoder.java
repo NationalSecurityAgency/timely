@@ -1,7 +1,9 @@
 package timely.netty.websocket;
 
+import java.security.cert.X509Certificate;
 import java.util.List;
 
+import com.google.common.collect.Multimap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -11,6 +13,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.ssl.SslCompletionEvent;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.AttributeKey;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +21,18 @@ import timely.api.request.AuthenticatedRequest;
 import timely.api.request.WebSocketRequest;
 import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
+import timely.auth.AuthenticationService;
+import timely.auth.SubjectIssuerDNPair;
+import timely.auth.TimelyPrincipal;
 import timely.configuration.Security;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.subscription.SubscriptionRegistry;
 import timely.util.JsonUtil;
 
 public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFrame> {
+
+    public static final AttributeKey<Multimap<String, String>> HTTP_HEADERS_ATTR = AttributeKey.newInstance("headers");
+    public static final AttributeKey<X509Certificate> CLIENT_CERT_ATTR = AttributeKey.newInstance("clientCert");
 
     private static final Logger LOG = LoggerFactory.getLogger(WebSocketRequestDecoder.class);
 
@@ -42,12 +52,33 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
             LOG.trace("Received WS request {}", content);
 
             String sessionId = ctx.channel().attr(SubscriptionRegistry.SESSION_ID_ATTR).get();
-            if (request instanceof AuthenticatedRequest && !StringUtils.isEmpty(sessionId)) {
-                LOG.info("Found session id in WebSocket channel, setting sessionId {} on request", sessionId);
-                AuthenticatedRequest ar = (AuthenticatedRequest) request;
-                ar.setSessionId(sessionId);
-            }
+            Multimap<String, String> headers = ctx.channel().attr(HTTP_HEADERS_ATTR).get();
+            X509Certificate clientCert = ctx.channel().attr(CLIENT_CERT_ATTR).get();
 
+
+            if (request instanceof AuthenticatedRequest) {
+                if (headers != null) {
+                    ((AuthenticatedRequest) request).addHeaders(headers);
+                }
+                TimelyAuthenticationToken token;
+                if (StringUtils.isNotBlank(sessionId)) {
+                    TimelyPrincipal principal;
+                    ((AuthenticatedRequest) request).setSessionId(sessionId);
+                    if (AuthCache.getCache().asMap().containsKey(sessionId)) {
+                        principal = AuthCache.getCache().asMap().get(sessionId);
+                    } else {
+                        principal = TimelyPrincipal.anonymousPrincipal();
+                    }
+                    SubjectIssuerDNPair dn = principal.getPrimaryUser().getDn();
+                    token = AuthenticationService.getAuthenticationToken(null, dn.subjectDN(), dn.issuerDN());
+                } else if (clientCert != null) {
+                    token = AuthenticationService.getAuthenticationToken(clientCert, headers);
+                } else {
+                    SubjectIssuerDNPair dn = TimelyPrincipal.anonymousPrincipal().getPrimaryUser().getDn();
+                    token = AuthenticationService.getAuthenticationToken(null, dn.subjectDN(), dn.issuerDN());
+                }
+                ((AuthenticatedRequest) request).setToken(token);
+            }
             try {
                 request.validate();
             } catch (IllegalArgumentException e) {
@@ -56,8 +87,16 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
                 return;
             }
             try {
-                AuthCache.enforceAccess(security, request);
-            } catch (TimelyException e) {
+                if (request instanceof AuthenticatedRequest) {
+                    try {
+                        AuthenticationService.enforceAccess((AuthenticatedRequest) request);
+                    } catch (TimelyException e) {
+                        if (!security.isAllowAnonymousWsAccess()) {
+                            throw e;
+                        }
+                    }
+                }
+            } catch (Exception e) {
                 out.clear();
                 LOG.error("Error during access enforcment: " + e.getMessage());
                 ctx.writeAndFlush(new CloseWebSocketFrame(1008, e.getMessage()));

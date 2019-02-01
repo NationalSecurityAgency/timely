@@ -26,7 +26,7 @@ public class X509LoginRequestHandler extends TimelyLoginRequestHandler<X509Login
             X509Certificate clientCert = (X509Certificate) sslHandler.engine().getSession().getPeerCertificates()[0];
             String subjectDN = AuthenticationService.extractDN(clientCert);
             HttpHeaders httpHeaders = loginRequest.getHttpRequest().headers();
-            TimelyPreAuthenticatedAuthenticationToken token = new TimelyPreAuthenticatedAuthenticationToken(subjectDN,
+            TimelyAuthenticationToken token = new TimelyAuthenticationToken(subjectDN,
                     clientCert, httpHeaders);
             return AuthenticationService.getAuthenticationManager().authenticate(token);
         } else {

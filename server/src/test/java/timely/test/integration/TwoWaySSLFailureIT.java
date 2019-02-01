@@ -80,7 +80,7 @@ public class TwoWaySSLFailureIT extends QueryBase {
         config.getSecurity().getServerSsl().setTrustStoreFile(serverCert.certificate().getAbsolutePath());
         config.getSecurity().getServerSsl().setUseOpenssl(false);
         config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
-        config.getSecurity().setAllowAnonymousAccess(false);
+        config.getSecurity().setAllowAnonymousHttpAccess(false);
     }
 
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {

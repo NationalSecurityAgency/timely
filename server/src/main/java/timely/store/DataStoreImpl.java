@@ -147,7 +147,7 @@ public class DataStoreImpl implements DataStore {
             bwConfig.setMaxWriteThreads(accumuloConf.getWrite().getThreads());
             scannerThreads = accumuloConf.getScan().getThreads();
             maxDownsampleMemory = accumuloConf.getScan().getMaxDownsampleMemory();
-            anonAccessAllowed = conf.getSecurity().isAllowAnonymousAccess();
+            anonAccessAllowed = conf.getSecurity().isAllowAnonymousHttpAccess();
 
             metricsTable = conf.getMetricsTable();
             if (metricsTable.contains(".")) {

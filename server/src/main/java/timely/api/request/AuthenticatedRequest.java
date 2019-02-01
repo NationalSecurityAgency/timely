@@ -1,10 +1,10 @@
 package timely.api.request;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import timely.auth.TimelyUser;
+import timely.auth.util.HttpHeaderUtils;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 
 /**
  * Base class for requests that require authentication
@@ -12,7 +12,8 @@ import java.util.Map.Entry;
 public class AuthenticatedRequest implements Request {
 
     private String sessionId = null;
-    private Map<String, String> requestHeaders = new HashMap<>();
+    private TimelyAuthenticationToken token = null;
+    private Multimap<String, String> requestHeaders = HashMultimap.create();
 
     public String getSessionId() {
         return sessionId;
@@ -22,12 +23,16 @@ public class AuthenticatedRequest implements Request {
         this.sessionId = sessionId;
     }
 
-    public void addHeaders(List<Entry<String, String>> headers) {
-        headers.forEach(l -> requestHeaders.put(l.getKey(), l.getValue()));
+    public void addHeaders(Multimap<String, String> headers) {
+        requestHeaders.putAll(headers);
     }
 
-    public Map<String, String> getRequestHeaders() {
-        return Collections.unmodifiableMap(requestHeaders);
+    public Multimap<String, String> getRequestHeaders() {
+        return requestHeaders;
+    }
+
+    public String getRequestHeader(String name) {
+        return HttpHeaderUtils.getSingleHeader(requestHeaders, name, false);
     }
 
     @Override
@@ -35,17 +40,31 @@ public class AuthenticatedRequest implements Request {
         StringBuilder buf = new StringBuilder();
         buf.append("{");
         buf.append("Session ID: ").append(sessionId);
+        buf.append("Token: ").append(token.getTimelyPrincipal().getName());
         buf.append(", Request Headers: ").append(requestHeaders.toString());
         buf.append("}");
         return buf.toString();
     }
 
-    @Override
-    public void validate() {
-        Request.super.validate();
-        if (null == sessionId) {
-            throw new IllegalArgumentException("SessionID is null, must log in first");
-        }
+    public void setToken(TimelyAuthenticationToken token) {
+        this.token = token;
     }
 
+    public TimelyAuthenticationToken getToken() {
+        return token;
+    }
+
+    public String getUserName() {
+        String name;
+        try {
+            TimelyUser user = token.getTimelyPrincipal().getPrimaryUser();
+            name = user.getCommonName();
+            if (name == null) {
+                name = user.getName();
+            }
+        } catch (Exception e) {
+            name = "UNKNOWN";
+        }
+        return name;
+    }
 }

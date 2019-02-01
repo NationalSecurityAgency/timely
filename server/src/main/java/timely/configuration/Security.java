@@ -6,18 +6,27 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 public class Security {
 
-    private boolean allowAnonymousAccess = false;
+    private boolean allowAnonymousHttpAccess = false;
+    private boolean allowAnonymousWsAccess = false;
     private int sessionMaxAge = 86400;
     @Valid
     @NestedConfigurationProperty
     private ServerSsl serverSsl = new ServerSsl();
 
-    public boolean isAllowAnonymousAccess() {
-        return allowAnonymousAccess;
+    public boolean isAllowAnonymousHttpAccess() {
+        return allowAnonymousHttpAccess;
     }
 
-    public void setAllowAnonymousAccess(boolean allowAnonymousAccess) {
-        this.allowAnonymousAccess = allowAnonymousAccess;
+    public void setAllowAnonymousHttpAccess(boolean allowAnonymousHttpAccess) {
+        this.allowAnonymousHttpAccess = allowAnonymousHttpAccess;
+    }
+
+    public boolean isAllowAnonymousWsAccess() {
+        return allowAnonymousWsAccess;
+    }
+
+    public void setAllowAnonymousWsAccess(boolean allowAnonymousWsAccess) {
+        this.allowAnonymousWsAccess = allowAnonymousWsAccess;
     }
 
     public int getSessionMaxAge() {

@@ -1,25 +1,31 @@
 package timely.auth;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import timely.api.request.AuthenticatedRequest;
+import timely.api.request.AuthenticatedWebSocketRequest;
 import timely.api.request.Request;
 import timely.api.response.TimelyException;
-import timely.configuration.Configuration;
+import timely.auth.util.AuthorizationsUtil;
 import timely.configuration.Security;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 
 public class AuthCache {
 
-    private static Cache<String, Authentication> CACHE = null;
+    private static Logger LOG = LoggerFactory.getLogger(AuthCache.class);
+    private static Cache<String, TimelyPrincipal> CACHE = null;
 
     private static int sessionMaxAge = -1;
 
@@ -30,14 +36,14 @@ public class AuthCache {
         sessionMaxAge = -1;
     }
 
-    public static void setSessionMaxAge(Configuration config) {
+    public static void setSessionMaxAge(Security security) {
         if (-1 != sessionMaxAge) {
             throw new IllegalStateException("Cache session max age already configured.");
         }
-        sessionMaxAge = config.getSecurity().getSessionMaxAge();
+        sessionMaxAge = security.getSessionMaxAge();
     }
 
-    public static Cache<String, Authentication> getCache() {
+    public static Cache<String, TimelyPrincipal> getCache() {
         if (-1 == sessionMaxAge) {
             throw new IllegalStateException("Cache session max age not configured.");
         }
@@ -47,35 +53,45 @@ public class AuthCache {
         return CACHE;
     }
 
-    public static Authorizations getAuthorizations(String sessionId) {
-        if (!StringUtils.isEmpty(sessionId)) {
-            Authentication auth = CACHE.asMap().get(sessionId);
-            if (null != auth) {
-                Collection<? extends GrantedAuthority> authorities = CACHE.asMap().get(sessionId).getAuthorities();
-                String[] auths = new String[authorities.size()];
-                final AtomicInteger i = new AtomicInteger(0);
-                authorities.forEach(a -> auths[i.getAndIncrement()] = a.getAuthority());
-                return new Authorizations(auths);
+    protected static Collection<Authorizations> getAuthorizations(String entityName) {
+        if (!StringUtils.isEmpty(entityName)) {
+            List<Authorizations> authorizationsList = new ArrayList<>();
+            TimelyPrincipal principal = CACHE.asMap().get(entityName);
+            if (principal != null) {
+                for (Collection<String> authCollection : principal.getAuthorizations()) {
+                    authorizationsList.add(AuthorizationsUtil.toAuthorizations(authCollection));
+                }
+                LOG.debug("Authorizations for user {} {}", entityName, principal.getAuthorizationsString());
+                return authorizationsList;
             } else {
-                return null;
+                return Collections.singletonList(Authorizations.EMPTY);
             }
         } else {
-            throw new IllegalArgumentException("session id cannot be null");
+            throw new IllegalArgumentException("entityName can not be null");
         }
     }
 
-    public static void enforceAccess(Security security, Request r) throws Exception {
-        if (!security.isAllowAnonymousAccess() && (r instanceof AuthenticatedRequest)) {
-            AuthenticatedRequest ar = (AuthenticatedRequest) r;
-            if (StringUtils.isEmpty(ar.getSessionId())) {
-                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
-                        "Anonymous access is disabled, log in first");
-            }
-            if (!AuthCache.getCache().asMap().containsKey(ar.getSessionId())) {
-                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
-                        "Unknown session id was submitted, log in again");
-            }
+    public static Collection<Authorizations> getAuthorizations(AuthenticatedRequest request, Security security) {
+        Collection<Authorizations> auths;
+        boolean anonAccessAllowed;
+        if (request instanceof AuthenticatedWebSocketRequest) {
+            anonAccessAllowed = security.isAllowAnonymousWsAccess();
+        } else {
+            anonAccessAllowed = security.isAllowAnonymousHttpAccess();
         }
+        TimelyAuthenticationToken token = request.getToken();
+        String sessionId = request.getSessionId();
+        if (StringUtils.isBlank(sessionId) && token.getClientCert() == null) {
+            if (anonAccessAllowed) {
+                auths = Collections.singletonList(Authorizations.EMPTY);
+            } else {
+                throw new IllegalArgumentException("User must provide either a sessionId or a client certificate");
+            }
+        } else if (StringUtils.isNotBlank(sessionId)) {
+            auths = getAuthorizations(sessionId);
+        } else {
+            auths = getAuthorizations(token.getTimelyPrincipal().getName());
+        }
+        return auths;
     }
-
 }

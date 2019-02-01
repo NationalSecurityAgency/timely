@@ -18,7 +18,7 @@ public class TestGorillaStore {
     @BeforeClass
     public static void setup() {
         configuration = new Configuration();
-        configuration.getSecurity().setAllowAnonymousAccess(true);
+        configuration.getSecurity().setAllowAnonymousHttpAccess(true);
     }
 
     @Test
