@@ -45,6 +45,10 @@ public class AuthenticationService {
         return authManager;
     }
 
+    public static TimelyAuthenticationToken authenticate(Authentication authentication) {
+        return authenticate(authentication, null);
+    }
+
     public static TimelyAuthenticationToken authenticate(Authentication authentication, X509Certificate clientCert) {
         Authentication token = getAuthenticationManager().authenticate(authentication);
         return AuthenticationUtils.getTimelyAuthenticationToken(token, clientCert);
@@ -110,7 +114,7 @@ public class AuthenticationService {
     }
 
     public static TimelyAuthenticationToken getAuthenticationToken(X509Certificate clientCert,
-                                                                   Multimap<String, String> headers) {
+            Multimap<String, String> headers) {
         TimelyAuthenticationToken authenticationToken = null;
         try {
             authenticationToken = new TimelyAuthenticationToken(clientCert.getSubjectDN().getName(), clientCert,
@@ -122,7 +126,7 @@ public class AuthenticationService {
     }
 
     public static TimelyAuthenticationToken getAuthenticationToken(X509Certificate clientCert, String subjectDn,
-                                                                   String issuerDn) {
+            String issuerDn) {
         TimelyAuthenticationToken authenticationToken = null;
         try {
             authenticationToken = new TimelyAuthenticationToken(subjectDn, issuerDn, clientCert);

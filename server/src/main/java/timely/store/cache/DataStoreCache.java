@@ -25,7 +25,6 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.SerializationUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicValue;
 import org.apache.curator.framework.recipes.cache.TreeCache;
@@ -44,7 +43,9 @@ import timely.api.response.MetricResponse;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
+import timely.auth.util.AuthorizationsUtil;
 import timely.configuration.Configuration;
+import timely.configuration.Security;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
@@ -71,7 +72,7 @@ public class DataStoreCache {
     private DistributedAtomicValue nonCachedMetricsIP = null;
     private InterProcessReadWriteLock nonCachedMetricsIPRWLock;
     private long maxUniqueTagSets;
-    private boolean anonAccessAllowed;
+    private final Security security;
     private Map<String, Long> minimumAgeOff;
     private Map<String, String> minimumAgeOffForIterator;
     private int flushBatch = 0;
@@ -88,7 +89,7 @@ public class DataStoreCache {
         LOG.info("Reading initial values from nonCachedMetricsIP");
         readNonCachedMetricsIP();
         maxUniqueTagSets = conf.getCache().getMaxUniqueTagSets();
-        anonAccessAllowed = conf.getSecurity().isAllowAnonymousHttpAccess();
+        security = conf.getSecurity();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
         LOG.info("cacheAgeOff:{} accumuloAgeOff:{}", cacheAgeOff, accumuloAgeOff);
@@ -602,7 +603,8 @@ public class DataStoreCache {
         long start = System.currentTimeMillis();
         try {
             SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
-            itr = setupIterator(msg, query, getSessionAuthorizations(msg), getAgeOffForMetric(query.getMetric()));
+            Collection<Authorizations> authorizations = getSessionAuthorizations(msg);
+            itr = setupIterator(msg, query, authorizations, getAgeOffForMetric(query.getMetric()));
             Map<Set<Tag>, Set<Tag>> matchingTagCache = new HashMap<>();
             while (itr.hasTop()) {
                 Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(itr.getTopValue());
@@ -633,8 +635,8 @@ public class DataStoreCache {
         }
     }
 
-    public List<MetricResponse> getMetricsFromCache(String metric, Map<String, String> tags, long begin, long end,
-            String sessionId) {
+    public List<MetricResponse> getMetricsFromCache(AuthenticatedRequest request, String metric,
+            Map<String, String> tags, long begin, long end) {
 
         List<MetricResponse> metricResponses = new ArrayList<>();
         QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
@@ -644,8 +646,13 @@ public class DataStoreCache {
                 subQuery.addTag(t.getKey(), t.getValue());
             }
         }
-        VisibilityFilter visFilter = new VisibilityFilter(getSessionAuthorizations(sessionId));
-        DataStoreCacheIterator itr = new DataStoreCacheIterator(this, visFilter, subQuery, begin, end);
+        Collection<Authorizations> authorizations = getSessionAuthorizations(request);
+        Collection<Authorizations> minimizedAuths = AuthorizationsUtil.minimize(authorizations);
+        Collection<VisibilityFilter> visibilityFilters = new ArrayList<>();
+        for (Authorizations a : minimizedAuths) {
+            ((ArrayList<VisibilityFilter>) visibilityFilters).add(new VisibilityFilter(a));
+        }
+        DataStoreCacheIterator itr = new DataStoreCacheIterator(this, visibilityFilters, subQuery, begin, end);
         try {
             itr.seek(new Range(subQuery.getMetric()), null, true);
             while (itr.hasTop()) {
@@ -667,7 +674,7 @@ public class DataStoreCache {
     }
 
     protected SortedKeyValueIterator<Key, Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery,
-            Authorizations authorizations, long ageOffForMetric) throws TimelyException {
+            Collection<Authorizations> authorizations, long ageOffForMetric) throws TimelyException {
 
         SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
 
@@ -686,9 +693,12 @@ public class DataStoreCache {
 
         try {
             // create DataStoreCacheIterator which is the base iterator of the stack
-            VisibilityFilter visFilter = new VisibilityFilter(authorizations);
-
-            itr = new DataStoreCacheIterator(this, visFilter, subQuery, startOfFirstPeriod, endOfLastPeriod);
+            Collection<Authorizations> minimizedAuths = AuthorizationsUtil.minimize(authorizations);
+            Collection<VisibilityFilter> visibilityFilters = new ArrayList<>();
+            for (Authorizations a : minimizedAuths) {
+                ((ArrayList<VisibilityFilter>) visibilityFilters).add(new VisibilityFilter(a));
+            }
+            itr = new DataStoreCacheIterator(this, visibilityFilters, subQuery, startOfFirstPeriod, endOfLastPeriod);
 
             // create RateIterator if necessary
             if (subQuery.isRate()) {
@@ -737,32 +747,8 @@ public class DataStoreCache {
         return itr;
     }
 
-    private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
-        return getSessionAuthorizations(request.getSessionId());
-    }
-
-    private Authorizations getSessionAuthorizations(String sessionId) {
-        if (anonAccessAllowed) {
-            if (StringUtils.isEmpty(sessionId)) {
-                return Authorizations.EMPTY;
-            } else {
-                Authorizations auths = AuthCache.getAuthorizations(sessionId);
-                if (null == auths) {
-                    auths = Authorizations.EMPTY;
-                }
-                return auths;
-            }
-        } else {
-            if (StringUtils.isEmpty(sessionId)) {
-                throw new IllegalArgumentException("session id cannot be null");
-            } else {
-                Authorizations auths = AuthCache.getAuthorizations(sessionId);
-                if (null == auths) {
-                    throw new IllegalStateException("No auths found for sessionId: " + sessionId);
-                }
-                return auths;
-            }
-        }
+    private Collection<Authorizations> getSessionAuthorizations(AuthenticatedRequest request) {
+        return AuthCache.getAuthorizations(request, security);
     }
 
     private QueryResponse convertToQueryResponse(QueryRequest.SubQuery query, Set<Tag> tags,

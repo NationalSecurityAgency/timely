@@ -52,7 +52,7 @@ public class TwoWaySSLFailureIT extends QueryBase {
     static {
         try {
             // This fqdn does not match what is in security.xml
-            serverCert = new SelfSignedCertificate("bad.example.com");
+            serverCert = new SelfSignedCertificate("CN=bad.example.com");
             clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
         } catch (Exception e) {
             throw new RuntimeException("Error creating self signed certificate", e);

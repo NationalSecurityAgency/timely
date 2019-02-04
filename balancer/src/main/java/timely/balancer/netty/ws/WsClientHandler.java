@@ -1,11 +1,15 @@
 package timely.balancer.netty.ws;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
 
+import com.google.common.collect.Multimap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -14,20 +18,41 @@ import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.response.TimelyException;
+import timely.auth.util.ProxiedEntityUtils;
 import timely.client.websocket.ClientHandler;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 
 public class WsClientHandler extends ClientHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(WsClientHandler.class);
     private final ChannelHandlerContext ctx;
+    private final TimelyAuthenticationToken token;
     private ScheduledFuture<?> ping;
 
-    public WsClientHandler(ChannelHandlerContext ctx, int pingRate) {
+    public WsClientHandler(ChannelHandlerContext ctx, TimelyAuthenticationToken token, int pingRate) {
         this.ctx = ctx;
+        this.token = token;
         this.ping = this.ctx.executor().scheduleAtFixedRate(() -> {
             LOG.trace("Sending ping on channel {}", ctx.channel());
             ctx.writeAndFlush(new PingWebSocketFrame());
         }, pingRate, pingRate, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public void beforeRequest(Map<String, List<String>> headers) {
+        Multimap<String, String> requestHeaders = token.getHttpHeaders();
+        if (token.getClientCert() != null) {
+            ProxiedEntityUtils.addProxyHeaders(requestHeaders, token.getClientCert());
+        }
+        for (String s : requestHeaders.keySet()) {
+            List<String> valueList = new ArrayList<>();
+            valueList.addAll(requestHeaders.get(s));
+            if (headers.containsKey(s)) {
+                // add pre-existing values
+                valueList.addAll(headers.get(s));
+            }
+            headers.put(s, valueList);
+        }
     }
 
     @Override

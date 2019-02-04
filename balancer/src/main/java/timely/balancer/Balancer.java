@@ -66,6 +66,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import timely.auth.AuthCache;
 import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.configuration.ClientSsl;
 import timely.balancer.configuration.SpringBootstrap;
@@ -362,6 +363,7 @@ public class Balancer {
         curatorFramework.start();
         ensureZkPaths(curatorFramework, zkPaths);
 
+        AuthCache.setSessionMaxAge(balancerConfig.getSecurity());
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;
@@ -559,7 +561,7 @@ public class Balancer {
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler(balancerConfig.getSecurity()));
+                ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler());
 
                 ch.pipeline().addLast("idle-handler",
                         new IdleStateHandler(balancerConfig.getWebsocket().getTimeout(), 0, 0));

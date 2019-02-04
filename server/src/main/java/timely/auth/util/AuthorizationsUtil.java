@@ -37,9 +37,9 @@ public class AuthorizationsUtil {
                 .collect(Collectors.toList()));
     }
 
-
     public static List<String> splitAuths(String requestedAuths) {
-        return Arrays.asList(Iterables.toArray(Splitter.on(',').omitEmptyStrings().trimResults().split(requestedAuths), String.class));
+        return Arrays.asList(Iterables.toArray(Splitter.on(',').omitEmptyStrings().trimResults().split(requestedAuths),
+                String.class));
     }
 
     public static Set<Authorizations> buildAuthorizations(Collection<? extends Collection<String>> userAuths) {

@@ -52,7 +52,6 @@ import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,8 +70,10 @@ import timely.api.response.timeseries.SearchLookupResponse;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.api.response.timeseries.SuggestResponse;
 import timely.auth.AuthCache;
+import timely.auth.util.ScannerHelper;
 import timely.configuration.Accumulo;
 import timely.configuration.Configuration;
+import timely.configuration.Security;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
@@ -118,14 +119,14 @@ public class DataStoreImpl implements DataStore {
     private final String metricsTable;
     private final String metaTable;
     private final InternalMetrics internalMetrics;
-    private final Timer internalMetricsTimer = new Timer("InternalMatricsTimer", true);
+    private final Timer internalMetricsTimer = new Timer("InternalMetricsTimer", true);
     private final int scannerThreads;
     private final long maxDownsampleMemory;
     private final BatchWriterConfig bwConfig;
     private final List<BatchWriter> writers = new ArrayList<>();
     private final ThreadLocal<BatchWriter> metaWriter = new ThreadLocal<>();
     private final ThreadLocal<BatchWriter> batchWriter = new ThreadLocal<>();
-    private boolean anonAccessAllowed = false;
+    private final Security security;
     private final Map<String, String> ageOff;
     private final long defaultAgeOffMilliSec;
     private DataStoreCache cache = null;
@@ -147,7 +148,7 @@ public class DataStoreImpl implements DataStore {
             bwConfig.setMaxWriteThreads(accumuloConf.getWrite().getThreads());
             scannerThreads = accumuloConf.getScan().getThreads();
             maxDownsampleMemory = accumuloConf.getScan().getMaxDownsampleMemory();
-            anonAccessAllowed = conf.getSecurity().isAllowAnonymousHttpAccess();
+            security = conf.getSecurity();
 
             metricsTable = conf.getMetricsTable();
             if (metricsTable.contains(".")) {
@@ -505,8 +506,7 @@ public class DataStoreImpl implements DataStore {
     @Override
     public List<QueryResponse> query(QueryRequest msg) throws TimelyException {
         List<QueryResponse> result = new ArrayList<>();
-
-        LOG.debug("Query request {}", msg);
+        LOG.debug("Query for [{}] [{}]", msg.getUserName(), msg);
         long requestedStartTs = msg.getStart();
         long requestedEndTs = msg.getEnd();
         StringBuilder metricList = new StringBuilder();
@@ -549,8 +549,9 @@ public class DataStoreImpl implements DataStore {
                             if (percentServedFromCache > 100) {
                                 percentServedFromCache = 100;
                             }
-                            LOG.debug("Cache query time:{} duration (min):{} metrics:{} results:{} percentFromCache:{}",
-                                    (System.currentTimeMillis() - now),
+                            LOG.debug(
+                                    "Cache query for [{}] time:{} duration (min):{} metrics:{} results:{} percentFromCache:{}",
+                                    msg.getUserName(), (System.currentTimeMillis() - now),
                                     ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList.toString(), z,
                                     percentServedFromCache);
                             allSeries.putAll(cachedMetrics);
@@ -581,7 +582,8 @@ public class DataStoreImpl implements DataStore {
                     if (endOfLastPeriod > startOfFirstPeriod) {
                         BatchScanner scanner = null;
                         try {
-                            scanner = connector.createBatchScanner(metricsTable, getSessionAuthorizations(msg),
+                            Collection<Authorizations> authorizations = getSessionAuthorizations(msg);
+                            scanner = ScannerHelper.createBatchScanner(connector, metricsTable, authorizations,
                                     scannerThreads);
                             List<String> tagOrder = prioritizeTags(query.getMetric(), query.getTags());
                             Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
@@ -658,8 +660,9 @@ public class DataStoreImpl implements DataStore {
                     result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
                 }
             }
-            LOG.debug("Query time:{} duration:{} metrics:{} results:{}", (System.currentTimeMillis() - now),
-                    ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList.toString(), numResults);
+            LOG.debug("Query for [{}] time:{} duration:{} metrics:{} results:{}", msg.getUserName(),
+                    (System.currentTimeMillis() - now), ((requestedEndTs - requestedStartTs) / (1000 * 60)),
+                    metricList.toString(), numResults);
             internalMetrics.addQueryResponse(result.size(), (System.currentTimeMillis() - now));
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
@@ -945,32 +948,8 @@ public class DataStoreImpl implements DataStore {
         return Aggregator.getAggregator(query.getAggregator());
     }
 
-    private Authorizations getSessionAuthorizations(AuthenticatedRequest request) {
-        return getSessionAuthorizations(request.getSessionId());
-    }
-
-    private Authorizations getSessionAuthorizations(String sessionId) {
-        if (anonAccessAllowed) {
-            if (StringUtils.isEmpty(sessionId)) {
-                return Authorizations.EMPTY;
-            } else {
-                Authorizations auths = AuthCache.getAuthorizations(sessionId);
-                if (null == auths) {
-                    auths = Authorizations.EMPTY;
-                }
-                return auths;
-            }
-        } else {
-            if (StringUtils.isEmpty(sessionId)) {
-                throw new IllegalArgumentException("session id cannot be null");
-            } else {
-                Authorizations auths = AuthCache.getAuthorizations(sessionId);
-                if (null == auths) {
-                    throw new IllegalStateException("No auths found for sessionId: " + sessionId);
-                }
-                return auths;
-            }
-        }
+    private Collection<Authorizations> getSessionAuthorizations(AuthenticatedRequest request) {
+        return AuthCache.getAuthorizations(request, security);
     }
 
     public long getAgeOffForMetric(String metricName) {
@@ -982,27 +961,15 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
-    public Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags,
+    public Scanner createScannerForMetric(AuthenticatedRequest request, String metric, Map<String, String> tags,
             int scannerBatchSize, int scannerReadAhead) throws TimelyException {
         try {
-            Authorizations auths = null;
-            try {
-                auths = getSessionAuthorizations(sessionId);
-            } catch (NullPointerException npe) {
-                // Session id being used for metric scanner, but session Id does
-                // not exist in Auth Cache. Use Empty auths if anonymous access
-                // allowed
-                if (anonAccessAllowed) {
-                    auths = Authorizations.EMPTY;
-                } else {
-                    throw npe;
-                }
-            }
-            LOG.debug("Creating metric scanner for session: {} with auths: {}", sessionId, auths);
-            Scanner s = connector.createScanner(this.metricsTable, auths);
             if (null == metric) {
                 throw new IllegalArgumentException("metric name must be specified");
             }
+            Collection<Authorizations> auths = getSessionAuthorizations(request);
+            LOG.debug("Creating metric scanner for session: {} with auths: {}", request.getSessionId(), auths);
+            Scanner s = ScannerHelper.createScanner(connector, this.metricsTable, auths);
             if (tags == null) {
                 tags = new LinkedHashMap<>();
             }

@@ -13,12 +13,14 @@ public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedH
 
     private final SSLContext sslContext;
     private final boolean doLogin;
+    private final boolean twoWaySsl;
     private BalancerConfiguration balancerConfig;
 
     public WsClientFactory(BalancerConfiguration balancerConfig, SSLContext sslContext) {
         this.sslContext = sslContext;
         this.doLogin = balancerConfig.isLoginRequired();
         this.balancerConfig = balancerConfig;
+        this.twoWaySsl = balancerConfig.getSecurity().getClientSsl().isTwoWaySsl();
     }
 
     @Override
@@ -26,7 +28,7 @@ public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedH
 
         int bufferSize = balancerConfig.getWebsocket().getSubscriptionBatchSize() * 500;
         WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslContext, k.getHost(), k.getHttpPort(),
-                k.getWsPort(), doLogin, "", "", false, bufferSize);
+                k.getWsPort(), twoWaySsl, doLogin, "", "", false, bufferSize);
         return new DefaultPooledObject<>(client);
     }
 

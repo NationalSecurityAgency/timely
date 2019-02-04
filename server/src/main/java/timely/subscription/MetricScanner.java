@@ -27,6 +27,7 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.adapter.accumulo.MetricAdapter;
+import timely.api.request.AuthenticatedRequest;
 import timely.api.response.MetricResponse;
 import timely.api.response.MetricResponses;
 import timely.api.response.TimelyException;
@@ -44,6 +45,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final Scanner scanner;
     private Iterator<Entry<Key, Value>> iter = null;
     private final ChannelHandlerContext ctx;
+    private final AuthenticatedRequest request;
     private volatile boolean closed = false;
     private final long delay;
     private String scannerInfo;
@@ -66,14 +68,15 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
     public MetricScanner(Subscription sub, String subscriptionId, String sessionId, DataStore store,
             DataStoreCache cache, String metric, Map<String, String> tags, long beginTime, long endTime, long delay,
-            int lag, ChannelHandlerContext ctx, int scannerBatchSize, int flushIntervalSeconds, int scannerReadAhead,
-            int subscriptionBatchSize) throws TimelyException {
+            int lag, AuthenticatedRequest request, ChannelHandlerContext ctx, int scannerBatchSize,
+            int flushIntervalSeconds, int scannerReadAhead, int subscriptionBatchSize) throws TimelyException {
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(this);
         this.store = store;
         this.cache = cache;
         this.subscription = sub;
         this.ctx = ctx;
+        this.request = request;
         this.lag = lag;
         this.metric = metric;
         this.beginTime = beginTime;
@@ -118,13 +121,13 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         // cached
                         ranges.addAll(
                                 this.store.getQueryRanges(metric, this.beginTime, oldestTsForMetric - 1, colFamValues));
-                        metricsFromCache = cache.getMetricsFromCache(metric, tags, oldestTsForMetric, endTimeStamp,
-                                sessionId);
+                        metricsFromCache = cache.getMetricsFromCache(request, metric, tags, oldestTsForMetric,
+                                endTimeStamp);
                         LOG.debug("[{}] MetricScanner request partially fulfilled from cache: {} metrics",
                                 subscriptionId, metricsFromCache.size());
                     } else {
-                        metricsFromCache = cache.getMetricsFromCache(metric, tags, this.beginTime, endTimeStamp,
-                                sessionId);
+                        metricsFromCache = cache.getMetricsFromCache(request, metric, tags, this.beginTime,
+                                endTimeStamp);
                         LOG.debug("[{}] Websocket request completely fulfilled from cache: {} metrics [{}]",
                                 subscriptionId, metricsFromCache.size());
                     }
@@ -159,7 +162,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 this.scanner = null;
                 this.done = true;
             } else {
-                this.scanner = this.store.createScannerForMetric(sessionId, metric, tags, scannerBatchSize,
+                this.scanner = this.store.createScannerForMetric(this.request, metric, tags, scannerBatchSize,
                         scannerReadAhead);
                 rangeItr = ranges.iterator();
                 if (rangeItr.hasNext()) {

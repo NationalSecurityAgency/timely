@@ -28,7 +28,7 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
     private TimelyPrincipal timelyPrincipal;
 
     public TimelyAuthenticationToken(String subjectDN, X509Certificate clientCert,
-                                     Multimap<String, String> httpHeaders) {
+            Multimap<String, String> httpHeaders) {
         super(subjectDN, clientCert);
         if (httpHeaders == null) {
             this.httpHeaders = HashMultimap.create();
@@ -48,7 +48,8 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
         }
         if (proxiedEntities != null && proxiedIssuers == null) {
             LOG.error(PROXIED_ENTITIES_HEADER + " supplied, but missing " + PROXIED_ISSUERS_HEADER);
-            throw new IllegalArgumentException(PROXIED_ENTITIES_HEADER + " supplied, but missing " + PROXIED_ISSUERS_HEADER);
+            throw new IllegalArgumentException(
+                    PROXIED_ENTITIES_HEADER + " supplied, but missing " + PROXIED_ISSUERS_HEADER);
         }
         List<SubjectIssuerDNPair> entities = extractEntities(subjectDN, issuerDn, proxiedEntities, proxiedIssuers);
         long now = System.currentTimeMillis();
@@ -73,7 +74,8 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
         LOG.trace("Created TimelyAuthenticationToken: {}", timelyPrincipal.getName());
     }
 
-    private List<SubjectIssuerDNPair> extractEntities(String subjectDn, String issuerDn, String proxiedEntities, String proxiedIssuers) {
+    private List<SubjectIssuerDNPair> extractEntities(String subjectDn, String issuerDn, String proxiedEntities,
+            String proxiedIssuers) {
         List<SubjectIssuerDNPair> entities = new ArrayList<>();
         entities.add(SubjectIssuerDNPair.of(subjectDn, issuerDn));
         if (proxiedEntities != null) {

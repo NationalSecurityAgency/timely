@@ -1,12 +1,7 @@
 package timely.auth;
 
-import timely.auth.util.DnUtils;
+import static timely.auth.TimelyUser.ANONYMOUS_USER;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
 import java.io.Serializable;
 import java.security.Principal;
 import java.util.Collection;
@@ -15,16 +10,25 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static timely.auth.TimelyUser.ANONYMOUS_USER;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+
+import timely.auth.util.DnUtils;
 
 /**
- * A {@link Principal} that represents a set of proxied {@link TimelyUser}s. For example, this proxied user could represent a GUI server acting on behalf of a
- * user. The GUI server user represents the entity that made the call to us and the other proxied user would be the actual end user.
+ * A {@link Principal} that represents a set of proxied {@link TimelyUser}s. For
+ * example, this proxied user could represent a GUI server acting on behalf of a
+ * user. The GUI server user represents the entity that made the call to us and
+ * the other proxied user would be the actual end user.
  */
 @XmlRootElement
-@XmlType(factoryMethod = "anonymousPrincipal", propOrder = {"name", "proxiedUsers", "creationTime"})
+@XmlType(factoryMethod = "anonymousPrincipal", propOrder = { "name", "proxiedUsers", "creationTime" })
 @XmlAccessorType(XmlAccessType.NONE)
 public class TimelyPrincipal implements Principal, Serializable {
+
     private final String username;
     private final TimelyUser primaryUser;
     @XmlElement
@@ -33,7 +37,8 @@ public class TimelyPrincipal implements Principal, Serializable {
     private final long creationTime;
 
     /**
-     * This constructor should not be used. It is here to allow JAX-B mapping and CDI proxying of this class.
+     * This constructor should not be used. It is here to allow JAX-B mapping and
+     * CDI proxying of this class.
      */
     public TimelyPrincipal() {
         this(ANONYMOUS_USER);
@@ -56,7 +61,8 @@ public class TimelyPrincipal implements Principal, Serializable {
         this.primaryUser = proxiedUsers.stream().filter(u -> u.getUserType() == TimelyUser.UserType.USER).findFirst()
                 .orElse(first);
         this.proxiedUsers.add(first);
-        this.proxiedUsers.addAll(proxiedUsers.stream().filter(u -> !u.equals(primaryUser)).collect(Collectors.toList()));
+        this.proxiedUsers
+                .addAll(proxiedUsers.stream().filter(u -> !u.equals(primaryUser)).collect(Collectors.toList()));
         this.username = this.proxiedUsers.stream().map(TimelyUser::getName).collect(Collectors.joining(" -> "));
     }
 
@@ -69,7 +75,8 @@ public class TimelyPrincipal implements Principal, Serializable {
     }
 
     public Collection<? extends Collection<String>> getAuthorizations() {
-        return Collections.unmodifiableCollection(proxiedUsers.stream().map(TimelyUser::getAuths).collect(Collectors.toList()));
+        return Collections
+                .unmodifiableCollection(proxiedUsers.stream().map(TimelyUser::getAuths).collect(Collectors.toList()));
     }
 
     public String[] getDNs() {

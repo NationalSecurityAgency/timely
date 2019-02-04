@@ -20,7 +20,7 @@ public class HttpMetricsRequestHandler extends SimpleChannelInboundHandler<Metri
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MetricsRequest msg) throws Exception {
         MetricsResponse r = new MetricsResponse(conf);
-        String acceptHeader = msg.getRequestHeaders().get(Names.ACCEPT);
+        String acceptHeader = msg.getRequestHeader(Names.ACCEPT);
         sendResponse(ctx, r.toHttpResponse(acceptHeader));
     }
 

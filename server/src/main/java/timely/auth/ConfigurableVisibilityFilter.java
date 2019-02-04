@@ -1,5 +1,8 @@
 package timely.auth;
 
+import java.io.IOException;
+import java.util.Map;
+
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
@@ -10,18 +13,18 @@ import org.apache.accumulo.core.iterators.system.VisibilityFilter;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
-import java.util.Map;
-
 public class ConfigurableVisibilityFilter extends WrappingIterator implements OptionDescriber {
+
     public static final String AUTHORIZATIONS_OPT = "authorizations";
-    private SortedKeyValueIterator<Key,Value> delegate;
+    private SortedKeyValueIterator<Key, Value> delegate;
 
     private static final Logger log = Logger.getLogger(ConfigurableVisibilityFilter.class);
 
-    public ConfigurableVisibilityFilter() {}
+    public ConfigurableVisibilityFilter() {
+    }
 
-    public ConfigurableVisibilityFilter(SortedKeyValueIterator<Key,Value> iterator, Authorizations authorizations, byte[] defaultVisibility) {
+    public ConfigurableVisibilityFilter(SortedKeyValueIterator<Key, Value> iterator, Authorizations authorizations,
+            byte[] defaultVisibility) {
         setSource(iterator);
     }
 
@@ -31,7 +34,8 @@ public class ConfigurableVisibilityFilter extends WrappingIterator implements Op
     }
 
     @Override
-    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
+    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
+            throws IOException {
         Authorizations auths = Authorizations.EMPTY;
         if (options.containsKey(AUTHORIZATIONS_OPT))
             auths = new Authorizations(options.get(AUTHORIZATIONS_OPT).split(","));
@@ -42,20 +46,21 @@ public class ConfigurableVisibilityFilter extends WrappingIterator implements Op
     }
 
     @Override
-    public SortedKeyValueIterator<Key,Value> deepCopy(IteratorEnvironment env) {
+    public SortedKeyValueIterator<Key, Value> deepCopy(IteratorEnvironment env) {
         return new ConfigurableVisibilityFilter(this, env);
     }
 
     @Override
     public IteratorOptions describeOptions() {
         IteratorOptions opts = new IteratorOptions(getClass().getSimpleName(),
-                "Filters keys based to return only those whose visibility tests positive against the supplied authorizations", null, null);
+                "Filters keys based to return only those whose visibility tests positive against the supplied authorizations",
+                null, null);
         opts.addNamedOption(AUTHORIZATIONS_OPT, "Comma delimited list of scan authorizations");
         return opts;
     }
 
     @Override
-    public boolean validateOptions(Map<String,String> options) {
+    public boolean validateOptions(Map<String, String> options) {
         boolean valid = false;
         String auths = options.get(AUTHORIZATIONS_OPT);
         if (auths != null) {

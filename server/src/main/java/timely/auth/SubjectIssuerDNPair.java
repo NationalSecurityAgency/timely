@@ -1,16 +1,18 @@
 package timely.auth;
 
+import java.io.Serializable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import timely.auth.util.ProxiedEntityUtils;
 
-import java.io.Serializable;
-
 /**
- * A simple pair containing a subject and (optional) issuer DN. The supplied DN values are normalized into a lower-case form with the CN portion first.
+ * A simple pair containing a subject and (optional) issuer DN. The supplied DN
+ * values are normalized into a lower-case form with the CN portion first.
  */
 public class SubjectIssuerDNPair implements Serializable {
+
     private final String subjectDN;
     private final String issuerDN;
 
@@ -19,7 +21,8 @@ public class SubjectIssuerDNPair implements Serializable {
     }
 
     @JsonCreator
-    public static SubjectIssuerDNPair of(@JsonProperty("subjectDN") String subjectDN, @JsonProperty("issuerDN") String issuerDN) {
+    public static SubjectIssuerDNPair of(@JsonProperty("subjectDN") String subjectDN,
+            @JsonProperty("issuerDN") String issuerDN) {
         return new SubjectIssuerDNPair(subjectDN, issuerDN);
     }
 

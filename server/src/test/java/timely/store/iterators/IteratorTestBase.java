@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.apache.accumulo.core.client.sample.SamplerConfiguration;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
@@ -63,6 +64,20 @@ public class IteratorTestBase {
             throw new UnsupportedOperationException();
         }
 
+        @Override
+        public IteratorEnvironment cloneWithSamplingEnabled() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public SamplerConfiguration getSamplerConfiguration() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isSamplingEnabled() {
+            return false;
+        }
     }
 
     protected static class CombinerIteratorEnvironment extends DefaultIteratorEnvironment {

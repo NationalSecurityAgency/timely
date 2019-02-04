@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import timely.api.request.AuthenticatedRequest;
 import timely.api.response.TimelyException;
 import timely.configuration.Configuration;
 import timely.store.DataStore;
@@ -54,11 +55,11 @@ public class Subscription {
         }, rate, rate, TimeUnit.SECONDS);
     }
 
-    public void addMetric(String metric, Map<String, String> tags, long startTime, long endTime, long delay)
-            throws TimelyException {
+    public void addMetric(AuthenticatedRequest request, String metric, Map<String, String> tags, long startTime,
+            long endTime, long delay) throws TimelyException {
         LOG.debug("[{}] Adding metric scanner", this.subscriptionId);
         MetricScanner m = new MetricScanner(this, this.subscriptionId, this.sessionId, store, cache, metric, tags,
-                startTime, endTime, delay, lag, ctx, scannerBatchSize, flushIntervalSeconds, scannerReadAhead,
+                startTime, endTime, delay, lag, request, ctx, scannerBatchSize, flushIntervalSeconds, scannerReadAhead,
                 subscriptionBatchSize);
         METRICS.put(metric, m);
         m.start();

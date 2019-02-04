@@ -7,6 +7,7 @@ import java.util.Set;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Range;
+import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;
@@ -36,8 +37,8 @@ public interface DataStore {
 
     Set<Tag> getColumnFamilies(String metric, Map<String, String> tags) throws TableNotFoundException;
 
-    Scanner createScannerForMetric(String sessionId, String metric, Map<String, String> tags, int scannerBatchSize,
-            int scannerReadAhead) throws TimelyException;
+    Scanner createScannerForMetric(AuthenticatedRequest request, String metric, Map<String, String> tags,
+            int scannerBatchSize, int scannerReadAhead) throws TimelyException;
 
     void setCache(DataStoreCache cache);
 

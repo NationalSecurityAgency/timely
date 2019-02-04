@@ -40,7 +40,7 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
             if (add.getDelayTime().isPresent()) {
                 delayTime = add.getDelayTime().get();
             }
-            s.addMetric(metric, tags, startTime, endTime, delayTime);
+            s.addMetric(add, metric, tags, startTime, endTime, delayTime);
         } else {
             LOG.error("Unknown subscription id, create subscription first");
             ctx.writeAndFlush(new CloseWebSocketFrame(1003, "Unknown subscription id, create subscription first"));

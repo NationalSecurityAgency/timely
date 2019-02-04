@@ -2,6 +2,7 @@ package timely.auth;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.UUID;
 
 import org.apache.accumulo.core.security.Authorizations;
@@ -11,8 +12,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import timely.configuration.Configuration;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.test.TestConfiguration;
 
 public class AuthCacheTest {
@@ -29,10 +30,10 @@ public class AuthCacheTest {
 
     @Before
     public void setup() throws Exception {
-        AuthCache.setSessionMaxAge(config);
+        AuthCache.setSessionMaxAge(config.getSecurity());
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
-        Authentication auth = AuthenticationService.getAuthenticationManager().authenticate(token);
-        AuthCache.getCache().put(cookie, auth);
+        TimelyAuthenticationToken auth = AuthenticationService.authenticate(token);
+        AuthCache.getCache().put(cookie, auth.getTimelyPrincipal());
     }
 
     @After
@@ -47,7 +48,9 @@ public class AuthCacheTest {
 
     @Test
     public void testGetAuths() throws Exception {
-        Authorizations a = AuthCache.getAuthorizations(cookie);
+        Collection<Authorizations> auths = AuthCache.getAuthorizations(cookie);
+        Assert.assertEquals(1, auths.size());
+        Authorizations a = auths.iterator().next();
         Assert.assertEquals("A,B,C", a.toString());
     }
 

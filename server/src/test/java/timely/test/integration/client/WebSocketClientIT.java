@@ -147,28 +147,33 @@ public class WebSocketClientIT extends OneWaySSLBase {
     @Test
     public void testClientAnonymousAccess() throws Exception {
         WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, false,
-                null, null, false, 65536);
-        testWorkflow(client);
+                false, null, null, false, 65536);
+        try {
+            conf.getSecurity().setAllowAnonymousWsAccess(true);
+            testWorkflow(client);
+        } finally {
+            conf.getSecurity().setAllowAnonymousWsAccess(false);
+        }
     }
 
     @Test
     public void testClientBasicAuthAccess() throws Exception {
-        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, true,
-                "test", "test1", false, 65536);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, false,
+                true, "test", "test1", false, 65536);
         testWorkflow(client);
     }
 
     @Test(expected = HttpResponseException.class)
     public void testClientBasicAuthAccessFailure() throws Exception {
-        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, true,
-                "test", "test2", false, 65536);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, false,
+                true, "test", "test2", false, 65536);
         testWorkflow(client);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testClientBasicAuthParameterMismatch() throws Exception {
-        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, true,
-                "test", null, false, 65536);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, false,
+                true, "test", null, false, 65536);
         testWorkflow(client);
     }
 

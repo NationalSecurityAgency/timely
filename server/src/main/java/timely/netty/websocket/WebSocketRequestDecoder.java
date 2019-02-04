@@ -55,7 +55,6 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
             Multimap<String, String> headers = ctx.channel().attr(HTTP_HEADERS_ATTR).get();
             X509Certificate clientCert = ctx.channel().attr(CLIENT_CERT_ATTR).get();
 
-
             if (request instanceof AuthenticatedRequest) {
                 if (headers != null) {
                     ((AuthenticatedRequest) request).addHeaders(headers);

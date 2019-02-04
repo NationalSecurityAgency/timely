@@ -1,12 +1,13 @@
 package timely.client.http;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
@@ -40,14 +41,25 @@ public class HttpClient {
     }
 
     public static CloseableHttpClient get(SSLContext ssl, CookieStore cookieStore, boolean hostVerificationEnabled) {
-        RequestConfig defaultRequestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
+        return get(ssl, cookieStore, hostVerificationEnabled, false);
+    }
 
-        HttpClientBuilder builder = HttpClients.custom().setSSLContext(ssl).setDefaultCookieStore(cookieStore)
-                .setDefaultRequestConfig(defaultRequestConfig);
+    public static CloseableHttpClient get(SSLContext ssl, CookieStore cookieStore, boolean hostVerificationEnabled,
+            boolean clientAuth) {
+        RequestConfig defaultRequestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
+        HostnameVerifier hostnameVerifier;
         if (hostVerificationEnabled) {
-            builder.setSSLHostnameVerifier(new DefaultHostnameVerifier());
+            hostnameVerifier = SSLConnectionSocketFactory.getDefaultHostnameVerifier();
         } else {
-            builder.setSSLHostnameVerifier(new NoopHostnameVerifier());
+            hostnameVerifier = new NoopHostnameVerifier();
+        }
+        HttpClientBuilder builder = HttpClients.custom().setSSLContext(ssl).setDefaultCookieStore(cookieStore)
+                .setDefaultRequestConfig(defaultRequestConfig).setSSLHostnameVerifier(hostnameVerifier);
+
+        if (clientAuth) {
+            SSLConnectionSocketFactory sslCF = new SSLConnectionSocketFactory(ssl,
+                    new String[] { "TLSv1.1", "TLSv1.2" }, null, hostnameVerifier);
+            builder.setSSLSocketFactory(sslCF);
         }
         return builder.build();
     }

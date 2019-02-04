@@ -14,13 +14,15 @@ import org.apache.http.cookie.Cookie;
 public class TimelyEndpointConfig implements ClientEndpointConfig {
 
     private String sessionCookie = null;
+    private final ClientHandler clientEndpoint;
 
     private static final String FORMAT = "%s=%s;";
 
-    public TimelyEndpointConfig(Cookie sessionCookie) {
+    public TimelyEndpointConfig(ClientHandler clientEndpoint, Cookie sessionCookie) {
         if (null != sessionCookie) {
             this.sessionCookie = String.format(FORMAT, sessionCookie.getName(), sessionCookie.getValue());
         }
+        this.clientEndpoint = clientEndpoint;
     }
 
     @Override
@@ -58,6 +60,7 @@ public class TimelyEndpointConfig implements ClientEndpointConfig {
                 if (null != sessionCookie) {
                     headers.put("Cookie", Collections.singletonList(sessionCookie));
                 }
+                TimelyEndpointConfig.this.clientEndpoint.beforeRequest(headers);
             }
         };
     }

@@ -31,11 +31,14 @@ import timely.api.request.timeseries.QueryRequest.RateOption;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.request.timeseries.SuggestRequest;
+import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
+import timely.auth.AuthenticationService;
 import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.netty.Constants;
+import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.test.TestConfiguration;
 import timely.util.JsonUtil;
 
@@ -68,8 +71,10 @@ public class HttpRequestDecoderTest {
         anonConfig = TestConfiguration.createMinimalConfigurationForTest();
         anonConfig.getSecurity().setAllowAnonymousHttpAccess(true);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
-        AuthCache.setSessionMaxAge(config);
-        AuthCache.getCache().put(cookie, new UsernamePasswordAuthenticationToken("test", "test1"));
+        AuthCache.setSessionMaxAge(config.getSecurity());
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
+        TimelyAuthenticationToken auth = AuthenticationService.authenticate(token);
+        AuthCache.getCache().put(cookie, auth.getTimelyPrincipal());
     }
 
     @AfterClass
@@ -96,7 +101,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(request, results.get(0));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = TimelyException.class)
     public void testAggregatorsURINoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
@@ -127,7 +132,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(AggregatorsRequest.class, results.iterator().next().getClass());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = TimelyException.class)
     public void testAggregatorsPostNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
@@ -375,7 +380,7 @@ public class HttpRequestDecoderTest {
         suggest.validate();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = TimelyException.class)
     public void testSuggestURIWithValidTypeNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
@@ -510,7 +515,7 @@ public class HttpRequestDecoderTest {
         suggest.validate();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = TimelyException.class)
     public void testQueryWithNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,

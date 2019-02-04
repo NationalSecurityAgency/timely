@@ -1,5 +1,7 @@
 package timely.api.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import timely.auth.TimelyUser;
@@ -9,6 +11,7 @@ import timely.netty.http.auth.TimelyAuthenticationToken;
 /**
  * Base class for requests that require authentication
  */
+@JsonIgnoreProperties({ "userName", "requestHeader" })
 public class AuthenticatedRequest implements Request {
 
     private String sessionId = null;
@@ -31,6 +34,7 @@ public class AuthenticatedRequest implements Request {
         return requestHeaders;
     }
 
+    @JsonIgnore
     public String getRequestHeader(String name) {
         return HttpHeaderUtils.getSingleHeader(requestHeaders, name, false);
     }
@@ -54,6 +58,7 @@ public class AuthenticatedRequest implements Request {
         return token;
     }
 
+    @JsonIgnore
     public String getUserName() {
         String name;
         try {

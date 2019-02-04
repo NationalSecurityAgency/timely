@@ -7,20 +7,24 @@ import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
+import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 
 public class HttpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, CloseableHttpClient> {
 
     private final SSLContext sslContext;
+    private boolean twoWaySsl;
 
-    public HttpClientFactory(SSLContext sslContext) {
+    public HttpClientFactory(BalancerConfiguration balancerConfig, SSLContext sslContext) {
         this.sslContext = sslContext;
+        this.twoWaySsl = balancerConfig.getSecurity().getClientSsl().isTwoWaySsl();
     }
 
     @Override
     public PooledObject<CloseableHttpClient> makeObject(TimelyBalancedHost k) throws Exception {
         BasicCookieStore cookieJar = new BasicCookieStore();
-        return new DefaultPooledObject<>(timely.client.http.HttpClient.get(this.sslContext, cookieJar, false));
+        return new DefaultPooledObject<>(
+                timely.client.http.HttpClient.get(this.sslContext, cookieJar, false, twoWaySsl));
     }
 
     @Override

@@ -20,9 +20,11 @@ import timely.auth.ConfigurableVisibilityFilter;
 import timely.auth.ScannerBaseDelegate;
 
 public class ScannerHelper {
+
     private static final Logger logger = LoggerFactory.getLogger(ScannerHelper.class);
 
-    public static Scanner createScanner(Connector connector, String tableName, Collection<Authorizations> authorizations) throws TableNotFoundException {
+    public static Scanner createScanner(Connector connector, String tableName,
+            Collection<Authorizations> authorizations) throws TableNotFoundException {
         if (authorizations == null || authorizations.isEmpty())
             throw new IllegalArgumentException("Authorizations must not be empty.");
 
@@ -32,8 +34,8 @@ public class ScannerHelper {
         return scanner;
     }
 
-    public static BatchScanner createBatchScanner(Connector connector, String tableName, Collection<Authorizations> authorizations, int numQueryThreads)
-            throws TableNotFoundException {
+    public static BatchScanner createBatchScanner(Connector connector, String tableName,
+            Collection<Authorizations> authorizations, int numQueryThreads) throws TableNotFoundException {
         if (authorizations == null || authorizations.isEmpty())
             throw new IllegalArgumentException("Authorizations must not be empty.");
 
@@ -43,14 +45,15 @@ public class ScannerHelper {
         return batchScanner;
     }
 
-    public static BatchDeleter createBatchDeleter(Connector connector, String tableName, Collection<Authorizations> authorizations, int numQueryThreads,
-                                                  long maxMemory, long maxLatency, int maxWriteThreads) throws TableNotFoundException {
+    public static BatchDeleter createBatchDeleter(Connector connector, String tableName,
+            Collection<Authorizations> authorizations, int numQueryThreads, long maxMemory, long maxLatency,
+            int maxWriteThreads) throws TableNotFoundException {
         if (authorizations == null || authorizations.isEmpty())
             throw new IllegalArgumentException("Authorizations must not be empty.");
 
         Iterator<Authorizations> iter = AuthorizationsMinimizer.minimize(authorizations).iterator();
-        BatchWriterConfig bwCfg = new BatchWriterConfig().setMaxLatency(maxLatency, TimeUnit.MILLISECONDS).setMaxMemory(maxMemory)
-                .setMaxWriteThreads(maxWriteThreads);
+        BatchWriterConfig bwCfg = new BatchWriterConfig().setMaxLatency(maxLatency, TimeUnit.MILLISECONDS)
+                .setMaxMemory(maxMemory).setMaxWriteThreads(maxWriteThreads);
         BatchDeleter batchDeleter = connector.createBatchDeleter(tableName, iter.next(), numQueryThreads, bwCfg);
         addVisibilityFilters(iter, batchDeleter);
         return batchDeleter;
@@ -61,16 +64,18 @@ public class ScannerHelper {
             IteratorSetting cfg = new IteratorSetting(priority, ConfigurableVisibilityFilter.class);
             cfg.setName("visibilityFilter" + priority);
             cfg.addOption(ConfigurableVisibilityFilter.AUTHORIZATIONS_OPT, iter.next().toString());
-            // Set the visibility filter as a "system" iterator, which means that normal modify, remove, clear operations performed
-            // on the scanner will not modify/remove/clear this iterator. This way, if a query logic attempts to reconfigure the
+            // Set the visibility filter as a "system" iterator, which means that normal
+            // modify, remove, clear operations performed
+            // on the scanner will not modify/remove/clear this iterator. This way, if a
+            // query logic attempts to reconfigure the
             // scanner's iterators, then this iterator will remain intact.
             if (scanner instanceof ScannerBaseDelegate) {
                 ((ScannerBaseDelegate) scanner).addSystemScanIterator(cfg);
             } else {
-                logger.warn("Adding system visibility filter to non-wrapped scanner {}.", scanner.getClass(), new Exception());
+                logger.warn("Adding system visibility filter to non-wrapped scanner {}.", scanner.getClass(),
+                        new Exception());
                 scanner.addScanIterator(cfg);
             }
         }
     }
 }
-

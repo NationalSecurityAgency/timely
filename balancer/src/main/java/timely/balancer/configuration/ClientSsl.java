@@ -8,6 +8,7 @@ public class ClientSsl {
     private String trustStoreFile;
     private String trustStoreType;
     private String trustStorePassword;
+    private boolean twoWaySsl;
 
     public String getKeyFile() {
         return keyFile;
@@ -55,6 +56,9 @@ public class ClientSsl {
 
     public void setTrustStorePassword(String trustStorePassword) {
         this.trustStorePassword = trustStorePassword;
+    }
 
+    public boolean isTwoWaySsl() {
+        return twoWaySsl;
     }
 }
