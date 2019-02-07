@@ -67,7 +67,7 @@ public class WebSocketRequestDecoderTest {
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
         AuthCache.setSessionMaxAge(config.getSecurity());
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
-        AuthCache.getCache().put(cookie,
+        AuthCache.put(cookie,
                 new TimelyPrincipal(new TimelyUser("ANONYMOUS", AuthenticationUtils.getAuthCollection(token))));
     }
 

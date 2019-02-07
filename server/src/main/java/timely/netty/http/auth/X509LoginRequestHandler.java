@@ -22,7 +22,8 @@ public class X509LoginRequestHandler extends TimelyLoginRequestHandler<X509Login
     }
 
     @Override
-    protected TimelyPrincipal authenticate(ChannelHandlerContext ctx, X509LoginRequest loginRequest) throws Exception {
+    protected TimelyPrincipal authenticate(ChannelHandlerContext ctx, X509LoginRequest loginRequest, String sessionId)
+            throws Exception {
         // If we are operating in 2 way SSL, then get the subjectDN from the
         // client certificate and perform the login process.
         TimelyPrincipal principal = null;
@@ -34,8 +35,7 @@ public class X509LoginRequestHandler extends TimelyLoginRequestHandler<X509Login
                 // login endpoint is for direct certificate only, not for proxying
                 TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(clientCert,
                         clientCert.getSubjectDN().getName(), clientCert.getIssuerDN().getName());
-                TimelyAuthenticationToken t = AuthenticationService.authenticate(token, clientCert);
-                principal = t.getTimelyPrincipal();
+                principal = AuthenticationService.authenticate(token, clientCert, sessionId);
                 LOG.debug("Authenticated user {} with authorizations {}",
                         principal.getPrimaryUser().getDn().subjectDN(), principal.getAuthorizationsString());
             }

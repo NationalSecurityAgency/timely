@@ -7,13 +7,13 @@ import java.util.UUID;
 
 import org.apache.accumulo.core.security.Authorizations;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import timely.configuration.Configuration;
-import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.test.TestConfiguration;
 
 public class AuthCacheTest {
@@ -28,12 +28,16 @@ public class AuthCacheTest {
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
     }
 
+    @AfterClass
+    public static void after() {
+        AuthCache.resetSessionMaxAge();
+    }
+
     @Before
     public void setup() throws Exception {
         AuthCache.setSessionMaxAge(config.getSecurity());
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
-        TimelyAuthenticationToken auth = AuthenticationService.authenticate(token);
-        AuthCache.getCache().put(cookie, auth.getTimelyPrincipal());
+        AuthenticationService.authenticate(token, cookie);
     }
 
     @After

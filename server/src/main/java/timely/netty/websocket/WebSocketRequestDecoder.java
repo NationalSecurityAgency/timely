@@ -61,8 +61,8 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
                 if (StringUtils.isNotBlank(sessionId)) {
                     TimelyPrincipal principal;
                     ((AuthenticatedRequest) request).setSessionId(sessionId);
-                    if (AuthCache.getCache().asMap().containsKey(sessionId)) {
-                        principal = AuthCache.getCache().asMap().get(sessionId);
+                    if (AuthCache.containsKey(sessionId)) {
+                        principal = AuthCache.get(sessionId);
                     } else {
                         principal = TimelyPrincipal.anonymousPrincipal();
                     }

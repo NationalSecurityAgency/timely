@@ -12,6 +12,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import timely.auth.AuthCache;
 import timely.configuration.Configuration;
 import timely.store.MetricAgeOffIterator;
 import timely.test.TestConfiguration;
@@ -83,4 +84,8 @@ public class MacITBase {
         conf.setMetricAgeOffDays(ageOffSettings);
     }
 
+    @Before
+    public void initializeAuthCache() {
+        AuthCache.clear();
+    }
 }

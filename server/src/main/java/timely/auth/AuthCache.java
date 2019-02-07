@@ -39,7 +39,7 @@ public class AuthCache {
         sessionMaxAge = security.getSessionMaxAge();
     }
 
-    public static Cache<String, TimelyPrincipal> getCache() {
+    private static Cache<String, TimelyPrincipal> getCache() {
         if (-1 == sessionMaxAge) {
             throw new IllegalStateException("Cache session max age not configured.");
         }
@@ -47,6 +47,28 @@ public class AuthCache {
             CACHE = Caffeine.newBuilder().expireAfterAccess(sessionMaxAge, TimeUnit.SECONDS).build();
         }
         return CACHE;
+    }
+
+    public static boolean containsKey(String key) {
+        return getCache().asMap().containsKey(key);
+    }
+
+    public static TimelyPrincipal get(String key) {
+        return getCache().asMap().get(key);
+    }
+
+    public static void put(String key, TimelyPrincipal principal) {
+        getCache().asMap().put(key, principal);
+    }
+
+    public static TimelyPrincipal remove(String key) {
+        return getCache().asMap().remove(key);
+    }
+
+    public static void clear() {
+        if (CACHE != null) {
+            CACHE.asMap().clear();
+        }
     }
 
     protected static Collection<Authorizations> getAuthorizations(String entityName) {

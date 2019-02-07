@@ -80,6 +80,7 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
 
     @Before
     public void setup() throws Exception {
+        AuthCache.clear();
         Connector con = mac.getConnector("root", "secret");
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
     }

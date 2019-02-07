@@ -71,7 +71,6 @@ import timely.auth.TimelyPrincipal;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.netty.Constants;
-import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
@@ -196,7 +195,7 @@ public class WebSocketIT extends OneWaySSLBase {
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
 
         this.sessionId = UUID.randomUUID().toString();
-        AuthCache.getCache().put(sessionId, TimelyPrincipal.anonymousPrincipal());
+        AuthCache.put(sessionId, TimelyPrincipal.anonymousPrincipal());
         group = new NioEventLoopGroup();
         SslContext ssl = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
@@ -505,9 +504,8 @@ public class WebSocketIT extends OneWaySSLBase {
     @Test
     public void testSubscriptionWorkflowWithEndTimeAndVisibilities() throws Exception {
 
-        TimelyAuthenticationToken auth = AuthenticationService.authenticate(token);
-        TimelyPrincipal principal = auth.getTimelyPrincipal();
-        AuthCache.getCache().put(sessionId, principal);
+        AuthCache.remove(sessionId);
+        AuthenticationService.authenticate(token, sessionId);
 
         try {
             final String subscriptionId = "1234";
@@ -585,7 +583,7 @@ public class WebSocketIT extends OneWaySSLBase {
             close.setSubscriptionId(subscriptionId);
             ch.writeAndFlush(new TextWebSocketFrame(JsonUtil.getObjectMapper().writeValueAsString(close)));
         } finally {
-            AuthCache.getCache().asMap().remove(sessionId, principal);
+            AuthCache.remove(sessionId);
             ch.close().sync();
             s.shutdown();
             group.shutdownGracefully();

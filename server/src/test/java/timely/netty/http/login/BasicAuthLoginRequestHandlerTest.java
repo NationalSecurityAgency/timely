@@ -57,6 +57,7 @@ public class BasicAuthLoginRequestHandlerTest {
 
     @Before
     public void setup() throws Exception {
+        AuthCache.clear();
         results.clear();
     }
 

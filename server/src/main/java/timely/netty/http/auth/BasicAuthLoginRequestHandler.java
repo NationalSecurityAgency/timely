@@ -20,13 +20,12 @@ public class BasicAuthLoginRequestHandler extends TimelyLoginRequestHandler<Basi
     }
 
     @Override
-    protected TimelyPrincipal authenticate(ChannelHandlerContext ctx, BasicAuthLoginRequest msg)
+    protected TimelyPrincipal authenticate(ChannelHandlerContext ctx, BasicAuthLoginRequest msg, String sessionId)
             throws AuthenticationException {
         // Perform the login process using username/password
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(msg.getUsername(),
                 msg.getPassword());
-        TimelyAuthenticationToken timelyToken = AuthenticationService.authenticate(token);
-        TimelyPrincipal principal = timelyToken.getTimelyPrincipal();
+        TimelyPrincipal principal = AuthenticationService.authenticate(token, sessionId);
 
         LOG.debug("Authenticated user {} with authorizations {}", principal.getPrimaryUser().getDn().subjectDN(),
                 principal.getAuthorizationsString());

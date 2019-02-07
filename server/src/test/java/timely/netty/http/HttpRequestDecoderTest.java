@@ -38,7 +38,6 @@ import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.netty.Constants;
-import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.test.TestConfiguration;
 import timely.util.JsonUtil;
 
@@ -73,8 +72,7 @@ public class HttpRequestDecoderTest {
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
         AuthCache.setSessionMaxAge(config.getSecurity());
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
-        TimelyAuthenticationToken auth = AuthenticationService.authenticate(token);
-        AuthCache.getCache().put(cookie, auth.getTimelyPrincipal());
+        AuthenticationService.authenticate(token, cookie);
     }
 
     @AfterClass

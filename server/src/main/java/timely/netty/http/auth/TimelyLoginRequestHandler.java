@@ -15,7 +15,6 @@ import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.auth.AuthCache;
 import timely.auth.TimelyPrincipal;
 import timely.configuration.Http;
 import timely.configuration.Security;
@@ -38,9 +37,8 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
     protected final void channelRead0(ChannelHandlerContext ctx, T loginRequest) throws Exception {
         try {
             LOG.trace("Authenticating {}", loginRequest);
-            TimelyPrincipal principal = authenticate(ctx, loginRequest);
             String sessionId = UUID.randomUUID().toString();
-            AuthCache.getCache().put(sessionId, principal);
+            TimelyPrincipal principal = authenticate(ctx, loginRequest, sessionId);
             LOG.trace("Authenticated new sessionId {} for user {}", sessionId,
                     principal.getPrimaryUser().getDn().subjectDN());
             String sessionIdEncoded = URLEncoder.encode(sessionId, StandardCharsets.UTF_8.name());
@@ -66,5 +64,6 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
 
     }
 
-    protected abstract TimelyPrincipal authenticate(ChannelHandlerContext ctx, T loginRequest) throws Exception;
+    protected abstract TimelyPrincipal authenticate(ChannelHandlerContext ctx, T loginRequest, String entity)
+            throws Exception;
 }

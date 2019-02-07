@@ -968,7 +968,7 @@ public class DataStoreImpl implements DataStore {
                 throw new IllegalArgumentException("metric name must be specified");
             }
             Collection<Authorizations> auths = getSessionAuthorizations(request);
-            LOG.debug("Creating metric scanner for session: {} with auths: {}", request.getSessionId(), auths);
+            LOG.debug("Creating metric scanner for [{}] with auths: {}", request.getUserName(), auths);
             Scanner s = ScannerHelper.createScanner(connector, this.metricsTable, auths);
             if (tags == null) {
                 tags = new LinkedHashMap<>();
