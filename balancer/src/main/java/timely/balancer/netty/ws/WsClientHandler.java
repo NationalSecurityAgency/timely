@@ -9,6 +9,7 @@ import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -40,18 +41,20 @@ public class WsClientHandler extends ClientHandler {
 
     @Override
     public void beforeRequest(Map<String, List<String>> headers) {
-        Multimap<String, String> requestHeaders = token.getHttpHeaders();
         if (token.getClientCert() != null) {
-            ProxiedEntityUtils.addProxyHeaders(requestHeaders, token.getClientCert());
-        }
-        for (String s : requestHeaders.keySet()) {
-            List<String> valueList = new ArrayList<>();
-            valueList.addAll(requestHeaders.get(s));
-            if (headers.containsKey(s)) {
-                // add pre-existing values
-                valueList.addAll(headers.get(s));
+            Multimap<String, String> proxyRequestHeaders = HashMultimap.create();
+            ProxiedEntityUtils.addProxyHeaders(proxyRequestHeaders, token.getClientCert());
+            for (String s : proxyRequestHeaders.keySet()) {
+                headers.put(s, new ArrayList(proxyRequestHeaders.get(s)));
             }
-            headers.put(s, valueList);
+        }
+
+        Multimap<String, String> originalRequestHeaders = token.getHttpHeaders();
+        for (String s : originalRequestHeaders.keySet()) {
+            if (!headers.containsKey(s)) {
+                // add pre-existing values if key does not exist in proxyRequest
+                headers.put(s, new ArrayList(originalRequestHeaders.get(s)));
+            }
         }
     }
 

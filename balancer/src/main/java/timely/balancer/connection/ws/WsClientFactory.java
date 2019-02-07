@@ -12,15 +12,11 @@ import timely.client.websocket.subscription.WebSocketSubscriptionClient;
 public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, WebSocketSubscriptionClient> {
 
     private final SSLContext sslContext;
-    private final boolean doLogin;
-    private final boolean twoWaySsl;
     private BalancerConfiguration balancerConfig;
 
     public WsClientFactory(BalancerConfiguration balancerConfig, SSLContext sslContext) {
-        this.sslContext = sslContext;
-        this.doLogin = balancerConfig.isLoginRequired();
         this.balancerConfig = balancerConfig;
-        this.twoWaySsl = balancerConfig.getSecurity().getClientSsl().isTwoWaySsl();
+        this.sslContext = sslContext;
     }
 
     @Override
@@ -28,7 +24,9 @@ public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedH
 
         int bufferSize = balancerConfig.getWebsocket().getSubscriptionBatchSize() * 500;
         WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslContext, k.getHost(), k.getHttpPort(),
-                k.getWsPort(), twoWaySsl, doLogin, "", "", false, bufferSize);
+                k.getWsPort(), balancerConfig.getSecurity().getClientSsl().isUseClientCert(),
+                balancerConfig.isLoginRequired(), "", "",
+                balancerConfig.getSecurity().getClientSsl().isHostVerificationEnabled(), bufferSize);
         return new DefaultPooledObject<>(client);
     }
 

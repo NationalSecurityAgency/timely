@@ -8,7 +8,8 @@ public class ClientSsl {
     private String trustStoreFile;
     private String trustStoreType;
     private String trustStorePassword;
-    private boolean twoWaySsl = true;
+    private boolean useClientCert = true;
+    private boolean hostVerificationEnabled = true;
 
     public String getKeyFile() {
         return keyFile;
@@ -58,11 +59,19 @@ public class ClientSsl {
         this.trustStorePassword = trustStorePassword;
     }
 
-    public void setTwoWaySsl(boolean twoWaySsl) {
-        this.twoWaySsl = twoWaySsl;
+    public void setUseClientCert(boolean useClientCert) {
+        this.useClientCert = useClientCert;
     }
 
-    public boolean isTwoWaySsl() {
-        return twoWaySsl;
+    public boolean isUseClientCert() {
+        return useClientCert;
+    }
+
+    public void setHostVerificationEnabled(boolean hostVerificationEnabled) {
+        this.hostVerificationEnabled = hostVerificationEnabled;
+    }
+
+    public boolean isHostVerificationEnabled() {
+        return hostVerificationEnabled;
     }
 }

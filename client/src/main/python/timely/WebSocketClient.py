@@ -15,10 +15,14 @@ class WebSocketClient():
     APPLICATION_JSON = 'application/json'
 
     def __init__(self, hostport, path, params, connect_timeout=DEFAULT_CONNECT_TIMEOUT,
-                 request_timeout=DEFAULT_REQUEST_TIMEOUT):
+                 request_timeout=DEFAULT_REQUEST_TIMEOUT, client_cert=None, client_key=None, ca_certs=None, validate_cert=False):
 
         self.connect_timeout = connect_timeout
         self.request_timeout = request_timeout
+        self.client_cert=client_cert
+        self.client_key=client_key
+        self.ca_certs=ca_certs
+        self.validate_cert=validate_cert
         self.url = 'wss://' + hostport
         if (path is not None and len(path) > 0):
             if (path.startswith('/')):
@@ -39,7 +43,8 @@ class WebSocketClient():
         """Connect to the server.
         :param str url: server URL.
         """
-        request = websocket.httpclient.HTTPRequest(self.url, connect_timeout=self.connect_timeout, request_timeout=self.request_timeout, validate_cert=False)
+        request = websocket.httpclient.HTTPRequest(self.url, connect_timeout=self.connect_timeout, request_timeout=self.request_timeout, validate_cert=self.validate_cert,
+                                                   client_cert=self.client_cert, client_key=self.client_key, ca_certs=self.ca_certs)
         websocket.websocket_connect(request, io_loop=ioloop, callback=self._connect_callback)
 
     def send(self, data):

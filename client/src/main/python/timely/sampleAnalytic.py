@@ -5,7 +5,9 @@ import os
 from timely.TimelyAnalyticConfiguration import TimelyAnalyticConfiguration
 
 hostport = "127.0.0.1:5244"
-timelyMetric = timely.TimelyMetric.TimelyMetric(hostport, 'timely.keys.metric.inserted', None, None, None, '24 hours', None).fetch()
+client_cert = None
+client_key = None
+timelyMetric = timely.TimelyMetric.TimelyMetric(hostport, 'timely.keys.metric.inserted', None, None, None, '24 hours', None, client_cert=client_cert, client_key=client_key).fetch()
 
 print(timelyMetric.getDataFrame())
 exit()

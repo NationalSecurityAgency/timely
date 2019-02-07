@@ -16,14 +16,15 @@ utc = UTC()
 class TimelyWebSocketClient(WebSocketClient):
 
     def __init__(self, hostport, metric, tags, startTime, endTime, connect_timeout=WebSocketClient.DEFAULT_CONNECT_TIMEOUT,
-                 request_timeout=WebSocketClient.DEFAULT_REQUEST_TIMEOUT):
+                 request_timeout=WebSocketClient.DEFAULT_REQUEST_TIMEOUT, client_cert=None, client_key=None, ca_certs=None, validate_cert=False):
 
         self.metric = metric
         self.tags = tags
         self.startTime = startTime
         self.endTime = endTime
         self.subscriptionId = random.randint(1000000000, 9999999999)
-        WebSocketClient.__init__(self, hostport, '/websocket', {'metric' : metric}, connect_timeout, request_timeout)
+        WebSocketClient.__init__(self, hostport, '/websocket', {'metric' : metric}, connect_timeout, request_timeout,
+                                 client_cert=client_cert, client_key=client_key, ca_certs=ca_certs, validate_cert=validate_cert)
 
     def _on_message(self, msg):
         # implement in subclass
@@ -72,7 +73,8 @@ class TimelyMetric(TimelyWebSocketClient):
     client = None
     endtime = None
 
-    def __init__(self, hostport, metric, tags, beginStr, endStr, period, sample):
+    def __init__(self, hostport, metric, tags, beginStr, endStr, period, sample,
+                 client_cert=None, client_key=None, ca_certs=None, validate_cert=False):
         self.series = pandas.Series()
         self.metric = metric
         self.tags = tags
@@ -82,7 +84,8 @@ class TimelyMetric(TimelyWebSocketClient):
         self.data = []
         self.timeDateRange = TimeDateRange(beginStr, endStr, period)
 
-        TimelyWebSocketClient.__init__(self, hostport, metric, tags, self.timeDateRange.getBeginMs(), self.timeDateRange.getEndMs())
+        TimelyWebSocketClient.__init__(self, hostport, metric, tags, self.timeDateRange.getBeginMs(), self.timeDateRange.getEndMs(),
+                                       client_cert=client_cert, client_key=client_key, ca_certs=ca_certs, validate_cert=validate_cert)
 
     def debugOn(self):
         self.debug = True

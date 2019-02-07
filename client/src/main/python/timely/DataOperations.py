@@ -23,7 +23,7 @@ def pivot(df, metric, groupByColumn=None):
     return dataFrame
 
 
-def resample(df, sample, how='mean'):
+def resample(df, sample, how='mean', interpolate=True, fill=None):
 
     dataFrame = pandas.DataFrame(df, copy=True)
     if dataFrame is not None:
