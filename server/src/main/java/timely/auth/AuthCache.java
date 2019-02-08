@@ -50,31 +50,31 @@ public class AuthCache {
     }
 
     public static boolean containsKey(String key) {
-        return getCache().asMap().containsKey(key);
+        return getCache().getIfPresent(key) != null;
     }
 
     public static TimelyPrincipal get(String key) {
-        return getCache().asMap().get(key);
+        return getCache().getIfPresent(key);
     }
 
     public static void put(String key, TimelyPrincipal principal) {
-        getCache().asMap().put(key, principal);
+        getCache().put(key, principal);
     }
 
-    public static TimelyPrincipal remove(String key) {
-        return getCache().asMap().remove(key);
+    public static void remove(String key) {
+        getCache().invalidate(key);
     }
 
     public static void clear() {
         if (CACHE != null) {
-            CACHE.asMap().clear();
+            CACHE.invalidateAll();
         }
     }
 
     protected static Collection<Authorizations> getAuthorizations(String entityName) {
         if (!StringUtils.isEmpty(entityName)) {
             List<Authorizations> authorizationsList = new ArrayList<>();
-            TimelyPrincipal principal = CACHE.asMap().get(entityName);
+            TimelyPrincipal principal = AuthCache.get(entityName);
             if (principal != null) {
                 for (Collection<String> authCollection : principal.getAuthorizations()) {
                     authorizationsList.add(AuthorizationsUtil.toAuthorizations(authCollection));

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import timely.api.request.auth.X509LoginRequest;
 import timely.api.response.TimelyException;
 import timely.auth.AuthenticationService;
+import timely.auth.SubjectIssuerDNPair;
 import timely.auth.TimelyPrincipal;
 import timely.configuration.Http;
 import timely.configuration.Security;
@@ -35,7 +36,9 @@ public class X509LoginRequestHandler extends TimelyLoginRequestHandler<X509Login
                 // login endpoint is for direct certificate only, not for proxying
                 TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(clientCert,
                         clientCert.getSubjectDN().getName(), clientCert.getIssuerDN().getName());
-                principal = AuthenticationService.authenticate(token, clientCert, sessionId);
+                SubjectIssuerDNPair pair = SubjectIssuerDNPair.of(clientCert.getSubjectDN().getName(),
+                        clientCert.getIssuerDN().getName());
+                principal = AuthenticationService.authenticate(token, pair, sessionId);
                 LOG.debug("Authenticated user {} with authorizations {}",
                         principal.getPrimaryUser().getDn().subjectDN(), principal.getAuthorizationsString());
             }
