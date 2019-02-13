@@ -15,15 +15,27 @@
 
     <beans:bean id="timelyUserDetailsService" class="timely.auth.UserDetailsService">
     	<beans:property name="users">
-    		<util:map key-type="java.lang.String">
-    			<beans:entry key="CN=example.com">
-   					<util:list>
-   						<beans:value>D</beans:value>
-   						<beans:value>E</beans:value>
-   						<beans:value>F</beans:value>
-   					</util:list>
-    			</beans:entry>
-    		</util:map>
+    		<util:list>
+				<beans:bean class="timely.auth.TimelyUser">
+					<beans:constructor-arg name="subjectDn">
+						<beans:value>CN=example.com</beans:value>
+					</beans:constructor-arg>
+					<beans:constructor-arg name="auths">
+						<util:list>
+							<beans:value>D</beans:value>
+							<beans:value>E</beans:value>
+							<beans:value>F</beans:value>
+						</util:list>
+					</beans:constructor-arg>
+					<beans:constructor-arg name="roles">
+						<util:list>
+							<beans:value>G</beans:value>
+							<beans:value>H</beans:value>
+							<beans:value>I</beans:value>
+						</util:list>
+					</beans:constructor-arg>
+				</beans:bean>
+    		</util:list>
     	</beans:property>
     </beans:bean>
     
@@ -45,5 +57,9 @@
 		<!-- Basic authorization provider, validates provided username and password -->
 		<authentication-provider ref="UserNamePasswordAuthenticationProvider" />
 	</authentication-manager>
-	
+
+	<beans:bean id="requiredRoles" class="Array">
+
+	</beans:bean>
+
 </beans:beans>
