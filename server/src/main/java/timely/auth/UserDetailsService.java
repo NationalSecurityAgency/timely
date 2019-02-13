@@ -3,7 +3,6 @@ package timely.auth;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,18 +10,20 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
+import timely.netty.http.auth.TimelyUserDetails;
 
 public class UserDetailsService implements
         org.springframework.security.core.userdetails.AuthenticationUserDetailsService<PreAuthenticatedAuthenticationToken> {
 
-    private HashMap<String, List<String>> users;
+    private HashMap<String, TimelyUser> users;
 
-    public Map<String, List<String>> getUsers() {
+    public Map<String, TimelyUser> getUsers() {
         return users;
     }
 
-    public void setUsers(LinkedHashMap<String, List<String>> users) {
-        this.users = new HashMap<>(users);
+    public void setUsers(List<TimelyUser> users) {
+        this.users = new HashMap<>();
+        users.forEach(u -> this.users.put(u.getName(), u));
     }
 
     @Override
@@ -30,23 +31,30 @@ public class UserDetailsService implements
             throws UsernameNotFoundException {
         // Determine if the user is allowed to access the system, if not throw
         // UsernameNotFoundException
-        String username = token.getName().toString();
+        String username = token.getName();
         if (!users.containsKey(username)) {
             throw new UsernameNotFoundException(username + " not configured.");
         }
         // If allowed, populate the user details object with the authorities for
         // the user.
-        return new UserDetails() {
+        return new TimelyUserDetails() {
 
             private static final long serialVersionUID = 1L;
 
             @Override
             public Collection<SimpleGrantedAuthority> getAuthorities() {
                 final Collection<SimpleGrantedAuthority> auths = new ArrayList<>();
-                users.get(username).forEach(a -> {
+                users.get(username).getAuths().forEach(a -> {
                     auths.add(new SimpleGrantedAuthority(a));
                 });
                 return auths;
+            }
+
+            @Override
+            public Collection<String> getRoles() {
+                final Collection<String> roles = new ArrayList<>();
+                roles.addAll(users.get(username).getRoles());
+                return roles;
             }
 
             @Override

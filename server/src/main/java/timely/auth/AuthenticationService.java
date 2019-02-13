@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.ServiceConfigurationError;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -26,6 +28,7 @@ import timely.api.request.AuthenticatedRequest;
 import timely.api.response.TimelyException;
 import timely.auth.util.DnUtils;
 import timely.netty.http.auth.TimelyAuthenticationToken;
+import timely.netty.http.auth.TimelyUserDetails;
 
 public class AuthenticationService {
 
@@ -35,12 +38,18 @@ public class AuthenticationService {
     private static SubjectDnX509PrincipalExtractor x509 = null;
     private static ConcurrentHashMap<String, Object> fetchingEntity = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, Object> fetchingPrincipal = new ConcurrentHashMap<>();
+    private static Collection<String> requiredRoles;
+    private static Collection<String> requiredAuths;
 
     static {
         try {
             springContext = new ClassPathXmlApplicationContext("security.xml");
-            authManager = (AuthenticationManager) springContext.getBean("authenticationManager");
-            x509 = (SubjectDnX509PrincipalExtractor) springContext.getBean("x509PrincipalExtractor");
+            authManager = springContext.getBean("authenticationManager", AuthenticationManager.class);
+            x509 = springContext.getBean("x509PrincipalExtractor", SubjectDnX509PrincipalExtractor.class);
+            requiredRoles = springContext.getBean("requiredRoles", List.class);
+            requiredRoles.removeIf(String::isEmpty);
+            requiredAuths = springContext.getBean("requiredAuths", List.class);
+            requiredAuths.removeIf(String::isEmpty);
         } catch (BeansException e) {
             throw new ServiceConfigurationError("Error setting up Authentication objects: " + e.getMessage(),
                     e.getRootCause());
@@ -92,11 +101,13 @@ public class AuthenticationService {
     public static void enforceAccess(AuthenticatedRequest request) throws Exception {
         String sessionId = request.getSessionId();
         X509Certificate clientCert = request.getToken().getClientCert();
+        TimelyPrincipal verifiedPrincipal = null;
         if (StringUtils.isBlank(sessionId) && clientCert == null) {
             throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
                     "Anonymous access is disabled.  User must either send a client certificate or log in");
         } else if (StringUtils.isNotBlank(sessionId)) {
-            if (!AuthCache.containsKey(sessionId)) {
+            verifiedPrincipal = AuthCache.get(sessionId);
+            if (verifiedPrincipal == null) {
                 throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
                         "Unknown session id was submitted, log in again");
             }
@@ -105,7 +116,8 @@ public class AuthenticationService {
                 TimelyAuthenticationToken token = request.getToken();
                 TimelyPrincipal requestPrincipal = token.getTimelyPrincipal();
                 String entity = requestPrincipal.getName();
-                if (!AuthCache.containsKey(requestPrincipal.getName())) {
+                verifiedPrincipal = AuthCache.get(entity);
+                if (verifiedPrincipal == null) {
                     Object newObj = new Object();
                     Object o = fetchingPrincipal.getOrDefault(entity, newObj);
                     if (o == null) {
@@ -114,7 +126,8 @@ public class AuthenticationService {
                     try {
                         synchronized (o) {
                             // check again if in the AuthCache
-                            if (!AuthCache.containsKey(entity)) {
+                            verifiedPrincipal = AuthCache.get(entity);
+                            if (verifiedPrincipal == null) {
                                 // first thread here, so authenticate all entities in requestPrincipal
                                 List<TimelyUser> authenticatedTimelyUsers = new ArrayList<>();
                                 for (TimelyUser user : requestPrincipal.getProxiedUsers()) {
@@ -125,10 +138,11 @@ public class AuthenticationService {
                                             entityToken.getTimelyPrincipal().getName());
                                     authenticatedTimelyUsers.addAll(entityPrincipal.getProxiedUsers());
                                 }
-                                TimelyPrincipal principal = new TimelyPrincipal(authenticatedTimelyUsers);
-                                AuthCache.put(principal.getName(), principal);
+                                verifiedPrincipal = new TimelyPrincipal(authenticatedTimelyUsers);
+                                AuthCache.put(verifiedPrincipal.getName(), verifiedPrincipal);
                                 LOG.debug("Authenticated user {} for request {} with authorizations {}",
-                                        principal.getName(), request.toString(), principal.getAuthorizationsString());
+                                        verifiedPrincipal.getName(), request.toString(),
+                                        verifiedPrincipal.getAuthorizationsString());
                             } else {
                                 LOG.trace("Verified principal {} in AuthCache on 2nd attempt", entity);
                             }
@@ -139,10 +153,53 @@ public class AuthenticationService {
                 } else {
                     LOG.trace("Verified principal {} in AuthCache on 1st attempt", entity);
                 }
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 LOG.error(e.getMessage(), e);
                 throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "Access denied", e.getMessage());
             }
+        }
+        try {
+            checkAllowedAccess(verifiedPrincipal.getPrimaryUser());
+        } catch (TimelyException e) {
+            // validation based on roles and/or auths failed
+            // remove combined principal and primary user from cache
+            // i.e. don't cache a failure
+            AuthCache.remove(verifiedPrincipal.getName());
+            AuthCache.remove(verifiedPrincipal.getPrimaryUser().getName());
+            throw e;
+        }
+
+    }
+
+    private static void checkAllowedAccess(TimelyUser primaryUser) throws TimelyException {
+        Set<String> missingRoles = new TreeSet<>();
+        Set<String> missingAuths = new TreeSet<>();
+        if (requiredRoles != null) {
+            if (!primaryUser.getRoles().containsAll(requiredRoles)) {
+                missingRoles.addAll(requiredRoles);
+                missingRoles.removeAll(primaryUser.getRoles());
+            }
+        }
+        if (requiredAuths != null) {
+            if (!primaryUser.getAuths().containsAll(requiredAuths)) {
+                missingAuths.addAll(requiredRoles);
+                missingAuths.removeAll(primaryUser.getAuths());
+            }
+        }
+
+        if (!missingRoles.isEmpty() || !missingAuths.isEmpty()) {
+            String message = "";
+            if (!missingRoles.isEmpty() && !missingAuths.isEmpty()) {
+                message = "User:" + primaryUser.getName() + " is missing role(s):" + missingRoles + " and auth(s):"
+                        + missingAuths;
+
+            } else if (!missingRoles.isEmpty()) {
+                message = "User:" + primaryUser.getName() + " is missing role(s):" + missingRoles;
+            } else if (missingAuths.isEmpty()) {
+                message = "User:" + primaryUser.getName() + " is missing auths(s):" + missingAuths;
+            }
+            LOG.debug(message);
+            throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "Access denied", message);
         }
     }
 
@@ -193,7 +250,12 @@ public class AuthenticationService {
                 : TimelyUser.UserType.USER;
         Collection<String> auths = authentication.getAuthorities().stream().map(a -> a.getAuthority())
                 .collect(Collectors.toList());
-        TimelyUser timelyUser = new TimelyUser(subjectIssuerDNPair, userType, auths, null, null,
+        Object o = authentication.getPrincipal();
+        Collection<String> roles = null;
+        if (o instanceof TimelyUserDetails) {
+            roles = ((TimelyUserDetails) o).getRoles();
+        }
+        TimelyUser timelyUser = new TimelyUser(subjectIssuerDNPair, userType, auths, roles, null,
                 System.currentTimeMillis());
         return new TimelyPrincipal(Arrays.asList(timelyUser));
     }

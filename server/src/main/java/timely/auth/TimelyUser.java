@@ -39,6 +39,23 @@ public class TimelyUser implements Serializable {
     private final long expirationTime;
 
     /*
+     * For Spring configuration
+     */
+    public TimelyUser(String subjectDn, Collection<String> auths, Collection<String> roles) {
+        this.name = subjectDn;
+        this.commonName = DnUtils.getCommonName(subjectDn);
+        this.dn = SubjectIssuerDNPair.of(subjectDn);
+        this.userType = DnUtils.isServerDN(subjectDn) ? UserType.SERVER : UserType.USER;
+        this.auths = auths == null ? Collections.emptyList() : new LinkedHashSet<>(auths);
+        this.unmodifiableAuths = Collections.unmodifiableCollection(this.auths);
+        this.roles = roles == null ? Collections.emptyList() : new LinkedHashSet<>(roles);
+        this.unmodifiableRoles = Collections.unmodifiableCollection(this.roles);
+        this.roleToAuthMapping = null;
+        this.creationTime = System.currentTimeMillis();
+        this.expirationTime = -1L;
+    }
+
+    /*
      * For testing
      */
     public TimelyUser(String subjectDn, Collection<String> auths) {
