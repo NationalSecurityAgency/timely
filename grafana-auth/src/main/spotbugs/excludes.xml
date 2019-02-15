@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <Match>
+    <Class name="timely.grafana.auth.netty.http.GrafanaRelayHandler$MyByteArrayOutputStream" />
+    <Method name="getBuf" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+</FindBugsFilter>

@@ -429,8 +429,7 @@ public class Balancer {
         httpServer.group(httpBossGroup, httpWorkerGroup);
         httpServer.channel(channelClass);
         httpServer.handler(new LoggingHandler());
-        HttpClientPool httpClientPool = new HttpClientPool(balancerConfig.getSecurity(), balancerConfig.getHttp(),
-                clientSSLContext);
+        HttpClientPool httpClientPool = new HttpClientPool(balancerConfig, clientSSLContext);
         httpServer.childHandler(setupHttpChannel(balancerConfig, sslCtx, metricResolver, httpClientPool));
         httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         httpServer.option(ChannelOption.SO_BACKLOG, 128);
@@ -517,7 +516,8 @@ public class Balancer {
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
                 ch.pipeline().addLast("login",
                         new X509LoginRequestHandler(balancerConfig.getSecurity(), balancerConfig.getHttp()));
-                ch.pipeline().addLast("httpRelay", new HttpRelayHandler(metricResolver, httpClientPool));
+                ch.pipeline().addLast("httpRelay",
+                        new HttpRelayHandler(balancerConfig, metricResolver, httpClientPool));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler());
             }
         };

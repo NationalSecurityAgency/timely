@@ -20,6 +20,7 @@
     <module>grafana</module>
     <module>analytics</module>
     <module>balancer</module>
+    <module>grafana-auth</module>
   </modules>
   <scm>
     <connection>scm:git:https://github.com/NationalSecurityAgency/timely.git</connection>
@@ -307,6 +308,11 @@
       <dependency>
         <groupId>timely</groupId>
         <artifactId>collectd-plugin-parent</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>timely</groupId>
+        <artifactId>timely-balancer</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

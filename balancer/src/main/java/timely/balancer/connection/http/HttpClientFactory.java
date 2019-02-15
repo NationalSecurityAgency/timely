@@ -7,16 +7,16 @@ import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
-import timely.balancer.configuration.BalancerConfiguration;
+import timely.balancer.configuration.BalancerSecurity;
 import timely.balancer.connection.TimelyBalancedHost;
 
 public class HttpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, CloseableHttpClient> {
 
     private final SSLContext sslContext;
-    private final BalancerConfiguration balancerConfig;
+    private final BalancerSecurity security;
 
-    public HttpClientFactory(BalancerConfiguration balancerConfig, SSLContext sslContext) {
-        this.balancerConfig = balancerConfig;
+    public HttpClientFactory(BalancerSecurity security, SSLContext sslContext) {
+        this.security = security;
         this.sslContext = sslContext;
     }
 
@@ -24,8 +24,7 @@ public class HttpClientFactory implements KeyedPooledObjectFactory<TimelyBalance
     public PooledObject<CloseableHttpClient> makeObject(TimelyBalancedHost k) throws Exception {
         BasicCookieStore cookieJar = new BasicCookieStore();
         return new DefaultPooledObject<>(timely.client.http.HttpClient.get(this.sslContext, cookieJar,
-                balancerConfig.getSecurity().getClientSsl().isHostVerificationEnabled(),
-                balancerConfig.getSecurity().getClientSsl().isUseClientCert()));
+                security.getClientSsl().isHostVerificationEnabled(), security.getClientSsl().isUseClientCert()));
     }
 
     @Override
