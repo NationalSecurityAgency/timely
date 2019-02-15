@@ -39,5 +39,5 @@ JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}/libnetty-${TCNATIVE_SUFF
 
 #JVM_ARGS="${JVM_ARGS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
 
-echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.balancer.Balancer --spring.config.name=timely --spring.profiles.active=balancer"
-$JAVA_HOME/bin/java ${JVM_ARGS} timely.balancer.Balancer --spring.config.name=timely --spring.profiles.active=balancer
+echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.grafana.auth.GrafanaAuth --spring.config.name=grafana-auth"
+$JAVA_HOME/bin/java ${JVM_ARGS} timely.grafana.auth.GrafanaAuth --spring.config.name=grafana-auth

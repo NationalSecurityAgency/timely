@@ -9,7 +9,7 @@ import timely.auth.util.HttpHeaderUtils;
 import timely.netty.http.auth.TimelyAuthenticationToken;
 
 /**
- * Base class for requests that require authentication
+ * Base class for requests that require auth
  */
 @JsonIgnoreProperties({ "userName", "requestHeader" })
 public class AuthenticatedRequest implements Request {

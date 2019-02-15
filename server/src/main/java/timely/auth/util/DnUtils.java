@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
+import io.netty.handler.codec.http.QueryStringDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -199,5 +200,13 @@ public class DnUtils {
             }
             return false;
         }
+    }
+
+    public static void main(String[] args) {
+
+        QueryStringDecoder decoder = new QueryStringDecoder("https://my.server:3000");
+
+        System.out.println(decoder.path());
+
     }
 }
