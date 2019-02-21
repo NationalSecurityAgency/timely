@@ -8,6 +8,7 @@ timely:
     age-off-hours:
       default: 26
   metrics-report-ignored-tags:
+  defaultVisibility:
   accumulo:
     instance-name: accumulo
     zookeepers: localhost:2181

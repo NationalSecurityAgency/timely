@@ -2,6 +2,7 @@ package timely.store;
 
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getMemoryInBytes;
 import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
+import static timely.adapter.accumulo.MetricAdapter.VISIBILITY_TAG;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -18,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.Timer;
@@ -50,8 +52,11 @@ import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
 import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.accumulo.core.security.ColumnVisibility;
+import org.apache.accumulo.core.security.VisibilityEvaluator;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.commons.configuration.BaseConfiguration;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,6 +135,7 @@ public class DataStoreImpl implements DataStore {
     private final Map<String, String> ageOff;
     private final long defaultAgeOffMilliSec;
     private DataStoreCache cache = null;
+    private final String defaultVisibility;
 
     public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
 
@@ -149,6 +155,31 @@ public class DataStoreImpl implements DataStore {
             scannerThreads = accumuloConf.getScan().getThreads();
             maxDownsampleMemory = accumuloConf.getScan().getMaxDownsampleMemory();
             security = conf.getSecurity();
+            defaultVisibility = conf.getDefaultVisibility();
+            if (StringUtils.isNotBlank(defaultVisibility)) {
+                ColumnVisibility vis;
+                try {
+                    // validate visibility
+                    vis = new ColumnVisibility(defaultVisibility);
+                    LOG.info("Using defaultVisibility: {}", vis.toString());
+                } catch (RuntimeException e) {
+                    LOG.error("Error validating defaultVisibility " + defaultVisibility + " " + e.getMessage(), e);
+                    throw e;
+                }
+
+                try {
+                    String whoami = connector.whoami();
+                    Authorizations auths = connector.securityOperations().getUserAuthorizations(whoami);
+                    VisibilityEvaluator eval = new VisibilityEvaluator(auths);
+                    if (!eval.evaluate(vis)) {
+                        throw new IllegalArgumentException("Accumulo user " + whoami + " with authorization "
+                                + auths.toString() + " can not see data with defaultVisibility " + vis.toString());
+                    }
+                } catch (RuntimeException e) {
+                    LOG.error(e.getMessage(), e);
+                    throw e;
+                }
+            }
 
             metricsTable = conf.getMetricsTable();
             if (metricsTable.contains(".")) {
@@ -278,6 +309,17 @@ public class DataStoreImpl implements DataStore {
 
     public void store(Metric metric, boolean cacheEnabled) {
         LOG.trace("Received Store Request for: {}", metric);
+
+        // if default visibility is configured and current metric does not contain a
+        // visibility
+        // add it here, so that the cache and accumulo stores both have the correct
+        // visibility
+        if (StringUtils.isNotBlank(defaultVisibility)) {
+            Optional<Tag> visTag = metric.getTags().stream().filter(t -> t.getKey().equals(VISIBILITY_TAG)).findFirst();
+            if (!visTag.isPresent()) {
+                metric.addTag(new Tag(VISIBILITY_TAG, defaultVisibility));
+            }
+        }
 
         if (cache != null && cacheEnabled) {
             cache.store(metric);

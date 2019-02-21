@@ -19,6 +19,7 @@ public class Configuration {
     private HashMap<String, Integer> metricAgeOffDays = new HashMap<>();
     private List<String> metricsReportIgnoredTags = new ArrayList<>();
     private String instance = null;
+    private String defaultVisibility = null;
 
     @Valid
     @NestedConfigurationProperty
@@ -69,6 +70,14 @@ public class Configuration {
 
     public String getInstance() {
         return instance;
+    }
+
+    public String getDefaultVisibility() {
+        return defaultVisibility;
+    }
+
+    public void setDefaultVisibility(String defaultVisibility) {
+        this.defaultVisibility = defaultVisibility;
     }
 
     public HashMap<String, Integer> getMetricAgeOffDays() {
