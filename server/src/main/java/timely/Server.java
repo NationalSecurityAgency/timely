@@ -587,7 +587,7 @@ public class Server {
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
-                ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
+                ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 final Cors corsCfg = config.getHttp().getCors();
                 final CorsConfig.Builder ccb;
@@ -635,7 +635,7 @@ public class Server {
                 ch.pipeline().addLast("logger", new LoggingHandler());
                 ch.pipeline().addLast("packetDecoder", new UdpPacketToByteBuf());
                 ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
-                ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
+                ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(65536, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new UdpDecoder());
                 ch.pipeline().addLast("putHandler", new TcpPutHandler(dataStore));
             }
@@ -648,7 +648,7 @@ public class Server {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
-                ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
+                ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(65536, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new TcpDecoder());
                 ch.pipeline().addLast("putHandler", new TcpPutHandler(dataStore));
                 ch.pipeline().addLast("versionHandler", new TcpVersionHandler());
@@ -663,7 +663,7 @@ public class Server {
             protected void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
-                ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
+                ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler());
                 ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol",

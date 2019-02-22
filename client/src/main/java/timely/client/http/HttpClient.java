@@ -46,15 +46,21 @@ public class HttpClient {
 
     public static CloseableHttpClient get(SSLContext ssl, CookieStore cookieStore, boolean hostVerificationEnabled,
             boolean clientAuth) {
-        RequestConfig defaultRequestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
         HostnameVerifier hostnameVerifier;
         if (hostVerificationEnabled) {
             hostnameVerifier = SSLConnectionSocketFactory.getDefaultHostnameVerifier();
         } else {
             hostnameVerifier = new NoopHostnameVerifier();
         }
-        HttpClientBuilder builder = HttpClients.custom().setSSLContext(ssl).setDefaultCookieStore(cookieStore)
-                .setDefaultRequestConfig(defaultRequestConfig).setSSLHostnameVerifier(hostnameVerifier);
+        RequestConfig defaultRequestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
+        HttpClientBuilder builder;
+        if (cookieStore == null) {
+            builder = HttpClients.custom().setSSLContext(ssl).disableCookieManagement()
+                    .setDefaultRequestConfig(defaultRequestConfig).setSSLHostnameVerifier(hostnameVerifier);
+        } else {
+            builder = HttpClients.custom().setSSLContext(ssl).setDefaultCookieStore(cookieStore)
+                    .setDefaultRequestConfig(defaultRequestConfig).setSSLHostnameVerifier(hostnameVerifier);
+        }
 
         if (clientAuth) {
             SSLConnectionSocketFactory sslCSF = new SSLConnectionSocketFactory(ssl,

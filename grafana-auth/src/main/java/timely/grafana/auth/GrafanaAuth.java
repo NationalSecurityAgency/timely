@@ -304,7 +304,9 @@ public class GrafanaAuth {
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
-                ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
+                // high maximum contentLength so that grafana snapshots can be delivered
+                // might not be necessary if inbound chunking (while proxying) is handled
+                ch.pipeline().addLast("aggregator", new HttpObjectAggregator(2097152));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 ch.pipeline().addLast("grafanaDecoder",
                         new GrafanaRequestDecoder(config.getSecurity(), config.getHttp()));

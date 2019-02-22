@@ -9,8 +9,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import org.apache.commons.lang3.StringUtils;
@@ -84,18 +82,7 @@ public class GrafanaRequestDecoder extends MessageToMessageDecoder<FullHttpReque
 
         HttpRequest request;
         try {
-            HttpMethod method = msg.getMethod();
-            if (method.equals(HttpMethod.GET) || method.equals(HttpMethod.POST) || method.equals(HttpMethod.HEAD)) {
-                request = new GrafanaRequest();
-            } else {
-                TimelyException e = new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
-                        "unhandled method type", "");
-                e.addResponseHeader(Names.ALLOW,
-                        HttpMethod.GET.name() + "," + HttpMethod.POST.name() + "," + HttpMethod.HEAD.name());
-                LOG.warn("Unhandled HTTP request type {}", method);
-                throw e;
-            }
-
+            request = new GrafanaRequest();
             Multimap<String, String> headers = HttpHeaderUtils.toMultimap(msg.headers());
             ((AuthenticatedRequest) request).addHeaders(headers);
             X509Certificate clientCert = AuthenticationService.getClientCertificate(ctx);

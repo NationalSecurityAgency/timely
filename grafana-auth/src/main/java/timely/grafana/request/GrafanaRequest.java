@@ -18,7 +18,7 @@ public class GrafanaRequest extends AuthenticatedRequest implements HttpGetReque
     }
 
     @Override
-    public HttpPostRequest parseBody(String content) {
+    public HttpPostRequest parseBody(String content) throws Exception {
         return new GrafanaRequest();
     }
 

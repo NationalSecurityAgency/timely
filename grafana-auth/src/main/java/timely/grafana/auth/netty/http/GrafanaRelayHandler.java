@@ -23,9 +23,12 @@ import io.netty.util.ReferenceCountUtil;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicHeader;
@@ -107,7 +110,13 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                 Header[] headerArray = new Header[relayedHeaderList.size()];
                 relayedHeaderList.toArray(headerArray);
                 relayURI = protocol + "://" + host + ":" + port + originalURI;
-                if (request.getMethod().equals(HttpMethod.GET)) {
+                if (request.getMethod().equals(HttpMethod.HEAD)) {
+                    HttpHead relayedRequest = new HttpHead(relayURI);
+                    if (headerArray.length > 0) {
+                        relayedRequest.setHeaders(headerArray);
+                    }
+                    relayedResponse = client.execute(relayedRequest);
+                } else if (request.getMethod().equals(HttpMethod.GET)) {
                     HttpGet relayedRequest = new HttpGet(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
@@ -122,8 +131,23 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                         relayedRequest.setHeaders(headerArray);
                     }
                     relayedResponse = client.execute(relayedRequest);
-                } else if (request.getMethod().equals(HttpMethod.HEAD)) {
-                    HttpHead relayedRequest = new HttpHead(relayURI);
+                } else if (request.getMethod().equals(HttpMethod.PUT)) {
+                    HttpPut relayedRequest = new HttpPut(relayURI);
+                    String content = request.content().toString(StandardCharsets.UTF_8);
+                    StringEntity entity = new StringEntity(content);
+                    relayedRequest.setEntity(entity);
+                    if (headerArray.length > 0) {
+                        relayedRequest.setHeaders(headerArray);
+                    }
+                    relayedResponse = client.execute(relayedRequest);
+                } else if (request.getMethod().equals(HttpMethod.DELETE)) {
+                    HttpDelete relayedRequest = new HttpDelete(relayURI);
+                    if (headerArray.length > 0) {
+                        relayedRequest.setHeaders(headerArray);
+                    }
+                    relayedResponse = client.execute(relayedRequest);
+                } else if (request.getMethod().equals(HttpMethod.OPTIONS)) {
+                    HttpOptions relayedRequest = new HttpOptions(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
                     }
@@ -153,7 +177,7 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                 LOG.debug("RequestURL:{} ResponseCode:{}", relayURI, relayedResponse.getStatusLine().getStatusCode());
                 HttpEntity httpEntity = relayedResponse.getEntity();
                 if (httpEntity == null) {
-                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                    response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                             HttpResponseStatus.valueOf(relayedResponse.getStatusLine().getStatusCode()));
                 } else {
                     ByteArrayOutputStream baos = new MyByteArrayOutputStream();
@@ -178,10 +202,6 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                 LOG.error("NOT RETURNING CONNECTION! " + msg.getHttpRequest().getUri());
             }
         }
-    }
-
-    private boolean userHasAccount(String username) {
-        return false;
     }
 
     static public class MyByteArrayOutputStream extends ByteArrayOutputStream {
