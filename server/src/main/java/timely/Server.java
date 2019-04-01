@@ -70,6 +70,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import timely.api.response.TimelyException;
@@ -250,7 +251,7 @@ public class Server {
     }
 
     protected static Configuration initializeConfiguration(String[] args) {
-        applicationContext = new SpringApplicationBuilder(SpringBootstrap.class).web(false).run(args);
+        applicationContext = new SpringApplicationBuilder(SpringBootstrap.class).web(WebApplicationType.NONE).run(args);
         return applicationContext.getBean(Configuration.class);
     }
 

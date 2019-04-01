@@ -5,8 +5,10 @@ import javax.validation.Valid;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 import timely.configuration.Cache;
 
+@Validated
 @Component
 @ConfigurationProperties(prefix = "timely-balancer")
 public class BalancerConfiguration {

@@ -64,6 +64,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
@@ -143,7 +144,7 @@ public class Balancer {
     }
 
     protected static ConfigurableApplicationContext initializeConfiguration(String[] args) {
-        return new SpringApplicationBuilder(SpringBootstrap.class).web(false).run(args);
+        return new SpringApplicationBuilder(SpringBootstrap.class).web(WebApplicationType.NONE).run(args);
     }
 
     private void shutdownHook() {
