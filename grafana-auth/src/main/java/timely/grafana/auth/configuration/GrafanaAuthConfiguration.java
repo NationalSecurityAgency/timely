@@ -5,9 +5,11 @@ import javax.validation.Valid;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 import timely.balancer.configuration.BalancerHttp;
 import timely.balancer.configuration.BalancerSecurity;
 
+@Validated
 @Component
 @ConfigurationProperties(prefix = "grafana-auth")
 public class GrafanaAuthConfiguration {

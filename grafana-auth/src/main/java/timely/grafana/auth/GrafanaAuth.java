@@ -43,6 +43,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
@@ -81,7 +82,7 @@ public class GrafanaAuth {
     }
 
     protected static ConfigurableApplicationContext initializeConfiguration(String[] args) {
-        return new SpringApplicationBuilder(SpringBootstrap.class).web(false).run(args);
+        return new SpringApplicationBuilder(SpringBootstrap.class).web(WebApplicationType.NONE).run(args);
     }
 
     private void shutdownHook() {

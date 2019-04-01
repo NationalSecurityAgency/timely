@@ -42,6 +42,11 @@ public class CaptureChannelHandlerContext implements ChannelHandlerContext {
     }
 
     @Override
+    public <T> boolean hasAttr(AttributeKey<T> attributeKey) {
+        return false;
+    }
+
+    @Override
     public Channel channel() {
         return null;
     }

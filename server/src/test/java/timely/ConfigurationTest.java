@@ -4,16 +4,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.BeanCreationException;
-import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import timely.configuration.Configuration;
 import timely.configuration.SpringBootstrap;
 
 public class ConfigurationTest {
 
-    private final AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+    private AnnotationConfigApplicationContext context;
+
+    @Before
+    public void createContext() {
+        context = new AnnotationConfigApplicationContext();
+    }
 
     @After
     public void closeContext() {
@@ -24,7 +30,7 @@ public class ConfigurationTest {
     public void testMinimalConfiguration() throws Exception {
         context.register(SpringBootstrap.class);
         // @formatter:off
-        EnvironmentTestUtils.addEnvironment(this.context,
+        TestPropertyValues.of(
                 "timely.server.ip:127.0.0.1",
                 "timely.server.tcp-port:54321",
                 "timely.server.udp-port:54325",
@@ -38,7 +44,7 @@ public class ConfigurationTest {
                 "timely.accumulo.password:secret",
                 "timely.http.host:localhost",
                 "timely.security.serverSsl.use-generated-keypair:true",
-                "timely.metric-age-off-days[default]:7");
+                "timely.metric-age-off-days[default]:7").applyTo(this.context);
         // @formatter:on
         context.refresh();
         Configuration config = this.context.getBean(Configuration.class);
@@ -62,7 +68,7 @@ public class ConfigurationTest {
     public void testMissingSSLProperty() throws Exception {
         context.register(SpringBootstrap.class);
         // @formatter:off
-        EnvironmentTestUtils.addEnvironment(this.context,
+        TestPropertyValues.of(
                 "timely.server.ip:127.0.0.1",
                 "timely.server.tcp-port:54321",
                 "timely.server.udp-port:54325",
@@ -74,7 +80,7 @@ public class ConfigurationTest {
                 "timely.accumulo.instance-name:test",
                 "timely.accumulo.username:root",
                 "timely.accumulo.password:secret",
-                "timely.http.host:localhost");
+                "timely.http.host:localhost").applyTo(this.context);
         // @formatter:on
         context.refresh();
     }
@@ -83,7 +89,7 @@ public class ConfigurationTest {
     public void testSSLProperty() throws Exception {
         context.register(SpringBootstrap.class);
         // @formatter:off
-        EnvironmentTestUtils.addEnvironment(this.context,
+        TestPropertyValues.of(
                 "timely.server.ip:127.0.0.1",
                 "timely.server.tcp-port:54321",
                 "timely.server.udp-port:54325",
@@ -97,7 +103,7 @@ public class ConfigurationTest {
                 "timely.accumulo.password:secret",
                 "timely.http.host:localhost",
                 "timely.security.serverSsl.certificate-file:/tmp/foo",
-                "timely.security.serverSsl.key-file:/tmp/bar");
+                "timely.security.serverSsl.key-file:/tmp/bar").applyTo(this.context);
         // @formatter:on
         context.refresh();
     }
