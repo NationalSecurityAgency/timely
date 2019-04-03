@@ -76,7 +76,7 @@
     <version.maven-shade>2.4.2</version.maven-shade>
     <version.maven-surefire>2.19.1</version.maven-surefire>
     <version.netty>4.1.33.Final</version.netty>
-    <version.netty-tcnative>2.0.20.Final</version.netty-tcnative>
+    <version.netty-tcnative>2.0.24.Final</version.netty-tcnative>
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.6</version.powermock>
     <version.slf4j>1.7.26</version.slf4j>

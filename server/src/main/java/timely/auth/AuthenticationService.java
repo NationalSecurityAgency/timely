@@ -23,7 +23,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.authentication.preauth.x509.SubjectDnX509PrincipalExtractor;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.response.TimelyException;
 import timely.auth.util.DnUtils;
@@ -35,7 +34,6 @@ public class AuthenticationService {
     private static final Logger LOG = LoggerFactory.getLogger(AuthenticationService.class);
     private static ApplicationContext springContext = null;
     private static AuthenticationManager authManager = null;
-    private static SubjectDnX509PrincipalExtractor x509 = null;
     private static ConcurrentHashMap<String, Object> fetchingEntity = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, Object> fetchingPrincipal = new ConcurrentHashMap<>();
     private static Collection<String> requiredRoles;
@@ -45,7 +43,6 @@ public class AuthenticationService {
         try {
             springContext = new ClassPathXmlApplicationContext("security.xml");
             authManager = springContext.getBean("authenticationManager", AuthenticationManager.class);
-            x509 = springContext.getBean("x509PrincipalExtractor", SubjectDnX509PrincipalExtractor.class);
             requiredRoles = springContext.getBean("requiredRoles", List.class);
             requiredRoles.removeIf(String::isEmpty);
             requiredAuths = springContext.getBean("requiredAuths", List.class);
