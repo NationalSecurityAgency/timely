@@ -226,7 +226,7 @@ public class GrafanaAuth {
 
     public void run() throws Exception {
 
-        AuthCache.setSessionMaxAge(grafanaAuthConfig.getSecurity());
+        AuthCache.configure(grafanaAuthConfig.getSecurity());
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         if (useEpoll) {

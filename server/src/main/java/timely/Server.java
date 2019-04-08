@@ -431,7 +431,7 @@ public class Server {
         // Initialize the MetaCache
         MetaCacheFactory.getCache(config);
         // initialize the auth cache
-        AuthCache.setSessionMaxAge(config.getSecurity());
+        AuthCache.configure(config.getSecurity());
         // Initialize the VisibilityCache
         VisibilityCache.init(config);
         final boolean useEpoll = useEpoll();

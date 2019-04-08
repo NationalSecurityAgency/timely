@@ -22,8 +22,8 @@ public class AuthenticationServiceTest {
     public static void before() {
         config = TestConfiguration.createMinimalConfigurationForTest();
         config.getSecurity().setSessionMaxAge(Integer.MAX_VALUE);
-        AuthCache.resetSessionMaxAge();
-        AuthCache.setSessionMaxAge(config.getSecurity());
+        AuthCache.resetConfiguration();
+        AuthCache.configure(config.getSecurity());
     }
 
     @Before
@@ -34,7 +34,7 @@ public class AuthenticationServiceTest {
 
     @AfterClass
     public static void after() {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Test(expected = BadCredentialsException.class)

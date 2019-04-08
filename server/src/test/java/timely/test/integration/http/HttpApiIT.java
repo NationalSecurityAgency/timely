@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -20,6 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import org.apache.commons.collections.CollectionUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -130,12 +138,44 @@ public class HttpApiIT extends OneWaySSLBase {
             String metrics = "https://localhost:54322/api/metrics";
             // Test prefix matching
             String result = query(metrics, "application/json");
-            assertEquals(expected, result);
+
+            Gson gson = new Gson();
+            JsonObject response = gson.fromJson(result, JsonObject.class);
+            JsonArray metricsArray = response.getAsJsonArray("metrics");
+            assertEquals(3, metricsArray.size());
+
+            for (JsonElement e : metricsArray) {
+                JsonObject metricObject = e.getAsJsonObject();
+                String metricName = metricObject.get("metric").getAsString();
+                Iterator<JsonElement> tagItr = metricObject.get("tags").getAsJsonArray().iterator();
+                Multimap<String, String> tagMap = HashMultimap.create();
+                while (tagItr.hasNext()) {
+                    JsonObject tagObject = tagItr.next().getAsJsonObject();
+                    tagMap.put(tagObject.get("key").getAsString(), tagObject.get("value").getAsString());
+                }
+                switch (metricName) {
+                    case "sys.cpu.user":
+                        assertEquals(2, tagMap.size());
+                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value1"), tagMap.get("tag1")));
+                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value2"), tagMap.get("tag2")));
+                        break;
+                    case "sys.cpu.idle":
+                        assertEquals(2, tagMap.size());
+                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value3"), tagMap.get("tag3")));
+                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value4"), tagMap.get("tag4")));
+                        break;
+                    case "zzzz":
+                        assertEquals(1, tagMap.size());
+                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("localhost"), tagMap.get("host")));
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             s.shutdown();
         }
         // @formatter:on
-
     }
 
     @Test

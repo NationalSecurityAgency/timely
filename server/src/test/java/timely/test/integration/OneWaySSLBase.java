@@ -65,7 +65,7 @@ public class OneWaySSLBase extends QueryBase {
 
     @After
     public void tearDown() throws Exception {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
 }

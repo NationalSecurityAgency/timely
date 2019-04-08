@@ -64,7 +64,7 @@ public class TimelyUdpIT extends MacITBase {
 
     @After
     public void tearDown() throws Exception {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Test

@@ -62,9 +62,17 @@ public class AuthenticationService {
     }
 
     public static TimelyPrincipal authenticate(Authentication authentication, SubjectIssuerDNPair pair, String entity) {
+        return authenticate(authentication, pair, entity, true);
+    }
+
+    public static TimelyPrincipal authenticate(Authentication authentication, SubjectIssuerDNPair pair, String entity,
+            boolean useCache) {
 
         // only one thread should call the authenticationManager for a given entity
-        TimelyPrincipal principal = AuthCache.get(entity);
+        TimelyPrincipal principal = null;
+        if (useCache) {
+            principal = AuthCache.get(entity);
+        }
         // once an entity is in the AuthCache, we can bypass all of this
         if (principal == null) {
             Object newObj = new Object();
@@ -76,12 +84,16 @@ public class AuthenticationService {
                 synchronized (o) {
                     // if multiple threads are waiting on this synchronized, then the 2nd and all
                     // others will get the principal here
-                    principal = AuthCache.get(entity);
+                    if (useCache) {
+                        principal = AuthCache.get(entity);
+                    }
                     if (principal == null) {
                         Authentication token = getAuthenticationManager().authenticate(authentication);
                         principal = getTimelyPrincipal(token, pair);
                         LOG.trace("Got entity principal for {} from AuthenticationManager", entity);
-                        AuthCache.put(entity, principal);
+                        if (useCache) {
+                            AuthCache.put(entity, principal);
+                        }
                     } else {
                         LOG.trace("Got entity principal for {} from AuthCache on 2nd attempt", entity);
                     }
@@ -229,7 +241,7 @@ public class AuthenticationService {
         return authenticationToken;
     }
 
-    public static TimelyAuthenticationToken getAuthenticationToken(X509Certificate clientCert, String subjectDn,
+    public static TimelyAuthenticationToken getAuthenticationToken(Object clientCert, String subjectDn,
             String issuerDn) {
         TimelyAuthenticationToken authenticationToken = null;
         try {

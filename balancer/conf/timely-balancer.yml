@@ -8,6 +8,8 @@ timely-balancer:
   assignmentFile: /timely/balancer/assignments.csv
   security:
     session-max-age: 86400
+    cache-expiration-minutes: 60
+    cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
     serverSsl:

@@ -22,19 +22,20 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
     public static final String PROXIED_ISSUERS_HEADER = "X-ProxiedIssuersChain";
 
     private Multimap<String, String> httpHeaders = null;
-    private X509Certificate clientCert;
+    private X509Certificate clientCert = null;
     private TimelyPrincipal timelyPrincipal;
 
-    public TimelyAuthenticationToken(String subjectDn, X509Certificate clientCert,
-            Multimap<String, String> httpHeaders) {
+    public TimelyAuthenticationToken(String subjectDn, Object clientCert, Multimap<String, String> httpHeaders) {
         super(subjectDn, clientCert);
         if (httpHeaders == null) {
             this.httpHeaders = HashMultimap.create();
         } else {
             this.httpHeaders = httpHeaders;
         }
-        this.clientCert = clientCert;
-        String issuerDn = clientCert == null ? null : clientCert.getIssuerDN().getName();
+        if (clientCert instanceof X509Certificate) {
+            this.clientCert = (X509Certificate) clientCert;
+        }
+        String issuerDn = clientCert == null ? null : this.clientCert.getIssuerDN().getName();
         String proxiedEntities;
         String proxiedIssuers;
         try {
@@ -61,9 +62,11 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
         LOG.trace("Created TimelyAuthenticationToken: {}", timelyPrincipal.getName());
     }
 
-    public TimelyAuthenticationToken(String subjectDn, String issuerDn, X509Certificate clientCert) {
+    public TimelyAuthenticationToken(String subjectDn, String issuerDn, Object clientCert) {
         super(subjectDn, clientCert);
-        this.clientCert = clientCert;
+        if (clientCert instanceof X509Certificate) {
+            this.clientCert = (X509Certificate) clientCert;
+        }
         TimelyUser.UserType userType = DnUtils.isServerDN(subjectDn) ? TimelyUser.UserType.SERVER
                 : TimelyUser.UserType.USER;
         TimelyUser timelyUser = new TimelyUser(SubjectIssuerDNPair.of(subjectDn, issuerDn), userType, null, null, null,

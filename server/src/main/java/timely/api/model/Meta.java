@@ -56,15 +56,18 @@ public class Meta implements Comparable<Meta> {
     }
 
     public static Meta parse(Key k, Value v) {
+        return Meta.parse(k, v, METRIC_PREFIX);
+    }
+
+    public static Meta parse(Key k, Value v, String prefix) {
         if (k.getColumnQualifier().getLength() > 0) {
-            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), k.getColumnFamily().toString(),
+            return new Meta(k.getRow().toString().substring(prefix.length()), k.getColumnFamily().toString(),
                     k.getColumnQualifier().toString());
         } else if (k.getColumnFamily().getLength() > 0) {
-            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), k.getColumnFamily().toString(),
-                    null);
+            return new Meta(k.getRow().toString().substring(prefix.length()), k.getColumnFamily().toString(), null);
 
         } else {
-            return new Meta(k.getRow().toString().substring(METRIC_PREFIX.length()), null, null);
+            return new Meta(k.getRow().toString().substring(prefix.length()), null, null);
         }
     }
 

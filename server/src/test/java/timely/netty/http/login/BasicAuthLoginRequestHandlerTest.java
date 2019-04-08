@@ -47,12 +47,12 @@ public class BasicAuthLoginRequestHandlerTest {
 
     @BeforeClass
     public static void before() throws Exception {
-        AuthCache.setSessionMaxAge(TestConfiguration.createMinimalConfigurationForTest().getSecurity());
+        AuthCache.configure(TestConfiguration.createMinimalConfigurationForTest().getSecurity());
     }
 
     @AfterClass
     public static void after() throws Exception {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Before

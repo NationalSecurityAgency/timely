@@ -3,8 +3,8 @@ package timely.configuration;
 public class MetaCache {
 
     private long expirationMinutes = 60;
-    private int initialCapacity = 2000;
-    private long maxCapacity = 10000;
+    private int cacheRefreshMinutes = -1;
+    private long maxTagValues = 100;
 
     public long getExpirationMinutes() {
         return expirationMinutes;
@@ -14,19 +14,19 @@ public class MetaCache {
         this.expirationMinutes = expirationMinutes;
     }
 
-    public int getInitialCapacity() {
-        return initialCapacity;
+    public void setCacheRefreshMinutes(int cacheRefreshMinutes) {
+        this.cacheRefreshMinutes = cacheRefreshMinutes;
     }
 
-    public void setInitialCapacity(int initialCapacity) {
-        this.initialCapacity = initialCapacity;
+    public int getCacheRefreshMinutes() {
+        return cacheRefreshMinutes;
     }
 
-    public long getMaxCapacity() {
-        return maxCapacity;
+    public long getMaxTagValues() {
+        return maxTagValues;
     }
 
-    public void setMaxCapacity(long maxCapacity) {
-        this.maxCapacity = maxCapacity;
+    public void setMaxTagValues(long maxTagValues) {
+        this.maxTagValues = maxTagValues;
     }
 }

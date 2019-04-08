@@ -23,30 +23,66 @@ public class AuthCache {
     private static final Logger LOG = LoggerFactory.getLogger(AuthCache.class);
     private static Cache<String, TimelyPrincipal> CACHE = null;
 
-    private static int sessionMaxAge = -1;
+    private static int cacheExpirationMinutes = -1;
+    private static int cacheRefreshMinutes = -1;
 
     /**
      * For tests only
      */
-    public static void resetSessionMaxAge() {
-        sessionMaxAge = -1;
+    public static void resetConfiguration() {
+        cacheExpirationMinutes = -1;
+        cacheRefreshMinutes = -1;
     }
 
-    public static void setSessionMaxAge(Security security) {
-        if (-1 != sessionMaxAge) {
-            throw new IllegalStateException("Cache session max age already configured.");
+    public static void configure(Security security) {
+        if (-1 != cacheExpirationMinutes || -1 != cacheRefreshMinutes) {
+            throw new IllegalStateException("Cache already configured.");
         }
-        sessionMaxAge = security.getSessionMaxAge();
+        cacheExpirationMinutes = security.getCacheExpirationMinutes();
+        cacheRefreshMinutes = security.getCacheRefreshMinutes();
     }
 
     private static Cache<String, TimelyPrincipal> getCache() {
-        if (-1 == sessionMaxAge) {
+        if (-1 == cacheExpirationMinutes) {
             throw new IllegalStateException("Cache session max age not configured.");
         }
         if (null == CACHE) {
-            CACHE = Caffeine.newBuilder().expireAfterAccess(sessionMaxAge, TimeUnit.SECONDS).build();
+            Caffeine<Object, Object> caffeine = Caffeine.newBuilder();
+            caffeine.expireAfterWrite(cacheExpirationMinutes, TimeUnit.MINUTES);
+            if (cacheRefreshMinutes > 0) {
+                caffeine.refreshAfterWrite(cacheRefreshMinutes, TimeUnit.MINUTES);
+                CACHE = caffeine.build(key -> getTimelyPrincipal(key));
+            } else {
+                CACHE = caffeine.build();
+            }
         }
         return CACHE;
+    }
+
+    private static TimelyPrincipal getTimelyPrincipal(String key) {
+        LOG.debug("Refreshing TimelyPrincipal {}", key);
+        TimelyPrincipal timelyPrincipal = null;
+        String[] dnArray = key.split(" -> ");
+        if (dnArray.length == 1) {
+            SubjectIssuerDNPair pair = SubjectIssuerDNPair.parse(dnArray[0]);
+            TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(new Object(),
+                    pair.subjectDN(), pair.issuerDN());
+            timelyPrincipal = AuthenticationService.authenticate(token, pair, token.getTimelyPrincipal().getName(),
+                    false);
+
+        } else if (dnArray.length > 1) {
+            Collection<TimelyUser> timelyUsers = new ArrayList<>();
+            for (String s : dnArray) {
+                SubjectIssuerDNPair pair = SubjectIssuerDNPair.parse(s);
+                TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(new Object(),
+                        pair.subjectDN(), pair.issuerDN());
+                TimelyPrincipal p = AuthenticationService.authenticate(token, pair,
+                        token.getTimelyPrincipal().getName(), false);
+                timelyUsers.addAll(p.getProxiedUsers());
+            }
+            timelyPrincipal = new TimelyPrincipal(timelyUsers);
+        }
+        return timelyPrincipal;
     }
 
     public static boolean containsKey(String key) {

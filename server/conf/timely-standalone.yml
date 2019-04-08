@@ -18,6 +18,8 @@ timely:
       max-downsample-memory: 10000000
   security:
     session-max-age: 86400
+    cache-expiration-minutes: 60
+    cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
     ssl:
@@ -54,9 +56,9 @@ timely:
     scanner-read-ahead: 1
     subscription-batch-size: 5000
   meta-cache:
-    expiration-minutes: 60
-    initial-capacity: 2000
-    max-capacity: 10000
+    expiration-minutes: 1440
+    cache-refresh-minutes: 60
+    max-tag-values: 100
   visibility-cache:
     expiration-minutes: 60
     initial-capacity: 2000

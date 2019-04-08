@@ -70,14 +70,14 @@ public class HttpRequestDecoderTest {
         anonConfig = TestConfiguration.createMinimalConfigurationForTest();
         anonConfig.getSecurity().setAllowAnonymousHttpAccess(true);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
-        AuthCache.setSessionMaxAge(config.getSecurity());
+        AuthCache.configure(config.getSecurity());
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
         AuthenticationService.authenticate(token, cookie);
     }
 
     @AfterClass
     public static void after() {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Before

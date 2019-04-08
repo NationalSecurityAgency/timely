@@ -73,7 +73,7 @@ public class WebSocketClientIT extends OneWaySSLBase {
     @After
     public void tearDown() throws Exception {
         s.shutdown();
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     public void testWorkflow(WebSocketSubscriptionClient client) throws Exception {

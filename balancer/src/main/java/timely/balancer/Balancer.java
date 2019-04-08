@@ -364,7 +364,7 @@ public class Balancer {
         curatorFramework.start();
         ensureZkPaths(curatorFramework, zkPaths);
 
-        AuthCache.setSessionMaxAge(balancerConfig.getSecurity());
+        AuthCache.configure(balancerConfig.getSecurity());
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;

@@ -30,19 +30,19 @@ public class AuthCacheTest {
 
     @AfterClass
     public static void after() {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Before
     public void setup() throws Exception {
-        AuthCache.setSessionMaxAge(config.getSecurity());
+        AuthCache.configure(config.getSecurity());
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
         AuthenticationService.authenticate(token, cookie);
     }
 
     @After
     public void tearDown() throws Exception {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Test(expected = IllegalArgumentException.class)

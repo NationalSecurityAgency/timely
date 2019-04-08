@@ -43,7 +43,7 @@ public class TcpClientIT extends OneWaySSLBase {
 
     @After
     public void tearDown() throws Exception {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Test

@@ -176,7 +176,7 @@ public class WebSocketIT extends OneWaySSLBase {
 
     @AfterClass
     public static void after() {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     private EventLoopGroup group = null;

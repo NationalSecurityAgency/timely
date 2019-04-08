@@ -64,14 +64,14 @@ public class WebSocketRequestDecoderTest {
         anonConfig = TestConfiguration.createMinimalConfigurationForTest();
         anonConfig.getSecurity().setAllowAnonymousWsAccess(true);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
-        AuthCache.setSessionMaxAge(config.getSecurity());
+        AuthCache.configure(config.getSecurity());
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
         AuthCache.put(cookie, new TimelyPrincipal(TimelyUser.ANONYMOUS_USER));
     }
 
     @AfterClass
     public static void after() {
-        AuthCache.resetSessionMaxAge();
+        AuthCache.resetConfiguration();
     }
 
     @Before
