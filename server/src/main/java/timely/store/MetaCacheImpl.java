@@ -39,16 +39,16 @@ public class MetaCacheImpl implements MetaCache {
     @Override
     public void init(Configuration config) {
         configuration = config;
-        cache = Caffeine.newBuilder().build();
-        long cacheRefrshMinutes = configuration.getMetaCache().getCacheRefreshMinutes();
-        if (cacheRefrshMinutes > 0) {
+        cache = Caffeine.newBuilder().initialCapacity(1000).build();
+        long cacheRefreshMinutes = configuration.getMetaCache().getCacheRefreshMinutes();
+        if (cacheRefreshMinutes > 0) {
             timer.schedule(new TimerTask() {
 
                 @Override
                 public void run() {
                     refreshCache(config.getMetaCache().getExpirationMinutes());
                 }
-            }, 60000, cacheRefrshMinutes * 60 * 1000);
+            }, 60000, cacheRefreshMinutes * 60 * 1000);
         }
     }
 

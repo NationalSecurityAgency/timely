@@ -2,7 +2,7 @@ package timely.configuration;
 
 public class MetaCache {
 
-    private long expirationMinutes = 60;
+    private long expirationMinutes = 1440;
     private int cacheRefreshMinutes = -1;
     private long maxTagValues = 100;
 

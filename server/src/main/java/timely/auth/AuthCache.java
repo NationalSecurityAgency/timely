@@ -69,7 +69,6 @@ public class AuthCache {
                     pair.subjectDN(), pair.issuerDN());
             timelyPrincipal = AuthenticationService.authenticate(token, pair, token.getTimelyPrincipal().getName(),
                     false);
-
         } else if (dnArray.length > 1) {
             Collection<TimelyUser> timelyUsers = new ArrayList<>();
             for (String s : dnArray) {
