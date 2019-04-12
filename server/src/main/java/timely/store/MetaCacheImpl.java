@@ -58,7 +58,7 @@ public class MetaCacheImpl implements MetaCache {
         Accumulo accumuloConf = configuration.getAccumulo();
         apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
         apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
-        final ClientConfiguration aConf = new ClientConfiguration((Collections.singletonList(apacheConf)));
+        final ClientConfiguration aConf = new ClientConfiguration(Collections.singletonList(apacheConf));
         String metaTable = configuration.getMetaTable();
         Map<String, Map<String, Long>> metricMap = new HashMap<>();
         try {
@@ -80,10 +80,10 @@ public class MetaCacheImpl implements MetaCache {
                     tagMap = new HashMap<>();
                     metricMap.put(metric, tagMap);
                 }
-                long numValues = tagMap.getOrDefault(tagKey, 0l);
+                long numTagValues = tagMap.getOrDefault(tagKey, 0l);
                 if (entry.getKey().getTimestamp() > oldestTimestamp) {
-                    tagMap.put(tagKey, ++numValues);
-                    if (numValues <= configuration.getMetaCache().getMaxTagValues()) {
+                    tagMap.put(tagKey, ++numTagValues);
+                    if (numTagValues <= configuration.getMetaCache().getMaxTagValues()) {
                         cache.put(meta, DUMMY);
                     } else {
                         // found maxTagValues on this refresh, so remove this key
@@ -129,5 +129,4 @@ public class MetaCacheImpl implements MetaCache {
     public boolean isClosed() {
         return closed;
     }
-
 }
