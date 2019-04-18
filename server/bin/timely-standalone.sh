@@ -2,16 +2,11 @@
 
 if [[ `uname` == "Darwin" ]]; then
         THIS_SCRIPT=`python -c 'import os,sys; print os.path.realpath(sys.argv[1])' $0`
-        TCNATIVE_SUFFIX="tcnative.jnilib"
+        TCNATIVE_SUFFIX="jnilib"
 else
         THIS_SCRIPT=`readlink -f $0`
-        TCNATIVE_SUFFIX="tcnative.so"
+        TCNATIVE_SUFFIX="so"
 fi
-
-# netty tcnative file reference
-#netty-tcnative-1.1.33.Fork18-linux-x86_64-fedora.jar -> libnetty-tcnative.so
-#netty-tcnative-1.1.33.Fork18-linux-x86_64.jar -> libnetty-tcnative.so
-#netty-tcnative-1.1.33.Fork18-osx-x86_64.jar -> libnetty-tcnative.jnilib
 
 THIS_DIR="${THIS_SCRIPT%/*}"
 NATIVE_DIR="${THIS_DIR}/META-INF/native"
@@ -32,11 +27,12 @@ fi
 mkdir -p ${NATIVE_DIR}
 
 pushd ${BASE_DIR}/bin
-$JAVA_HOME/bin/jar xf ${LIB_DIR}/netty-tcnative*.jar META-INF/native/libnetty-${TCNATIVE_SUFFIX}
+$JAVA_HOME/bin/jar xf ${LIB_DIR}/netty-tcnative-boringssl-static*.jar META-INF/native/libnetty_tcnative_linux_x86_64.${TCNATIVE_SUFFIX}
+$JAVA_HOME/bin/jar xf ${LIB_DIR}/netty-all*.jar META-INF/native/libnetty_transport_native_epoll_x86_64.${TCNATIVE_SUFFIX}
 popd
 
-export CLASSPATH="${CONF_DIR}:${LIB_DIR}/*"
-JVM_ARGS="-Xmx256m -Xms256m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS}"
+export CLASSPATH="${CONF_DIR}:${LIB_DIR}/*:${HADOOP_CONF_DIR}"
+JVM_ARGS="-Xmx256m -Xms256m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS}" -Dlog4j.configurationFile=${CONF_DIR}/log4j2-spring.xml
 JVM_ARGS="${JVM_ARGS} -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
 JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
 # for debugging
