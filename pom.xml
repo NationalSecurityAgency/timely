@@ -456,7 +456,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${version.maven-surefire}</version>
           <configuration>
-            <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty-tcnative_linux_x86_64.so -Dzookeeper.sasl.client=false</argLine>
+            <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -Dzookeeper.sasl.client=false</argLine>
             <includes>
               <include>**/*.java</include>
             </includes>
