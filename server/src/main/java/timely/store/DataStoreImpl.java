@@ -208,7 +208,7 @@ public class DataStoreImpl implements DataStore {
             }
             try {
                 this.removeAgeOffIterators(connector, metricsTable);
-                this.applyAgeOffIterator(connector, metricsTable, true);
+                this.applyMetricAgeOffIterator(connector, metricsTable);
             } catch (Exception e1) {
                 Throwable cause = e1.getCause();
                 if (cause.getMessage().contains("conflict")) {
@@ -229,7 +229,7 @@ public class DataStoreImpl implements DataStore {
             }
             try {
                 this.removeAgeOffIterators(connector, metaTable);
-                this.applyAgeOffIterator(connector, metaTable, false);
+                this.applyMetaAgeOffIterator(connector, metaTable);
             } catch (Exception e1) {
                 Throwable cause = e1.getCause();
                 if (cause.getMessage().contains("conflict")) {
@@ -282,13 +282,15 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
-    private void applyAgeOffIterator(Connector con, String tableName, boolean useIterator) throws Exception {
-        IteratorSetting ageOffIteratorSettings = null;
-        if (useIterator) {
-            ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffIterator.class, this.ageOff);
-        } else {
-            ageOffIteratorSettings = new IteratorSetting(100, "ageoff", MetricAgeOffFilter.class, this.ageOff);
-        }
+    private void applyMetricAgeOffIterator(Connector con, String tableName) throws Exception {
+        IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoffmetrics", MetricAgeOffIterator.class,
+                this.ageOff);
+        connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+    }
+
+    private void applyMetaAgeOffIterator(Connector con, String tableName) throws Exception {
+        IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoffmeta", MetaAgeOffIterator.class,
+                this.ageOff);
         connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
 
@@ -438,6 +440,7 @@ public class DataStoreImpl implements DataStore {
     @Override
     public SuggestResponse suggest(SuggestRequest request) throws TimelyException {
         SuggestResponse result = new SuggestResponse();
+        Scanner scanner = null;
         try {
             if (request.getType().equals("metrics")) {
                 Range range;
@@ -457,7 +460,7 @@ public class DataStoreImpl implements DataStore {
                     end.append(lastBytes, 0, lastBytes.length);
                     range = new Range(start, end);
                 }
-                Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
+                scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
                 scanner.setRange(range);
                 List<String> metrics = new ArrayList<>();
                 for (Entry<Key, Value> metric : scanner) {
@@ -472,6 +475,10 @@ public class DataStoreImpl implements DataStore {
             LOG.error("Error during suggest: " + ex.getMessage(), ex);
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                     "Error during suggest: " + ex.getMessage(), ex.getMessage(), ex);
+        } finally {
+            if (scanner != null) {
+                scanner.close();
+            }
         }
         return result;
     }
@@ -506,28 +513,34 @@ public class DataStoreImpl implements DataStore {
             tagPatterns.put(k, Pattern.compile(v));
         });
         try {
-            List<Result> resultField = new ArrayList<>();
-            Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
-            Key start = new Key(Meta.VALUE_PREFIX + msg.getQuery());
-            Key end = start.followingKey(PartialKey.ROW);
-            Range range = new Range(start, end);
-            scanner.setRange(range);
-            tags.keySet().forEach(k -> scanner.fetchColumnFamily(new Text(k)));
-            int total = 0;
-            for (Entry<Key, Value> entry : scanner) {
-                Meta metaEntry = Meta.parse(entry.getKey(), entry.getValue());
-                if (matches(metaEntry.getTagKey(), metaEntry.getTagValue(), tagPatterns)) {
-                    if (resultField.size() < msg.getLimit()) {
-                        Result r = new Result();
-                        r.putTag(metaEntry.getTagKey(), metaEntry.getTagValue());
-                        resultField.add(r);
+            final Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
+            try {
+                List<Result> resultField = new ArrayList<>();
+                Key start = new Key(Meta.VALUE_PREFIX + msg.getQuery());
+                Key end = start.followingKey(PartialKey.ROW);
+                Range range = new Range(start, end);
+                scanner.setRange(range);
+                tags.keySet().forEach(k -> scanner.fetchColumnFamily(new Text(k)));
+                int total = 0;
+                for (Entry<Key, Value> entry : scanner) {
+                    Meta metaEntry = Meta.parse(entry.getKey(), entry.getValue());
+                    if (matches(metaEntry.getTagKey(), metaEntry.getTagValue(), tagPatterns)) {
+                        if (resultField.size() < msg.getLimit()) {
+                            Result r = new Result();
+                            r.putTag(metaEntry.getTagKey(), metaEntry.getTagValue());
+                            resultField.add(r);
+                        }
+                        total++;
                     }
-                    total++;
+                }
+                result.setResults(resultField);
+                result.setTotalResults(total);
+                result.setTime((int) (System.currentTimeMillis() - startMillis));
+            } finally {
+                if (scanner != null) {
+                    scanner.close();
                 }
             }
-            result.setResults(resultField);
-            result.setTotalResults(total);
-            result.setTime((int) (System.currentTimeMillis() - startMillis));
         } catch (Exception ex) {
             LOG.error("Error during lookup: " + ex.getMessage(), ex);
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
@@ -798,70 +811,77 @@ public class DataStoreImpl implements DataStore {
 
     public Set<Tag> getColumnFamilies(String metric, Map<String, String> requestedTags) throws TableNotFoundException {
 
-        Map<String, String> tags = (requestedTags == null) ? new LinkedHashMap<>() : requestedTags;
-        LOG.trace("Looking for requested tags: {}", tags);
-        Scanner meta = connector.createScanner(metaTable, Authorizations.EMPTY);
-        Text start = new Text(Meta.VALUE_PREFIX + metric);
-        Text end = new Text(Meta.VALUE_PREFIX + metric + "\\x0000");
-        end.append(new byte[] { (byte) 0xff }, 0, 1);
-        meta.setRange(new Range(start, end));
-        // Only look for the meta entries that match our tags, if any
-        boolean onlyFirstRow = false;
-        Entry<String, String> first = null;
-        // Set the columns on the meta scanner based on the first tag
-        // in the set of tags passed in the query. If no tags are present
-        // then we are only going to return the first tag name present in the
-        // meta table.
-        Iterator<Entry<String, String>> tagIter = tags.entrySet().iterator();
-        if (tagIter.hasNext()) {
-            first = tagIter.next();
-            if (isTagValueRegex(first.getValue())) {
-                meta.fetchColumnFamily(new Text(first.getKey()));
-            } else {
-                meta.fetchColumn(new Text(first.getKey()), new Text(first.getValue()));
-            }
-        } else {
-            // grab all of the values found for the first tag for the metric
-            onlyFirstRow = true;
-        }
-        final boolean ONLY_RETURN_FIRST_TAG = onlyFirstRow;
-        Iterator<Entry<Key, Value>> iter = meta.iterator();
-        Iterator<Pair<String, String>> knownKeyValues = new Iterator<Pair<String, String>>() {
-
-            Text firstTag = null;
-            Text tagName = null;
-            Text tagValue = null;
-
-            @Override
-            public boolean hasNext() {
-                if (iter.hasNext()) {
-                    Entry<Key, Value> metaEntry = iter.next();
-                    if (null == firstTag) {
-                        firstTag = metaEntry.getKey().getColumnFamily();
-                    }
-                    tagName = metaEntry.getKey().getColumnFamily();
-                    tagValue = metaEntry.getKey().getColumnQualifier();
-                    LOG.trace("Found tag entry {}={}", tagName, tagValue);
-
-                    if (ONLY_RETURN_FIRST_TAG && !tagName.equals(firstTag)) {
-                        return false;
-                    }
-                    return true;
+        Scanner meta = null;
+        try {
+            Map<String, String> tags = (requestedTags == null) ? new LinkedHashMap<>() : requestedTags;
+            LOG.trace("Looking for requested tags: {}", tags);
+            meta = connector.createScanner(metaTable, Authorizations.EMPTY);
+            Text start = new Text(Meta.VALUE_PREFIX + metric);
+            Text end = new Text(Meta.VALUE_PREFIX + metric + "\\x0000");
+            end.append(new byte[] { (byte) 0xff }, 0, 1);
+            meta.setRange(new Range(start, end));
+            // Only look for the meta entries that match our tags, if any
+            boolean onlyFirstRow = false;
+            Entry<String, String> first = null;
+            // Set the columns on the meta scanner based on the first tag
+            // in the set of tags passed in the query. If no tags are present
+            // then we are only going to return the first tag name present in the
+            // meta table.
+            Iterator<Entry<String, String>> tagIter = tags.entrySet().iterator();
+            if (tagIter.hasNext()) {
+                first = tagIter.next();
+                if (isTagValueRegex(first.getValue())) {
+                    meta.fetchColumnFamily(new Text(first.getKey()));
+                } else {
+                    meta.fetchColumn(new Text(first.getKey()), new Text(first.getValue()));
                 }
-                return false;
+            } else {
+                // grab all of the values found for the first tag for the metric
+                onlyFirstRow = true;
             }
+            final boolean ONLY_RETURN_FIRST_TAG = onlyFirstRow;
+            Iterator<Entry<Key, Value>> iter = meta.iterator();
+            Iterator<Pair<String, String>> knownKeyValues = new Iterator<Pair<String, String>>() {
 
-            @Override
-            public Pair<String, String> next() {
-                LOG.trace("Returning tag {}={}", tagName, tagValue);
-                return new Pair<>(tagName.toString(), tagValue.toString());
+                Text firstTag = null;
+                Text tagName = null;
+                Text tagValue = null;
+
+                @Override
+                public boolean hasNext() {
+                    if (iter.hasNext()) {
+                        Entry<Key, Value> metaEntry = iter.next();
+                        if (null == firstTag) {
+                            firstTag = metaEntry.getKey().getColumnFamily();
+                        }
+                        tagName = metaEntry.getKey().getColumnFamily();
+                        tagValue = metaEntry.getKey().getColumnQualifier();
+                        LOG.trace("Found tag entry {}={}", tagName, tagValue);
+
+                        if (ONLY_RETURN_FIRST_TAG && !tagName.equals(firstTag)) {
+                            return false;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+
+                @Override
+                public Pair<String, String> next() {
+                    LOG.trace("Returning tag {}={}", tagName, tagValue);
+                    return new Pair<>(tagName.toString(), tagValue.toString());
+                }
+            };
+            // Expand the list of tags in the meta table for this metric that
+            // matches
+            // the pattern of the first tag in the query. The resulting set of tags
+            // will be used to fetch specific columns from the metric table.
+            return expandTagValues(first, knownKeyValues);
+        } finally {
+            if (meta != null) {
+                meta.close();
             }
-        };
-        // Expand the list of tags in the meta table for this metric that
-        // matches
-        // the pattern of the first tag in the query. The resulting set of tags
-        // will be used to fetch specific columns from the metric table.
-        return expandTagValues(first, knownKeyValues);
+        }
     }
 
     private void setQueryColumns(ScannerBase scanner, String metric, Map<String, String> tags, Set<Tag> colFamValues)

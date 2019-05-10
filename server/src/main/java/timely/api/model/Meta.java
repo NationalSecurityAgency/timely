@@ -55,8 +55,32 @@ public class Meta implements Comparable<Meta> {
         return keys;
     }
 
-    public static Meta parse(Key k, Value v) {
-        return Meta.parse(k, v, METRIC_PREFIX);
+    public static String prefix(Key key) {
+        String row = key.getRow().toString();
+        if (row.startsWith(Meta.METRIC_PREFIX)) {
+            return Meta.METRIC_PREFIX;
+        } else if (row.startsWith(Meta.TAG_PREFIX)) {
+            return Meta.TAG_PREFIX;
+        } else if (row.startsWith(Meta.VALUE_PREFIX)) {
+            return Meta.VALUE_PREFIX;
+        }
+        throw new IllegalStateException("Invalid key in meta " + key.toString());
+    }
+
+    public static Meta parse(Key key) {
+        return parse(key, null);
+    }
+
+    public static Meta parse(Key key, Value value) {
+        String row = key.getRow().toString();
+        if (row.startsWith(Meta.METRIC_PREFIX)) {
+            return Meta.parse(key, value, Meta.METRIC_PREFIX);
+        } else if (row.startsWith(Meta.TAG_PREFIX)) {
+            return Meta.parse(key, value, Meta.TAG_PREFIX);
+        } else if (row.startsWith(Meta.VALUE_PREFIX)) {
+            return Meta.parse(key, value, Meta.VALUE_PREFIX);
+        }
+        throw new IllegalStateException("Invalid key in meta " + key.toString());
     }
 
     public static Meta parse(Key k, Value v, String prefix) {
