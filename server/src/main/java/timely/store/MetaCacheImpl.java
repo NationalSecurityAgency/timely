@@ -5,8 +5,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeSet;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -61,42 +63,60 @@ public class MetaCacheImpl implements MetaCache {
         final ClientConfiguration aConf = new ClientConfiguration(Collections.singletonList(apacheConf));
         String metaTable = configuration.getMetaTable();
         Map<String, Map<String, Long>> metricMap = new HashMap<>();
+        Scanner scanner = null;
         try {
             final Instance instance = new ZooKeeperInstance(aConf);
             Connector connector = instance.getConnector(accumuloConf.getUsername(),
                     new PasswordToken(accumuloConf.getPassword()));
-            Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
-            Key begin = new Key(Meta.VALUE_PREFIX);
-            Key end = new Key("w" + '\0');
-            Range range = new Range(begin, true, end, false);
-            scanner.setRange(range);
+            scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
             LOG.debug("Begin scanning " + metaTable);
+            Range metricRange = new Range(new Key(Meta.METRIC_PREFIX), true, new Key(Meta.METRIC_PREFIX + '\0'), false);
+            scanner.setRange(metricRange);
+            Set<String> allMetrics = new TreeSet<>();
             for (Map.Entry<Key, Value> entry : scanner) {
-                Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.VALUE_PREFIX);
-                String metric = meta.getMetric();
-                String tagKey = meta.getTagKey();
-                Map<String, Long> tagMap = metricMap.get(metric);
-                if (tagMap == null) {
-                    tagMap = new HashMap<>();
-                    metricMap.put(metric, tagMap);
-                }
-                long numTagValues = tagMap.getOrDefault(tagKey, 0l);
-                if (entry.getKey().getTimestamp() > oldestTimestamp) {
-                    tagMap.put(tagKey, ++numTagValues);
-                    if (numTagValues <= configuration.getMetaCache().getMaxTagValues()) {
-                        cache.put(meta, DUMMY);
+                Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.METRIC_PREFIX);
+                allMetrics.add(meta.getMetric());
+            }
+            for (String currMetric : allMetrics) {
+                Key begin = new Key(Meta.VALUE_PREFIX + currMetric);
+                Key end = new Key(Meta.VALUE_PREFIX + currMetric + '\0');
+                Range range = new Range(begin, true, end, false);
+                scanner.setRange(range);
+                Iterator<Map.Entry<Key, Value>> itr = scanner.iterator();
+                boolean maxedOutValues = false;
+                while (itr.hasNext() && !maxedOutValues) {
+                    Map.Entry<Key, Value> entry = itr.next();
+                    Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.VALUE_PREFIX);
+                    String metric = meta.getMetric();
+                    String tagKey = meta.getTagKey();
+                    Map<String, Long> tagMap = metricMap.get(metric);
+                    if (tagMap == null) {
+                        tagMap = new HashMap<>();
+                        metricMap.put(metric, tagMap);
+                    }
+                    long numTagValues = tagMap.getOrDefault(tagKey, 0l);
+                    if (entry.getKey().getTimestamp() > oldestTimestamp) {
+                        tagMap.put(tagKey, ++numTagValues);
+                        if (numTagValues <= configuration.getMetaCache().getMaxTagValues()) {
+                            cache.put(meta, DUMMY);
+                        } else {
+                            // found maxTagValues on this refresh, so remove this key
+                            cache.invalidate(meta);
+                            maxedOutValues = true;
+                        }
                     } else {
-                        // found maxTagValues on this refresh, so remove this key
+                        // this entry is more than expirationMinutes old, so remove it
                         cache.invalidate(meta);
                     }
-                } else {
-                    // this entry is more than expirationMinutes old, so remove it
-                    cache.invalidate(meta);
                 }
             }
             LOG.debug("Finished scanning " + metaTable);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
+        } finally {
+            if (scanner != null) {
+                scanner.close();
+            }
         }
     }
 

@@ -1,0 +1,53 @@
+package timely.adapter.accumulo;
+
+import org.apache.accumulo.core.client.lexicoder.LongLexicoder;
+import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
+import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
+import org.apache.accumulo.core.data.Key;
+import timely.api.model.Meta;
+import timely.model.Metric;
+import timely.model.parse.TagListParser;
+import timely.model.parse.TagParser;
+
+/**
+ * Creates Accumulo data structures from {@link Metric}
+ */
+public class MetaAdapter {
+
+    private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
+            new LongLexicoder());
+
+    private static final PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(),
+            new StringLexicoder());
+
+    private static final TagParser tagParser = new TagParser();
+    private static final TagListParser tagListParser = new TagListParser();
+
+    public static Key createMetricKey(String metricName, Long timestamp) {
+        return new Key(Meta.METRIC_PREFIX + metricName, "", "", timestamp);
+    }
+
+    public static Key createTagKey(String metricName, String tagName, Long timestamp) {
+        return new Key(Meta.TAG_PREFIX + metricName, tagName, "", timestamp);
+    }
+
+    public static Key createValueKey(String metricName, String tagName, String tagValue, Long timestamp) {
+        return new Key(Meta.VALUE_PREFIX + metricName, tagName, tagValue, timestamp);
+    }
+
+    public static Meta parse(Key key) {
+        String row = key.getRow().toString();
+        if (row.startsWith(Meta.METRIC_PREFIX)) {
+            return Meta.parse(key, null, Meta.METRIC_PREFIX);
+        } else if (row.startsWith(Meta.TAG_PREFIX)) {
+            return Meta.parse(key, null, Meta.TAG_PREFIX);
+        } else if (row.startsWith(Meta.VALUE_PREFIX)) {
+            return Meta.parse(key, null, Meta.VALUE_PREFIX);
+        }
+        throw new IllegalStateException("Invalid key in meta " + key.toString());
+    }
+
+    public static String decodeRowKey(Key key) {
+        return parse(key).getMetric();
+    }
+}
