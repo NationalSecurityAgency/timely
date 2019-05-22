@@ -567,7 +567,7 @@ public class Balancer {
                 ch.pipeline().addLast("idle-handler",
                         new IdleStateHandler(balancerConfig.getWebsocket().getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol",
-                        new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, true));
+                        new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, false, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(balancerConfig.getSecurity()));
                 ch.pipeline().addLast("httpRelay", new WsRelayHandler(balancerConfig, metricResolver, wsClientPool));
                 ch.pipeline().addLast("error", new WSTimelyExceptionHandler());
