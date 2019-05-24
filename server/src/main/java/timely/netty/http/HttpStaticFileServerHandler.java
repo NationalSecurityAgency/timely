@@ -15,14 +15,14 @@
  */
 package timely.netty.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CACHE_CONTROL;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.DATE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.EXPIRES;
-import static io.netty.handler.codec.http.HttpHeaders.Names.IF_MODIFIED_SINCE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.LAST_MODIFIED;
-import static io.netty.handler.codec.http.HttpHeaders.Names.LOCATION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CACHE_CONTROL;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
+import static io.netty.handler.codec.http.HttpHeaderNames.EXPIRES;
+import static io.netty.handler.codec.http.HttpHeaderNames.IF_MODIFIED_SINCE;
+import static io.netty.handler.codec.http.HttpHeaderNames.LAST_MODIFIED;
+import static io.netty.handler.codec.http.HttpHeaderNames.LOCATION;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
@@ -59,9 +59,10 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpChunkedInput;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -94,7 +95,7 @@ import timely.netty.Constants;
  * Request #1 Headers
  * ===================
  * GET /file1.txt HTTP/1.1
- * 
+ *
  * Response #1 Headers
  * ===================
  * HTTP/1.1 200 OK
@@ -102,12 +103,12 @@ import timely.netty.Constants;
  * Last-Modified:      Wed, 30 Jun 2010 21:36:48 GMT
  * Expires:            Tue, 01 Mar 2012 22:44:26 GMT
  * Cache-Control:      private, max-age=31536000
- * 
+ *
  * Request #2 Headers
  * ===================
  * GET /file1.txt HTTP/1.1
  * If-Modified-Since:  Wed, 30 Jun 2010 21:36:48 GMT
- * 
+ *
  * Response #2 Headers
  * ===================
  * HTTP/1.1 304 Not Modified
@@ -125,17 +126,17 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-        if (!request.getDecoderResult().isSuccess()) {
+        if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }
 
-        if (request.getMethod() != GET) {
+        if (request.method() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
-        String uri = request.getUri();
+        String uri = request.uri();
         if (uri.startsWith("/favicon.ico")) {
             uri = uri.replaceFirst("\\/", "/webapp/");
         }
@@ -201,12 +202,12 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         long fileLength = raf.length();
 
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-        HttpHeaders.setContentLength(response, fileLength);
+        HttpUtil.setContentLength(response, fileLength);
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
-        HttpHeaders.setTransferEncodingChunked(response);
-        if (HttpHeaders.isKeepAlive(request)) {
-            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+        HttpUtil.setTransferEncodingChunked(response, true);
+        if (HttpUtil.isKeepAlive(request)) {
+            response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
         // Write the initial line and the header.

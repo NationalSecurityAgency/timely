@@ -6,7 +6,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
@@ -25,8 +25,8 @@ public interface TimelyHttpHandler {
                 .writeValueAsBytes("ResponseCode: " + e.getCode() + " Message: " + e.getMessage());
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                 HttpResponseStatus.valueOf(e.getCode()), Unpooled.copiedBuffer(buf));
-        response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
-        response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
         e.getResponseHeaders().entrySet().forEach(entry -> response.headers().set(entry.getKey(), entry.getValue()));
         // Send the error response
         sendResponse(ctx, response);

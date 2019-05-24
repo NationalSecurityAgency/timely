@@ -48,14 +48,17 @@ import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.accumulo.core.data.*;
+import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Mutation;
+import org.apache.accumulo.core.data.PartialKey;
+import org.apache.accumulo.core.data.Range;
+import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
 import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.security.VisibilityEvaluator;
 import org.apache.accumulo.core.util.Pair;
-import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
@@ -140,11 +143,11 @@ public class DataStoreImpl implements DataStore {
     public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
 
         try {
-            final BaseConfiguration apacheConf = new BaseConfiguration();
+            final Map<String, String> properties = new HashMap<>();
             Accumulo accumuloConf = conf.getAccumulo();
-            apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
-            apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
-            final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
+            properties.put("instance.name", accumuloConf.getInstanceName());
+            properties.put("instance.zookeeper.host", accumuloConf.getZookeepers());
+            final ClientConfiguration aconf = ClientConfiguration.fromMap(properties);
             final Instance instance = new ZooKeeperInstance(aconf);
             connector = instance.getConnector(accumuloConf.getUsername(),
                     new PasswordToken(accumuloConf.getPassword()));
@@ -809,6 +812,7 @@ public class DataStoreImpl implements DataStore {
         return !REGEX_TEST.matcher(value).matches();
     }
 
+    @Override
     public Set<Tag> getColumnFamilies(String metric, Map<String, String> requestedTags) throws TableNotFoundException {
 
         Scanner meta = null;
@@ -952,6 +956,7 @@ public class DataStoreImpl implements DataStore {
         return result;
     }
 
+    @Override
     public List<Range> getQueryRanges(String metric, long start, long end, Set<Tag> colFamValues) {
         List<Range> ranges = new ArrayList<>();
         long beginRangeRounded = MetricAdapter.roundTimestampToLastHour(start);
@@ -1014,6 +1019,7 @@ public class DataStoreImpl implements DataStore {
         return AuthCache.getAuthorizations(request, security);
     }
 
+    @Override
     public long getAgeOffForMetric(String metricName) {
         String age = this.ageOff.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
         if (null == age) {
@@ -1023,6 +1029,7 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
+    @Override
     public Scanner createScannerForMetric(AuthenticatedRequest request, String metric, Map<String, String> tags,
             int scannerBatchSize, int scannerReadAhead) throws TimelyException {
         try {

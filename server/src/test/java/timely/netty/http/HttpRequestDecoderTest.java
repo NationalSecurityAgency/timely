@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
@@ -86,7 +86,7 @@ public class HttpRequestDecoderTest {
     }
 
     private void addCookie(FullHttpRequest request) {
-        request.headers().set(Names.COOKIE, ClientCookieEncoder.STRICT.encode(Constants.COOKIE_NAME, cookie));
+        request.headers().set(HttpHeaderNames.COOKIE, ClientCookieEncoder.STRICT.encode(Constants.COOKIE_NAME, cookie));
     }
 
     @Test
@@ -218,10 +218,10 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testLookupPostWithNoLimit() throws Exception {
-        // @formatter:off
-        String content = 
+    // @formatter:off
+        String content =
         "{\n" +
-        "    \"metric\": \"sys.cpu.user\"\n" + 
+        "    \"metric\": \"sys.cpu.user\"\n" +
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
@@ -255,8 +255,8 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testLookupPostWithLimit() throws Exception {
-        // @formatter:off
-        String content = 
+    // @formatter:off
+        String content =
         "{\n" +
         "    \"metric\": \"sys.cpu.user\",\n" +
         "    \"limit\": 3000\n" +
@@ -296,8 +296,8 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testLookupPostWithLimitAndTags() throws Exception {
-        // @formatter:off
-        String content = 
+    // @formatter:off
+        String content =
         "{\n" +
         "    \"metric\": \"sys.cpu.user\",\n" +
         "    \"limit\": 3000,\n" +
@@ -411,8 +411,8 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testSuggestPostWithValidType() throws Exception {
-        // @formatter:off
-        String content = 
+    // @formatter:off
+        String content =
         "{\n" +
         "    \"type\": \"metrics\"\n" +
         "}";
@@ -450,8 +450,8 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testSuggestPostWithValidTypeAndQuery() throws Exception {
-        // @formatter:off
-        String content = 
+    // @formatter:off
+        String content =
         "{\n" +
         "    \"type\": \"metrics\",\n" +
         "    \"q\": \"sys.cpu.user\"\n" +
@@ -490,8 +490,8 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testSuggestPostWithValidTypeAndQueryAndMax() throws Exception {
-        // @formatter:off
-        String content = 
+    // @formatter:off
+        String content =
         "{\n" +
         "    \"type\": \"metrics\",\n" +
         "    \"q\": \"sys.cpu.user\",\n" +
@@ -616,7 +616,7 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testQueryEmptyTags() throws Exception {
-        // @formatter:off
+    // @formatter:off
         String content =
                 "{\n"+
                         "    \"start\": 1356998400,\n"+
@@ -665,7 +665,7 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testQueryPostAll() throws Exception {
-        // @formatter:off
+    // @formatter:off
         String content =
         "{\n"+
         "    \"start\": 1356998400,\n"+
@@ -762,7 +762,7 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testQueryPostGlobalAnnotations() throws Exception {
-        // @formatter:off
+    // @formatter:off
         String content = "" +
         "{"
         + "\"start\":1447767369171,"
@@ -803,8 +803,8 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testQueryPostRateOption() throws Exception {
-        // @formatter:off
-        String content = 
+    // @formatter:off
+        String content =
         "{"
         +  "\"start\":1447767369171,"
         +  "\"queries\":"
@@ -861,7 +861,7 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testPutMetricPost() throws Exception {
-        // @formatter:off
+    // @formatter:off
         Metric m = Metric.newBuilder()
                 .name("sys.cpu.user")
                 .value(TEST_TIME, 1.0D)

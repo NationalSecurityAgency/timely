@@ -6,7 +6,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -51,7 +51,7 @@ public class NonSslRedirectHandler extends OptionalSslHandler implements TimelyH
                 LOG.trace("Received non-SSL request, returning redirect");
                 FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                         HttpResponseStatus.MOVED_PERMANENTLY, Unpooled.EMPTY_BUFFER);
-                response.headers().set(Names.LOCATION, redirectAddress);
+                response.headers().set(HttpHeaderNames.LOCATION, redirectAddress);
                 LOG.trace(Constants.LOG_RETURNING_RESPONSE, response);
                 encoder.write(ctx, response, ctx.voidPromise());
                 ctx.flush();

@@ -1,15 +1,13 @@
 package timely.store.cache;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
 
 import fi.iki.yak.ts.compression.gorilla.Pair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import timely.configuration.Configuration;
-import timely.model.Metric;
-import timely.model.Tag;
-import timely.model.Value;
 
 public class TestGorillaStore {
 
@@ -57,21 +55,6 @@ public class TestGorillaStore {
         }
     }
 
-    private Metric createMetric(String metric, Map<String, String> tags, double value, long timestamp) {
-        Metric m = new Metric();
-        m.setName(metric);
-        List<Tag> tagList = new ArrayList<>();
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
-            tagList.add(new Tag(entry.getKey(), entry.getValue()));
-        }
-        m.setTags(tagList);
-        Value metricValue = new Value();
-        metricValue.setMeasure(value);
-        metricValue.setTimestamp(timestamp);
-        m.setValue(metricValue);
-        return m;
-    }
-
     @Test
     public void testExtentOfStorage() {
 
@@ -100,12 +83,9 @@ public class TestGorillaStore {
             long totalObservations = 0;
 
             List<WrappedGorillaDecompressor> decompressorList = gStore.getDecompressors(start, timestamp);
-            Pair pair = null;
             for (WrappedGorillaDecompressor w : decompressorList) {
-                while ((pair = w.readPair()) != null) {
+                while (w.readPair() != null) {
                     totalObservations++;
-                    // System.out.println(pair.getTimestamp() + " --> " +
-                    // pair.getDoubleValue());
                 }
             }
 

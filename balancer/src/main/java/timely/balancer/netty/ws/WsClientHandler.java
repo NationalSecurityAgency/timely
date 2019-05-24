@@ -45,7 +45,7 @@ public class WsClientHandler extends ClientHandler {
             Multimap<String, String> proxyRequestHeaders = HashMultimap.create();
             ProxiedEntityUtils.addProxyHeaders(proxyRequestHeaders, token.getClientCert());
             for (String s : proxyRequestHeaders.keySet()) {
-                headers.put(s, new ArrayList(proxyRequestHeaders.get(s)));
+                headers.put(s, new ArrayList<>(proxyRequestHeaders.get(s)));
             }
         }
 
@@ -53,7 +53,7 @@ public class WsClientHandler extends ClientHandler {
         for (String s : originalRequestHeaders.keySet()) {
             if (!headers.containsKey(s)) {
                 // add pre-existing values if key does not exist in proxyRequest
-                headers.put(s, new ArrayList(originalRequestHeaders.get(s)));
+                headers.put(s, new ArrayList<>(originalRequestHeaders.get(s)));
             }
         }
     }

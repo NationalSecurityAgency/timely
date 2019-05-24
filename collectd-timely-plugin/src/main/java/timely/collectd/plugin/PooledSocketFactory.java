@@ -8,7 +8,7 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.collectd.api.Collectd;
 import org.collectd.api.OConfigItem;
 
-public class PooledSocketFactory implements PooledObjectFactory {
+public class PooledSocketFactory implements PooledObjectFactory<Socket> {
 
     private String host = null;
     private int port = 0;
@@ -81,12 +81,12 @@ public class PooledSocketFactory implements PooledObjectFactory {
     }
 
     @Override
-    public PooledObject makeObject() throws Exception {
-        return new DefaultPooledObject(connect());
+    public PooledObject<Socket> makeObject() throws Exception {
+        return new DefaultPooledObject<>(connect());
     }
 
     @Override
-    public void destroyObject(PooledObject pooledObject) throws Exception {
+    public void destroyObject(PooledObject<Socket> pooledObject) throws Exception {
         try {
             Collectd.logDebug("Shutting down connection to Timely at " + host + ":" + port);
             Socket socket = (Socket) pooledObject.getObject();
@@ -103,7 +103,7 @@ public class PooledSocketFactory implements PooledObjectFactory {
     }
 
     @Override
-    public boolean validateObject(PooledObject pooledObject) {
+    public boolean validateObject(PooledObject<Socket> pooledObject) {
         if (connectionTimeToLive > -1) {
             if (System.currentTimeMillis() > pooledObject.getCreateTime() + connectionTimeToLive) {
                 return false;
@@ -114,12 +114,12 @@ public class PooledSocketFactory implements PooledObjectFactory {
     }
 
     @Override
-    public void activateObject(PooledObject pooledObject) throws Exception {
+    public void activateObject(PooledObject<Socket> pooledObject) throws Exception {
         // do nothing
     }
 
     @Override
-    public void passivateObject(PooledObject pooledObject) throws Exception {
+    public void passivateObject(PooledObject<Socket> pooledObject) throws Exception {
         // do nothing
     }
 }

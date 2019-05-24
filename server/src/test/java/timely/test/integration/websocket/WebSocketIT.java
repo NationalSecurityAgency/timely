@@ -25,8 +25,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -201,7 +201,7 @@ public class WebSocketIT extends OneWaySSLBase {
 
         String cookieVal = ClientCookieEncoder.STRICT.encode(Constants.COOKIE_NAME, sessionId);
         HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(Names.COOKIE, cookieVal);
+        headers.add(HttpHeaderNames.COOKIE, cookieVal);
 
         WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(LOCATION,
                 WebSocketVersion.V13, (String) null, false, headers);
@@ -236,9 +236,9 @@ public class WebSocketIT extends OneWaySSLBase {
             // Add some data
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+                "sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -287,9 +287,9 @@ public class WebSocketIT extends OneWaySSLBase {
             // Add some data
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+                "sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -324,9 +324,9 @@ public class WebSocketIT extends OneWaySSLBase {
             // Add some more data
             // @formatter:off
             put("sys.cpu.user " + (TEST_TIME + 500) + " 6.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME + 500) + " 7.0 tag3=value3 rack=r2",
-            	"sys.cpu.idle " + (TEST_TIME + 1000) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-            	"sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+                "sys.cpu.user " + (TEST_TIME + 500) + " 7.0 tag3=value3 rack=r2",
+                "sys.cpu.idle " + (TEST_TIME + 1000) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -429,9 +429,9 @@ public class WebSocketIT extends OneWaySSLBase {
             // Add some data
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+                "sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -467,9 +467,9 @@ public class WebSocketIT extends OneWaySSLBase {
             // Add some more data
             // @formatter:off
             put("sys.cpu.user " + (TEST_TIME + 500) + " 6.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME + 500) + " 7.0 tag3=value3 rack=r2",
-            	"sys.cpu.idle " + (TEST_TIME + 1000) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-            	"sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+                "sys.cpu.user " + (TEST_TIME + 500) + " 7.0 tag3=value3 rack=r2",
+                "sys.cpu.idle " + (TEST_TIME + 1000) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -516,9 +516,9 @@ public class WebSocketIT extends OneWaySSLBase {
             // Add some data
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1 viz=A",
-            	"sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2 viz=A",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1 viz=A",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2 viz=A");
+                "sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2 viz=A",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1 viz=A",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2 viz=A");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -555,9 +555,9 @@ public class WebSocketIT extends OneWaySSLBase {
             // Add some more data
             // @formatter:off
             put("sys.cpu.user " + (TEST_TIME + 500) + " 6.0 tag1=value1 tag2=value2 rack=r1, viz=A",
-            	"sys.cpu.user " + (TEST_TIME + 500) + " 7.0 tag3=value3 rack=r2, viz=A",
-            	"sys.cpu.idle " + (TEST_TIME + 1000) + " 1.0 tag3=value3 tag4=value4 rack=r1, viz=A",
-            	"sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2, viz=A");
+                "sys.cpu.user " + (TEST_TIME + 500) + " 7.0 tag3=value3 rack=r2, viz=A",
+                "sys.cpu.idle " + (TEST_TIME + 1000) + " 1.0 tag3=value3 tag4=value4 rack=r1, viz=A",
+                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2, viz=A");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -641,8 +641,8 @@ public class WebSocketIT extends OneWaySSLBase {
         try {
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-            	"sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
-            	"sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=secret");
+                "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
+                "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=secret");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
@@ -705,22 +705,22 @@ public class WebSocketIT extends OneWaySSLBase {
         try {
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-            	"sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-            	"sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                 "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
-            String request = 
+            String request =
             "{"+
             "   \"operation\" : \"lookup\","+
             "   \"metric\" : \"sys.cpu.idle\","+
             "   \"tags\" : ["+
                    "\"tag3=.*\""+
                 "]"+
-    	    "}";
+            "}";
             // @formatter:on
             ch.writeAndFlush(new TextWebSocketFrame(request));
 
@@ -750,22 +750,22 @@ public class WebSocketIT extends OneWaySSLBase {
         try {
             // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-            	"sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-            	"sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-            	"zzzz 1234567892 1.0 host=localhost");
+                "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+                "zzzz 1234567892 1.0 host=localhost");
             // @formatter:off
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
             // @formatter:off
-        	String request = 
-        			"{\n" +
-        			"    \"operation\" : \"suggest\",\n" +
-        	        "    \"type\": \"metrics\",\n" +
-        	        "    \"q\": \"sys.cpu.user\",\n" +
-        	        "    \"max\": 30\n" +    			
-        			"}";
-        	// @formatter:on
+            String request =
+                    "{\n" +
+                    "    \"operation\" : \"suggest\",\n" +
+                    "    \"type\": \"metrics\",\n" +
+                    "    \"q\": \"sys.cpu.user\",\n" +
+                    "    \"max\": 30\n" +
+                    "}";
+            // @formatter:on
             ch.writeAndFlush(new TextWebSocketFrame(request));
 
             // Confirm receipt of all data sent to this point

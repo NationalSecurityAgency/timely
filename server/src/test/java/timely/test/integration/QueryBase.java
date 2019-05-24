@@ -12,7 +12,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 
 import com.fasterxml.jackson.databind.JavaType;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -75,7 +75,7 @@ public abstract class QueryBase extends MacITBase {
         HttpsURLConnection con = getUrlConnection(url);
         if (null != acceptType) {
             LOG.trace("Setting Accept header to {}", acceptType);
-            con.addRequestProperty(Names.ACCEPT, acceptType);
+            con.addRequestProperty(HttpHeaderNames.ACCEPT.toString(), acceptType);
         }
         LOG.trace("Sending HTTP Headers: {}", con.getRequestProperties());
         int responseCode = con.getResponseCode();

@@ -12,11 +12,11 @@ public class WebSocketRequestDeserializationTest {
     @Test
     public void testCreateDeserialization() throws Exception {
         // @formatter:off
-		String json = "{ "
-				       + "\"operation\" : \"create\","
-				       + " \"sessionId\": \"1234\""
-				    + "}";
-		// @formatter:on
+        String json = "{ "
+                       + "\"operation\" : \"create\","
+                       + " \"sessionId\": \"1234\""
+                    + "}";
+        // @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(CreateSubscription.class, request.getClass());
@@ -26,12 +26,12 @@ public class WebSocketRequestDeserializationTest {
     @Test
     public void testRemoveDeserialization() throws Exception {
         // @formatter:off
-		String json = "{ "
-				       + "\"operation\" : \"remove\","
-				       + " \"sessionId\": \"1234\","
-				       + " \"metric\" : \"sys.cpu.user\""
-				    + "}";
-		// @formatter:on
+        String json = "{ "
+                       + "\"operation\" : \"remove\","
+                       + " \"sessionId\": \"1234\","
+                       + " \"metric\" : \"sys.cpu.user\""
+                    + "}";
+        // @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(RemoveSubscription.class, request.getClass());
@@ -42,11 +42,11 @@ public class WebSocketRequestDeserializationTest {
     @Test
     public void testCloseDeserialization() throws Exception {
         // @formatter:off
-		String json = "{ "
-				       + "\"operation\" : \"close\","
-				       + " \"sessionId\": \"1234\""
-				    + "}";
-		// @formatter:on
+        String json = "{ "
+                       + "\"operation\" : \"close\","
+                       + " \"sessionId\": \"1234\""
+                    + "}";
+        // @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(CloseSubscription.class, request.getClass());
@@ -56,12 +56,12 @@ public class WebSocketRequestDeserializationTest {
     @Test
     public void testAddDeserialization() throws Exception {
         // @formatter:off
-		String json = "{" +
-						"\"operation\" : \"add\"," +
-						"\"sessionId\" : \"1234\"," +
-					    " \"metric\" : \"sys.cpu.user\"" +
-					  "}";
-		// @formatter:on
+        String json = "{" +
+                        "\"operation\" : \"add\"," +
+                        "\"sessionId\" : \"1234\"," +
+                        " \"metric\" : \"sys.cpu.user\"" +
+                      "}";
+        // @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());
@@ -74,13 +74,13 @@ public class WebSocketRequestDeserializationTest {
     @Test
     public void testAddDeserializationWithTime() throws Exception {
         // @formatter:off
-		String json = "{" +
-						"\"operation\" : \"add\"," +
-						"\"sessionId\" : \"1234\"," +
-					    "\"metric\" : \"sys.cpu.user\"," +
-						"\"startTime\" : \"1000\"" +
-					  "}";
-		// @formatter:on
+        String json = "{" +
+                        "\"operation\" : \"add\"," +
+                        "\"sessionId\" : \"1234\"," +
+                        "\"metric\" : \"sys.cpu.user\"," +
+                        "\"startTime\" : \"1000\"" +
+                      "}";
+        // @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());
@@ -95,18 +95,18 @@ public class WebSocketRequestDeserializationTest {
     @Test
     public void testAddDeserializationWithTimeAndTags() throws Exception {
         // @formatter:off
-		String json = "{" +
-						"\"operation\" : \"add\"," +
-						"\"sessionId\" : \"1234\"," +
-					    "\"metric\" : \"sys.cpu.user\"," +
-						"\"tags\" : {" +
-					       "\"tag2\" : \"value2\"," +
-					       "\"tag1\" : \"value1\"" +
-					    "}," +
-						"\"startTime\" : \"1000\"," +
-					    "\"endTime\" : \"2000\""+
-					  "}";
-		// @formatter:on
+        String json = "{" +
+                        "\"operation\" : \"add\"," +
+                        "\"sessionId\" : \"1234\"," +
+                        "\"metric\" : \"sys.cpu.user\"," +
+                        "\"tags\" : {" +
+                           "\"tag2\" : \"value2\"," +
+                           "\"tag1\" : \"value1\"" +
+                        "}," +
+                        "\"startTime\" : \"1000\"," +
+                        "\"endTime\" : \"2000\""+
+                      "}";
+        // @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());
@@ -129,18 +129,18 @@ public class WebSocketRequestDeserializationTest {
     @Test
     public void testAddDeserializationWithStartAndDelayTimeAndTags() throws Exception {
         // @formatter:off
-		String json = "{" +
-						"\"operation\" : \"add\"," +
-						"\"sessionId\" : \"1234\"," +
-					    "\"metric\" : \"sys.cpu.user\"," +
-						"\"tags\" : {" +
-					       "\"tag2\" : \"value2\"," +
-					       "\"tag1\" : \"value1\"" +
-					    "}," +
-						"\"startTime\" : \"1000\"," +
-					    "\"delayTime\" : \"500\"" +
-					  "}";
-		// @formatter:on
+        String json = "{" +
+                        "\"operation\" : \"add\"," +
+                        "\"sessionId\" : \"1234\"," +
+                        "\"metric\" : \"sys.cpu.user\"," +
+                        "\"tags\" : {" +
+                           "\"tag2\" : \"value2\"," +
+                           "\"tag1\" : \"value1\"" +
+                        "}," +
+                        "\"startTime\" : \"1000\"," +
+                        "\"delayTime\" : \"500\"" +
+                      "}";
+        // @formatter:on
         WebSocketRequest request = JsonUtil.getObjectMapper().readValue(json.getBytes(), WebSocketRequest.class);
         Assert.assertNotNull(request);
         Assert.assertEquals(AddSubscription.class, request.getClass());

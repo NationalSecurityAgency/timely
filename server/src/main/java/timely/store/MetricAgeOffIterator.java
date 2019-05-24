@@ -143,8 +143,8 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
             byte[] newStartRow = MetricAdapter.encodeRowKey(start.getFirst(), timeTarget);
             // @formatter:off
             Key newStartKey = new Key(newStartRow, 
-            		null != startKey.getColumnFamily() ? startKey.getColumnFamilyData().getBackingArray() : null, 
-            		null != startKey.getColumnQualifier() ? startKey.getColumnQualifierData().getBackingArray() : null,
+                    null != startKey.getColumnFamily() ? startKey.getColumnFamilyData().getBackingArray() : null, 
+                    null != startKey.getColumnQualifier() ? startKey.getColumnQualifierData().getBackingArray() : null,
                     null != startKey.getColumnVisibility() ? startKey.getColumnVisibility().getBytes() : null,
                     timeTarget, startKey.isDeleted());
             // @formatter:on

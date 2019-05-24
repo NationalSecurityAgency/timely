@@ -55,11 +55,6 @@ public class AggregationIteratorTest {
     /**
      * This will add key, values to the test data as output from the
      * DownsampleIterator
-     * 
-     * @param testData
-     * @param m
-     * @param sample
-     * @throws Exception
      */
     void put(Map<Key, Value> testData, Metric m, Downsample sample) throws Exception {
         Mutation mutation = MetricAdapter.toMutation(m);

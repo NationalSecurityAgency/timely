@@ -20,6 +20,8 @@ import timely.auth.util.DnUtils;
  */
 public class TimelyUser implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     public enum UserType {
         USER, SERVER
     }

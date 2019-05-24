@@ -47,7 +47,6 @@ public class TcpClient implements AutoCloseable {
      * 
      * @param metric
      *            newline terminated string representation of Timely metric
-     * @throws IOException
      */
     public synchronized void write(String metric) throws IOException {
         if (connect() != 0) {

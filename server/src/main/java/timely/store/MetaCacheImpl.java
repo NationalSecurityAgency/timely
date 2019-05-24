@@ -1,7 +1,6 @@
 package timely.store;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -22,7 +21,6 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.commons.configuration.BaseConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.model.Meta;
@@ -56,11 +54,11 @@ public class MetaCacheImpl implements MetaCache {
 
     private void refreshCache(long expirationMinutes) {
         long oldestTimestamp = System.currentTimeMillis() - (expirationMinutes * 60 * 1000);
-        final BaseConfiguration apacheConf = new BaseConfiguration();
+        Map<String, String> properties = new HashMap<>();
         Accumulo accumuloConf = configuration.getAccumulo();
-        apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
-        apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
-        final ClientConfiguration aConf = new ClientConfiguration(Collections.singletonList(apacheConf));
+        properties.put("instance.name", accumuloConf.getInstanceName());
+        properties.put("instance.zookeeper.host", accumuloConf.getZookeepers());
+        final ClientConfiguration aConf = ClientConfiguration.fromMap(properties);
         String metaTable = configuration.getMetaTable();
         Map<String, Map<String, Long>> metricMap = new HashMap<>();
         Scanner scanner = null;

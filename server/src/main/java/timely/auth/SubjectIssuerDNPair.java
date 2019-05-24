@@ -13,6 +13,7 @@ import timely.auth.util.ProxiedEntityUtils;
  */
 public class SubjectIssuerDNPair implements Serializable {
 
+    private static final long serialVersionUID = 1L;
     private final String subjectDN;
     private final String issuerDN;
 

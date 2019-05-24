@@ -1,9 +1,9 @@
 package timely.configuration;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
-import org.hibernate.validator.constraints.NotBlank;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 public class Http {

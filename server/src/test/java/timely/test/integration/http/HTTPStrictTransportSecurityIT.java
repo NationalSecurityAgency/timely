@@ -7,7 +7,7 @@ import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import timely.Server;
@@ -39,7 +39,7 @@ public class HTTPStrictTransportSecurityIT extends OneWaySSLBase {
         con.setRequestMethod("GET");
         int responseCode = con.getResponseCode();
         assertEquals(301, responseCode);
-        assertEquals("https://localhost:54322/secure-me", con.getHeaderField(Names.LOCATION));
+        assertEquals("https://localhost:54322/secure-me", con.getHeaderField(HttpHeaderNames.LOCATION.toString()));
         con.disconnect();
     }
 

@@ -41,7 +41,7 @@
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <version.accumulo>1.9.2</version.accumulo>
+    <version.accumulo>1.9.3</version.accumulo>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
     <version.caffeine>2.6.2</version.caffeine>
     <version.collectd>5.7.1</version.collectd>
@@ -58,7 +58,7 @@
     <version.hadoop>2.7.3</version.hadoop>
     <version.httpcomponents>4.5.6</version.httpcomponents>
     <version.impsort>1.2.0</version.impsort>
-    <version.jackson>2.9.8</version.jackson>
+    <version.jackson>2.9.9</version.jackson>
     <version.jacoco>0.7.6.201602180812</version.jacoco>
     <version.javacsv>2.0</version.javacsv>
     <version.javassist>3.24.1-GA</version.javassist>
@@ -145,6 +145,11 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
         <version>${version.netty}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-tcnative-boringssl-static</artifactId>
+        <version>${version.netty-tcnative}</version>
       </dependency>
       <dependency>
         <groupId>net.sourceforge.javacsv</groupId>

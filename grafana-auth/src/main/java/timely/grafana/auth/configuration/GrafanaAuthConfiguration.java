@@ -43,8 +43,6 @@ public class GrafanaAuthConfiguration {
     /**
      * Time to wait (in seconds) for connections to finish and to make sure no new
      * connections happen before shutting down Netty event loop groups.
-     *
-     * @return
      */
     public int getShutdownQuietPeriod() {
         return this.shutdownQuietPeriod;

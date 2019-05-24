@@ -62,7 +62,6 @@ public interface ObjectSizeOf {
          * ObjectSizeOf interface and if implemented on the object will use that.
          * Otherwise it will do a simple navigation of the fields using reflection.
          *
-         * @param o
          * @return an approximation of the object size
          */
         public static long getObjectSize(Object o, boolean useSizeInBytesMethod, boolean debug) {

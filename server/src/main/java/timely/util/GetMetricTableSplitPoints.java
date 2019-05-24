@@ -1,6 +1,7 @@
 package timely.util;
 
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.ClientConfiguration;
@@ -12,7 +13,6 @@ import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.commons.configuration.BaseConfiguration;
 import org.springframework.boot.Banner.Mode;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -30,11 +30,11 @@ public class GetMetricTableSplitPoints {
                 .bannerMode(Mode.OFF).web(WebApplicationType.NONE).run(args)) {
             Configuration conf = ctx.getBean(Configuration.class);
 
-            final BaseConfiguration apacheConf = new BaseConfiguration();
+            final Map<String, String> properties = new HashMap<>();
             Accumulo accumuloConf = conf.getAccumulo();
-            apacheConf.setProperty("instance.name", accumuloConf.getInstanceName());
-            apacheConf.setProperty("instance.zookeeper.host", accumuloConf.getZookeepers());
-            final ClientConfiguration aconf = new ClientConfiguration(Collections.singletonList(apacheConf));
+            properties.put("instance.name", accumuloConf.getInstanceName());
+            properties.put("instance.zookeeper.host", accumuloConf.getZookeepers());
+            final ClientConfiguration aconf = ClientConfiguration.fromMap(properties);
             final Instance instance = new ZooKeeperInstance(aconf);
             Connector con = instance.getConnector(accumuloConf.getUsername(),
                     new PasswordToken(accumuloConf.getPassword()));

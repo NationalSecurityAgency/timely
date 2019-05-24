@@ -51,7 +51,6 @@ public class DownsampleIterator extends WrappingIterator {
 
     private DownsampleMemoryEstimator memoryEstimator = null;
 
-    @SuppressWarnings("unchecked")
     @Override
     public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
             throws IOException {
@@ -73,7 +72,9 @@ public class DownsampleIterator extends WrappingIterator {
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
-        factory = new DownsampleFactory(start, end, period, (Class<? extends Aggregator>) aggClass);
+        @SuppressWarnings("unchecked")
+        Class<? extends Aggregator> uncheckedAggClass = (Class<? extends Aggregator>) aggClass;
+        factory = new DownsampleFactory(start, end, period, uncheckedAggClass);
     }
 
     @Override
@@ -154,11 +155,12 @@ public class DownsampleIterator extends WrappingIterator {
         is.addOption(AGGCLASS, classname);
     }
 
-    @SuppressWarnings("unchecked")
     public static Map<Set<Tag>, Downsample> decodeValue(Value value) throws IOException, ClassNotFoundException {
         ByteArrayInputStream bis = new ByteArrayInputStream(value.get());
         ObjectInputStream ois = new ObjectInputStream(bis);
-        return (Map<Set<Tag>, Downsample>) ois.readObject();
+        @SuppressWarnings("unchecked")
+        Map<Set<Tag>, Downsample> unchecked = (Map<Set<Tag>, Downsample>) ois.readObject();
+        return unchecked;
     }
 
     public static long getDownsamplePeriod(QueryRequest.SubQuery query) {

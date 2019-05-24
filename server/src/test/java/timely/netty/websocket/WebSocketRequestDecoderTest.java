@@ -15,7 +15,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
@@ -65,7 +64,6 @@ public class WebSocketRequestDecoderTest {
         anonConfig.getSecurity().setAllowAnonymousWsAccess(true);
         cookie = URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name());
         AuthCache.configure(config.getSecurity());
-        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
         AuthCache.put(cookie, new TimelyPrincipal(TimelyUser.ANONYMOUS_USER));
     }
 
@@ -83,7 +81,7 @@ public class WebSocketRequestDecoderTest {
     @Test
     public void testVersion() throws Exception {
         decoder = new WebSocketRequestDecoder(anonConfig.getSecurity());
-        // @formatter:off
+    // @formatter:off
         String request = "{ "+
           "\"operation\" : \"version\"" +
         " }";
@@ -98,19 +96,19 @@ public class WebSocketRequestDecoderTest {
     @Test
     public void testPutMetric() throws Exception {
         decoder = new WebSocketRequestDecoder(anonConfig.getSecurity());
-        // @formatter:off
-        String request = "{" + 
-          "\"operation\" : \"put\",\n" + 
+    // @formatter:off
+        String request = "{" +
+          "\"operation\" : \"put\",\n" +
           "\"name\" : \"sys.cpu.user\",\n" +
-          "\"timestamp\":" + TEST_TIME + ",\n" + 
+          "\"timestamp\":" + TEST_TIME + ",\n" +
           "\"measure\":1.0,\n" +
-          "\"tags\":[ {\n" + 
-              "\"key\":\"tag1\",\n" + 
-              "\"value\":\"value1\"\n" + 
-          "},{\n" + 
-              "\"key\":\"tag2\",\n" + 
+          "\"tags\":[ {\n" +
+              "\"key\":\"tag1\",\n" +
+              "\"value\":\"value1\"\n" +
+          "},{\n" +
+              "\"key\":\"tag2\",\n" +
               "\"value\":\"value2\"\n" +
-          "}]\n" + 
+          "}]\n" +
         "}";
         // @formatter:on
         TextWebSocketFrame frame = new TextWebSocketFrame();
@@ -128,10 +126,10 @@ public class WebSocketRequestDecoderTest {
     @Test
     public void testCreateSubscriptionWithMissingSessionId() throws Exception {
         decoder = new WebSocketRequestDecoder(config.getSecurity());
-        // @formatter:off
-        String request = "{ "+ 
+    // @formatter:off
+        String request = "{ "+
           "\"operation\" : \"create\", " +
-          "\"subscriptionId\" : \"1234\"" + 
+          "\"subscriptionId\" : \"1234\"" +
         " }";
         // @formatter:on
         TextWebSocketFrame frame = new TextWebSocketFrame();
@@ -148,10 +146,10 @@ public class WebSocketRequestDecoderTest {
         ctx.channel().attr(SubscriptionRegistry.SESSION_ID_ATTR)
                 .set(URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name()));
         decoder = new WebSocketRequestDecoder(config.getSecurity());
-        // @formatter:off
-        String request = "{ "+ 
+    // @formatter:off
+        String request = "{ "+
           "\"operation\" : \"create\", " +
-          "\"subscriptionId\" : \"1234\"" + 
+          "\"subscriptionId\" : \"1234\"" +
         " }";
         // @formatter:on
         TextWebSocketFrame frame = new TextWebSocketFrame();
@@ -167,9 +165,9 @@ public class WebSocketRequestDecoderTest {
     public void testCreateSubscriptionWithValidSessionIdAndNonAnonymousAccess() throws Exception {
         ctx.channel().attr(SubscriptionRegistry.SESSION_ID_ATTR).set(cookie);
         decoder = new WebSocketRequestDecoder(config.getSecurity());
-        // @formatter:off
-        String request = "{ " + 
-          "\"operation\" : \"create\"," + 
+    // @formatter:off
+        String request = "{ " +
+          "\"operation\" : \"create\"," +
           "\"subscriptionId\" : \"" + cookie + "\"" +
         "}";
         // @formatter:on
@@ -276,7 +274,7 @@ public class WebSocketRequestDecoderTest {
         // @formatter:off
         String request =
         "{\n"+
-        "	 \"operation\" : \"query\",\n"+
+        "     \"operation\" : \"query\",\n"+
         "    \"sessionId\" : \"1234\",\n"+
         "    \"start\": 1356998400,\n"+
         "    \"end\": 1356998460,\n"+
@@ -343,15 +341,15 @@ public class WebSocketRequestDecoderTest {
     @Test
     public void testSuggest() throws Exception {
         // @formatter:off
-    	String request = 
-    			"{\n" +
-    			"    \"operation\" : \"suggest\",\n" +
-    	        "    \"sessionId\" : \"1234\",\n" +
-    	        "    \"type\": \"metrics\",\n" +
-    	        "    \"q\": \"sys.cpu.user\",\n" +
-    	        "    \"max\": 30\n" +    			
-    			"}";
-    	// @formatter:on
+        String request =
+                "{\n" +
+                "    \"operation\" : \"suggest\",\n" +
+                "    \"sessionId\" : \"1234\",\n" +
+                "    \"type\": \"metrics\",\n" +
+                "    \"q\": \"sys.cpu.user\",\n" +
+                "    \"max\": 30\n" +
+                "}";
+        // @formatter:on
         decoder = new WebSocketRequestDecoder(anonConfig.getSecurity());
         TextWebSocketFrame frame = new TextWebSocketFrame();
         frame.content().writeBytes(request.getBytes(StandardCharsets.UTF_8));

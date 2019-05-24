@@ -16,8 +16,6 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.data.thrift.IterInfo;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A simple wrapper around a {@link ScannerBase} that overrides the methods that
@@ -27,7 +25,6 @@ import org.slf4j.LoggerFactory;
  */
 public class ScannerBaseDelegate implements ScannerBase {
 
-    private static final Logger log = LoggerFactory.getLogger(ScannerBaseDelegate.class);
     private static final String SYSTEM_ITERATOR_NAME_PREFIX = "sys_";
 
     protected final ScannerBase delegate;
@@ -139,10 +136,11 @@ public class ScannerBaseDelegate implements ScannerBase {
     @Override
     public void clearScanIterators() {
         if (delegate instanceof ScannerOptions) {
-            ScannerOptionsHelper opts = new ScannerOptionsHelper((ScannerOptions) delegate);
-            for (IteratorSetting iteratorSetting : opts.getIterators()) {
-                if (!iteratorSetting.getName().startsWith(SYSTEM_ITERATOR_NAME_PREFIX)) {
-                    delegate.removeScanIterator(iteratorSetting.getName());
+            try (ScannerOptionsHelper opts = new ScannerOptionsHelper((ScannerOptions) delegate)) {
+                for (IteratorSetting iteratorSetting : opts.getIterators()) {
+                    if (!iteratorSetting.getName().startsWith(SYSTEM_ITERATOR_NAME_PREFIX)) {
+                        delegate.removeScanIterator(iteratorSetting.getName());
+                    }
                 }
             }
         } else {

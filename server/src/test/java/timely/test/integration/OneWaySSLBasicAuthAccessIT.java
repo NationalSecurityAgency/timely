@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.apache.accumulo.core.client.Connector;
@@ -68,12 +68,12 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
             throw new UnauthorizedUserException();
         }
         Assert.assertEquals(200, responseCode);
-        List<String> cookies = con.getHeaderFields().get(Names.SET_COOKIE);
+        List<String> cookies = con.getHeaderFields().get(HttpHeaderNames.SET_COOKIE.toString());
         Assert.assertEquals(1, cookies.size());
         Cookie sessionCookie = ClientCookieDecoder.STRICT.decode(cookies.get(0));
         Assert.assertEquals(Constants.COOKIE_NAME, sessionCookie.name());
         con = (HttpsURLConnection) url.openConnection();
-        con.setRequestProperty(Names.COOKIE, sessionCookie.name() + "=" + sessionCookie.value());
+        con.setRequestProperty(HttpHeaderNames.COOKIE.toString(), sessionCookie.name() + "=" + sessionCookie.value());
         con.setHostnameVerifier((host, session) -> true);
         return con;
     }

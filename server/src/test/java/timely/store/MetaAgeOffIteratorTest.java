@@ -21,7 +21,6 @@ public class MetaAgeOffIteratorTest {
 
     private static final Long TEST_TIME = System.currentTimeMillis() - 1000;
     private static final Integer ONE_DAY = 86400000;
-    private static final Value EMPTY_VALUE = new Value(new byte[0]);
     private static final Collection<ByteSequence> columnFamilies = new ArrayList<>();
 
     @Test(expected = IllegalArgumentException.class)

@@ -29,6 +29,7 @@ import timely.auth.util.DnUtils;
 @XmlAccessorType(XmlAccessType.NONE)
 public class TimelyPrincipal implements Principal, Serializable {
 
+    private static final long serialVersionUID = 1L;
     private final String username;
     private final TimelyUser primaryUser;
     @XmlElement
@@ -103,7 +104,7 @@ public class TimelyPrincipal implements Principal, Serializable {
 
     public Set<String> getProxyServers() {
 
-        // @formatter:off
+    // @formatter:off
         Set<String> proxyServers = getProxiedUsers().stream()
                 .filter(u -> u.getUserType() == TimelyUser.UserType.SERVER)
                 .map(TimelyUser::getDn)

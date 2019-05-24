@@ -8,7 +8,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
@@ -43,22 +43,22 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
                     principal.getPrimaryUser().getDn().subjectDN());
             String sessionIdEncoded = URLEncoder.encode(sessionId, StandardCharsets.UTF_8.name());
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-            response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
-            response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
             DefaultCookie cookie = new DefaultCookie(Constants.COOKIE_NAME, sessionIdEncoded);
             cookie.setDomain(domain);
             cookie.setMaxAge(maxAge);
             cookie.setPath("/");
             cookie.setHttpOnly(true);
             cookie.setSecure(true);
-            response.headers().set(Names.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
+            response.headers().set(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
             sendResponse(ctx, response);
         } catch (Exception e) {
             LOG.error("Login failure", e);
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                     HttpResponseStatus.UNAUTHORIZED);
-            response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
-            response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
             sendResponse(ctx, response);
         }
 

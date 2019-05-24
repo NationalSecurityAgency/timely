@@ -43,9 +43,13 @@ public class AuthenticationService {
         try {
             springContext = new ClassPathXmlApplicationContext("security.xml");
             authManager = springContext.getBean("authenticationManager", AuthenticationManager.class);
-            requiredRoles = springContext.getBean("requiredRoles", List.class);
+            @SuppressWarnings("unchecked")
+            List<String> uncheckedRoles = springContext.getBean("requiredRoles", List.class);
+            requiredRoles = uncheckedRoles;
             requiredRoles.removeIf(String::isEmpty);
-            requiredAuths = springContext.getBean("requiredAuths", List.class);
+            @SuppressWarnings("unchecked")
+            List<String> uncheckedAuths = springContext.getBean("requiredAuths", List.class);
+            requiredAuths = uncheckedAuths;
             requiredAuths.removeIf(String::isEmpty);
         } catch (BeansException e) {
             throw new ServiceConfigurationError("Error setting up Authentication objects: " + e.getMessage(),

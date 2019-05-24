@@ -1,8 +1,7 @@
 package timely.configuration;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-
-import org.hibernate.validator.constraints.NotBlank;
 
 public class Server {
 
@@ -42,8 +41,6 @@ public class Server {
     /**
      * Time to wait (in seconds) for connections to finish and to make sure no new
      * connections happen before shutting down Netty event loop groups.
-     *
-     * @return
      */
     public int getShutdownQuietPeriod() {
         return this.shutdownQuietPeriod;

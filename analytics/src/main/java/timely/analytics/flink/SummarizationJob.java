@@ -67,7 +67,7 @@ public class SummarizationJob {
         })
         .name("Metric Windows")
         .addSink(
-    		new SocketClientSink<MetricHistogram>(jp.getTimelyHostname(), jp.getTimelyTcpPort(),
+            new SocketClientSink<MetricHistogram>(jp.getTimelyHostname(), jp.getTimelyTcpPort(),
                     new MetricHistogram(), 2, true) {
 
                 private final Logger LOG = LoggerFactory

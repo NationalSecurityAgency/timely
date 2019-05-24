@@ -1,6 +1,6 @@
 package timely.grafana.auth.netty.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 
 import java.io.ByteArrayOutputStream;
 import java.net.URLEncoder;
@@ -71,7 +71,7 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
         try {
             try {
                 request = msg.getHttpRequest();
-                String originalURI = request.getUri();
+                String originalURI = request.uri();
                 originalURI = encodeURI(originalURI);
 
                 if (msg instanceof GrafanaRequest) {
@@ -92,37 +92,37 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                 Multimap<String, String> headers = HttpHeaderUtils.toMultimap(request.headers());
 
                 // If incoming user sets these headers, do not relay them
-                headers.removeAll("X-WEBAUTH-USER");
-                headers.removeAll("X-WEBAUTH-NAME");
+                headers.removeAll("x-webauth-user");
+                headers.removeAll("x-webauth-name");
                 TimelyPrincipal principal = token.getTimelyPrincipal();
                 TimelyUser user = principal.getPrimaryUser();
                 String subjectDn = user.getDn().subjectDN();
                 String userName = DnUtils.getCommonName(subjectDn);
                 String loginName = DnUtils.getShortName(subjectDn);
-                headers.put("X-WEBAUTH-USER", loginName);
-                headers.put("X-WEBAUTH-NAME", userName);
+                headers.put("x-webauth-user", loginName);
+                headers.put("x-webauth-name", userName);
                 List<Header> relayedHeaderList = new ArrayList<>();
                 for (Map.Entry<String, String> h : headers.entries()) {
-                    if (!h.getKey().equals(CONTENT_LENGTH)) {
+                    if (!h.getKey().equals(CONTENT_LENGTH.toString())) {
                         relayedHeaderList.add(new BasicHeader(h.getKey(), h.getValue()));
                     }
                 }
                 Header[] headerArray = new Header[relayedHeaderList.size()];
                 relayedHeaderList.toArray(headerArray);
                 relayURI = protocol + "://" + host + ":" + port + originalURI;
-                if (request.getMethod().equals(HttpMethod.HEAD)) {
+                if (request.method().equals(HttpMethod.HEAD)) {
                     HttpHead relayedRequest = new HttpHead(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
                     }
                     relayedResponse = client.execute(relayedRequest);
-                } else if (request.getMethod().equals(HttpMethod.GET)) {
+                } else if (request.method().equals(HttpMethod.GET)) {
                     HttpGet relayedRequest = new HttpGet(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
                     }
                     relayedResponse = client.execute(relayedRequest);
-                } else if (request.getMethod().equals(HttpMethod.POST)) {
+                } else if (request.method().equals(HttpMethod.POST)) {
                     HttpPost relayedRequest = new HttpPost(relayURI);
                     String content = request.content().toString(StandardCharsets.UTF_8);
                     StringEntity entity = new StringEntity(content);
@@ -131,7 +131,7 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                         relayedRequest.setHeaders(headerArray);
                     }
                     relayedResponse = client.execute(relayedRequest);
-                } else if (request.getMethod().equals(HttpMethod.PUT)) {
+                } else if (request.method().equals(HttpMethod.PUT)) {
                     HttpPut relayedRequest = new HttpPut(relayURI);
                     String content = request.content().toString(StandardCharsets.UTF_8);
                     StringEntity entity = new StringEntity(content);
@@ -140,13 +140,13 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                         relayedRequest.setHeaders(headerArray);
                     }
                     relayedResponse = client.execute(relayedRequest);
-                } else if (request.getMethod().equals(HttpMethod.DELETE)) {
+                } else if (request.method().equals(HttpMethod.DELETE)) {
                     HttpDelete relayedRequest = new HttpDelete(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
                     }
                     relayedResponse = client.execute(relayedRequest);
-                } else if (request.getMethod().equals(HttpMethod.OPTIONS)) {
+                } else if (request.method().equals(HttpMethod.OPTIONS)) {
                     HttpOptions relayedRequest = new HttpOptions(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
@@ -199,7 +199,7 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
             if (client != null && k != null) {
                 httpClientPool.returnObject(k, client);
             } else {
-                LOG.error("NOT RETURNING CONNECTION! " + msg.getHttpRequest().getUri());
+                LOG.error("NOT RETURNING CONNECTION! " + msg.getHttpRequest().uri());
             }
         }
     }

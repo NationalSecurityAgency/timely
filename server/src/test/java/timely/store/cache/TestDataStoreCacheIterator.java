@@ -165,7 +165,6 @@ public class TestDataStoreCacheIterator {
         subQuery.setRateOptions(rateOption);
         query.setQueries(Collections.singleton(subQuery));
 
-        int x = 0;
         SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
         try {
             // long firstTimestamp = Long.MAX_VALUE;

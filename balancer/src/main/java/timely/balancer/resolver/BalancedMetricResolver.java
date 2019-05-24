@@ -265,15 +265,15 @@ public class BalancedMetricResolver implements MetricResolver {
 
     private void startServiceListener(CuratorFramework curatorFramework) {
         try {
-            ServiceDiscovery discovery = ServiceDiscoveryBuilder.builder(ServerDetails.class).client(curatorFramework)
-                    .basePath(SERVICE_DISCOVERY_PATH).build();
+            ServiceDiscovery<ServerDetails> discovery = ServiceDiscoveryBuilder.builder(ServerDetails.class)
+                    .client(curatorFramework).basePath(SERVICE_DISCOVERY_PATH).build();
             discovery.start();
-            Collection<ServiceInstance> instances = discovery.queryForInstances("timely-server");
+            Collection<ServiceInstance<ServerDetails>> instances = discovery.queryForInstances("timely-server");
 
             balancerLock.writeLock().lock();
             try {
-                for (ServiceInstance si : instances) {
-                    ServerDetails pl = (ServerDetails) si.getPayload();
+                for (ServiceInstance<ServerDetails> si : instances) {
+                    ServerDetails pl = si.getPayload();
                     TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(), pl.getHttpPort(),
                             pl.getWsPort(), pl.getUdpPort());
                     LOG.info("adding service {} host:{} tcpPort:{} httpPort:{} wsPort:{} udpPort:{}", si.getId(),
@@ -286,7 +286,8 @@ public class BalancedMetricResolver implements MetricResolver {
                 balancerLock.writeLock().unlock();
             }
 
-            final ServiceCache serviceCache = discovery.serviceCacheBuilder().name("timely-server").build();
+            final ServiceCache<ServerDetails> serviceCache = discovery.serviceCacheBuilder().name("timely-server")
+                    .build();
             ServiceCacheListener listener = new ServiceCacheListener() {
 
                 @Override
@@ -294,9 +295,9 @@ public class BalancedMetricResolver implements MetricResolver {
                     boolean rebalanceNeeded = false;
                     balancerLock.writeLock().lock();
                     try {
-                        List<ServiceInstance> instances = serviceCache.getInstances();
+                        List<ServiceInstance<ServerDetails>> instances = serviceCache.getInstances();
                         Set<TimelyBalancedHost> availableHosts = new HashSet<>();
-                        for (ServiceInstance si : instances) {
+                        for (ServiceInstance<ServerDetails> si : instances) {
                             ServerDetails pl = (ServerDetails) si.getPayload();
                             TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(),
                                     pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort());

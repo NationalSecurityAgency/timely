@@ -25,6 +25,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -450,10 +451,9 @@ public class Balancer {
         wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         wsServer.option(ChannelOption.SO_BACKLOG, 128);
         wsServer.option(ChannelOption.SO_KEEPALIVE, true);
-        /* Not sure if next three lines are necessary */
+        /* Not sure if next two lines are necessary */
         wsServer.option(ChannelOption.SO_SNDBUF, 1048576);
-        wsServer.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 838860);
-        wsServer.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 620145);
+        wsServer.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(620145, 838860));
         wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 
