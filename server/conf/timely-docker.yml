@@ -22,7 +22,7 @@ timely:
     cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
-    ssl:
+    server-ssl:
       certificate-file: /timely-server-src/server/pki/timely.csr
       key-file: /timely-server-src/server/pki/timely-pkcs8.key
       key-password: password
