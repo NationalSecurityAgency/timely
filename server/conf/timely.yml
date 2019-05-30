@@ -27,7 +27,7 @@ timely:
     cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
-    serverSsl:
+    server-ssl:
       certificate-file:
       key-file:
       key-password:

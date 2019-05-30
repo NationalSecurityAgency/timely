@@ -3,6 +3,8 @@ timely:
   meta-table: timely.meta
   metric-age-off-days:
     default: 7
+  cache:
+    enabled: false
   metrics-report-ignored-tags:
   accumulo:
     instance-name: TimelyStandalone
@@ -22,7 +24,7 @@ timely:
     cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
-    ssl:
+    server-ssl:
       certificate-file:
       key-file:
       key-password: timely
