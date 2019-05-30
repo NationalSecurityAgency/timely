@@ -8,7 +8,7 @@ import com.google.common.collect.Multimap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import org.apache.commons.lang3.StringUtils;
@@ -47,7 +47,7 @@ public class GrafanaRequestDecoder extends MessageToMessageDecoder<FullHttpReque
 
     public static String getSessionId(FullHttpRequest msg) {
         Multimap<String, String> headers = HttpHeaderUtils.toMultimap(msg.headers());
-        Collection<String> cookies = headers.get(Names.COOKIE);
+        Collection<String> cookies = headers.get(HttpHeaderNames.COOKIE.toString());
         final StringBuilder buf = new StringBuilder();
         cookies.forEach(h -> {
             ServerCookieDecoder.STRICT.decode(h).forEach(c -> {
@@ -70,7 +70,7 @@ public class GrafanaRequestDecoder extends MessageToMessageDecoder<FullHttpReque
 
         LOG.trace(LOG_RECEIVED_REQUEST, msg);
 
-        final String uri = msg.getUri();
+        final String uri = msg.uri();
         final QueryStringDecoder decoder = new QueryStringDecoder(uri);
         if (decoder.path().equals(nonSecureRedirectAddress)) {
             out.add(new StrictTransportResponse());

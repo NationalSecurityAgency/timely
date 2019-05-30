@@ -36,11 +36,13 @@ public class CaptureChannelHandlerContext implements ChannelHandlerContext {
     public Object msg = null;
     private TestDefaultPromise promise = new TestDefaultPromise(null);
 
+    @Deprecated
     @Override
     public <T> Attribute<T> attr(AttributeKey<T> key) {
         return null;
     }
 
+    @Deprecated
     @Override
     public <T> boolean hasAttr(AttributeKey<T> attributeKey) {
         return false;

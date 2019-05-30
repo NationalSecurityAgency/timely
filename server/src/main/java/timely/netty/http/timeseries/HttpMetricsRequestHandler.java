@@ -2,7 +2,7 @@ package timely.netty.http.timeseries;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import timely.api.request.timeseries.MetricsRequest;
 import timely.api.response.timeseries.MetricsResponse;
 import timely.configuration.Configuration;
@@ -20,7 +20,7 @@ public class HttpMetricsRequestHandler extends SimpleChannelInboundHandler<Metri
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MetricsRequest msg) throws Exception {
         MetricsResponse r = new MetricsResponse(conf);
-        String acceptHeader = msg.getRequestHeader(Names.ACCEPT);
+        String acceptHeader = msg.getRequestHeader(HttpHeaderNames.ACCEPT.toString());
         sendResponse(ctx, r.toHttpResponse(acceptHeader));
     }
 

@@ -77,8 +77,6 @@ public class Tag implements Comparable<Tag>, Serializable {
 
     /**
      * Joins key and value into key=value
-     * 
-     * @return
      */
     public String join() {
         return tagParser.combine(this);

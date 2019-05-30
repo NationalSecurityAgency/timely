@@ -93,7 +93,7 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            // @formatter:off
+      // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                 "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                 "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)",
@@ -122,9 +122,8 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testMetricsJson() throws Exception {
-        // @formatter:off
+    // @formatter:off
 
-        String expected = "{\"metrics\":[{\"metric\":\"sys.cpu.user\",\"tags\":[{\"key\":\"tag2\",\"value\":\"value2\"},{\"key\":\"tag1\",\"value\":\"value1\"}]},{\"metric\":\"sys.cpu.idle\",\"tags\":[{\"key\":\"tag4\",\"value\":\"value4\"},{\"key\":\"tag3\",\"value\":\"value3\"}]},{\"metric\":\"zzzz\",\"tags\":[{\"key\":\"host\",\"value\":\"localhost\"}]}]}";
         final Server s = new Server(conf);
         s.run();
         try {
@@ -406,7 +405,7 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testQueryWithTagWildcard() throws Exception {
         final Server s = new Server(conf);
         s.run();
-        // @formatter:off
+    // @formatter:off
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
@@ -471,7 +470,7 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testQueryWithTagWildcard2() throws Exception {
         final Server s = new Server(conf);
         s.run();
-        // @formatter:off
+    // @formatter:off
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
@@ -532,7 +531,7 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            // @formatter:off
+      // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME + 1L) + " 1.0 tag3=value3 rack=r2",
                     "sys.cpu.idle " + (TEST_TIME + 2L) + " 2.0 tag3=value3 tag4=value4 rack=r1",
@@ -570,14 +569,14 @@ public class HttpApiIT extends OneWaySSLBase {
                            switch(tagv){
                                case "r1":
                                    assertEquals(2.0D, measure, 0.0);
-                                   assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 2), 
-                                		   getBaselineStart(TEST_TIME + 2), ts.toString());
+                                   assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 2),
+                                           getBaselineStart(TEST_TIME + 2), ts.toString());
                                    rack1Count.getAndIncrement();
                                    break;
                                case "r2":
                                    assertEquals(3.0D, measure, 0.0);
-                                   assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 1000), 
-                                		   getBaselineStart(TEST_TIME + 1000), ts.toString());
+                                   assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 1000),
+                                           getBaselineStart(TEST_TIME + 1000), ts.toString());
                                    rack2Count.getAndIncrement();
                                    break;
                                default:
@@ -739,22 +738,22 @@ public class HttpApiIT extends OneWaySSLBase {
         s.run();
         try {
             // @formatter:off
-            put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1", 
-            	"sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+10) + " 11.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+11) + " 12.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+12) + " 13.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+13) + " 14.0 tag1=value1 tag2=value2 rack=r1",
-            	"sys.cpu.user " + (TEST_TIME+14) + " 15.0 tag1=value1 tag2=value2 rack=r1");
-    		// @formatter:on
+            put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+10) + " 11.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+11) + " 12.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+12) + " 13.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+13) + " 14.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME+14) + " 15.0 tag1=value1 tag2=value2 rack=r1");
+            // @formatter:on
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             QueryRequest request = new QueryRequest();
@@ -790,7 +789,7 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            // @formatter:off
+      // @formatter:off
             put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
@@ -844,7 +843,7 @@ public class HttpApiIT extends OneWaySSLBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            // @formatter:off
+      // @formatter:off
             put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",

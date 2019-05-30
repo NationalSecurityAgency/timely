@@ -41,7 +41,7 @@ public class OrderedTags {
     }
 
     public Map<String, String> getTags() {
-        Map<String, String> t = new LinkedHashMap();
+        Map<String, String> t = new LinkedHashMap<>();
         for (Pair<String, String> p : tagSet) {
             t.put(p.getLeft(), p.getRight());
         }

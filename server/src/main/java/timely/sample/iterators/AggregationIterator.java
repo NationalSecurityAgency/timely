@@ -37,7 +37,6 @@ public class AggregationIterator extends WrappingIterator {
     private Set<Tag> tags;
     private Key last;
 
-    @SuppressWarnings("unchecked")
     @Override
     public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
             throws IOException {
@@ -45,7 +44,10 @@ public class AggregationIterator extends WrappingIterator {
         String aggClassname = options.get(AGGCLASS);
         Class<? extends Aggregator> aggClass = null;
         try {
-            aggClass = (Class<? extends Aggregator>) this.getClass().getClassLoader().loadClass(aggClassname);
+            @SuppressWarnings("unchecked")
+            Class<? extends Aggregator> uncheckedAggClass = (Class<? extends Aggregator>) this.getClass()
+                    .getClassLoader().loadClass(aggClassname);
+            aggClass = uncheckedAggClass;
             tags = new HashSet<>(new TagListParser().parse(options.get(TAGS)));
             aggregation = new Aggregation(aggClass.newInstance());
         } catch (ClassNotFoundException e) {
@@ -119,10 +121,11 @@ public class AggregationIterator extends WrappingIterator {
         is.addOption(AGGCLASS, classname);
     }
 
-    @SuppressWarnings("unchecked")
     public static Map<Set<Tag>, Aggregation> decodeValue(Value value) throws IOException, ClassNotFoundException {
         ByteArrayInputStream bis = new ByteArrayInputStream(value.get());
         ObjectInputStream ois = new ObjectInputStream(bis);
-        return (Map<Set<Tag>, Aggregation>) ois.readObject();
+        @SuppressWarnings("unchecked")
+        Map<Set<Tag>, Aggregation> unchecked = (Map<Set<Tag>, Aggregation>) ois.readObject();
+        return unchecked;
     }
 }

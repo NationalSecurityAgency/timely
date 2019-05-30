@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
@@ -35,8 +35,8 @@ public class HttpMetricPutHandler extends SimpleChannelInboundHandler<MetricRequ
         }
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.EMPTY_BUFFER);
-        response.headers().set(Names.CONTENT_TYPE, Constants.JSON_TYPE);
-        response.headers().set(Names.CONTENT_LENGTH, response.content().readableBytes());
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
         sendResponse(ctx, response);
     }
 

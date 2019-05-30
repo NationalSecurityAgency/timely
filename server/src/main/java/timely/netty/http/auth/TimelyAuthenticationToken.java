@@ -17,9 +17,10 @@ import timely.auth.util.HttpHeaderUtils;
 
 public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationToken {
 
+    private static final long serialVersionUID = 1L;
     private static final Logger LOG = LoggerFactory.getLogger(TimelyAuthenticationToken.class);
-    public static final String PROXIED_ENTITIES_HEADER = "X-ProxiedEntitiesChain";
-    public static final String PROXIED_ISSUERS_HEADER = "X-ProxiedIssuersChain";
+    public static final String PROXIED_ENTITIES_HEADER = "x-proxiedentitieschain";
+    public static final String PROXIED_ISSUERS_HEADER = "x-proxiedissuerschain";
 
     private Multimap<String, String> httpHeaders = null;
     private X509Certificate clientCert = null;

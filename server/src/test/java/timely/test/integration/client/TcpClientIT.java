@@ -84,9 +84,9 @@ public class TcpClientIT extends OneWaySSLBase {
         try (TcpClient client = new TcpClient("127.0.0.1", 54321)) {
             client.open();
             // @formatter:off
-        	client.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n"
+            client.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n"
                        + "put sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n");
-        	client.flush();
+            client.flush();
             while (2 != m.getTcpRequests().getCount()) {
                 Thread.sleep(5);
             }

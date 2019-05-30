@@ -11,7 +11,7 @@
     <Logger name="org.apache.zookeeper" level="OFF" additivity="false" />
 <!--     <Logger name="javax.net.debug" level="ALL" additivity="false"/> -->
 <!--     <Logger name="sun.net.www.protocol.http.HttpURLConnection" level="ALL" additivity="false" /> -->
-    <Root level="TRACE">
+    <Root level="WARN">
       <AppenderRef ref="CONSOLE"/>
     </Root>
   </Loggers>

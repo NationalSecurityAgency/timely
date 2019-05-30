@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -44,6 +45,7 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.cors.CorsConfig;
+import io.netty.handler.codec.http.cors.CorsConfigBuilder;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.logging.LoggingHandler;
@@ -209,13 +211,13 @@ public class Server {
             payload.setWsPort(config.getWebsocket().getPort());
             payload.setUdpPort(config.getServer().getUdpPort());
 
-            ServiceInstanceBuilder builder = ServiceInstance.builder();
+            ServiceInstanceBuilder<ServerDetails> builder = ServiceInstance.builder();
             String serviceName = host + ":" + config.getServer().getTcpPort();
-            ServiceInstance serviceInstance = builder.id(serviceName).name("timely-server")
+            ServiceInstance<ServerDetails> serviceInstance = builder.id(serviceName).name("timely-server")
                     .address(config.getServer().getIp()).port(config.getServer().getTcpPort()).payload(payload).build();
 
-            ServiceDiscovery discovery = ServiceDiscoveryBuilder.builder(ServerDetails.class).client(curatorFramework)
-                    .basePath(SERVICE_DISCOVERY_PATH).build();
+            ServiceDiscovery<ServerDetails> discovery = ServiceDiscoveryBuilder.builder(ServerDetails.class)
+                    .client(curatorFramework).basePath(SERVICE_DISCOVERY_PATH).build();
             discovery.start();
             discovery.registerService(serviceInstance);
 
@@ -508,10 +510,9 @@ public class Server {
         wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         wsServer.option(ChannelOption.SO_BACKLOG, 128);
         wsServer.option(ChannelOption.SO_KEEPALIVE, true);
-        /* Not sure if next three lines are necessary */
+        /* Not sure if next two lines are necessary */
         wsServer.option(ChannelOption.SO_SNDBUF, 1048576);
-        wsServer.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 838860);
-        wsServer.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 620145);
+        wsServer.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(620145, 838860));
         wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
 
@@ -591,11 +592,11 @@ public class Server {
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 final Cors corsCfg = config.getHttp().getCors();
-                final CorsConfig.Builder ccb;
+                final CorsConfigBuilder ccb;
                 if (corsCfg.isAllowAnyOrigin()) {
-                    ccb = new CorsConfig.Builder();
+                    ccb = CorsConfigBuilder.forAnyOrigin();
                 } else {
-                    ccb = new CorsConfig.Builder(corsCfg.getAllowedOrigins().stream().toArray(String[]::new));
+                    ccb = CorsConfigBuilder.forOrigins(corsCfg.getAllowedOrigins().stream().toArray(String[]::new));
                 }
                 if (corsCfg.isAllowNullOrigin()) {
                     ccb.allowNullOrigin();

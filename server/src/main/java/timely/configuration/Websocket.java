@@ -1,8 +1,7 @@
 package timely.configuration;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-
-import org.hibernate.validator.constraints.NotBlank;
 
 public class Websocket {
 

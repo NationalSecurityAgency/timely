@@ -11,6 +11,7 @@ import org.apache.commons.lang3.Range;
 
 public class WrappedGorillaCompressor implements Serializable {
 
+    private static final long serialVersionUID = 1L;
     private boolean closed = false;
     private long numEntries = 0;
     private long oldestTimestamp;
@@ -18,10 +19,6 @@ public class WrappedGorillaCompressor implements Serializable {
     private LongArrayOutput compressorOutput = null;
     private long[] backingArray = null;
     private GorillaCompressor compressor;
-
-    private WrappedGorillaCompressor() {
-
-    }
 
     public WrappedGorillaCompressor(long timestamp) {
         this.compressorOutput = new LongArrayOutput(16);

@@ -47,7 +47,6 @@ public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag
      * An alternative combiner for a map of string to string instead of a list of
      * tags
      * 
-     * @param tags
      * @return string representation
      */
     public String combine(Map<String, String> tags) {

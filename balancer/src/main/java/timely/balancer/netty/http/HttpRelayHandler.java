@@ -1,6 +1,6 @@
 package timely.balancer.netty.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 
 import java.io.ByteArrayOutputStream;
 import java.net.URLEncoder;
@@ -67,7 +67,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
         try {
             try {
                 request = msg.getHttpRequest();
-                String originalURI = request.getUri();
+                String originalURI = request.uri();
                 originalURI = encodeURI(originalURI);
 
                 String metric = null;
@@ -101,7 +101,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
 
                 List<Header> relayedHeaderList = new ArrayList<>();
                 for (Map.Entry<String, String> h : headers.entries()) {
-                    if (!h.getKey().equals(CONTENT_LENGTH)) {
+                    if (!h.getKey().equals(CONTENT_LENGTH.toString())) {
                         relayedHeaderList.add(new BasicHeader(h.getKey(), h.getValue()));
                     }
                 }
@@ -109,14 +109,14 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 relayedHeaderList.toArray(headerArray);
 
                 String relayURI = "https://" + k.getHost() + ":" + k.getHttpPort() + originalURI;
-                if (request.getMethod().equals(HttpMethod.GET)) {
+                if (request.method().equals(HttpMethod.GET)) {
                     HttpUriRequest relayedRequest = new HttpGet(relayURI);
                     if (headerArray.length > 0) {
                         relayedRequest.setHeaders(headerArray);
                     }
                     relayedResponse = client.execute(relayedRequest);
 
-                } else if (request.getMethod().equals(HttpMethod.POST)) {
+                } else if (request.method().equals(HttpMethod.POST)) {
                     HttpPost relayedRequest = new HttpPost(relayURI);
 
                     String content = request.content().toString(StandardCharsets.UTF_8);
@@ -170,7 +170,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
             if (client != null && k != null) {
                 httpClientPool.returnObject(k, client);
             } else {
-                LOG.error("NOT RETURNING CONNECTION! " + msg.getHttpRequest().getUri());
+                LOG.error("NOT RETURNING CONNECTION! " + msg.getHttpRequest().uri());
             }
         }
     }

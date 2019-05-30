@@ -1,27 +1,13 @@
 package timely.adapter.accumulo;
 
-import org.apache.accumulo.core.client.lexicoder.LongLexicoder;
-import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
-import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
 import org.apache.accumulo.core.data.Key;
 import timely.api.model.Meta;
 import timely.model.Metric;
-import timely.model.parse.TagListParser;
-import timely.model.parse.TagParser;
 
 /**
  * Creates Accumulo data structures from {@link Metric}
  */
 public class MetaAdapter {
-
-    private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
-            new LongLexicoder());
-
-    private static final PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(),
-            new StringLexicoder());
-
-    private static final TagParser tagParser = new TagParser();
-    private static final TagListParser tagListParser = new TagListParser();
 
     public static Key createMetricKey(String metricName, Long timestamp) {
         return new Key(Meta.METRIC_PREFIX + metricName, "", "", timestamp);

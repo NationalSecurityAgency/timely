@@ -14,7 +14,6 @@ import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
 import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -39,7 +38,6 @@ import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
 import timely.test.integration.OneWaySSLBase;
 
-@SuppressWarnings("deprecation")
 @Category(IntegrationTest.class)
 public class WebSocketClientIT extends OneWaySSLBase {
 
@@ -56,7 +54,8 @@ public class WebSocketClientIT extends OneWaySSLBase {
         builder.sslProvider(SslProvider.JDK);
         builder.trustManager(clientTrustStoreFile); // Trust the server cert
         SslContext ctx = builder.build();
-        Assert.assertEquals(JdkSslClientContext.class, ctx.getClass());
+        Assert.assertTrue(ctx.isClient());
+        Assert.assertTrue(ctx instanceof JdkSslContext);
         JdkSslContext jdk = (JdkSslContext) ctx;
         sslCtx = jdk.context();
     }
@@ -70,6 +69,7 @@ public class WebSocketClientIT extends OneWaySSLBase {
         setupSslCtx();
     }
 
+    @Override
     @After
     public void tearDown() throws Exception {
         s.shutdown();
@@ -80,10 +80,10 @@ public class WebSocketClientIT extends OneWaySSLBase {
         // Add some data
         // @formatter:off
         put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-        	"sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2", 
-        	"sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1", 
-        	"sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
-		// @formatter:on
+            "sys.cpu.user " + TEST_TIME + " 1.0 tag3=value3 rack=r2",
+            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+            "sys.cpu.idle " + (TEST_TIME + 2) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:on
 
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);

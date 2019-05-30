@@ -153,7 +153,7 @@ public class MetricQueryLoadTest {
 
             long numQueries = 1000;
             long queriesCompleted = 0;
-            List<Future> futures = new ArrayList<>();
+            List<Future<?>> futures = new ArrayList<>();
 
             while (!testDone) {
                 testDone = (System.currentTimeMillis() - beginQueries) >= (testDurationMins * 60 * 1000);
@@ -164,9 +164,9 @@ public class MetricQueryLoadTest {
                     while (futures.size() < numQueries) {
                         futures.add(executorService.submit(runnableTask));
                     }
-                    Iterator<Future> itr = futures.iterator();
+                    Iterator<Future<?>> itr = futures.iterator();
                     while (itr.hasNext()) {
-                        Future f = itr.next();
+                        Future<?> f = itr.next();
                         if (f.isDone()) {
                             itr.remove();
                             queriesCompleted++;

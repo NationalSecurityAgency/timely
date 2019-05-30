@@ -14,11 +14,10 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -51,7 +50,6 @@ import timely.test.TestConfiguration;
  * Tests that Two way SSL without anonymous access works.
  *
  */
-@SuppressWarnings("deprecation")
 @Category(IntegrationTest.class)
 public class TwoWaySSLIT extends QueryBase {
 
@@ -83,7 +81,8 @@ public class TwoWaySSLIT extends QueryBase {
         builder.sslProvider(SslProvider.JDK);
         builder.trustManager(clientTrustStoreFile); // Trust the server cert
         SslContext ctx = builder.build();
-        Assert.assertEquals(JdkSslClientContext.class, ctx.getClass());
+        Assert.assertTrue(ctx.isClient());
+        Assert.assertTrue(ctx instanceof JdkSslContext);
         JdkSslContext jdk = (JdkSslContext) ctx;
         SSLContext jdkSslContext = jdk.context();
         return jdkSslContext.getSocketFactory();
@@ -99,11 +98,13 @@ public class TwoWaySSLIT extends QueryBase {
         config.getSecurity().setAllowAnonymousHttpAccess(false);
     }
 
+    @Override
     protected HttpsURLConnection getUrlConnection(URL url) throws Exception {
         // Username and password not used in 2way SSL case
         return getUrlConnection(null, null, url);
     }
 
+    @Override
     protected HttpsURLConnection getUrlConnection(String username, String password, URL url) throws Exception {
         HttpsURLConnection.setDefaultSSLSocketFactory(getSSLSocketFactory());
         URL loginURL = new URL(url.getProtocol() + "://" + url.getHost() + ":" + url.getPort() + "/login");
@@ -118,12 +119,12 @@ public class TwoWaySSLIT extends QueryBase {
             throw new UnauthorizedUserException();
         }
         Assert.assertEquals(200, responseCode);
-        List<String> cookies = con.getHeaderFields().get(Names.SET_COOKIE);
+        List<String> cookies = con.getHeaderFields().get(HttpHeaderNames.SET_COOKIE.toString());
         Assert.assertEquals(1, cookies.size());
         Cookie sessionCookie = ClientCookieDecoder.STRICT.decode(cookies.get(0));
         Assert.assertEquals(Constants.COOKIE_NAME, sessionCookie.name());
         con = (HttpsURLConnection) url.openConnection();
-        con.setRequestProperty(Names.COOKIE, sessionCookie.name() + "=" + sessionCookie.value());
+        con.setRequestProperty(HttpHeaderNames.COOKIE.toString(), sessionCookie.name() + "=" + sessionCookie.value());
         con.setHostnameVerifier((host, session) -> true);
         return con;
     }
@@ -191,7 +192,7 @@ public class TwoWaySSLIT extends QueryBase {
         final Server s = new Server(conf);
         s.run();
         try {
-            // @formatter:off
+      // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                 "sys.cpu.user " + (TEST_TIME + 1000) + " 2.0 tag1=value1 tag2=value2",
                 "sys.cpu.user " + (TEST_TIME + 2000) + " 3.0 tag1=value1 tag3=value3 viz=A",

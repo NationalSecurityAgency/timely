@@ -2,7 +2,14 @@ package timely.store.iterators;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
@@ -28,19 +35,19 @@ import timely.model.Metric;
  * number of elements in the filter. So, if you have a five day moving average
  * filter and a time series as 100 data points, then you will receive 95
  * results.
- * 
+ *
  * For multiple time series, K/V pairs will be reported in time order where time
  * is taken from the key of the last element in the filter. For example, if you
  * have series {A,B,C} and {A,C} are on the same time interval and B is lagging
  * behind them, then this iterator will return K/V answers for the time series
  * in the following manner:
- * 
+ *
  * A, C, B, A, C, B, ...
- * 
+ *
  * Also of note is that this iterator handles new time series appearing in the
  * middle of the time range. Time series that disappear during the time range
  * will stop reporting an answer.
- * 
+ *
  * NOTE: This iterator does not handle being re-seeked. It is currently designed
  * to be used with the DownsampleIterator above it.
  *
@@ -222,8 +229,6 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
     /**
      * This will parse the next set of keys with the same timestamp (encoded in the
      * row) from the underlying source.
-     * 
-     * @throws IOException
      */
     private void refillBuffer() throws IOException {
         LOG.trace("refill()");

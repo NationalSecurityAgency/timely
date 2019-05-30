@@ -10,7 +10,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -52,7 +52,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
 
     public static String getSessionId(FullHttpRequest msg) {
         Multimap<String, String> headers = HttpHeaderUtils.toMultimap(msg.headers());
-        Collection<String> cookies = headers.get(Names.COOKIE);
+        Collection<String> cookies = headers.get(HttpHeaderNames.COOKIE.toString());
         final StringBuilder buf = new StringBuilder();
         cookies.forEach(h -> {
             ServerCookieDecoder.STRICT.decode(h).forEach(c -> {
@@ -75,7 +75,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
 
         LOG.trace(LOG_RECEIVED_REQUEST, msg);
 
-        final String uri = msg.getUri();
+        final String uri = msg.uri();
         final QueryStringDecoder decoder = new QueryStringDecoder(uri);
         if (decoder.path().equals(nonSecureRedirectAddress)) {
             out.add(new StrictTransportResponse());
@@ -87,10 +87,10 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
 
         HttpRequest request;
         try {
-            if (msg.getMethod().equals(HttpMethod.GET)) {
+            if (msg.method().equals(HttpMethod.GET)) {
                 HttpGetRequest get = AnnotationResolver.getClassForHttpGet(decoder.path());
                 request = get.parseQueryParameters(decoder);
-            } else if (msg.getMethod().equals(HttpMethod.POST)) {
+            } else if (msg.method().equals(HttpMethod.POST)) {
                 HttpPostRequest post = AnnotationResolver.getClassForHttpPost(decoder.path());
                 String content = "";
                 ByteBuf body = msg.content();
@@ -101,8 +101,9 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
             } else {
                 TimelyException e = new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
                         "unhandled method type", "");
-                e.addResponseHeader(Names.ALLOW, HttpMethod.GET.name() + "," + HttpMethod.POST.name());
-                LOG.warn("Unhandled HTTP request type {}", msg.getMethod());
+                e.addResponseHeader(HttpHeaderNames.ALLOW.toString(),
+                        HttpMethod.GET.name() + "," + HttpMethod.POST.name());
+                LOG.warn("Unhandled HTTP request type {}", msg.method());
                 throw e;
             }
             if (request instanceof AuthenticatedRequest) {

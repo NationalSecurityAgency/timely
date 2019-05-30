@@ -47,9 +47,9 @@ public class SerializationTest {
         testSerialization(remove);
     }
 
-    @SuppressWarnings("unchecked")
     private <T> void testSerialization(T o) throws Exception {
         String ser = mapper.writeValueAsString(o);
+        @SuppressWarnings("unchecked")
         T des = mapper.readValue(ser, (Class<T>) o.getClass());
         Assert.assertEquals(o, des);
     }

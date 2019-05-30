@@ -86,13 +86,13 @@ public class WriteTimelyPlugin extends CollectDPluginParent
         PooledSocketFactory socketFactory = new PooledSocketFactory();
         retval = socketFactory.config(config);
         if (retval == 0) {
-            GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+            GenericObjectPoolConfig<Socket> poolConfig = new GenericObjectPoolConfig<>();
             // use max size for maxTotal and maxIdle
             // no need to activate and passivate
             poolConfig.setMaxTotal(POOL_MAX_SIZE);
             poolConfig.setMaxIdle(POOL_MAX_SIZE);
             poolConfig.setTestOnReturn(true);
-            socketPool = new GenericObjectPool(socketFactory, poolConfig);
+            socketPool = new GenericObjectPool<>(socketFactory, poolConfig);
         }
         return retval;
     }
