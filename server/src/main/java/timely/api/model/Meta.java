@@ -5,6 +5,10 @@ import java.util.List;
 
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 public class Meta implements Comparable<Meta> {
 
@@ -49,9 +53,15 @@ public class Meta implements Comparable<Meta> {
 
     public List<Key> toKeys() {
         List<Key> keys = new ArrayList<>();
-        keys.add(new Key(METRIC_PREFIX + metric));
-        keys.add(new Key(TAG_PREFIX + metric, tagKey));
-        keys.add(new Key(VALUE_PREFIX + metric, tagKey, tagValue));
+        if (StringUtils.isNotBlank(metric)) {
+            keys.add(new Key(METRIC_PREFIX + metric));
+        }
+        if (StringUtils.isNotBlank(tagKey)) {
+            keys.add(new Key(TAG_PREFIX + metric, tagKey));
+        }
+        if (StringUtils.isNotBlank(tagValue)) {
+            keys.add(new Key(VALUE_PREFIX + metric, tagKey, tagValue));
+        }
         return keys;
     }
 
@@ -97,39 +107,25 @@ public class Meta implements Comparable<Meta> {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((metric == null) ? 0 : metric.hashCode());
-        result = prime * result + ((tagKey == null) ? 0 : tagKey.hashCode());
-        result = prime * result + ((tagValue == null) ? 0 : tagValue.hashCode());
-        return result;
+        HashCodeBuilder builder = new HashCodeBuilder();
+        builder.append(metric);
+        builder.append(tagKey);
+        builder.append(tagValue);
+        return builder.toHashCode();
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
+    public boolean equals(Object o) {
+        if (o instanceof Meta) {
+            Meta obj = (Meta) o;
+            EqualsBuilder builder = new EqualsBuilder();
+            builder.append(this.metric, obj.metric);
+            builder.append(this.tagKey, obj.tagKey);
+            builder.append(this.tagValue, obj.tagValue);
+            return builder.isEquals();
+        } else {
             return false;
-        if (getClass() != obj.getClass())
-            return false;
-        Meta other = (Meta) obj;
-        if (metric == null) {
-            if (other.metric != null)
-                return false;
-        } else if (!metric.equals(other.metric))
-            return false;
-        if (tagKey == null) {
-            if (other.tagKey != null)
-                return false;
-        } else if (!tagKey.equals(other.tagKey))
-            return false;
-        if (tagValue == null) {
-            if (other.tagValue != null)
-                return false;
-        } else if (!tagValue.equals(other.tagValue))
-            return false;
-        return true;
+        }
     }
 
     @Override
@@ -139,15 +135,10 @@ public class Meta implements Comparable<Meta> {
 
     @Override
     public int compareTo(Meta o) {
-        int result = metric.compareTo(o.metric);
-        if (result != 0) {
-            return result;
-        }
-        result = tagKey.compareTo(o.tagKey);
-        if (result != 0) {
-            return result;
-        }
-        return tagValue.compareTo(o.tagValue);
+        CompareToBuilder builder = new CompareToBuilder();
+        builder.append(this.metric, o.metric);
+        builder.append(this.tagKey, o.tagKey);
+        builder.append(this.tagValue, o.tagValue);
+        return builder.toComparison();
     }
-
 }

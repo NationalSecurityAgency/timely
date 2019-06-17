@@ -354,10 +354,7 @@ public class DataStoreImpl implements DataStore {
         internalMetrics.incrementMetricsReceived(1);
         List<Meta> toCache = new ArrayList<>(metric.getTags().size());
         for (final Tag tag : metric.getTags()) {
-            Meta key = new Meta(metric.getName(), tag.getKey(), tag.getValue());
-            if (!metaCache.contains(key)) {
-                toCache.add(key);
-            }
+            toCache.add(new Meta(metric.getName(), tag.getKey(), tag.getValue()));
         }
         if (!toCache.isEmpty()) {
             final Set<Mutation> muts = new TreeSet<>(new Comparator<Mutation>() {
@@ -378,7 +375,7 @@ public class DataStoreImpl implements DataStore {
             MetaKeySet mks = new MetaKeySet();
             toCache.forEach(m -> mks.addAll(m.toKeys()));
             internalMetrics.incrementMetaKeysInserted(mks.size());
-            muts.addAll(mks.toMutations());
+            muts.addAll(mks.toMutations(metric.getValue().getTimestamp()));
             try {
                 metaWriter.get().addMutations(muts);
             } catch (MutationsRejectedException e) {

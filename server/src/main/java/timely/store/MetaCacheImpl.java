@@ -11,10 +11,13 @@ import java.util.TreeSet;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.Scanner;
+import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
@@ -63,6 +66,7 @@ public class MetaCacheImpl implements MetaCache {
         Map<String, Map<String, Long>> metricMap = new HashMap<>();
         Scanner scanner = null;
         try {
+            Map<Meta, Object> newCache = new HashMap<>();
             final Instance instance = new ZooKeeperInstance(aConf);
             Connector connector = instance.getConnector(accumuloConf.getUsername(),
                     new PasswordToken(accumuloConf.getPassword()));
@@ -96,20 +100,20 @@ public class MetaCacheImpl implements MetaCache {
                     if (entry.getKey().getTimestamp() > oldestTimestamp) {
                         tagMap.put(tagKey, ++numTagValues);
                         if (numTagValues <= configuration.getMetaCache().getMaxTagValues()) {
-                            cache.put(meta, DUMMY);
+                            newCache.put(meta, DUMMY);
                         } else {
-                            // found maxTagValues on this refresh, so remove this key
-                            cache.invalidate(meta);
+                            // found maxTagValues on this refresh
                             maxedOutValues = true;
                         }
-                    } else {
-                        // this entry is more than expirationMinutes old, so remove it
-                        cache.invalidate(meta);
                     }
                 }
             }
+            synchronized (cache) {
+                cache.invalidateAll();
+                cache.putAll(newCache);
+            }
             LOG.debug("Finished scanning " + metaTable);
-        } catch (Exception e) {
+        } catch (AccumuloException | AccumuloSecurityException | TableNotFoundException e) {
             LOG.error(e.getMessage(), e);
         } finally {
             if (scanner != null) {

@@ -287,7 +287,7 @@ public class TimelyTcpIT extends MacITBase {
             LOG.info("Meta no vers iter: " + entry);
             count++;
         }
-        assertEquals(10, count);
+        assertEquals(15, count);
     }
 
     @Test

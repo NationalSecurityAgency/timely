@@ -156,8 +156,10 @@ public class MetricsResponse {
         b.append(TR_END);
         String prevMetric = null;
         StringBuilder tags = new StringBuilder();
+        Map<String, Long> tagMap = new HashMap<>();
         for (Meta m : tree) {
             if (prevMetric != null && !m.getMetric().equals(prevMetric)) {
+                tagMap.clear();
                 b.append(TR_START);
                 b.append(TD_START).append(prevMetric).append(TD_END);
                 b.append(TD_START).append(tags.toString()).append(TD_END);
@@ -168,8 +170,12 @@ public class MetricsResponse {
             if (prevMetric == null) {
                 prevMetric = m.getMetric();
             }
+            long numValues = tagMap.getOrDefault(m.getTagKey(), 0l);
             if (!(this.ignoredTags.contains(m.getTagKey()))) {
-                tags.append(m.getTagKey()).append("=").append(m.getTagValue()).append(" ");
+                if (numValues <= conf.getMetaCache().getMaxTagValues()) {
+                    tags.append(m.getTagKey()).append("=").append(m.getTagValue()).append(" ");
+                    tagMap.put(m.getTagKey(), ++numValues);
+                }
             }
         }
         b.append(TR_START);

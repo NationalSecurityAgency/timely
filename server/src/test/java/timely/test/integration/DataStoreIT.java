@@ -107,10 +107,23 @@ public class DataStoreIT extends OneWaySSLBase {
 
         final Server s = new Server(conf);
         s.run();
+        // @formatter:off
+        /*
+         * TEST_TIME = System.currentTimeMillis() - ONE_DAY
+         * Age off for all metrics is one day = 24 hours
+         *
+         * lines 1, 2, 3 will age off immediately as they are >= 2 days old
+         * line 4 is there because otherwise the meta tags would also age off and we would get a 400 - No Tags Found
+         * line 5 is one day old and will age off immediately
+         * lines 6 & 7 should be returned as they are not aged off and are within the query range
+         *
+         */
+        // @formatter:on
         try {
             put("sys.cpu.idle " + (TEST_TIME - ONE_DAY - (2 * ONE_HOUR)) + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME - ONE_DAY - ONE_HOUR) + " 3.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME - ONE_DAY) + " 2.0 tag1=value1 tag3=value3",
+                    "sys.cpu.idle " + (TEST_TIME + (ONE_DAY * 2)) + " 2.0 tag1=value1 tag3=value3",
                     "sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + ONE_HOUR) + " 3.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + (ONE_HOUR * 2)) + " 2.0 tag1=value1 tag3=value3");

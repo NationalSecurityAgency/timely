@@ -62,8 +62,7 @@ public class HttpApiIT extends OneWaySSLBase {
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-                    "zzzz 1234567892 1.0 host=localhost");
+                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             // Latency in TestConfiguration is 2s, wait for it
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
@@ -78,11 +77,7 @@ public class HttpApiIT extends OneWaySSLBase {
 
             // Test empty query
             result = query(suggest + "type=metrics&max=10");
-            assertEquals("[\"sys.cpu.idle\",\"sys.cpu.user\",\"zzzz\"]", result);
-
-            // Test skipping over initial metrics
-            result = query(suggest + "type=metrics&q=z&max=10");
-            assertEquals("[\"zzzz\"]", result);
+            assertEquals("[\"sys.cpu.idle\",\"sys.cpu.user\"]", result);
         } finally {
             s.shutdown();
         }

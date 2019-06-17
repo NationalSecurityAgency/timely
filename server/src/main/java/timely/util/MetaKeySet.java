@@ -41,7 +41,7 @@ public class MetaKeySet extends TreeSet<Key> {
         super(new MetaKeyComparator());
     }
 
-    public List<Mutation> toMutations() {
+    public List<Mutation> toMutations(long ts) {
         List<Mutation> results = new ArrayList<>();
         String prevRow = null;
         Iterator<Key> keys = this.iterator();
@@ -55,7 +55,7 @@ public class MetaKeySet extends TreeSet<Key> {
                 m = new Mutation(next.getRow());
                 prevRow = next.getRow().toString();
             }
-            m.put(next.getColumnFamily(), next.getColumnQualifier(), NULL_VALUE);
+            m.put(next.getColumnFamily(), next.getColumnQualifier(), ts, NULL_VALUE);
         }
         results.add(m);
         return results;
