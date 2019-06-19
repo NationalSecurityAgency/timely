@@ -59,7 +59,7 @@ public class Meta implements Comparable<Meta> {
         if (StringUtils.isNotBlank(tagKey)) {
             keys.add(new Key(TAG_PREFIX + metric, tagKey));
         }
-        if (StringUtils.isNotBlank(tagValue)) {
+        if (StringUtils.isNotBlank(tagKey) && StringUtils.isNotBlank(tagValue)) {
             keys.add(new Key(VALUE_PREFIX + metric, tagKey, tagValue));
         }
         return keys;
