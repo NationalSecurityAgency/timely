@@ -50,6 +50,7 @@
     <version.commons-pool2>2.6.1</version.commons-pool2>
     <version.curator>4.1.0</version.curator>
     <version.disruptor>3.4.2</version.disruptor>
+    <version.easymock>4.0.2</version.easymock>
     <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
     <version.fast-classpath-scanner>3.1.13</version.fast-classpath-scanner>
     <version.flink>1.1.4</version.flink>
@@ -394,6 +395,12 @@
         <groupId>net.jcip</groupId>
         <artifactId>jcip-annotations</artifactId>
         <version>${version.jcip-annotations}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.easymock</groupId>
+        <artifactId>easymock</artifactId>
+        <version>${version.easymock}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
