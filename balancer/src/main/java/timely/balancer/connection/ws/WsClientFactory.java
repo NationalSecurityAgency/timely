@@ -22,7 +22,7 @@ public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedH
     @Override
     public PooledObject<WebSocketSubscriptionClient> makeObject(TimelyBalancedHost k) throws Exception {
 
-        int bufferSize = balancerConfig.getWebsocket().getSubscriptionBatchSize() * 500;
+        int bufferSize = balancerConfig.getWebsocket().getIncomingBufferSize();
         WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslContext, k.getHost(), k.getHttpPort(),
                 k.getWsPort(), balancerConfig.getSecurity().getClientSsl().isUseClientCert(),
                 balancerConfig.isLoginRequired(), "", "",

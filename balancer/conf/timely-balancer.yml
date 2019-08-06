@@ -111,6 +111,7 @@ timely-balancer:
     flush-interval-seconds: 30
     scanner-read-ahead: 1
     subscription-batch-size: 5000
+    incomingBufferSize: 50000000
     wsClientPool:
       minIdlePerKey: 0
       maxIdlePerKey: 40

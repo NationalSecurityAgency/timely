@@ -16,4 +16,14 @@ public class BalancerWebsocket extends Websocket {
     public GenericKeyedObjectPoolConfig<WebSocketSubscriptionClient> getWsClientPool() {
         return wsClientPool;
     }
+
+    public int incomingBufferSize = 50000000;
+
+    public int getIncomingBufferSize() {
+        return incomingBufferSize;
+    }
+
+    public void setIncomingBufferSize(int incomingBufferSize) {
+        this.incomingBufferSize = incomingBufferSize;
+    }
 }
