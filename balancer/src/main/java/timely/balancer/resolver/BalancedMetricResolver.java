@@ -122,8 +122,7 @@ public class BalancedMetricResolver implements MetricResolver {
             }
         };
 
-        try {
-            TreeCache assignmentTreeCache = new TreeCache(curatorFramework, ASSIGNMENTS_LAST_UPDATED_PATH);
+        try (TreeCache assignmentTreeCache = new TreeCache(curatorFramework, ASSIGNMENTS_LAST_UPDATED_PATH)) {
             assignmentTreeCache.getListenable().addListener(assignmentListener);
             assignmentTreeCache.start();
         } catch (Exception e) {
@@ -144,8 +143,7 @@ public class BalancedMetricResolver implements MetricResolver {
             }
         };
 
-        try {
-            TreeCache nonCachedMetricsTreeCache = new TreeCache(curatorFramework, NON_CACHED_METRICS);
+        try (TreeCache nonCachedMetricsTreeCache = new TreeCache(curatorFramework, NON_CACHED_METRICS)) {
             nonCachedMetricsTreeCache.getListenable().addListener(nonCachedMetricsListener);
             nonCachedMetricsTreeCache.start();
         } catch (Exception e) {

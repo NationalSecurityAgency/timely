@@ -56,32 +56,32 @@
     <version.flink>1.1.4</version.flink>
     <version.google-flatbuffers>1.10.0</version.google-flatbuffers>
     <version.guava>27.1-jre</version.guava>
-    <version.hadoop>2.7.3</version.hadoop>
+    <version.hadoop>2.7.7</version.hadoop>
     <version.httpcomponents>4.5.6</version.httpcomponents>
-    <version.impsort>1.2.0</version.impsort>
+    <version.impsort>1.3.0</version.impsort>
     <version.jackson>2.9.9</version.jackson>
-    <version.jacoco>0.7.6.201602180812</version.jacoco>
+    <version.jacoco>0.8.4</version.jacoco>
     <version.javacsv>2.0</version.javacsv>
     <version.javassist>3.24.1-GA</version.javassist>
     <version.jcip-annotations>1.0</version.jcip-annotations>
     <version.jsoup>1.11.3</version.jsoup>
     <version.junit>4.12</version.junit>
     <version.log4j>2.11.2</version.log4j>
-    <version.maven-assembly>2.6</version.maven-assembly>
-    <version.maven-build-helper>1.12</version.maven-build-helper>
-    <version.maven-compiler>3.3</version.maven-compiler>
-    <version.maven-dependency>2.10</version.maven-dependency>
-    <version.maven-jar>3.0.1</version.maven-jar>
-    <version.maven-pmd>3.6</version.maven-pmd>
-    <version.maven-rpm>2.1.4</version.maven-rpm>
-    <version.maven-shade>2.4.2</version.maven-shade>
-    <version.maven-surefire>2.19.1</version.maven-surefire>
+    <version.maven-assembly>3.1.1</version.maven-assembly>
+    <version.maven-build-helper>3.0.0</version.maven-build-helper>
+    <version.maven-compiler>3.8.1</version.maven-compiler>
+    <version.maven-dependency>3.1.1</version.maven-dependency>
+    <version.maven-jar>3.1.2</version.maven-jar>
+    <version.maven-pmd>3.12.0</version.maven-pmd>
+    <version.maven-rpm>2.2.0</version.maven-rpm>
+    <version.maven-shade>3.2.1</version.maven-shade>
+    <version.maven-surefire>3.0.0-M3</version.maven-surefire>
     <version.netty>4.1.35.Final</version.netty>
     <version.netty-tcnative>2.0.25.Final</version.netty-tcnative>
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.4</version.powermock>
     <version.slf4j>1.7.26</version.slf4j>
-    <version.spotbugs-maven>3.1.7</version.spotbugs-maven>
+    <version.spotbugs-maven>3.1.12.1</version.spotbugs-maven>
     <version.spring-boot>2.1.3.RELEASE</version.spring-boot>
     <version.tyrus>1.15</version.tyrus>
   </properties>
@@ -100,7 +100,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>${version.jackson}.1</version>
+        <version>${version.jackson}.3</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -418,7 +418,7 @@
         <plugin>
           <groupId>net.revelc.code.formatter</groupId>
           <artifactId>formatter-maven-plugin</artifactId>
-          <version>2.8.0</version>
+          <version>2.10.0</version>
           <configuration>
             <compilerCompliance>${maven.compiler.source}</compilerCompliance>
             <compilerSource>${maven.compiler.source}</compilerSource>
@@ -436,7 +436,7 @@
         <plugin>
           <groupId>com.github.ekryd.sortpom</groupId>
           <artifactId>sortpom-maven-plugin</artifactId>
-          <version>2.8.0</version>
+          <version>2.10.0</version>
           <configuration>
             <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
             <createBackupFile>false</createBackupFile>
@@ -580,7 +580,7 @@
             <configuration>
               <rules>
                 <requireMavenVersion>
-                  <version>3.0.5</version>
+                  <version>3.5.0</version>
                 </requireMavenVersion>
                 <requireJavaVersion>
                   <version>[${maven.compiler.target},)</version>
@@ -751,6 +751,9 @@
           <name>m2e.version</name>
         </property>
       </activation>
+      <properties>
+        <maven.compiler.release>8</maven.compiler.release>
+      </properties>
       <build>
         <pluginManagement>
           <plugins>
@@ -810,6 +813,15 @@
           </plugins>
         </pluginManagement>
       </build>
+    </profile>
+    <profile>
+      <id>jdk-release-flag</id>
+      <activation>
+        <jdk>[9,)</jdk>
+      </activation>
+      <properties>
+        <maven.compiler.release>8</maven.compiler.release>
+      </properties>
     </profile>
   </profiles>
 </project>
