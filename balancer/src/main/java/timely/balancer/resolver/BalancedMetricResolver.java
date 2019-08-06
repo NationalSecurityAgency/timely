@@ -201,7 +201,10 @@ public class BalancedMetricResolver implements MetricResolver {
 
         Set<String> currentNonCachedMetricsDistributed = new TreeSet<>();
         try {
-            nonCachedMetricsIPRWLock.readLock().acquire();
+            boolean acquired = false;
+            while (!acquired) {
+                acquired = nonCachedMetricsIPRWLock.readLock().acquire(60, TimeUnit.SECONDS);
+            }
             byte[] currentNonCachedMetricsDistributedBytes = nonCachedMetricsIP.get().postValue();
             if (currentNonCachedMetricsDistributedBytes != null) {
                 try {
@@ -643,7 +646,10 @@ public class BalancedMetricResolver implements MetricResolver {
                 }
 
                 try {
-                    nonCachedMetricsIPRWLock.writeLock().acquire();
+                    boolean acquired = false;
+                    while (!acquired) {
+                        acquired = nonCachedMetricsIPRWLock.writeLock().acquire(60, TimeUnit.SECONDS);
+                    }
                     byte[] currentNonCachedMetricsDistributedBytes = nonCachedMetricsIP.get().postValue();
                     Set<String> currentNonCachedMetricsIP;
                     if (currentNonCachedMetricsDistributedBytes == null) {
@@ -879,7 +885,10 @@ public class BalancedMetricResolver implements MetricResolver {
 
         Map<String, TimelyBalancedHost> assignedMetricToHostMap = new TreeMap<>();
         try {
-            assignmentsIPRWLock.readLock().acquire();
+            boolean acquired = false;
+            while (!acquired) {
+                acquired = assignmentsIPRWLock.readLock().acquire(60, TimeUnit.SECONDS);
+            }
             balancerLock.writeLock().lock();
             Configuration configuration = new Configuration();
             FileSystem fs = FileSystem.get(configuration);
@@ -948,7 +957,10 @@ public class BalancedMetricResolver implements MetricResolver {
 
         CsvWriter writer = null;
         try {
-            assignmentsIPRWLock.writeLock().acquire();
+            boolean acquired = false;
+            while (!acquired) {
+                acquired = assignmentsIPRWLock.writeLock().acquire(60, TimeUnit.SECONDS);
+            }
             balancerLock.readLock().lock();
             nonCachedMetricsLocalLock.readLock().lock();
             try {
