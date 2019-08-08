@@ -227,8 +227,7 @@ public class DataStoreCache {
             }
         };
 
-        try {
-            TreeCache nonCachedMetricsTreeCache = new TreeCache(curatorFramework, NON_CACHED_METRICS);
+        try (TreeCache nonCachedMetricsTreeCache = new TreeCache(curatorFramework, NON_CACHED_METRICS)) {
             nonCachedMetricsTreeCache.getListenable().addListener(nonCachedMetricsListener);
             nonCachedMetricsTreeCache.start();
         } catch (Exception e) {

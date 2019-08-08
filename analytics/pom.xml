@@ -68,6 +68,7 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
             <compilerId>jdt</compilerId>
@@ -76,7 +77,7 @@
             <dependency>
               <groupId>org.eclipse.tycho</groupId>
               <artifactId>tycho-compiler-jdt</artifactId>
-              <version>0.21.0</version>
+              <version>1.4.0</version>
             </dependency>
           </dependencies>
         </plugin>

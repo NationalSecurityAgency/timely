@@ -162,9 +162,10 @@ public class MetricCompactionStrategy extends CompactionStrategy {
             PatriciaTrie<Long> ageoffs = new PatriciaTrie<>();
             long configureMinAgeOff = Long.MAX_VALUE;
             long configureMaxAgeOff = Long.MIN_VALUE;
-            Iterator keys = configAgeOff.getKeys();
+            @SuppressWarnings("unchecked")
+            Iterator<String> keys = configAgeOff.getKeys();
             while (keys.hasNext()) {
-                String k = (String) keys.next();
+                String k = keys.next();
                 String v = configAgeOff.getString(k);
                 if (k.startsWith((AGE_OFF_PREFIX))) {
                     String name = k.substring(AGE_OFF_PREFIX.length());
