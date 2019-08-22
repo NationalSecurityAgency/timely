@@ -1,7 +1,8 @@
 package timely.client.tcp;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 
 import org.slf4j.Logger;
@@ -14,7 +15,7 @@ public class TcpClient implements AutoCloseable {
     private final String host;
     private final int port;
     private Socket sock = null;
-    private PrintWriter out = null;
+    private BufferedWriter out = null;
     private long connectTime = 0L;
     private long backoff = 2000;
     private int bufferSize = -1;
@@ -59,7 +60,7 @@ public class TcpClient implements AutoCloseable {
         }
     }
 
-    public synchronized void flush() {
+    public synchronized void flush() throws IOException {
         if (null != out) {
             out.flush();
             writesSinceFlush = 0;
@@ -93,12 +94,12 @@ public class TcpClient implements AutoCloseable {
     }
 
     private synchronized int connect() {
-        if (null == sock || !sock.isConnected() || out.checkError()) {
+        if (null == sock || !sock.isConnected()) {
             if (System.currentTimeMillis() > (connectTime + backoff)) {
                 try {
                     connectTime = System.currentTimeMillis();
                     sock = new Socket(host, port);
-                    out = new PrintWriter(sock.getOutputStream(), false);
+                    out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()));
                     backoff = 2000;
                     LOG.trace("Connected to Timely at {}:{}", host, port);
                 } catch (IOException e) {
