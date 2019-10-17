@@ -147,6 +147,7 @@ public class DataStoreImpl implements DataStore {
             Accumulo accumuloConf = conf.getAccumulo();
             properties.put("instance.name", accumuloConf.getInstanceName());
             properties.put("instance.zookeeper.host", accumuloConf.getZookeepers());
+            properties.put("instance.zookeeper.timeout", accumuloConf.getZookeeperTimeout());
             final ClientConfiguration aconf = ClientConfiguration.fromMap(properties);
             final Instance instance = new ZooKeeperInstance(aconf);
             connector = instance.getConnector(accumuloConf.getUsername(),

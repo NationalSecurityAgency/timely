@@ -12,6 +12,8 @@ public class Accumulo {
     @NotBlank
     private String instanceName;
     @NotBlank
+    private String zookeeperTimeout = "120s";
+    @NotBlank
     private String username;
     @NotBlank
     private String password;
@@ -44,6 +46,14 @@ public class Accumulo {
 
     public void setInstanceName(String instanceName) {
         this.instanceName = instanceName;
+    }
+
+    public String getZookeeperTimeout() {
+        return zookeeperTimeout;
+    }
+
+    public void setZookeeperTimeout(String zookeeperTimeout) {
+        this.zookeeperTimeout = zookeeperTimeout;
     }
 
     public String getUsername() {

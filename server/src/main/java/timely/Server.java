@@ -60,6 +60,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -417,7 +418,9 @@ public class Server {
     public void run() throws Exception {
 
         RetryPolicy retryPolicy = new RetryForever(1000);
-        curatorFramework = CuratorFrameworkFactory.newClient(config.getAccumulo().getZookeepers(), 30000, 10000,
+        int timeout = Long.valueOf(AccumuloConfiguration.getTimeInMillis(config.getAccumulo().getZookeeperTimeout()))
+                .intValue();
+        curatorFramework = CuratorFrameworkFactory.newClient(config.getAccumulo().getZookeepers(), timeout, 10000,
                 retryPolicy);
         curatorFramework.start();
         ensureZkPaths(curatorFramework, zkPaths);
