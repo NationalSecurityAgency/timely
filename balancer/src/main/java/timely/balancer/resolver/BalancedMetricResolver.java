@@ -108,16 +108,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 LOG.debug("Handling assignments event {}. assignmentsLastUpdatedInHdfs:{}", event.getType().toString(),
                         new Date(assignmentsLastUpdatedInHdfs.get().postValue()));
                 if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
-                    long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
-                    long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
-                    if (lastHdfsUpdate > lastLocalUpdate) {
-                        LOG.debug("Reading assignments from hdfs lastHdfsUpdate ({}) > lastLocalUpdate ({})",
-                                new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
-                        readAssignmentsFromHdfs();
-                    } else {
-                        LOG.debug("Not reading assignments from hdfs lastHdfsUpdate ({}) <= lastLocalUpdate ({})",
-                                new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
-                    }
+                    readAssignmentsFromHdfs(true);
                 }
             }
         };
@@ -158,7 +149,7 @@ public class BalancedMetricResolver implements MetricResolver {
         }
         readNonCachedMetricsIP();
 
-        readAssignmentsFromHdfs();
+        readAssignmentsFromHdfs(false);
 
         timer.schedule(new TimerTask() {
 
@@ -183,10 +174,16 @@ public class BalancedMetricResolver implements MetricResolver {
                         long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
                         long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
                         if (lastLocalUpdate > lastHdfsUpdate) {
-                            LOG.debug("Writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
+                            LOG.debug("Leader writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
                                     new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
                             writeAssigmentsToHdfs();
+                        } else {
+                            LOG.trace(
+                                    "Leader not writing assignments to hdfs lastLocalUpdate ({}) <= lastHdfsUpdate ({})",
+                                    new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
                         }
+                    } else {
+                        readAssignmentsFromHdfs(true);
                     }
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
@@ -209,7 +206,7 @@ public class BalancedMetricResolver implements MetricResolver {
                     currentNonCachedMetricsDistributed = SerializationUtils
                             .deserialize(currentNonCachedMetricsDistributedBytes);
                 } catch (Exception e) {
-                    LOG.error(e.getMessage());
+                    LOG.error(e.getMessage(), e);
                     currentNonCachedMetricsDistributed = new TreeSet<>();
                 }
             }
@@ -694,7 +691,7 @@ public class BalancedMetricResolver implements MetricResolver {
             try {
                 lock.writeLock().release();
             } catch (Exception e3) {
-                LOG.error(e3.getMessage());
+                LOG.error(e3.getMessage(), e3);
             }
         }
     }
@@ -879,7 +876,25 @@ public class BalancedMetricResolver implements MetricResolver {
         return tbh;
     }
 
-    private void readAssignmentsFromHdfs() {
+    private void readAssignmentsFromHdfs(boolean checkIfNecesssary) {
+
+        try {
+            long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
+            long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
+            if (checkIfNecesssary) {
+                if (lastHdfsUpdate <= lastLocalUpdate) {
+                    LOG.debug("Not reading assignments from hdfs lastHdfsUpdate ({}) <= lastLocalUpdate ({})",
+                            new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
+                    return;
+                }
+            }
+            LOG.debug("Reading assignments from hdfs lastHdfsUpdate ({}) > lastLocalUpdate ({})",
+                    new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+
+        // proceed with reading
 
         Map<String, TimelyBalancedHost> assignedMetricToHostMap = new TreeMap<>();
         try {
@@ -919,8 +934,14 @@ public class BalancedMetricResolver implements MetricResolver {
 
             metricToHostMap.clear();
             for (Map.Entry<String, TimelyBalancedHost> e : assignedMetricToHostMap.entrySet()) {
-                if (shouldCache(e.getKey())) {
-                    metricToHostMap.put(e.getKey(), e.getValue());
+                if (StringUtils.isNotBlank(e.getKey()) && e.getValue() != null) {
+                    if (shouldCache(e.getKey())) {
+                        metricToHostMap.put(e.getKey(), e.getValue());
+                    }
+                } else {
+                    Exception e1 = new IllegalStateException(
+                            "Bad assignment metric:" + e.getKey() + " host:" + e.getValue());
+                    LOG.warn(e1.getMessage(), e);
                 }
             }
 
@@ -1016,13 +1037,18 @@ public class BalancedMetricResolver implements MetricResolver {
 
     private void assignMetric(String metric, TimelyBalancedHost tbh) {
         if (isLeader.get()) {
-            balancerLock.writeLock().lock();
-            try {
-                metricToHostMap.put(metric, tbh);
-                assignmentsLastUpdatedLocal.set(System.currentTimeMillis());
-            } finally {
-                balancerLock.writeLock().unlock();
+            if (StringUtils.isNotBlank(metric) && tbh != null) {
+                balancerLock.writeLock().lock();
+                try {
+                    metricToHostMap.put(metric, tbh);
+                    assignmentsLastUpdatedLocal.set(System.currentTimeMillis());
+                } finally {
+                    balancerLock.writeLock().unlock();
+                }
             }
+        } else {
+            Exception e = new IllegalStateException("Bad assignment metric:" + metric + " host:" + tbh);
+            LOG.warn(e.getMessage(), e);
         }
     }
 }
