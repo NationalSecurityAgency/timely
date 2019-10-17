@@ -71,6 +71,7 @@ public class DataStoreCache {
     private Set<String> nonCachedMetrics = Collections.synchronizedSet(new HashSet<>());
     private DistributedAtomicValue nonCachedMetricsIP = null;
     private InterProcessReadWriteLock nonCachedMetricsIPRWLock;
+    private long staleCacheExpiration;
     private long maxUniqueTagSets;
     private final Security security;
     private Map<String, Long> minimumAgeOff;
@@ -89,6 +90,7 @@ public class DataStoreCache {
         LOG.info("Reading initial values from nonCachedMetricsIP");
         readNonCachedMetricsIP();
         maxUniqueTagSets = conf.getCache().getMaxUniqueTagSets();
+        staleCacheExpiration = conf.getCache().getStaleCacheExpiration();
         security = conf.getSecurity();
         Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
         Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
@@ -117,6 +119,18 @@ public class DataStoreCache {
                 }
             }
         }, conf.getCache().getFlushInterval(), conf.getCache().getFlushInterval());
+
+        maintenanceTimer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                try {
+                    removeStaleMetrics();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, (300 * 1000), (300 * 1000));
 
         maintenanceTimer.schedule(new TimerTask() {
 
@@ -436,6 +450,68 @@ public class DataStoreCache {
         }
     }
 
+    private void removeStaleMetrics() {
+
+        Set<String> metricsToRemove = new HashSet<>();
+        long stamp = gorillaMapLock.readLock();
+        try {
+            long now = System.currentTimeMillis();
+            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
+                String metricName = entry.getKey();
+                long totalMsecToMetric = 0;
+                long numStoresWithMultipleEntries = 0;
+                int tagVariations = entry.getValue().values().size();
+                for (GorillaStore store : entry.getValue().values()) {
+                    long numEntries = store.getNumEntries();
+                    long oldestTimestamp = store.getOldestTimestamp();
+                    long newestTimestamp = store.getNewestTimestamp();
+                    if (numEntries > 1) {
+                        long msecToMetric = (newestTimestamp - oldestTimestamp) / (numEntries - 1);
+                        totalMsecToMetric += msecToMetric;
+                        numStoresWithMultipleEntries++;
+                    }
+                }
+                if (numStoresWithMultipleEntries > 0) {
+                    long avgMsecToMetric = totalMsecToMetric / numStoresWithMultipleEntries;
+                    long ageOfNewest = now - getNewestTimestamp(metricName, stamp);
+                    // do not delete slow-arriving metrics based on this criteria
+                    // only consider metrics that should have arrived in staleCacheExpiration * 0.5
+                    LOG.trace("metric:{} tagVariations:{} avgMsecToMetric:{}", metricName, tagVariations,
+                            avgMsecToMetric);
+                    if (avgMsecToMetric < (staleCacheExpiration * 0.5)) {
+                        if (ageOfNewest > staleCacheExpiration) {
+                            LOG.info("Removing metric:{} tagVariations:{} avgMsecToMetric:{} > staleCacheExpiration:{}",
+                                    metricName, tagVariations, avgMsecToMetric, staleCacheExpiration);
+                            metricsToRemove.add(metricName);
+                        }
+                    } else {
+                        LOG.trace(
+                                "Skipping staleness evaluation of metric:{} tagVariations:{} avgMsecToMetric:{} < (0.5 * staleCacheExpiration):{}",
+                                metricName, tagVariations, avgMsecToMetric, (staleCacheExpiration / 2));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        } finally {
+            gorillaMapLock.unlockRead(stamp);
+        }
+
+        if (metricsToRemove.size() > 0) {
+            stamp = gorillaMapLock.writeLock();
+            try {
+                for (String metricName : metricsToRemove) {
+                    gorillaMap.remove(metricName);
+                }
+
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            } finally {
+                gorillaMapLock.unlockWrite(stamp);
+            }
+        }
+    }
+
     public long getAgeOffForMetric(String metricName) {
         if (this.minimumAgeOff.containsKey(metricName)) {
             return this.minimumAgeOff.get(metricName);
@@ -511,6 +587,7 @@ public class DataStoreCache {
         try {
             metricMap = gorillaMap.get(metric);
             if (metricMap == null) {
+                LOG.info("Creating new cache for metric:{}", metric);
                 metricMap = new HashMap<>();
                 needWrite = true;
             }
@@ -768,9 +845,13 @@ public class DataStoreCache {
     }
 
     public long getNewestTimestamp(String metric) {
+        return getNewestTimestamp(metric, 0);
+    }
+
+    public long getNewestTimestamp(String metric, long lockStamp) {
 
         long newest = 0;
-        long stamp = gorillaMapLock.readLock();
+        long stamp = lockStamp == 0 ? gorillaMapLock.readLock() : lockStamp;
         try {
             Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
             for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
@@ -779,7 +860,9 @@ public class DataStoreCache {
                 }
             }
         } finally {
-            gorillaMapLock.unlockRead(stamp);
+            if (lockStamp == 0) {
+                gorillaMapLock.unlockRead(stamp);
+            }
         }
         return newest;
     }

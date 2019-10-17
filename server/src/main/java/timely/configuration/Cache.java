@@ -13,6 +13,7 @@ public class Cache {
     private List<String> nonCachedMetrics = new ArrayList<>();
     private long maxUniqueTagSets = 50000;
     private long flushInterval = 5000;
+    private long staleCacheExpiration = 1800000;
 
     public HashMap<String, Integer> getMetricAgeOffHours() {
         return metricAgeOffHours;
@@ -56,5 +57,13 @@ public class Cache {
 
     public void setFlushInterval(long flushInterval) {
         this.flushInterval = flushInterval;
+    }
+
+    public long getStaleCacheExpiration() {
+        return staleCacheExpiration;
+    }
+
+    public void setStaleCacheExpiration(long staleCacheExpiration) {
+        this.staleCacheExpiration = staleCacheExpiration;
     }
 }
