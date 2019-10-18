@@ -480,8 +480,9 @@ public class DataStoreCache {
                             avgMsecToMetric);
                     if (avgMsecToMetric < (staleCacheExpiration * 0.5)) {
                         if (ageOfNewest > staleCacheExpiration) {
-                            LOG.info("Removing metric:{} tagVariations:{} avgMsecToMetric:{} > staleCacheExpiration:{}",
-                                    metricName, tagVariations, avgMsecToMetric, staleCacheExpiration);
+                            LOG.info(
+                                    "Removing metric:{} tagVariations:{} avgMsecToMetric:{} ageOfNewestEntry:{} > staleCacheExpiration:{}",
+                                    metricName, tagVariations, avgMsecToMetric, ageOfNewest, staleCacheExpiration);
                             metricsToRemove.add(metricName);
                         }
                     } else {
@@ -503,7 +504,6 @@ public class DataStoreCache {
                 for (String metricName : metricsToRemove) {
                     gorillaMap.remove(metricName);
                 }
-
             } catch (Exception e) {
                 LOG.error(e.getMessage(), e);
             } finally {

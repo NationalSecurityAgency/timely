@@ -876,12 +876,12 @@ public class BalancedMetricResolver implements MetricResolver {
         return tbh;
     }
 
-    private void readAssignmentsFromHdfs(boolean checkIfNecesssary) {
+    private void readAssignmentsFromHdfs(boolean checkIfNecessary) {
 
         try {
             long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
             long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
-            if (checkIfNecesssary) {
+            if (checkIfNecessary) {
                 if (lastHdfsUpdate <= lastLocalUpdate) {
                     LOG.debug("Not reading assignments from hdfs lastHdfsUpdate ({}) <= lastLocalUpdate ({})",
                             new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
@@ -894,7 +894,7 @@ public class BalancedMetricResolver implements MetricResolver {
             LOG.error(e.getMessage(), e);
         }
 
-        // proceed with reading
+        // proceed with reading from HDFS
 
         Map<String, TimelyBalancedHost> assignedMetricToHostMap = new TreeMap<>();
         try {
@@ -941,7 +941,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 } else {
                     Exception e1 = new IllegalStateException(
                             "Bad assignment metric:" + e.getKey() + " host:" + e.getValue());
-                    LOG.warn(e1.getMessage(), e);
+                    LOG.warn(e1.getMessage(), e1);
                 }
             }
 
@@ -1045,10 +1045,10 @@ public class BalancedMetricResolver implements MetricResolver {
                 } finally {
                     balancerLock.writeLock().unlock();
                 }
+            } else {
+                Exception e = new IllegalStateException("Bad assignment metric:" + metric + " host:" + tbh);
+                LOG.warn(e.getMessage(), e);
             }
-        } else {
-            Exception e = new IllegalStateException("Bad assignment metric:" + metric + " host:" + tbh);
-            LOG.warn(e.getMessage(), e);
         }
     }
 }
