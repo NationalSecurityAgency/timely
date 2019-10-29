@@ -176,7 +176,7 @@ public class BalancedMetricResolver implements MetricResolver {
                         if (lastLocalUpdate > lastHdfsUpdate) {
                             LOG.debug("Leader writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
                                     new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
-                            writeAssigmentsToHdfs();
+                            writeAssignmentsToHdfs();
                         } else {
                             LOG.trace(
                                     "Leader not writing assignments to hdfs lastLocalUpdate ({}) <= lastHdfsUpdate ({})",
@@ -247,7 +247,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 public void isLeader() {
                     LOG.info("this balancer is the leader");
                     isLeader.set(true);
-                    writeAssigmentsToHdfs();
+                    writeAssignmentsToHdfs();
                 }
 
                 @Override
@@ -340,14 +340,16 @@ public class BalancedMetricResolver implements MetricResolver {
                                 assignMetric(s, h);
                                 LOG.debug("Assigned server removed.  Assigning {} to server {}:{}", s, h.getTcpPort());
                             }
-                            writeAssigmentsToHdfs();
                         }
 
                     } finally {
                         balancerLock.writeLock().unlock();
                     }
-                    if (isLeader.get() && rebalanceNeeded) {
-                        balance();
+                    if (isLeader.get()) {
+                        if (rebalanceNeeded) {
+                            balance();
+                        }
+                        writeAssignmentsToHdfs();
                     }
                 }
 
@@ -972,7 +974,7 @@ public class BalancedMetricResolver implements MetricResolver {
         }
     }
 
-    private void writeAssigmentsToHdfs() {
+    private void writeAssignmentsToHdfs() {
 
         CsvWriter writer = null;
         try {
