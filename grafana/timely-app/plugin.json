@@ -23,7 +23,7 @@
       {"name": "Project site", "url": "https://github.com/NationalSecurityAgency/timely"},
       {"name": "License & Terms", "url": "https://raw.githubusercontent.com/NationalSecurityAgency/timely/master/LICENSE"}
     ],
-    "version": "1.2.7",
+    "version": "1.2.8-SNAPSHOT",
     "updated": "2020-02-21"
   },
 
