@@ -1,5 +1,7 @@
 package timely.balancer.resolver;
 
+import static timely.Server.SERVICE_DISCOVERY_PATH;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
@@ -10,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.ServerDetails;
 import timely.balancer.connection.TimelyBalancedHost;
-
-import static timely.Server.SERVICE_DISCOVERY_PATH;
 
 public class ServiceRegistry {
 

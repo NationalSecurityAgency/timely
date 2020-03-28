@@ -272,6 +272,8 @@ public class Server {
     }
 
     public void shutdown() {
+        LOG.warn("Server shutdown 1");
+
         List<ChannelFuture> channelFutures = new ArrayList<>();
 
         if (tcpChannelHandle != null) {
@@ -303,6 +305,8 @@ public class Server {
                 LOG.error("Channel:" + f.channel().config() + " -> " + e.getMessage(), e);
             }
         });
+
+        LOG.warn("Server shutdown 2");
 
         int quietPeriod = config.getServer().getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
@@ -342,6 +346,8 @@ public class Server {
             groupFutures.add(udpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
+        LOG.warn("Server shutdown 3");
+
         if (udpWorkerGroup != null) {
             LOG.info("Shutting down udpWorkerGroup");
             groupFutures.add(udpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
@@ -355,6 +361,8 @@ public class Server {
             }
         });
 
+        LOG.warn("Server shutdown 4");
+
         try {
             LOG.info("Closing dataStore");
             dataStore.close();
@@ -362,12 +370,18 @@ public class Server {
             LOG.error(e.getMessage(), e);
         }
 
-        try {
-            LOG.info("Closing dataStoreCache");
-            dataStoreCache.close();
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
+        LOG.warn("Server shutdown 5");
+
+        if (dataStoreCache != null) {
+            try {
+                LOG.info("Closing dataStoreCache");
+                dataStoreCache.close();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
         }
+
+        LOG.warn("Server shutdown 6");
 
         try {
             LOG.info("Closing metaCacheFactory");
@@ -376,12 +390,16 @@ public class Server {
             LOG.error(e.getMessage(), e);
         }
 
+        LOG.warn("Server shutdown 7");
+
         try {
             LOG.info("Closing webSocketRequestDecoder subscriptions");
             WebSocketRequestDecoder.close();
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
+
+        LOG.warn("Server shutdown 8");
 
         if (curatorFramework != null) {
             try {
@@ -392,6 +410,8 @@ public class Server {
             }
         }
 
+        LOG.warn("Server shutdown 9");
+
         if (applicationContext != null) {
             try {
                 LOG.info("Closing applicationContext");
@@ -400,6 +420,7 @@ public class Server {
                 LOG.error(e.getMessage(), e);
             }
         }
+        LOG.warn("Server shutdown 10");
         this.shutdown = true;
         LOG.info("Server shut down.");
     }

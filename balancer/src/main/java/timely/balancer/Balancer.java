@@ -257,7 +257,7 @@ public class Balancer {
         if (this.metricResolver != null) {
             try {
                 LOG.info("Closing metricResolver");
-                this.metricResolver.close();
+                this.metricResolver.stop();
             } catch (Exception e) {
                 LOG.error(e.getMessage(), e);
             }

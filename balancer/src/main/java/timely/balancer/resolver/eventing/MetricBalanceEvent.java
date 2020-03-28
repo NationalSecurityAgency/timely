@@ -12,7 +12,8 @@ public class MetricBalanceEvent {
     private final BalancedMetricResolver.BalanceType balanceType;
     private final Long numRessigned;
 
-    public MetricBalanceEvent(ProgressType progressType, BalancedMetricResolver.BalanceType balanceType, long numReassigned) {
+    public MetricBalanceEvent(ProgressType progressType, BalancedMetricResolver.BalanceType balanceType,
+            long numReassigned) {
         this.progressType = progressType;
         this.balanceType = balanceType;
         this.numRessigned = numReassigned;

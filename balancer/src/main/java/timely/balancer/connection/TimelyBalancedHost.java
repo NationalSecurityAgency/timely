@@ -42,6 +42,10 @@ public class TimelyBalancedHost {
         return new TimelyBalancedHost(host, tcpPort, httpPort, wsPort, udpPort, arrivalRate);
     }
 
+    static public TimelyBalancedHost of(String host, int basePort) {
+        return new TimelyBalancedHost(host, basePort, basePort + 1, basePort + 2, basePort + 3, null);
+    }
+
     public void setBalancerConfig(BalancerConfiguration balancerConfig) {
         this.balancerConfig = balancerConfig;
     }

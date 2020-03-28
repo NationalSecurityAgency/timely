@@ -1,5 +1,24 @@
 package timely.balancer.resolver;
 
+import static timely.balancer.Balancer.ASSIGNMENTS_LAST_UPDATED_PATH;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
 import org.apache.commons.lang.StringUtils;
@@ -15,24 +34,6 @@ import org.slf4j.LoggerFactory;
 import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.resolver.eventing.MetricAssignedEvent;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.Charset;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import static timely.balancer.Balancer.ASSIGNMENTS_LAST_UPDATED_PATH;
 
 public class MetricAssignmentPerister {
 
@@ -55,12 +56,11 @@ public class MetricAssignmentPerister {
     // local
     private DistributedAtomicLong assignmentsLastUpdatedInHdfs;
 
-    public MetricAssignmentPerister(BalancedMetricResolver balancedMetricResolver,
-                                        BalancerConfiguration balancerConfig,
-                                        Map<String, TimelyBalancedHost> metricToHostMap, Set<String> nonCachedMetrics,
-                                        CuratorFramework curatorFramework,
-                                        InterProcessReadWriteLock assignmentsIPRWLock, ReentrantReadWriteLock nonCachedMetricsLocalLock,
-                                        AtomicLong assignmentsLastUpdatedLocal, ReentrantReadWriteLock balancerLock) {
+    public MetricAssignmentPerister(BalancedMetricResolver balancedMetricResolver, BalancerConfiguration balancerConfig,
+            Map<String, TimelyBalancedHost> metricToHostMap, Set<String> nonCachedMetrics,
+            CuratorFramework curatorFramework, InterProcessReadWriteLock assignmentsIPRWLock,
+            ReentrantReadWriteLock nonCachedMetricsLocalLock, AtomicLong assignmentsLastUpdatedLocal,
+            ReentrantReadWriteLock balancerLock) {
 
         this.balancedMetricResolver = balancedMetricResolver;
         this.balancerConfig = balancerConfig;
@@ -110,7 +110,8 @@ public class MetricAssignmentPerister {
             for (Map.Entry<String, TimelyBalancedHost> e : assignedMetricToHostMap.entrySet()) {
                 if (StringUtils.isNotBlank(e.getKey()) && e.getValue() != null) {
                     if (balancedMetricResolver.shouldCache(e.getKey())) {
-                        balancedMetricResolver.metricAssignedEvent(e.getKey(), null, e.getValue(), MetricAssignedEvent.Reason.ASSIGN_FILE);
+                        balancedMetricResolver.metricAssignedEvent(e.getKey(), null, e.getValue(),
+                                MetricAssignedEvent.Reason.ASSIGN_FILE);
                         metricToHostMap.put(e.getKey(), e.getValue());
                     }
                 } else {
@@ -132,8 +133,11 @@ public class MetricAssignmentPerister {
                 nonCachedMetricsLocalLock.readLock().unlock();
             }
             assignmentsLastUpdatedLocal.set(assignmentsLastUpdatedInHdfs.get().postValue());
-            LOG.info("Read {} assignments from storage lastStorageUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
-                    new Date(assignmentsLastUpdatedLocal.get()));
+            LOG.info("Read {} assignments from storage lastStorageUpdate = lastLocalUpdate ({})",
+                    metricToHostMap.size(), new Date(assignmentsLastUpdatedLocal.get()));
+        } catch (FileNotFoundException e) {
+            createAssignmentFile();
+            metricToHostMap.clear();
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         } finally {
@@ -246,6 +250,39 @@ public class MetricAssignmentPerister {
         }
     }
 
+    public void createAssignmentFile() {
+        LOG.info("Creating assignment file: " + balancerConfig.getAssignmentFile());
+        PeristerType peristerType = PeristerType.valueOf(balancerConfig.getMetricAssignmentPersisterType());
+        switch (peristerType) {
+            case HDFS:
+                try {
+                    Configuration configuration = new Configuration();
+                    FileSystem fs = FileSystem.get(configuration);
+                    Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
+                    fs.create(assignmentFile);
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+                break;
+            case FILE:
+                try {
+                    File assignmentFile = new File(balancerConfig.getAssignmentFile());
+                    String parentPath = assignmentFile.getParent();
+                    File directory = new File(parentPath);
+                    if (!directory.exists()) {
+
+                        directory.mkdirs();
+                    }
+                    if (!assignmentFile.exists()) {
+                        assignmentFile.createNewFile();
+                    }
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+                break;
+        }
+    }
+
     public InputStream getInputStream(BalancerConfiguration balancerConfiguration) throws Exception {
         PeristerType peristerType = PeristerType.valueOf(balancerConfiguration.getMetricAssignmentPersisterType());
         switch (peristerType) {
@@ -257,7 +294,8 @@ public class MetricAssignmentPerister {
             case FILE:
                 return new FileInputStream(new File(balancerConfiguration.getAssignmentFile()));
             default:
-                throw new IllegalArgumentException("Unknown metricPersisterType " + balancerConfiguration.getMetricAssignmentPersisterType());
+                throw new IllegalArgumentException(
+                        "Unknown metricPersisterType " + balancerConfiguration.getMetricAssignmentPersisterType());
         }
     }
 
@@ -275,7 +313,8 @@ public class MetricAssignmentPerister {
             case FILE:
                 return new FileOutputStream(new File(balancerConfiguration.getAssignmentFile()));
             default:
-                throw new IllegalArgumentException("Unknown metricPersisterType " + balancerConfiguration.getMetricAssignmentPersisterType());
+                throw new IllegalArgumentException(
+                        "Unknown metricPersisterType " + balancerConfiguration.getMetricAssignmentPersisterType());
         }
     }
 }

@@ -13,7 +13,8 @@ public class MetricAssignedEvent {
     private final TimelyBalancedHost gainingHost;
     private final Reason reason;
 
-    public MetricAssignedEvent(String metric, TimelyBalancedHost losingHost, TimelyBalancedHost gainingHost, Reason reason) {
+    public MetricAssignedEvent(String metric, TimelyBalancedHost losingHost, TimelyBalancedHost gainingHost,
+            Reason reason) {
         this.metric = metric;
         this.losingHost = losingHost;
         this.gainingHost = gainingHost;

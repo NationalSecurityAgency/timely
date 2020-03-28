@@ -10,4 +10,9 @@
     <Method name="getBuf" />
     <Bug pattern="EI_EXPOSE_REP" />
   </Match>
+  <Match>
+    <Class name="timely.balancer.resolver.MetricAssignmentPerister" />
+    <Method name="createAssignmentFile" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+  </Match>
 </FindBugsFilter>
