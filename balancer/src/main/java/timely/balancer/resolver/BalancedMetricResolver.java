@@ -12,7 +12,6 @@ import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.ASSIG
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,12 +32,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.csvreader.CsvReader;
-import com.csvreader.CsvWriter;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.atomic.DistributedAtomicLong;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicValue;
 import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
@@ -53,11 +50,6 @@ import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.details.ServiceCacheListener;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +58,12 @@ import timely.balancer.ArrivalRate;
 import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.healthcheck.HealthChecker;
+import timely.balancer.resolver.eventing.MetricAssignedCallback;
+import timely.balancer.resolver.eventing.MetricAssignedEvent;
+import timely.balancer.resolver.eventing.MetricBalanceCallback;
+import timely.balancer.resolver.eventing.MetricBalanceEvent;
+import timely.balancer.resolver.eventing.MetricHostCallback;
+import timely.balancer.resolver.eventing.MetricHostEvent;
 
 public class BalancedMetricResolver implements MetricResolver {
 
@@ -76,7 +74,6 @@ public class BalancedMetricResolver implements MetricResolver {
     private ReentrantReadWriteLock balancerLock = new ReentrantReadWriteLock();
     private List<TimelyBalancedHost> serverList = new ArrayList<>();
     private Random r = new Random();
-    final private HealthChecker healthChecker;
     private Timer timer = new Timer("RebalanceTimer", true);
     private Timer arrivalRateTimer = new Timer("ArrivalRateTimerResolver", true);
     private int roundRobinCounter = 0;
@@ -84,38 +81,45 @@ public class BalancedMetricResolver implements MetricResolver {
     private DistributedAtomicValue nonCachedMetricsIP;
     private ReentrantReadWriteLock nonCachedMetricsLocalLock = new ReentrantReadWriteLock();
     private InterProcessReadWriteLock nonCachedMetricsIPRWLock;
-    private BalancerConfiguration balancerConfig;
+    private AtomicLong assignmentsLastUpdatedLocal = new AtomicLong(0);
     private LeaderLatch leaderLatch;
     private AtomicBoolean isLeader = new AtomicBoolean(false);
     private InterProcessReadWriteLock assignmentsIPRWLock;
-    private DistributedAtomicLong assignmentsLastUpdatedInHdfs;
-    private AtomicLong assignmentsLastUpdatedLocal = new AtomicLong(0);
+    private MetricAssignmentPerister assignmentPerister;
 
-    private enum BalanceType {
-        HIGH_LOW, HIGH_AVG, AVG_LOW
+    final private BalancerConfiguration balancerConfig;
+    final private HealthChecker healthChecker;
+    final private CuratorFramework curatorFramework;
+
+    private List<MetricAssignedCallback> metricAssignedCallbacks = new ArrayList<>();
+    private List<MetricBalanceCallback> metricBalanceCallbacks = new ArrayList<>();
+    private List<MetricHostCallback> metricHostCallbacks = new ArrayList<>();
+
+    public enum BalanceType {
+        HIGH_LOW, HIGH_AVG, AVG_LOW;
     }
 
-    public BalancedMetricResolver(CuratorFramework curatorFramework, BalancerConfiguration balancerConfig,
-            HealthChecker healthChecker) {
+    public BalancedMetricResolver(CuratorFramework curatorFramework, BalancerConfiguration balancerConfig, HealthChecker healthChecker) {
+        this.curatorFramework = curatorFramework;
         this.balancerConfig = balancerConfig;
         this.healthChecker = healthChecker;
+    }
 
+    public void start() {
         assignmentsIPRWLock = new InterProcessReadWriteLock(curatorFramework, ASSIGNMENTS_LOCK_PATH);
         testIPRWLock(curatorFramework, assignmentsIPRWLock, ASSIGNMENTS_LOCK_PATH);
+
+        this.assignmentPerister = new MetricAssignmentPerister(this, balancerConfig, metricToHostMap,
+                nonCachedMetrics, curatorFramework, assignmentsIPRWLock, nonCachedMetricsLocalLock, assignmentsLastUpdatedLocal, balancerLock);
+
         startLeaderLatch(curatorFramework);
         startServiceListener(curatorFramework);
-        assignmentsLastUpdatedInHdfs = new DistributedAtomicLong(curatorFramework, ASSIGNMENTS_LAST_UPDATED_PATH,
-                new RetryForever(1000));
 
-        TreeCacheListener assignmentListener = new TreeCacheListener() {
-
-            @Override
-            public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
-                LOG.debug("Handling assignments event {}. assignmentsLastUpdatedInHdfs:{}", event.getType().toString(),
-                        new Date(assignmentsLastUpdatedInHdfs.get().postValue()));
-                if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
-                    readAssignmentsFromHdfs(true);
-                }
+        TreeCacheListener assignmentListener = (curatorFramework1, event) -> {
+            LOG.debug("Handling assignments event {}. assignmentsLastUpdated:{}", event.getType().toString(),
+                    new Date(assignmentPerister.getAssignmentsLastUpdatedByLeader()));
+            if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
+                assignmentPerister.readAssignments(true);
             }
         };
 
@@ -155,7 +159,7 @@ public class BalancedMetricResolver implements MetricResolver {
         }
         readNonCachedMetricsIP();
 
-        readAssignmentsFromHdfs(false);
+        assignmentPerister.readAssignments(false);
 
         timer.schedule(new TimerTask() {
 
@@ -169,7 +173,7 @@ public class BalancedMetricResolver implements MetricResolver {
                     }
                 }
             }
-        }, 900000, 900000);
+        }, balancerConfig.getBalanceDelay(), balancerConfig.getBalancePeriod());
 
         timer.schedule(new TimerTask() {
 
@@ -178,24 +182,28 @@ public class BalancedMetricResolver implements MetricResolver {
                 try {
                     if (isLeader.get()) {
                         long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
-                        long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
-                        if (lastLocalUpdate > lastHdfsUpdate) {
-                            LOG.debug("Leader writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
-                                    new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
-                            writeAssignmentsToHdfs();
+                        long lastUpdateByLeader = assignmentPerister.getAssignmentsLastUpdatedByLeader();
+                        if (lastLocalUpdate > lastUpdateByLeader) {
+                            LOG.debug("Leader writing assignments lastLocalUpdate ({}) > lastUpdateByLeader ({})",
+                                    new Date(lastLocalUpdate), new Date(lastUpdateByLeader));
+                            assignmentPerister.writeAssignments();
                         } else {
                             LOG.trace(
-                                    "Leader not writing assignments to hdfs lastLocalUpdate ({}) <= lastHdfsUpdate ({})",
-                                    new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
+                                    "Leader not writing assignments lastLocalUpdate ({}) <= lastUpdateByLeader ({})",
+                                    new Date(lastLocalUpdate), new Date(lastUpdateByLeader));
                         }
                     } else {
-                        readAssignmentsFromHdfs(true);
+                        assignmentPerister.readAssignments(true);
                     }
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
             }
-        }, 10000, 60000);
+        }, balancerConfig.getPersistDelay(), balancerConfig.getPersistPeriod());
+    }
+
+    public void stop() {
+        this.timer.cancel();
     }
 
     private void readNonCachedMetricsIP() {
@@ -253,7 +261,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 public void isLeader() {
                     LOG.info("this balancer is the leader");
                     isLeader.set(true);
-                    writeAssignmentsToHdfs();
+                    assignmentPerister.writeAssignments();
                 }
 
                 @Override
@@ -356,7 +364,7 @@ public class BalancedMetricResolver implements MetricResolver {
                         if (rebalanceNeeded) {
                             balance();
                         }
-                        writeAssignmentsToHdfs();
+                        assignmentPerister.writeAssignments();
                     }
                 }
 
@@ -416,7 +424,7 @@ public class BalancedMetricResolver implements MetricResolver {
         return tbh;
     }
 
-    private TimelyBalancedHost getRoundRobinHost(TimelyBalancedHost notThisOne) {
+    protected TimelyBalancedHost getRoundRobinHost(TimelyBalancedHost notThisOne) {
         TimelyBalancedHost tbh = null;
         balancerLock.readLock().lock();
         try {
@@ -692,11 +700,13 @@ public class BalancedMetricResolver implements MetricResolver {
         try {
             lock.writeLock().acquire(10, TimeUnit.SECONDS);
         } catch (Exception e1) {
+            e1.printStackTrace();
             try {
                 curatorFramework.delete().deletingChildrenIfNeeded().forPath(path);
                 curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
                         .forPath(path);
             } catch (Exception e2) {
+                e1.printStackTrace();
                 LOG.info(e2.getMessage(), e2);
             }
         } finally {
@@ -708,7 +718,7 @@ public class BalancedMetricResolver implements MetricResolver {
         }
     }
 
-    private boolean shouldCache(String metricName) {
+    protected boolean shouldCache(String metricName) {
 
         if (StringUtils.isBlank(metricName)) {
             return false;
@@ -880,7 +890,7 @@ public class BalancedMetricResolver implements MetricResolver {
         return tbh;
     }
 
-    private TimelyBalancedHost findHost(String host, int tcpPort) {
+    protected TimelyBalancedHost findHost(String host, int tcpPort) {
         TimelyBalancedHost tbh = null;
         for (TimelyBalancedHost h : serverList) {
             if (h.getHost().equals(host) && h.getTcpPort() == tcpPort) {
@@ -891,166 +901,7 @@ public class BalancedMetricResolver implements MetricResolver {
         return tbh;
     }
 
-    private void readAssignmentsFromHdfs(boolean checkIfNecessary) {
-
-        try {
-            long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
-            long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
-            if (checkIfNecessary) {
-                if (lastHdfsUpdate <= lastLocalUpdate) {
-                    LOG.debug("Not reading assignments from hdfs lastHdfsUpdate ({}) <= lastLocalUpdate ({})",
-                            new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
-                    return;
-                }
-            }
-            LOG.debug("Reading assignments from hdfs lastHdfsUpdate ({}) > lastLocalUpdate ({})",
-                    new Date(lastHdfsUpdate), new Date(lastLocalUpdate));
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
-
-        // proceed with reading from HDFS
-
-        Map<String, TimelyBalancedHost> assignedMetricToHostMap = new TreeMap<>();
-        try {
-            boolean acquired = false;
-            while (!acquired) {
-                acquired = assignmentsIPRWLock.readLock().acquire(60, TimeUnit.SECONDS);
-            }
-            balancerLock.writeLock().lock();
-            Configuration configuration = new Configuration();
-            FileSystem fs = FileSystem.get(configuration);
-            Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
-            FSDataInputStream iStream = fs.open(assignmentFile);
-
-            CsvReader reader = new CsvReader(iStream, ',', Charset.forName("UTF-8"));
-            reader.setUseTextQualifier(false);
-
-            // skip the headers
-            boolean success = true;
-            success = reader.readHeaders();
-
-            while (success) {
-                success = reader.readRecord();
-                String[] nextLine = reader.getValues();
-                if (nextLine.length >= 3) {
-                    String metric = nextLine[0];
-                    String host = nextLine[1];
-                    int tcpPort = Integer.parseInt(nextLine[2]);
-                    TimelyBalancedHost tbh = findHost(host, tcpPort);
-                    if (tbh == null) {
-                        tbh = getRoundRobinHost(null);
-                    } else {
-                        LOG.trace("Found assigment: {} to {}:{}", metric, host, tcpPort);
-                    }
-                    assignedMetricToHostMap.put(metric, tbh);
-                }
-            }
-
-            metricToHostMap.clear();
-            for (Map.Entry<String, TimelyBalancedHost> e : assignedMetricToHostMap.entrySet()) {
-                if (StringUtils.isNotBlank(e.getKey()) && e.getValue() != null) {
-                    if (shouldCache(e.getKey())) {
-                        metricToHostMap.put(e.getKey(), e.getValue());
-                    }
-                } else {
-                    Exception e1 = new IllegalStateException(
-                            "Bad assignment metric:" + e.getKey() + " host:" + e.getValue());
-                    LOG.warn(e1.getMessage(), e1);
-                }
-            }
-
-            nonCachedMetricsLocalLock.readLock().lock();
-            try {
-                Iterator<Map.Entry<String, TimelyBalancedHost>> itr = metricToHostMap.entrySet().iterator();
-                while (itr.hasNext()) {
-                    Map.Entry<String, TimelyBalancedHost> e = itr.next();
-                    if (nonCachedMetrics.contains(e.getKey())) {
-                        itr.remove();
-                    }
-                }
-            } finally {
-                nonCachedMetricsLocalLock.readLock().unlock();
-            }
-            assignmentsLastUpdatedLocal.set(assignmentsLastUpdatedInHdfs.get().postValue());
-            LOG.info("Read {} assignments from hdfs lastHdfsUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
-                    new Date(assignmentsLastUpdatedLocal.get()));
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        } finally {
-            balancerLock.writeLock().unlock();
-            try {
-                assignmentsIPRWLock.readLock().release();
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
-            }
-        }
-    }
-
-    private void writeAssignmentsToHdfs() {
-
-        CsvWriter writer = null;
-        try {
-            boolean acquired = false;
-            while (!acquired) {
-                acquired = assignmentsIPRWLock.writeLock().acquire(60, TimeUnit.SECONDS);
-            }
-            balancerLock.readLock().lock();
-            nonCachedMetricsLocalLock.readLock().lock();
-            try {
-                if (!metricToHostMap.isEmpty()) {
-                    Configuration configuration = new Configuration();
-                    FileSystem fs = FileSystem.get(configuration);
-                    Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
-                    if (!fs.exists(assignmentFile.getParent())) {
-                        fs.mkdirs(assignmentFile.getParent());
-                    }
-                    FSDataOutputStream oStream = fs.create(assignmentFile, true);
-                    writer = new CsvWriter(oStream, ',', Charset.forName("UTF-8"));
-                    writer.setUseTextQualifier(false);
-                    writer.write("metric");
-                    writer.write("host");
-                    writer.write("tcpPort");
-                    writer.endRecord();
-                    for (Map.Entry<String, TimelyBalancedHost> e : metricToHostMap.entrySet()) {
-                        if (!nonCachedMetrics.contains(e.getKey())) {
-                            writer.write(e.getKey());
-                            writer.write(e.getValue().getHost());
-                            writer.write(Integer.toString(e.getValue().getTcpPort()));
-                            writer.endRecord();
-                            LOG.trace("Saving assigment: {} to {}:{}", e.getKey(), e.getValue().getHost(),
-                                    e.getValue().getTcpPort());
-                        }
-                    }
-
-                    long now = System.currentTimeMillis();
-                    assignmentsLastUpdatedLocal.set(now);
-                    assignmentsLastUpdatedInHdfs.trySet(now);
-                    if (!assignmentsLastUpdatedInHdfs.get().succeeded()) {
-                        assignmentsLastUpdatedInHdfs.forceSet(now);
-                    }
-                    LOG.debug("Wrote {} assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})",
-                            metricToHostMap.size(), new Date(assignmentsLastUpdatedLocal.get()));
-                }
-            } finally {
-                nonCachedMetricsLocalLock.readLock().unlock();
-                balancerLock.readLock().unlock();
-            }
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
-            try {
-                assignmentsIPRWLock.writeLock().release();
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
-            }
-        }
-    }
-
-    private void assignMetric(String metric, TimelyBalancedHost tbh) {
+    private void assignMetric(String metric, TimelyBalancedHost tbh, MetricAssignedEvent.Reason reason) {
         if (isLeader.get()) {
             if (StringUtils.isNotBlank(metric) && tbh != null) {
                 balancerLock.writeLock().lock();

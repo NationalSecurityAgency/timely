@@ -77,7 +77,7 @@ import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.connection.tcp.TcpClientPool;
 import timely.balancer.connection.udp.UdpClientPool;
 import timely.balancer.connection.ws.WsClientPool;
-import timely.balancer.healthcheck.HealthChecker;
+import timely.balancer.healthcheck.TcpHealthChecker;
 import timely.balancer.netty.http.HttpRelayHandler;
 import timely.balancer.netty.tcp.TcpRelayHandler;
 import timely.balancer.netty.udp.UdpRelayHandler;
@@ -401,8 +401,9 @@ public class Balancer {
         for (int x = 0; x < balancerConfig.getServer().getNumTcpPools(); x++) {
             tcpClientPools.add(new TcpClientPool(this.balancerConfig));
         }
-        HealthChecker healthChecker = new HealthChecker(this.balancerConfig, tcpClientPools.get(0));
+        TcpHealthChecker healthChecker = new TcpHealthChecker(this.balancerConfig, tcpClientPools.get(0));
         this.metricResolver = new BalancedMetricResolver(curatorFramework, this.balancerConfig, healthChecker);
+        this.metricResolver.start();
 
         final ServerBootstrap tcpServer = new ServerBootstrap();
         tcpServer.group(tcpBossGroup, tcpWorkerGroup);

@@ -49,6 +49,16 @@ public class BalancerConfiguration {
 
     private int serverSuccessesBeforeUp = 3;
 
+    private String metricAssignmentPersisterType = "HDFS";
+
+    private long balanceDelay = 900000;
+
+    private long balancePeriod = 900000;
+
+    private long persistDelay = 10000;
+
+    private long persistPeriod = 60000;
+
     public ZooKeeper getZooKeeper() {
         return zooKeeper;
     }
@@ -119,5 +129,45 @@ public class BalancerConfiguration {
 
     public void setServerSuccessesBeforeUp(int serverSuccessesBeforeUp) {
         this.serverSuccessesBeforeUp = serverSuccessesBeforeUp;
+    }
+
+    public String getMetricAssignmentPersisterType() {
+        return metricAssignmentPersisterType;
+    }
+
+    public void setMetricAssignmentPersisterType(String metricAssignmentPersisterType) {
+        this.metricAssignmentPersisterType = metricAssignmentPersisterType;
+    }
+
+    public void setBalanceDelay(long balanceDelay) {
+        this.balanceDelay = balanceDelay;
+    }
+
+    public long getBalanceDelay() {
+        return balanceDelay;
+    }
+
+    public void setBalancePeriod(long balancePeriod) {
+        this.balancePeriod = balancePeriod;
+    }
+
+    public long getBalancePeriod() {
+        return balancePeriod;
+    }
+
+    public void setPersistDelay(long persistDelay) {
+        this.persistDelay = persistDelay;
+    }
+
+    public long getPersistDelay() {
+        return persistDelay;
+    }
+
+    public void setPersistPeriod(long persistPeriod) {
+        this.persistPeriod = persistPeriod;
+    }
+
+    public long getPersistPeriod() {
+        return persistPeriod;
     }
 }
