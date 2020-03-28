@@ -4,6 +4,11 @@ import static timely.Server.SERVICE_DISCOVERY_PATH;
 import static timely.balancer.Balancer.ASSIGNMENTS_LAST_UPDATED_PATH;
 import static timely.balancer.Balancer.ASSIGNMENTS_LOCK_PATH;
 import static timely.balancer.Balancer.LEADER_LATCH_PATH;
+import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.ASSIGN_FALLBACK_SEQUENTIAL;
+import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.HOST_DOWN_ROUND_ROBIN;
+import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.HOST_REMOVED;
+import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.REBALANCE;
+import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.ASSIGN_ROUND_ROBIN;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
@@ -66,6 +71,7 @@ public class BalancedMetricResolver implements MetricResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(BalancedMetricResolver.class);
     private Map<String, TimelyBalancedHost> metricToHostMap = new TreeMap<>();
+    private Set<String> unassignedMetrics = new HashSet<>();
     private Map<String, ArrivalRate> metricMap = new HashMap<>();
     private ReentrantReadWriteLock balancerLock = new ReentrantReadWriteLock();
     private List<TimelyBalancedHost> serverList = new ArrayList<>();
@@ -274,10 +280,10 @@ public class BalancedMetricResolver implements MetricResolver {
                     ServerDetails pl = si.getPayload();
                     TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(), pl.getHttpPort(),
                             pl.getWsPort(), pl.getUdpPort());
-                    LOG.info("adding service {} host:{} tcpPort:{} httpPort:{} wsPort:{} udpPort:{}", si.getId(),
-                            pl.getHost(), pl.getTcpPort(), pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort());
+                    LOG.info("adding service {} host:{}", si.getId(), TimelyBalancedHost.toStringShort(tbh));
                     tbh.setBalancerConfig(balancerConfig);
                     serverList.add(tbh);
+                    metricHostEvent(tbh, MetricHostEvent.ActionType.ADDED);
                 }
                 healthChecker.setTimelyHosts(serverList);
             } finally {
@@ -312,9 +318,8 @@ public class BalancedMetricResolver implements MetricResolver {
                                 availableHosts.remove(h);
                             } else {
                                 itr.remove();
-                                LOG.info("removing service {}:{} host:{} tcpPort:{} httpPort:{} wsPort:{} udpPort:{}",
-                                        h.getHost(), h.getTcpPort(), h.getHost(), h.getTcpPort(), h.getHttpPort(),
-                                        h.getWsPort(), h.getUdpPort());
+                                metricHostEvent(h, MetricHostEvent.ActionType.REMOVED);
+                                LOG.info("removing service {}", TimelyBalancedHost.toStringShort(h));
                                 for (Map.Entry<String, TimelyBalancedHost> e : metricToHostMap.entrySet()) {
                                     if (e.getValue().equals(h)) {
                                         reassignMetrics.add(e.getKey());
@@ -326,19 +331,21 @@ public class BalancedMetricResolver implements MetricResolver {
 
                         // add new hosts that were not previously known
                         for (TimelyBalancedHost h : availableHosts) {
-                            LOG.info("adding service {}:{} host:{} tcpPort:{} httpPort:{} wsPort:{} udpPort:{}",
-                                    h.getHost(), h.getTcpPort(), h.getHost(), h.getTcpPort(), h.getHttpPort(),
-                                    h.getWsPort(), h.getUdpPort());
+                            LOG.info("adding service {}", TimelyBalancedHost.toStringShort(h));
                             serverList.add(h);
+                            metricHostEvent(h, MetricHostEvent.ActionType.ADDED);
                             rebalanceNeeded = true;
                         }
                         healthChecker.setTimelyHosts(serverList);
-
+                        if (!availableHosts.isEmpty()) {
+                            reassignMetrics.addAll(unassignedMetrics);
+                            unassignedMetrics.clear();
+                        }
                         if (isLeader.get()) {
                             for (String s : reassignMetrics) {
                                 TimelyBalancedHost h = getRoundRobinHost(null);
-                                assignMetric(s, h);
-                                LOG.debug("Assigned server removed.  Assigning {} to server {}:{}", s, h.getTcpPort());
+                                assignMetric(s, h, HOST_REMOVED);
+                                LOG.debug("Assigned server removed.  Assigning {} to server {}", s, TimelyBalancedHost.toStringShort(h));
                             }
                         }
 
@@ -442,7 +449,7 @@ public class BalancedMetricResolver implements MetricResolver {
     }
 
     private TimelyBalancedHost chooseHost(Set<TimelyBalancedHost> potentialHosts,
-            Map<TimelyBalancedHost, Double> calculatedRates, double referenceRate, BalanceType balanceType) {
+                                          Map<TimelyBalancedHost, Double> calculatedRates, double referenceRate, BalanceType balanceType) {
 
         TimelyBalancedHost tbh = null;
         Map<Long, TimelyBalancedHost> weightedList = new TreeMap<>();
@@ -527,11 +534,13 @@ public class BalancedMetricResolver implements MetricResolver {
     }
 
     public int rebalance(Set<TimelyBalancedHost> losingHosts, Set<TimelyBalancedHost> gainingHosts,
-            Map<TimelyBalancedHost, Double> calculatedRates, double targetArrivalRate, BalanceType balanceType) {
+                         Map<TimelyBalancedHost, Double> calculatedRates, double targetArrivalRate, BalanceType balanceType) {
 
         int numReassigned = 0;
         if (isLeader.get()) {
+            metricBalanceEvent(MetricBalanceEvent.ProgressType.BEGIN, balanceType, 0);
             balancerLock.writeLock().lock();
+            metricBalanceEvent(MetricBalanceEvent.ProgressType.BALANCER_LOCK_ACQUIRED, balanceType, 0);
             try {
                 Map<String, ArrivalRate> tempMetricMap = new HashMap<>();
                 tempMetricMap.putAll(metricMap);
@@ -562,8 +571,8 @@ public class BalancedMetricResolver implements MetricResolver {
                         }
                     }
 
-                    LOG.trace("focusHost {}:{} desiredChange:{} rateSortedMetrics.size():{}", h.getHost(),
-                            h.getTcpPort(), desiredChange, rateSortedMetrics.size());
+                    LOG.trace("focusHost {} desiredChange:{} rateSortedMetrics.size():{}", TimelyBalancedHost.toStringShort(h),
+                            desiredChange, rateSortedMetrics.size());
 
                     boolean doneWithHost = false;
                     while (!doneWithHost) {
@@ -592,7 +601,7 @@ public class BalancedMetricResolver implements MetricResolver {
                                 } else {
                                     String metric = e.getValue();
                                     Double metricRate = e.getKey();
-                                    assignMetric(metric, candidateHost);
+                                    assignMetric(metric, candidateHost, REBALANCE);
                                     numReassigned++;
                                     calculatedRates.put(candidateHost, calculatedRates.get(candidateHost) + metricRate);
                                     calculatedRates.put(h, calculatedRates.get(h) - metricRate);
@@ -601,9 +610,9 @@ public class BalancedMetricResolver implements MetricResolver {
                                     itr.remove();
                                     tempMetricMap.remove(metric);
                                     LOG.info(
-                                            "rebalancing: reassigning metric:{} rate:{} from server {}:{} to {}:{} remaining delta {}",
-                                            metric, metricRate, h.getHost(), h.getTcpPort(), candidateHost.getHost(),
-                                            candidateHost.getTcpPort(), desiredChange);
+                                            "rebalancing: reassigning metric:{} rate:{} from server {} to {} remaining delta {}",
+                                            metric, metricRate, TimelyBalancedHost.toStringShort(h),
+                                            TimelyBalancedHost.toStringShort(candidateHost), desiredChange);
                                 }
                             }
                         }
@@ -626,6 +635,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 }
             } finally {
                 balancerLock.writeLock().unlock();
+                metricBalanceEvent(MetricBalanceEvent.ProgressType.END, balanceType, numReassigned);
             }
         }
         return numReassigned;
@@ -760,7 +770,7 @@ public class BalancedMetricResolver implements MetricResolver {
             }
 
             if (StringUtils.isBlank(metric)) {
-                tbh = getRandomHost(null);
+                tbh = getRoundRobinHost(null);
             } else {
                 tbh = metricToHostMap.get(metric);
                 if (tbh == null) {
@@ -769,17 +779,17 @@ public class BalancedMetricResolver implements MetricResolver {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
                     }
-                    assignMetric(metric, tbh);
+                    assignMetric(metric, tbh, ASSIGN_ROUND_ROBIN);
                 } else if (!tbh.isUp()) {
                     TimelyBalancedHost oldTbh = tbh;
-                    tbh = getLeastUsedHost();
-                    LOG.debug("rebalancing from host that is down: reassigning metric {} from server {}:{} to {}:{}",
-                            metric, oldTbh.getHost(), oldTbh.getTcpPort(), tbh.getHost(), tbh.getTcpPort());
+                    tbh = getRoundRobinHost(oldTbh);
+                    LOG.debug("rebalancing from host that is down: reassigning metric {} from server {} to {}",
+                            metric, TimelyBalancedHost.toStringShort(oldTbh), TimelyBalancedHost.toStringShort(tbh));
                     if (!balancerLock.isWriteLockedByCurrentThread()) {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
                     }
-                    assignMetric(metric, tbh);
+                    assignMetric(metric, tbh, HOST_DOWN_ROUND_ROBIN);
                 }
             }
 
@@ -796,7 +806,7 @@ public class BalancedMetricResolver implements MetricResolver {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
                     }
-                    assignMetric(metric, tbh);
+                    assignMetric(metric, tbh, ASSIGN_FALLBACK_SEQUENTIAL);
                 }
             }
         } finally {
@@ -825,20 +835,23 @@ public class BalancedMetricResolver implements MetricResolver {
                 metric = null;
             }
 
-            if (tbh == null || !tbh.isUp()) {
-                for (int x = 0; tbh == null && x < serverList.size(); x++) {
-                    tbh = serverList.get(Math.abs(r.nextInt() & Integer.MAX_VALUE) % serverList.size());
-                    if (!tbh.isUp()) {
-                        tbh = null;
-                    }
+            if (tbh == null) {
+                tbh = getRoundRobinHost(null);
+                if (!balancerLock.isWriteLockedByCurrentThread()) {
+                    balancerLock.readLock().unlock();
+                    balancerLock.writeLock().lock();
                 }
-                if (tbh != null && StringUtils.isNotBlank(metric)) {
-                    if (!balancerLock.isWriteLockedByCurrentThread()) {
-                        balancerLock.readLock().unlock();
-                        balancerLock.writeLock().lock();
-                    }
-                    assignMetric(metric, tbh);
+                assignMetric(metric, tbh, ASSIGN_ROUND_ROBIN);
+            } else if (!tbh.isUp()) {
+                TimelyBalancedHost oldTbh = tbh;
+                tbh = getRoundRobinHost(oldTbh);
+                LOG.debug("rebalancing from host that is down: reassigning metric {} from server {} to {}",
+                        metric, TimelyBalancedHost.toStringShort(oldTbh), TimelyBalancedHost.toStringShort(tbh));
+                if (!balancerLock.isWriteLockedByCurrentThread()) {
+                    balancerLock.readLock().unlock();
+                    balancerLock.writeLock().lock();
                 }
+                assignMetric(metric, tbh, HOST_DOWN_ROUND_ROBIN);
             }
 
             // if all else fails
@@ -854,7 +867,7 @@ public class BalancedMetricResolver implements MetricResolver {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
                     }
-                    assignMetric(metric, tbh);
+                    assignMetric(metric, tbh, ASSIGN_FALLBACK_SEQUENTIAL);
                 }
             }
         } finally {
@@ -1042,15 +1055,60 @@ public class BalancedMetricResolver implements MetricResolver {
             if (StringUtils.isNotBlank(metric) && tbh != null) {
                 balancerLock.writeLock().lock();
                 try {
+                    metricAssignedEvent(metric, metricToHostMap.get(metric), tbh, reason);
                     metricToHostMap.put(metric, tbh);
                     assignmentsLastUpdatedLocal.set(System.currentTimeMillis());
                 } finally {
                     balancerLock.writeLock().unlock();
                 }
             } else {
-                Exception e = new IllegalStateException("Bad assignment metric:" + metric + " host:" + tbh);
-                LOG.warn(e.getMessage(), e);
+                unassignedMetrics.add(metric);
+//                Exception e = new IllegalStateException("Bad assignment metric:" + metric + " host:" + tbh);
+                LOG.warn("Bad assignment metric:" + metric + " host:" + tbh);
             }
         }
+    }
+
+    public void registerCallback(MetricAssignedCallback callback) {
+        this.metricAssignedCallbacks.add(callback);
+    }
+
+    public void registerCallback(MetricBalanceCallback callback) {
+        this.metricBalanceCallbacks.add(callback);
+    }
+
+    public void registerCallback(MetricHostCallback callback) {
+        this.metricHostCallbacks.add(callback);
+    }
+
+    protected void metricAssignedEvent(String metric, TimelyBalancedHost losing, TimelyBalancedHost gaining, MetricAssignedEvent.Reason reason) {
+        if (!metricAssignedCallbacks.isEmpty()) {
+            MetricAssignedEvent event = new MetricAssignedEvent(metric, losing, gaining, reason);
+            for (MetricAssignedCallback callback : metricAssignedCallbacks) {
+                callback.onEvent(event);
+            }
+        }
+    }
+
+    protected void metricBalanceEvent(MetricBalanceEvent.ProgressType progressType, BalancedMetricResolver.BalanceType balanceType, long numReassigned) {
+        if (!metricBalanceCallbacks.isEmpty()) {
+            MetricBalanceEvent event = new MetricBalanceEvent(progressType, balanceType, numReassigned);
+            for (MetricBalanceCallback callback : metricBalanceCallbacks) {
+                callback.onEvent(event);
+            }
+        }
+    }
+
+    protected void metricHostEvent(TimelyBalancedHost host, MetricHostEvent.ActionType actionType) {
+        if (!metricHostCallbacks.isEmpty()) {
+            MetricHostEvent event = new MetricHostEvent(host, actionType);
+            for (MetricHostCallback callback : metricHostCallbacks) {
+                callback.onEvent(event);
+            }
+        }
+    }
+
+    protected void writeAssignments(Map<String, TimelyBalancedHost> metricToHostMap) {
+        assignmentPerister.writeAssignments(metricToHostMap);
     }
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="CONSOLE" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{yyyyMMdd HHmmss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Logger name="org.apache.accumulo.core.client.impl.ThriftTransportPool" level="OFF" additivity="false" />
+    <Logger name="org.apache.accumulo.fate.zookeeper.ZooCache" level="OFF" additivity="false" />
+    <Logger name="org.apache.zookeeper" level="OFF" additivity="false" />
+    <Logger name="timely.balancer.resolver" level="TRACE" additivity="true" />
+    <Logger name="timely.balancer.resolver.TestBalancedMetricResolver" level="DEBUG" additivity="true" />
+    <Root level="ERROR">
+      <AppenderRef ref="CONSOLE"/>
+    </Root>
+  </Loggers>
+</Configuration>

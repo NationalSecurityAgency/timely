@@ -186,4 +186,11 @@ public class TimelyBalancedHost {
         builder.append(isUp);
         return builder.toString();
     }
+
+    public static String toStringShort(TimelyBalancedHost tbh) {
+        if (tbh == null) {
+            return null;
+        }
+        return tbh.host + ":" + tbh.tcpPort;
+    }
 }
