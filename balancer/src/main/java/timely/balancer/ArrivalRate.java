@@ -1,7 +1,7 @@
 package timely.balancer;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.util.concurrent.AtomicDouble;
@@ -20,38 +20,26 @@ public class ArrivalRate {
     private AtomicDouble longTermRate = new AtomicDouble(0);
     private AtomicLong longTermLastReset = new AtomicLong(0);
 
-    public ArrivalRate(Timer timer) {
+    public ArrivalRate(ScheduledExecutorService arrivalRateExecutor) {
         long now = System.currentTimeMillis();
         shortTermLastReset.set(now);
         mediumTermLastReset.set(now);
         longTermLastReset.set(now);
 
         // 2 minute
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                resetShort();
-            }
-        }, 120000, 120000);
+        arrivalRateExecutor.scheduleAtFixedRate(() -> {
+            resetShort();
+        }, 2, 2, TimeUnit.MINUTES);
 
         // 5 minute
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                resetMedium();
-            }
-        }, 300000, 300000);
+        arrivalRateExecutor.scheduleAtFixedRate(() -> {
+            resetMedium();
+        }, 5, 5, TimeUnit.MINUTES);
 
         // 15 minute
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                resetLong();
-            }
-        }, 900000, 900000);
+        arrivalRateExecutor.scheduleAtFixedRate(() -> {
+            resetLong();
+        }, 15, 15, TimeUnit.MINUTES);
     }
 
     private void resetShort() {

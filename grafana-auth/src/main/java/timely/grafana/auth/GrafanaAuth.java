@@ -81,8 +81,11 @@ public class GrafanaAuth {
         this.grafanaAuthConfig = grafanaAuthConfig;
     }
 
-    protected static ConfigurableApplicationContext initializeConfiguration(String[] args) {
-        return new SpringApplicationBuilder(SpringBootstrap.class).web(WebApplicationType.NONE).run(args);
+    protected static ConfigurableApplicationContext initializeContext(String[] args) {
+        SpringApplicationBuilder builder = new SpringApplicationBuilder(SpringBootstrap.class);
+        builder.web(WebApplicationType.NONE);
+        builder.registerShutdownHook(false);
+        return builder.run(args);
     }
 
     private void shutdownHook() {
@@ -109,13 +112,11 @@ public class GrafanaAuth {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Error while shutting down channel: {}", f.channel().config());
-                LOG.error("{}", e.getMessage());
-                e.printStackTrace();
+                LOG.error("Channel:" + f.channel().config() + " -> " + e.getMessage(), e);
             }
         });
 
-        Integer quietPeriod = grafanaAuthConfig.getShutdownQuietPeriod();
+        int quietPeriod = grafanaAuthConfig.getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
 
         if (httpBossGroup != null) {
@@ -132,9 +133,7 @@ public class GrafanaAuth {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Error while shutting down group: {}", f.toString());
-                LOG.error("{}", e.getMessage());
-                e.printStackTrace();
+                LOG.error("Group:" + f.toString() + " -> " + e.getMessage(), e);
             }
         });
 
@@ -272,12 +271,13 @@ public class GrafanaAuth {
 
     public static void main(String[] args) throws Exception {
 
-        GrafanaAuth.applicationContext = GrafanaAuth.initializeConfiguration(args);
-        GrafanaAuthConfiguration balancerConf = applicationContext.getBean(GrafanaAuthConfiguration.class);
+        GrafanaAuth.applicationContext = GrafanaAuth.initializeContext(args);
+        GrafanaAuthConfiguration grafanaAuthConf = GrafanaAuth.applicationContext
+                .getBean(GrafanaAuthConfiguration.class);
 
-        GrafanaAuth b = new GrafanaAuth(balancerConf);
+        GrafanaAuth grafanaAuth = new GrafanaAuth(grafanaAuthConf);
         try {
-            b.run();
+            grafanaAuth.run();
             LATCH.await();
         } catch (final InterruptedException e) {
             LOG.info("Server shutting down.");
@@ -285,7 +285,7 @@ public class GrafanaAuth {
             LOG.error("Error running server.", e);
         } finally {
             try {
-                b.shutdown();
+                grafanaAuth.shutdown();
             } catch (Exception e) {
                 System.exit(1);
             }

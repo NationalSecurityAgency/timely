@@ -87,7 +87,7 @@ public class GrafanaRelayHandler extends SimpleChannelInboundHandler<HttpRequest
                 String protocol = config.getGrafana().getProtocol();
                 String host = config.getGrafana().getHost();
                 Integer port = config.getGrafana().getPort();
-                k = TimelyBalancedHost.of(host, -1, port, -1, -1);
+                k = TimelyBalancedHost.of(host, -1, port, -1, -1, null);
                 client = httpClientPool.borrowObject(k);
                 Multimap<String, String> headers = HttpHeaderUtils.toMultimap(request.headers());
 

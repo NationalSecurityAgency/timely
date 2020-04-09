@@ -11,9 +11,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 
@@ -79,7 +79,7 @@ public class DataStoreCache {
     private int flushBatch = 0;
     private int numBatches = 5;
     private InternalMetrics internalMetrics;
-    private Timer maintenanceTimer = new Timer("DataStoreCacheTimer");
+    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(6);
 
     public DataStoreCache(CuratorFramework curatorFramework, Configuration conf) {
         if (curatorFramework != null) {
@@ -103,82 +103,58 @@ public class DataStoreCache {
 
         minimumAgeOffForIterator = getAgeOffForIterator(minimumAgeOff);
 
-        maintenanceTimer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                try {
-                    flushCaches(flushBatch);
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                } finally {
-                    flushBatch++;
-                    if (flushBatch == numBatches) {
-                        flushBatch = 0;
-                    }
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                flushCaches(flushBatch);
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            } finally {
+                flushBatch++;
+                if (flushBatch == numBatches) {
+                    flushBatch = 0;
                 }
             }
-        }, conf.getCache().getFlushInterval(), conf.getCache().getFlushInterval());
+        }, conf.getCache().getFlushInterval(), conf.getCache().getFlushInterval(), TimeUnit.MILLISECONDS);
 
-        maintenanceTimer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                try {
-                    removeStaleMetrics();
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                }
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                DataStoreCache.this.removeStaleMetrics();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
             }
-        }, (300 * 1000), (300 * 1000));
+        }, 5, 5, TimeUnit.MINUTES);
 
-        maintenanceTimer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                try {
-                    ageOffGorillaStores();
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                }
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                ageOffGorillaStores();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
             }
-        }, (600 * 1000), (600 * 1000));
+        }, 10, 10, TimeUnit.MINUTES);
 
-        maintenanceTimer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                try {
-                    archiveGorillaStoreCurrentCompressors();
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                }
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                archiveGorillaStoreCurrentCompressors();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
             }
-        }, (3600 * 1000), (3600 * 1000));
+        }, 60, 60, TimeUnit.MINUTES);
 
-        maintenanceTimer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                try {
-                    pruneStats();
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                }
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                pruneStats();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
             }
-        }, (600 * 1000), (600 * 1000));
+        }, 10, 10, TimeUnit.MINUTES);
 
-        maintenanceTimer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                try {
-                    reportInternalMetrics();
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                }
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                reportInternalMetrics();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
             }
-        }, (60 * 1000), (60 * 1000));
+        }, 1, 1, TimeUnit.MINUTES);
     }
 
     private void addNonCachedMetrics(Collection<String> nonCachedMetricsUpdate) {
@@ -934,5 +910,18 @@ public class DataStoreCache {
             gorillaMapLock.unlockRead(stamp);
         }
         return response;
+    }
+
+    public void close() {
+        this.executorService.shutdown();
+        try {
+            this.executorService.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+
+        } finally {
+            if (!this.executorService.isTerminated()) {
+                this.executorService.shutdownNow();
+            }
+        }
     }
 }

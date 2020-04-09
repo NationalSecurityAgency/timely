@@ -5,9 +5,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -37,7 +38,7 @@ public class MetaCacheImpl implements MetaCache {
     private volatile boolean closed = false;
     private Cache<Meta, Object> cache = null;
     private Configuration configuration;
-    private Timer timer = new Timer("MetaCacheImpl", true);
+    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     @Override
     public void init(Configuration config) {
@@ -45,13 +46,8 @@ public class MetaCacheImpl implements MetaCache {
         cache = Caffeine.newBuilder().initialCapacity(1000).build();
         long cacheRefreshMinutes = configuration.getMetaCache().getCacheRefreshMinutes();
         if (cacheRefreshMinutes > 0) {
-            timer.schedule(new TimerTask() {
-
-                @Override
-                public void run() {
-                    refreshCache(config.getMetaCache().getExpirationMinutes());
-                }
-            }, 60000, cacheRefreshMinutes * 60 * 1000);
+            executorService.scheduleAtFixedRate(() -> refreshCache(config.getMetaCache().getExpirationMinutes()), 1,
+                    cacheRefreshMinutes, TimeUnit.MINUTES);
         }
     }
 
@@ -148,6 +144,16 @@ public class MetaCacheImpl implements MetaCache {
     @Override
     public void close() {
         this.closed = true;
+        this.executorService.shutdown();
+        try {
+            this.executorService.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+
+        } finally {
+            if (!this.executorService.isTerminated()) {
+                this.executorService.shutdownNow();
+            }
+        }
     }
 
     @Override

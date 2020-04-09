@@ -52,7 +52,8 @@ public class StandaloneServer extends Server {
             System.exit(1);
         }
 
-        Configuration conf = initializeConfiguration(args);
+        StandaloneServer.applicationContext = initializeContext(args);
+        Configuration conf = StandaloneServer.applicationContext.getBean(Configuration.class);
 
         File accumuloDir = new File(tmp, "accumulo");
         MiniAccumuloConfig macConfig = new MiniAccumuloConfig(accumuloDir, "secret");

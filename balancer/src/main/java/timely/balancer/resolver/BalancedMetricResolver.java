@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -71,8 +71,8 @@ public class BalancedMetricResolver implements MetricResolver {
     private List<TimelyBalancedHost> serverList = new ArrayList<>();
     private Random r = new Random();
     final private HealthChecker healthChecker;
-    private Timer timer = new Timer("RebalanceTimer", true);
-    private Timer arrivalRateTimer = new Timer("ArrivalRateTimerResolver", true);
+    private ScheduledExecutorService assignmentExecutor = Executors.newScheduledThreadPool(2);
+    private ScheduledExecutorService arrivalRateExecutor = Executors.newScheduledThreadPool(2);
     private int roundRobinCounter = 0;
     private Set<String> nonCachedMetrics = new HashSet<>();
     private DistributedAtomicValue nonCachedMetricsIP;
@@ -151,45 +151,36 @@ public class BalancedMetricResolver implements MetricResolver {
 
         readAssignmentsFromHdfs(false);
 
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                if (isLeader.get()) {
-                    try {
-                        balance();
-                    } catch (Exception e) {
-                        LOG.error(e.getMessage(), e);
-                    }
-                }
-            }
-        }, 900000, 900000);
-
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
+        assignmentExecutor.scheduleAtFixedRate(() -> {
+            if (isLeader.get()) {
                 try {
-                    if (isLeader.get()) {
-                        long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
-                        long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
-                        if (lastLocalUpdate > lastHdfsUpdate) {
-                            LOG.debug("Leader writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
-                                    new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
-                            writeAssignmentsToHdfs();
-                        } else {
-                            LOG.trace(
-                                    "Leader not writing assignments to hdfs lastLocalUpdate ({}) <= lastHdfsUpdate ({})",
-                                    new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
-                        }
-                    } else {
-                        readAssignmentsFromHdfs(true);
-                    }
+                    balance();
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
             }
-        }, 10000, 60000);
+        }, 15, 15, TimeUnit.MINUTES);
+
+        assignmentExecutor.scheduleAtFixedRate(() -> {
+            try {
+                if (isLeader.get()) {
+                    long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
+                    long lastHdfsUpdate = assignmentsLastUpdatedInHdfs.get().postValue();
+                    if (lastLocalUpdate > lastHdfsUpdate) {
+                        LOG.debug("Leader writing assignments to hdfs lastLocalUpdate ({}) > lastHdfsUpdate ({})",
+                                new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
+                        writeAssignmentsToHdfs();
+                    } else {
+                        LOG.trace("Leader not writing assignments to hdfs lastLocalUpdate ({}) <= lastHdfsUpdate ({})",
+                                new Date(lastLocalUpdate), new Date(lastHdfsUpdate));
+                    }
+                } else {
+                    readAssignmentsFromHdfs(true);
+                }
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
+        }, 10, 60, TimeUnit.SECONDS);
     }
 
     private void readNonCachedMetricsIP() {
@@ -273,7 +264,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 for (ServiceInstance<ServerDetails> si : instances) {
                     ServerDetails pl = si.getPayload();
                     TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(), pl.getHttpPort(),
-                            pl.getWsPort(), pl.getUdpPort());
+                            pl.getWsPort(), pl.getUdpPort(), new ArrivalRate(arrivalRateExecutor));
                     LOG.info("adding service {} host:{} tcpPort:{} httpPort:{} wsPort:{} udpPort:{}", si.getId(),
                             pl.getHost(), pl.getTcpPort(), pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort());
                     tbh.setBalancerConfig(balancerConfig);
@@ -298,7 +289,8 @@ public class BalancedMetricResolver implements MetricResolver {
                         for (ServiceInstance<ServerDetails> si : instances) {
                             ServerDetails pl = (ServerDetails) si.getPayload();
                             TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(),
-                                    pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort());
+                                    pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort(),
+                                    new ArrivalRate(arrivalRateExecutor));
                             tbh.setBalancerConfig(balancerConfig);
                             availableHosts.add(tbh);
                         }
@@ -747,7 +739,7 @@ public class BalancedMetricResolver implements MetricResolver {
             if (chooseMetricSpecificHost) {
                 ArrivalRate rate = metricMap.get(metric);
                 if (rate == null) {
-                    rate = new ArrivalRate(arrivalRateTimer);
+                    rate = new ArrivalRate(arrivalRateExecutor);
                     if (!balancerLock.isWriteLockedByCurrentThread()) {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
@@ -1051,6 +1043,38 @@ public class BalancedMetricResolver implements MetricResolver {
                 Exception e = new IllegalStateException("Bad assignment metric:" + metric + " host:" + tbh);
                 LOG.warn(e.getMessage(), e);
             }
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+
+        this.assignmentExecutor.shutdown();
+        try {
+            this.assignmentExecutor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+
+        } finally {
+            if (!this.assignmentExecutor.isTerminated()) {
+                this.assignmentExecutor.shutdownNow();
+            }
+        }
+
+        this.arrivalRateExecutor.shutdown();
+        try {
+            this.arrivalRateExecutor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+
+        } finally {
+            if (!this.arrivalRateExecutor.isTerminated()) {
+                this.arrivalRateExecutor.shutdownNow();
+            }
+        }
+
+        try {
+            this.healthChecker.close();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
         }
     }
 }

@@ -29,8 +29,6 @@ public interface DataStore {
 
     List<QueryResponse> query(QueryRequest msg) throws TimelyException;
 
-    void flush() throws TimelyException;
-
     long getAgeOffForMetric(String metricName);
 
     List<Range> getQueryRanges(String metric, long start, long end, Set<Tag> colFamValues);
@@ -45,4 +43,6 @@ public interface DataStore {
     DataStoreCache getCache();
 
     InternalMetrics getInternalMetrics();
+
+    void close() throws Exception;
 }
