@@ -145,8 +145,11 @@ public class Balancer {
         this.balancerConfig = balancerConf;
     }
 
-    protected static ConfigurableApplicationContext initializeConfiguration(String[] args) {
-        return new SpringApplicationBuilder(SpringBootstrap.class).web(WebApplicationType.NONE).run(args);
+    protected static ConfigurableApplicationContext initializeContext(String[] args) {
+        SpringApplicationBuilder builder = new SpringApplicationBuilder(SpringBootstrap.class);
+        builder.web(WebApplicationType.NONE);
+        builder.registerShutdownHook(false);
+        return builder.run(args);
     }
 
     private void shutdownHook() {
@@ -178,8 +181,9 @@ public class Balancer {
             channelFutures.add(wsChannelHandle.close());
         }
 
+        int udpChannel = 1;
         for (Channel c : udpChannelHandleList) {
-            LOG.info("Closing udpChannelHandle");
+            LOG.info("Closing udpChannelHandle #" + udpChannel++);
             channelFutures.add(c.close());
         }
 
@@ -188,14 +192,13 @@ public class Balancer {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Error while shutting down channel: {}", f.channel().config());
-                LOG.error("{}", e.getMessage());
-                e.printStackTrace();
+                LOG.error("Channel:" + f.channel().config() + " -> " + e.getMessage(), e);
             }
         });
 
-        Integer quietPeriod = balancerConfig.getServer().getShutdownQuietPeriod();
+        int quietPeriod = balancerConfig.getServer().getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
+
         if (tcpBossGroup != null) {
             LOG.info("Shutting down tcpBossGroup");
             groupFutures.add(tcpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
@@ -240,9 +243,7 @@ public class Balancer {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Error while shutting down group: {}", f.toString());
-                LOG.error("{}", e.getMessage());
-                e.printStackTrace();
+                LOG.error("Group:" + f.toString() + " -> " + e.getMessage(), e);
             }
         });
 
@@ -253,14 +254,29 @@ public class Balancer {
             LOG.error("Error closing WebSocketRequestDecoder during shutdown", e);
         }
 
+        if (this.metricResolver != null) {
+            try {
+                LOG.info("Closing metricResolver");
+                this.metricResolver.close();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
+        }
+
+        if (curatorFramework != null) {
+            try {
+                LOG.info("Closing curatorFramework");
+                curatorFramework.close();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
+        }
+
         if (applicationContext != null) {
             LOG.info("Closing applicationContext");
             applicationContext.close();
         }
 
-        if (curatorFramework != null) {
-            curatorFramework.close();
-        }
         this.shutdown = true;
         LOG.info("Server shut down.");
     }
@@ -482,12 +498,12 @@ public class Balancer {
 
     public static void main(String[] args) throws Exception {
 
-        Balancer.applicationContext = Balancer.initializeConfiguration(args);
-        BalancerConfiguration balancerConf = applicationContext.getBean(BalancerConfiguration.class);
+        Balancer.applicationContext = Balancer.initializeContext(args);
+        BalancerConfiguration balancerConf = Balancer.applicationContext.getBean(BalancerConfiguration.class);
 
-        Balancer b = new Balancer(balancerConf);
+        Balancer balancer = new Balancer(balancerConf);
         try {
-            b.run();
+            balancer.run();
             LATCH.await();
         } catch (final InterruptedException e) {
             LOG.info("Server shutting down.");
@@ -495,7 +511,7 @@ public class Balancer {
             LOG.error("Error running server.", e);
         } finally {
             try {
-                b.shutdown();
+                balancer.shutdown();
             } catch (Exception e) {
                 System.exit(1);
             }

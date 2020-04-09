@@ -76,7 +76,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-import timely.api.response.TimelyException;
 import timely.auth.AuthCache;
 import timely.auth.VisibilityCache;
 import timely.configuration.Configuration;
@@ -234,11 +233,12 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
 
-        Configuration conf = initializeConfiguration(args);
+        Server.applicationContext = initializeContext(args);
+        Configuration conf = Server.applicationContext.getBean(Configuration.class);
 
-        Server s = new Server(conf);
+        Server server = new Server(conf);
         try {
-            s.run();
+            server.run();
             LATCH.await();
         } catch (final InterruptedException e) {
             LOG.info("Server shutting down.");
@@ -246,16 +246,18 @@ public class Server {
             LOG.error("Error running server.", e);
         } finally {
             try {
-                s.shutdown();
+                server.shutdown();
             } catch (Exception e) {
                 System.exit(1);
             }
         }
     }
 
-    protected static Configuration initializeConfiguration(String[] args) {
-        applicationContext = new SpringApplicationBuilder(SpringBootstrap.class).web(WebApplicationType.NONE).run(args);
-        return applicationContext.getBean(Configuration.class);
+    protected static ConfigurableApplicationContext initializeContext(String[] args) {
+        SpringApplicationBuilder builder = new SpringApplicationBuilder(SpringBootstrap.class);
+        builder.web(WebApplicationType.NONE);
+        builder.registerShutdownHook(false);
+        return builder.run(args);
     }
 
     private void shutdownHook() {
@@ -287,8 +289,9 @@ public class Server {
             channelFutures.add(wsChannelHandle.close());
         }
 
+        int udpChannel = 1;
         for (Channel c : udpChannelHandleList) {
-            LOG.info("Closing udpChannelHandle");
+            LOG.info("Closing udpChannelHandle #" + udpChannel++);
             channelFutures.add(c.close());
         }
 
@@ -297,14 +300,13 @@ public class Server {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Error while shutting down channel: {}", f.channel().config());
-                LOG.error("{}", e.getMessage());
-                e.printStackTrace();
+                LOG.error("Channel:" + f.channel().config() + " -> " + e.getMessage(), e);
             }
         });
 
-        Integer quietPeriod = config.getServer().getShutdownQuietPeriod();
+        int quietPeriod = config.getServer().getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
+
         if (tcpBossGroup != null) {
             LOG.info("Shutting down tcpBossGroup");
             groupFutures.add(tcpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
@@ -349,40 +351,54 @@ public class Server {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Error while shutting down group: {}", f.toString());
-                LOG.error("{}", e.getMessage());
-                e.printStackTrace();
+                LOG.error("Group:" + f.toString() + " -> " + e.getMessage(), e);
             }
         });
 
         try {
-            LOG.info("Flushing datastore.");
-            dataStore.flush();
-        } catch (TimelyException e) {
-            LOG.error("Error flushing to server during shutdown", e);
+            LOG.info("Closing dataStore");
+            dataStore.close();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
         }
 
         try {
-            LOG.info("Closing MetaCacheFactory");
+            LOG.info("Closing dataStoreCache");
+            dataStoreCache.close();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+
+        try {
+            LOG.info("Closing metaCacheFactory");
             MetaCacheFactory.close();
         } catch (Exception e) {
-            LOG.error("Error closing MetaCacheFactory during shutdown", e);
+            LOG.error(e.getMessage(), e);
         }
 
         try {
-            LOG.info("Closing WebSocketRequestDecoder");
+            LOG.info("Closing webSocketRequestDecoder subscriptions");
             WebSocketRequestDecoder.close();
         } catch (Exception e) {
-            LOG.error("Error closing WebSocketRequestDecoder during shutdown", e);
+            LOG.error(e.getMessage(), e);
         }
 
         if (curatorFramework != null) {
-            curatorFramework.close();
+            try {
+                LOG.info("Closing curatorFramework");
+                curatorFramework.close();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
         }
 
         if (applicationContext != null) {
-            LOG.info("Closing applicationContext");
-            applicationContext.close();
+            try {
+                LOG.info("Closing applicationContext");
+                applicationContext.close();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
         }
         this.shutdown = true;
         LOG.info("Server shut down.");

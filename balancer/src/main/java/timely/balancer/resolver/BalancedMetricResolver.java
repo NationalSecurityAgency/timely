@@ -5,10 +5,10 @@ import static timely.balancer.Balancer.ASSIGNMENTS_LAST_UPDATED_PATH;
 import static timely.balancer.Balancer.ASSIGNMENTS_LOCK_PATH;
 import static timely.balancer.Balancer.LEADER_LATCH_PATH;
 import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.ASSIGN_FALLBACK_SEQUENTIAL;
+import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.ASSIGN_ROUND_ROBIN;
 import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.HOST_DOWN_ROUND_ROBIN;
 import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.HOST_REMOVED;
 import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.REBALANCE;
-import static timely.balancer.resolver.eventing.MetricAssignedEvent.Reason.ASSIGN_ROUND_ROBIN;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
@@ -23,15 +23,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.SerializationUtils;
@@ -74,8 +73,9 @@ public class BalancedMetricResolver implements MetricResolver {
     private ReentrantReadWriteLock balancerLock = new ReentrantReadWriteLock();
     private List<TimelyBalancedHost> serverList = new ArrayList<>();
     private Random r = new Random();
-    private Timer timer = new Timer("RebalanceTimer", true);
-    private Timer arrivalRateTimer = new Timer("ArrivalRateTimerResolver", true);
+    private final HealthChecker healthChecker;
+    private ScheduledExecutorService assignmentExecutor = Executors.newScheduledThreadPool(2);
+    private ScheduledExecutorService arrivalRateExecutor = Executors.newScheduledThreadPool(2);
     private int roundRobinCounter = 0;
     private Set<String> nonCachedMetrics = new HashSet<>();
     private DistributedAtomicValue nonCachedMetricsIP;
@@ -88,7 +88,6 @@ public class BalancedMetricResolver implements MetricResolver {
     private MetricAssignmentPerister assignmentPerister;
 
     final private BalancerConfiguration balancerConfig;
-    final private HealthChecker healthChecker;
     final private CuratorFramework curatorFramework;
 
     private List<MetricAssignedCallback> metricAssignedCallbacks = new ArrayList<>();
@@ -99,7 +98,8 @@ public class BalancedMetricResolver implements MetricResolver {
         HIGH_LOW, HIGH_AVG, AVG_LOW;
     }
 
-    public BalancedMetricResolver(CuratorFramework curatorFramework, BalancerConfiguration balancerConfig, HealthChecker healthChecker) {
+    public BalancedMetricResolver(CuratorFramework curatorFramework, BalancerConfiguration balancerConfig,
+            HealthChecker healthChecker) {
         this.curatorFramework = curatorFramework;
         this.balancerConfig = balancerConfig;
         this.healthChecker = healthChecker;
@@ -109,8 +109,9 @@ public class BalancedMetricResolver implements MetricResolver {
         assignmentsIPRWLock = new InterProcessReadWriteLock(curatorFramework, ASSIGNMENTS_LOCK_PATH);
         testIPRWLock(curatorFramework, assignmentsIPRWLock, ASSIGNMENTS_LOCK_PATH);
 
-        this.assignmentPerister = new MetricAssignmentPerister(this, balancerConfig, metricToHostMap,
-                nonCachedMetrics, curatorFramework, assignmentsIPRWLock, nonCachedMetricsLocalLock, assignmentsLastUpdatedLocal, balancerLock);
+        this.assignmentPerister = new MetricAssignmentPerister(this, balancerConfig, metricToHostMap, nonCachedMetrics,
+                curatorFramework, assignmentsIPRWLock, nonCachedMetricsLocalLock, assignmentsLastUpdatedLocal,
+                balancerLock);
 
         startLeaderLatch(curatorFramework);
         startServiceListener(curatorFramework);
@@ -161,49 +162,36 @@ public class BalancedMetricResolver implements MetricResolver {
 
         assignmentPerister.readAssignments(false);
 
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                if (isLeader.get()) {
-                    try {
-                        balance();
-                    } catch (Exception e) {
-                        LOG.error(e.getMessage(), e);
-                    }
-                }
-            }
-        }, balancerConfig.getBalanceDelay(), balancerConfig.getBalancePeriod());
-
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
+        assignmentExecutor.scheduleAtFixedRate(() -> {
+            if (isLeader.get()) {
                 try {
-                    if (isLeader.get()) {
-                        long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
-                        long lastUpdateByLeader = assignmentPerister.getAssignmentsLastUpdatedByLeader();
-                        if (lastLocalUpdate > lastUpdateByLeader) {
-                            LOG.debug("Leader writing assignments lastLocalUpdate ({}) > lastUpdateByLeader ({})",
-                                    new Date(lastLocalUpdate), new Date(lastUpdateByLeader));
-                            assignmentPerister.writeAssignments();
-                        } else {
-                            LOG.trace(
-                                    "Leader not writing assignments lastLocalUpdate ({}) <= lastUpdateByLeader ({})",
-                                    new Date(lastLocalUpdate), new Date(lastUpdateByLeader));
-                        }
-                    } else {
-                        assignmentPerister.readAssignments(true);
-                    }
+                    balance();
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
             }
-        }, balancerConfig.getPersistDelay(), balancerConfig.getPersistPeriod());
-    }
+        }, balancerConfig.getBalanceDelay(), balancerConfig.getBalancePeriod(), TimeUnit.MILLISECONDS);
 
-    public void stop() {
-        this.timer.cancel();
+        assignmentExecutor.scheduleAtFixedRate(() -> {
+            try {
+                if (isLeader.get()) {
+                    long lastLocalUpdate = assignmentsLastUpdatedLocal.get();
+                    long lastUpdateByLeader = assignmentPerister.getAssignmentsLastUpdatedByLeader();
+                    if (lastLocalUpdate > lastUpdateByLeader) {
+                        LOG.debug("Leader writing assignments lastLocalUpdate ({}) > lastUpdateByLeader ({})",
+                                new Date(lastLocalUpdate), new Date(lastUpdateByLeader));
+                        assignmentPerister.writeAssignments();
+                    } else {
+                        LOG.trace("Leader not writing assignments lastLocalUpdate ({}) <= lastUpdateByLeader ({})",
+                                new Date(lastLocalUpdate), new Date(lastUpdateByLeader));
+                    }
+                } else {
+                    assignmentPerister.readAssignments(true);
+                }
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
+        }, balancerConfig.getPersistDelay(), balancerConfig.getPersistPeriod(), TimeUnit.MILLISECONDS);
     }
 
     private void readNonCachedMetricsIP() {
@@ -287,7 +275,7 @@ public class BalancedMetricResolver implements MetricResolver {
                 for (ServiceInstance<ServerDetails> si : instances) {
                     ServerDetails pl = si.getPayload();
                     TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(), pl.getHttpPort(),
-                            pl.getWsPort(), pl.getUdpPort());
+                            pl.getWsPort(), pl.getUdpPort(), new ArrivalRate(arrivalRateExecutor));
                     LOG.info("adding service {} host:{}", si.getId(), TimelyBalancedHost.toStringShort(tbh));
                     tbh.setBalancerConfig(balancerConfig);
                     serverList.add(tbh);
@@ -312,7 +300,8 @@ public class BalancedMetricResolver implements MetricResolver {
                         for (ServiceInstance<ServerDetails> si : instances) {
                             ServerDetails pl = (ServerDetails) si.getPayload();
                             TimelyBalancedHost tbh = TimelyBalancedHost.of(pl.getHost(), pl.getTcpPort(),
-                                    pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort());
+                                    pl.getHttpPort(), pl.getWsPort(), pl.getUdpPort(),
+                                    new ArrivalRate(arrivalRateExecutor));
                             tbh.setBalancerConfig(balancerConfig);
                             availableHosts.add(tbh);
                         }
@@ -353,7 +342,8 @@ public class BalancedMetricResolver implements MetricResolver {
                             for (String s : reassignMetrics) {
                                 TimelyBalancedHost h = getRoundRobinHost(null);
                                 assignMetric(s, h, HOST_REMOVED);
-                                LOG.debug("Assigned server removed.  Assigning {} to server {}", s, TimelyBalancedHost.toStringShort(h));
+                                LOG.debug("Assigned server removed.  Assigning {} to server {}", s,
+                                        TimelyBalancedHost.toStringShort(h));
                             }
                         }
 
@@ -457,7 +447,7 @@ public class BalancedMetricResolver implements MetricResolver {
     }
 
     private TimelyBalancedHost chooseHost(Set<TimelyBalancedHost> potentialHosts,
-                                          Map<TimelyBalancedHost, Double> calculatedRates, double referenceRate, BalanceType balanceType) {
+            Map<TimelyBalancedHost, Double> calculatedRates, double referenceRate, BalanceType balanceType) {
 
         TimelyBalancedHost tbh = null;
         Map<Long, TimelyBalancedHost> weightedList = new TreeMap<>();
@@ -542,14 +532,14 @@ public class BalancedMetricResolver implements MetricResolver {
     }
 
     public int rebalance(Set<TimelyBalancedHost> losingHosts, Set<TimelyBalancedHost> gainingHosts,
-                         Map<TimelyBalancedHost, Double> calculatedRates, double targetArrivalRate, BalanceType balanceType) {
+            Map<TimelyBalancedHost, Double> calculatedRates, double targetArrivalRate, BalanceType balanceType) {
 
         int numReassigned = 0;
         if (isLeader.get()) {
             metricBalanceEvent(MetricBalanceEvent.ProgressType.BEGIN, balanceType, 0);
             balancerLock.writeLock().lock();
-            metricBalanceEvent(MetricBalanceEvent.ProgressType.BALANCER_LOCK_ACQUIRED, balanceType, 0);
             try {
+                metricBalanceEvent(MetricBalanceEvent.ProgressType.BALANCER_LOCK_ACQUIRED, balanceType, 0);
                 Map<String, ArrivalRate> tempMetricMap = new HashMap<>();
                 tempMetricMap.putAll(metricMap);
 
@@ -579,8 +569,8 @@ public class BalancedMetricResolver implements MetricResolver {
                         }
                     }
 
-                    LOG.trace("focusHost {} desiredChange:{} rateSortedMetrics.size():{}", TimelyBalancedHost.toStringShort(h),
-                            desiredChange, rateSortedMetrics.size());
+                    LOG.trace("focusHost {} desiredChange:{} rateSortedMetrics.size():{}",
+                            TimelyBalancedHost.toStringShort(h), desiredChange, rateSortedMetrics.size());
 
                     boolean doneWithHost = false;
                     while (!doneWithHost) {
@@ -700,13 +690,11 @@ public class BalancedMetricResolver implements MetricResolver {
         try {
             lock.writeLock().acquire(10, TimeUnit.SECONDS);
         } catch (Exception e1) {
-            e1.printStackTrace();
             try {
                 curatorFramework.delete().deletingChildrenIfNeeded().forPath(path);
                 curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
                         .forPath(path);
             } catch (Exception e2) {
-                e1.printStackTrace();
                 LOG.info(e2.getMessage(), e2);
             }
         } finally {
@@ -767,7 +755,7 @@ public class BalancedMetricResolver implements MetricResolver {
             if (chooseMetricSpecificHost) {
                 ArrivalRate rate = metricMap.get(metric);
                 if (rate == null) {
-                    rate = new ArrivalRate(arrivalRateTimer);
+                    rate = new ArrivalRate(arrivalRateExecutor);
                     if (!balancerLock.isWriteLockedByCurrentThread()) {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
@@ -793,8 +781,8 @@ public class BalancedMetricResolver implements MetricResolver {
                 } else if (!tbh.isUp()) {
                     TimelyBalancedHost oldTbh = tbh;
                     tbh = getRoundRobinHost(oldTbh);
-                    LOG.debug("rebalancing from host that is down: reassigning metric {} from server {} to {}",
-                            metric, TimelyBalancedHost.toStringShort(oldTbh), TimelyBalancedHost.toStringShort(tbh));
+                    LOG.debug("rebalancing from host that is down: reassigning metric {} from server {} to {}", metric,
+                            TimelyBalancedHost.toStringShort(oldTbh), TimelyBalancedHost.toStringShort(tbh));
                     if (!balancerLock.isWriteLockedByCurrentThread()) {
                         balancerLock.readLock().unlock();
                         balancerLock.writeLock().lock();
@@ -855,8 +843,8 @@ public class BalancedMetricResolver implements MetricResolver {
             } else if (!tbh.isUp()) {
                 TimelyBalancedHost oldTbh = tbh;
                 tbh = getRoundRobinHost(oldTbh);
-                LOG.debug("rebalancing from host that is down: reassigning metric {} from server {} to {}",
-                        metric, TimelyBalancedHost.toStringShort(oldTbh), TimelyBalancedHost.toStringShort(tbh));
+                LOG.debug("rebalancing from host that is down: reassigning metric {} from server {} to {}", metric,
+                        TimelyBalancedHost.toStringShort(oldTbh), TimelyBalancedHost.toStringShort(tbh));
                 if (!balancerLock.isWriteLockedByCurrentThread()) {
                     balancerLock.readLock().unlock();
                     balancerLock.writeLock().lock();
@@ -914,7 +902,8 @@ public class BalancedMetricResolver implements MetricResolver {
                 }
             } else {
                 unassignedMetrics.add(metric);
-//                Exception e = new IllegalStateException("Bad assignment metric:" + metric + " host:" + tbh);
+                // Exception e = new IllegalStateException("Bad assignment metric:" + metric + "
+                // host:" + tbh);
                 LOG.warn("Bad assignment metric:" + metric + " host:" + tbh);
             }
         }
@@ -932,7 +921,8 @@ public class BalancedMetricResolver implements MetricResolver {
         this.metricHostCallbacks.add(callback);
     }
 
-    protected void metricAssignedEvent(String metric, TimelyBalancedHost losing, TimelyBalancedHost gaining, MetricAssignedEvent.Reason reason) {
+    protected void metricAssignedEvent(String metric, TimelyBalancedHost losing, TimelyBalancedHost gaining,
+            MetricAssignedEvent.Reason reason) {
         if (!metricAssignedCallbacks.isEmpty()) {
             MetricAssignedEvent event = new MetricAssignedEvent(metric, losing, gaining, reason);
             for (MetricAssignedCallback callback : metricAssignedCallbacks) {
@@ -941,7 +931,8 @@ public class BalancedMetricResolver implements MetricResolver {
         }
     }
 
-    protected void metricBalanceEvent(MetricBalanceEvent.ProgressType progressType, BalancedMetricResolver.BalanceType balanceType, long numReassigned) {
+    protected void metricBalanceEvent(MetricBalanceEvent.ProgressType progressType,
+            BalancedMetricResolver.BalanceType balanceType, long numReassigned) {
         if (!metricBalanceCallbacks.isEmpty()) {
             MetricBalanceEvent event = new MetricBalanceEvent(progressType, balanceType, numReassigned);
             for (MetricBalanceCallback callback : metricBalanceCallbacks) {
@@ -961,5 +952,37 @@ public class BalancedMetricResolver implements MetricResolver {
 
     protected void writeAssignments(Map<String, TimelyBalancedHost> metricToHostMap) {
         assignmentPerister.writeAssignments(metricToHostMap);
+    }
+
+    @Override
+    public void stop() {
+
+        this.assignmentExecutor.shutdown();
+        try {
+            this.assignmentExecutor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+
+        } finally {
+            if (!this.assignmentExecutor.isTerminated()) {
+                this.assignmentExecutor.shutdownNow();
+            }
+        }
+
+        this.arrivalRateExecutor.shutdown();
+        try {
+            this.arrivalRateExecutor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+
+        } finally {
+            if (!this.arrivalRateExecutor.isTerminated()) {
+                this.arrivalRateExecutor.shutdownNow();
+            }
+        }
+
+        try {
+            this.healthChecker.close();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
     }
 }

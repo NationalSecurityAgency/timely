@@ -1,7 +1,5 @@
 package timely.balancer.connection;
 
-import java.util.Timer;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -13,7 +11,6 @@ import timely.balancer.configuration.BalancerConfiguration;
 public class TimelyBalancedHost {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyBalancedHost.class);
-    static private Timer arrivalRateTimer = new Timer("ArrivalRateTimerTBH", true);
 
     private String host;
     private int tcpPort;
@@ -24,34 +21,25 @@ public class TimelyBalancedHost {
     private BalancerConfiguration balancerConfig;
     private int failures = 0;
     private int successes = 0;
-    private ArrivalRate arrivalRate = new ArrivalRate(arrivalRateTimer);
+    private ArrivalRate arrivalRate = null;
 
-    public TimelyBalancedHost() {
+    private TimelyBalancedHost() {
 
     }
 
-    public TimelyBalancedHost(String host, int tcpPort, int httpPort, int wsPort, int udpPort) {
+    private TimelyBalancedHost(String host, int tcpPort, int httpPort, int wsPort, int udpPort,
+            ArrivalRate arrivalRate) {
         this.host = host;
         this.tcpPort = tcpPort;
         this.httpPort = httpPort;
         this.wsPort = wsPort;
         this.udpPort = udpPort;
+        this.arrivalRate = arrivalRate;
     }
 
-    public TimelyBalancedHost(String host, int basePort) {
-        this.host = host;
-        this.tcpPort = basePort;
-        this.httpPort = basePort + 1;
-        this.wsPort = basePort + 2;
-        this.udpPort = basePort + 3;
-    }
-
-    static public TimelyBalancedHost of(String host, int tcpPort, int httpPort, int wsPort, int udpPort) {
-        return new TimelyBalancedHost(host, tcpPort, httpPort, wsPort, udpPort);
-    }
-
-    static public TimelyBalancedHost of(String host, int basePort) {
-        return new TimelyBalancedHost(host, basePort);
+    static public TimelyBalancedHost of(String host, int tcpPort, int httpPort, int wsPort, int udpPort,
+            ArrivalRate arrivalRate) {
+        return new TimelyBalancedHost(host, tcpPort, httpPort, wsPort, udpPort, arrivalRate);
     }
 
     public void setBalancerConfig(BalancerConfiguration balancerConfig) {
@@ -141,11 +129,17 @@ public class TimelyBalancedHost {
     }
 
     public void arrived() {
-        arrivalRate.arrived();
+        if (this.arrivalRate != null) {
+            this.arrivalRate.arrived();
+        }
     }
 
     public double getArrivalRate() {
-        return arrivalRate.getRate();
+        if (this.arrivalRate == null) {
+            return 0;
+        } else {
+            return this.arrivalRate.getRate();
+        }
     }
 
     @Override

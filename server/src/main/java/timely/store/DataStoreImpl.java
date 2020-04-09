@@ -22,10 +22,10 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -127,7 +127,7 @@ public class DataStoreImpl implements DataStore {
     private final String metricsTable;
     private final String metaTable;
     private final InternalMetrics internalMetrics;
-    private final Timer internalMetricsTimer = new Timer("InternalMetricsTimer", true);
+    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private final int scannerThreads;
     private final long maxDownsampleMemory;
     private final BatchWriterConfig bwConfig;
@@ -244,14 +244,9 @@ public class DataStoreImpl implements DataStore {
             }
 
             internalMetrics = new InternalMetrics(conf);
-            internalMetricsTimer.schedule(new TimerTask() {
-
-                @Override
-                public void run() {
-                    internalMetrics.getMetricsAndReset().forEach(m -> store(m, false));
-                }
-
-            }, METRICS_PERIOD, METRICS_PERIOD);
+            executorService.scheduleAtFixedRate(
+                    () -> internalMetrics.getMetricsAndReset().forEach(m -> store(m, false)), METRICS_PERIOD,
+                    METRICS_PERIOD, TimeUnit.MILLISECONDS);
 
             this.metaCache = MetaCacheFactory.getCache(conf);
         } catch (Exception e2) {
@@ -482,19 +477,6 @@ public class DataStoreImpl implements DataStore {
             }
         }
         return result;
-    }
-
-    @Override
-    public void flush() {
-        internalMetricsTimer.cancel();
-        writers.forEach(w -> {
-            try {
-                w.close();
-            } catch (final Exception ex) {
-                LOG.warn("Error shutting down batchwriter", ex);
-            }
-
-        });
     }
 
     @Override
@@ -1054,4 +1036,24 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
+    @Override
+    public void close() throws Exception {
+        this.executorService.shutdown();
+        try {
+            this.executorService.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+
+        } finally {
+            if (!this.executorService.isTerminated()) {
+                this.executorService.shutdownNow();
+            }
+        }
+        writers.forEach(w -> {
+            try {
+                w.close();
+            } catch (final Exception ex) {
+                LOG.warn("Error shutting down batchwriter: ", ex.getMessage());
+            }
+        });
+    }
 }

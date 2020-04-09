@@ -109,7 +109,6 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
     }
 
     public static void close() {
-        LOG.info("Closing subscriptions");
         SubscriptionRegistry.get().forEach((k, v) -> v.close());
     }
 

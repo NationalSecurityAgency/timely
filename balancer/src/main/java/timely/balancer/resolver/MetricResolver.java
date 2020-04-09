@@ -9,4 +9,7 @@ public interface MetricResolver {
     public TimelyBalancedHost getHostPortKey(String metric);
 
     public void start();
+
+    public void stop();
+
 }
