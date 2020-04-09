@@ -230,6 +230,11 @@ public class DataStoreCache {
         nonCachedMetricsIPRWLock = new InterProcessReadWriteLock(curatorFramework, NON_CACHED_METRICS_LOCK_PATH);
         testIPRWLock(curatorFramework, nonCachedMetricsIPRWLock, NON_CACHED_METRICS_LOCK_PATH);
         nonCachedMetricsIP = new DistributedAtomicValue(curatorFramework, NON_CACHED_METRICS, new RetryForever(1000));
+        try {
+            nonCachedMetricsIP.initialize(SerializationUtils.serialize(new TreeSet<>()));
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
         TreeCacheListener nonCachedMetricsListener = new TreeCacheListener() {
 
             @Override
