@@ -72,7 +72,10 @@ public class MetaCacheImpl implements MetaCache {
                     new PasswordToken(accumuloConf.getPassword()));
             scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
             LOG.debug("Begin scanning " + metaTable);
-            Range metricRange = new Range(new Key(Meta.METRIC_PREFIX), true, new Key(Meta.METRIC_PREFIX + '\0'), false);
+            Key metricPrefixBeginKey = new Key(Meta.METRIC_PREFIX);
+            int firstChar = Meta.METRIC_PREFIX.charAt(0);
+            Key metricPrefixEndKey = new Key(String.valueOf((char) (firstChar + 1)) + ':');
+            Range metricRange = new Range(metricPrefixBeginKey, true, metricPrefixEndKey, false);
             scanner.setRange(metricRange);
             Set<String> allMetrics = new TreeSet<>();
             for (Map.Entry<Key, Value> entry : scanner) {
