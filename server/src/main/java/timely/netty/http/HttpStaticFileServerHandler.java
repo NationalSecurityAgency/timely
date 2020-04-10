@@ -48,6 +48,7 @@ import java.util.TimeZone;
 import java.util.regex.Pattern;
 
 import javax.activation.MimetypesFileTypeMap;
+import javax.net.ssl.SSLHandshakeException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -123,6 +124,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
     public static final int HTTP_CACHE_SECONDS = 60;
+    private boolean ignoreSslHandshakeErrors = false;
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
@@ -221,6 +223,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        // ignore SSLHandshakeException when using a self-signed server certificate
+        if (ignoreSslHandshakeErrors && cause.getCause() instanceof SSLHandshakeException) {
+            return;
+        }
         LOG.error("Error serving file", cause);
         if (ctx.channel().isActive()) {
             sendError(ctx, INTERNAL_SERVER_ERROR);
@@ -378,5 +384,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     private static void setContentTypeHeader(HttpResponse response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
         response.headers().set(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
+    }
+
+    public HttpStaticFileServerHandler setIgnoreSslHandshakeErrors(boolean ignoreSslHandshakeErrors) {
+        this.ignoreSslHandshakeErrors = ignoreSslHandshakeErrors;
+        return this;
     }
 }

@@ -563,7 +563,7 @@ public class Server {
         if (generate) {
             LOG.warn("Using generated self signed server certificate");
             Date begin = new Date();
-            Date end = new Date(begin.getTime() + 86400000);
+            Date end = new Date(begin.getTime() + TimeUnit.DAYS.toMillis(7));
             SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", begin, end);
             ssl = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
         } else {
@@ -630,7 +630,8 @@ public class Server {
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
                 ch.pipeline().addLast("queryDecoder",
                         new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
-                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
+                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler()
+                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isUseGeneratedKeypair()));
                 ch.pipeline().addLast("strict", new StrictTransportHandler(config));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("doLogin",
@@ -643,7 +644,9 @@ public class Server {
                 ch.pipeline().addLast("version", new HttpVersionRequestHandler());
                 ch.pipeline().addLast("cache", new HttpCacheRequestHandler(dataStoreCache));
                 ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
-                ch.pipeline().addLast("error", new TimelyExceptionHandler());
+                ch.pipeline().addLast("error", new TimelyExceptionHandler()
+                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isUseGeneratedKeypair()));
+
             }
         };
     }

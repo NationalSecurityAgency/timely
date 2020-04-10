@@ -1,5 +1,7 @@
 package timely.netty.http;
 
+import javax.net.ssl.SSLHandshakeException;
+
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,6 +14,7 @@ import timely.api.response.TimelyException;
 public class TimelyExceptionHandler extends SimpleChannelInboundHandler<TimelyException> implements TimelyHttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyExceptionHandler.class);
+    private boolean ignoreSslHandshakeErrors = false;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TimelyException msg) throws Exception {
@@ -20,6 +23,10 @@ public class TimelyExceptionHandler extends SimpleChannelInboundHandler<TimelyEx
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        // ignore SSLHandshakeException when using a self-signed server certificate
+        if (ignoreSslHandshakeErrors && cause.getCause() instanceof SSLHandshakeException) {
+            return;
+        }
         LOG.error("Unhandled exception in pipeline", cause);
         if (cause instanceof TimelyException) {
             this.sendHttpError(ctx, (TimelyException) cause);
@@ -32,4 +39,8 @@ public class TimelyExceptionHandler extends SimpleChannelInboundHandler<TimelyEx
         }
     }
 
+    public TimelyExceptionHandler setIgnoreSslHandshakeErrors(boolean ignoreSslHandshakeErrors) {
+        this.ignoreSslHandshakeErrors = ignoreSslHandshakeErrors;
+        return this;
+    }
 }

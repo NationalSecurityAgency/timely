@@ -534,11 +534,13 @@ public class Balancer {
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(
                         balancerConfig.getSecurity(), balancerConfig.getHttp()));
-                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
+                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler().setIgnoreSslHandshakeErrors(
+                        balancerConfig.getSecurity().getServerSsl().isUseGeneratedKeypair()));
                 ch.pipeline().addLast("login",
                         new X509LoginRequestHandler(balancerConfig.getSecurity(), balancerConfig.getHttp()));
                 ch.pipeline().addLast("httpRelay", new HttpRelayHandler(metricResolver, httpClientPool));
-                ch.pipeline().addLast("error", new TimelyExceptionHandler());
+                ch.pipeline().addLast("error", new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(
+                        balancerConfig.getSecurity().getServerSsl().isUseGeneratedKeypair()));
             }
         };
     }

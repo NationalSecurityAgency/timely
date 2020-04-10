@@ -314,7 +314,8 @@ public class GrafanaAuth {
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler());
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("httpRelay", new GrafanaRelayHandler(config, httpClientPool));
-                ch.pipeline().addLast("error", new TimelyExceptionHandler());
+                ch.pipeline().addLast("error", new TimelyExceptionHandler()
+                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isUseGeneratedKeypair()));
             }
         };
     }
