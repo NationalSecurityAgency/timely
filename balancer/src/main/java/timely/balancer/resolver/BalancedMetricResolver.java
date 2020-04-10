@@ -7,6 +7,7 @@ import static timely.balancer.Balancer.LEADER_LATCH_PATH;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
+import java.io.FileNotFoundException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -870,6 +871,18 @@ public class BalancedMetricResolver implements MetricResolver {
         return tbh;
     }
 
+    private void createAssignmentFile() {
+        try {
+            LOG.info("Creating assignment file: " + balancerConfig.getAssignmentFile());
+            Configuration configuration = new Configuration();
+            FileSystem fs = FileSystem.get(configuration);
+            Path assignmentFile = new Path(balancerConfig.getAssignmentFile());
+            fs.create(assignmentFile);
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
     private void readAssignmentsFromHdfs(boolean checkIfNecessary) {
 
         try {
@@ -954,6 +967,9 @@ public class BalancedMetricResolver implements MetricResolver {
             assignmentsLastUpdatedLocal.set(assignmentsLastUpdatedInHdfs.get().postValue());
             LOG.info("Read {} assignments from hdfs lastHdfsUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
                     new Date(assignmentsLastUpdatedLocal.get()));
+        } catch (FileNotFoundException e) {
+            createAssignmentFile();
+            metricToHostMap.clear();
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         } finally {
