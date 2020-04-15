@@ -2,7 +2,6 @@ package timely.model;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.Set;
@@ -87,15 +86,8 @@ public interface ObjectSizeOf {
                     visited.add(oi);
                     try {
                         if (useSizeInBytesMethod) {
-                            try {
-                                if (o instanceof ObjectSizeOf) {
-                                    size = ((ObjectSizeOf) o).sizeInBytes();
-                                } else {
-                                    Method sizeInBytes = o.getClass().getMethod("sizeInBytes", (Class<?>[]) null);
-                                    size = (Long) sizeInBytes.invoke(o);
-                                }
-                            } catch (Throwable t) {
-                                // ok, lets do this the hard way...
+                            if (o instanceof ObjectSizeOf) {
+                                size = ((ObjectSizeOf) o).sizeInBytes();
                             }
                         }
                         if (size == 0) {
