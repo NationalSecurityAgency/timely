@@ -1,6 +1,5 @@
 package timely.test.integration;
 
-import java.io.File;
 import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -12,25 +11,21 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import timely.auth.AuthCache;
-import timely.configuration.Configuration;
 
 /**
  * Base test class for SSL with anonymous access
  */
 public class OneWaySSLBase extends QueryBase {
 
-    protected static File clientTrustStoreFile = null;
-
     protected SSLSocketFactory getSSLSocketFactory() throws Exception {
         SslContextBuilder builder = SslContextBuilder.forClient();
         builder.applicationProtocolConfig(ApplicationProtocolConfig.DISABLED);
         builder.sslProvider(SslProvider.JDK);
-        builder.trustManager(clientTrustStoreFile); // Trust the server cert
+        builder.trustManager(MacITBase.clientTrustStoreFile); // Trust the server cert
         SslContext ctx = builder.build();
         Assert.assertTrue(ctx.isClient());
         Assert.assertTrue(ctx instanceof JdkSslContext);
@@ -39,19 +34,9 @@ public class OneWaySSLBase extends QueryBase {
         return jdkSslContext.getSocketFactory();
     }
 
-    protected static void setupSSL(Configuration config) throws Exception {
-        SelfSignedCertificate serverCert = new SelfSignedCertificate();
-        config.getSecurity().getServerSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
-        clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
-        config.getSecurity().getServerSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
-        config.getSecurity().getServerSsl().setUseOpenssl(false);
-        config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
-        config.getSecurity().setAllowAnonymousHttpAccess(true);
-    }
-
     @Before
     public void configureSSL() throws Exception {
-        setupSSL(conf);
+        setupSSL(conf, false);
     }
 
     @Override

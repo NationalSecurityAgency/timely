@@ -30,7 +30,7 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
     @Test
     public void testQueryWithVisibility() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",

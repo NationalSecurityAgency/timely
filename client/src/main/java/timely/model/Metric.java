@@ -22,7 +22,7 @@ import timely.model.parse.TagParser;
 @JsonRootName("metric")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({ "name" })
-public class Metric implements Serializable {
+public class Metric implements Serializable, ObjectSizeOf {
 
     private static final long serialVersionUID = 1L;
 
@@ -185,5 +185,10 @@ public class Metric implements Serializable {
         public Metric build() {
             return this.metric;
         }
+    }
+
+    @Override
+    public long sizeInBytes() {
+        return 0;
     }
 }

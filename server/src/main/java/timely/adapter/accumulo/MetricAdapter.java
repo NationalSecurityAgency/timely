@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
@@ -39,6 +40,8 @@ public class MetricAdapter {
 
     private static final TagParser tagParser = new TagParser();
     private static final TagListParser tagListParser = new TagListParser();
+    private static Pattern equalsPattern = Pattern.compile("=");
+    private static Pattern commaPattern = Pattern.compile(",");
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
@@ -59,10 +62,10 @@ public class MetricAdapter {
             // are used as a delimiter
             String k = t.getKey();
             String v = t.getValue();
-            k = k.replaceAll("=", "\\=");
-            k = k.replaceAll(",", "\\,");
-            v = v.replaceAll("=", "\\=");
-            v = v.replaceAll(",", "\\,");
+            k = equalsPattern.matcher(k).replaceAll("\\=");
+            k = commaPattern.matcher(k).replaceAll("\\,");
+            v = equalsPattern.matcher(v).replaceAll("\\=");
+            v = commaPattern.matcher(v).replaceAll("\\,");
             newTags.add(new Tag(k, v));
         }
         return newTags;
@@ -75,10 +78,10 @@ public class MetricAdapter {
             // are used as a delimiter
             String k = t.getKey();
             String v = t.getValue();
-            k = k.replaceAll("=", "\\=");
-            k = k.replaceAll(",", "\\,");
-            v = v.replaceAll("=", "\\=");
-            v = v.replaceAll(",", "\\,");
+            k = equalsPattern.matcher(k).replaceAll("\\=");
+            k = commaPattern.matcher(k).replaceAll("\\,");
+            v = equalsPattern.matcher(v).replaceAll("\\=");
+            v = commaPattern.matcher(v).replaceAll("\\,");
             newTags.put(k, v);
         }
         return newTags;

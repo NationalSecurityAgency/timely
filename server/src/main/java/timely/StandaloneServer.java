@@ -85,7 +85,7 @@ public class StandaloneServer extends Server {
         try {
             LOG.info("Starting StandaloneServer");
             StandaloneServer s = new StandaloneServer(conf);
-            s.run();
+            s.run(createSSLContext(conf));
         } catch (Exception e) {
             System.err.println("Error starting server");
             e.printStackTrace();

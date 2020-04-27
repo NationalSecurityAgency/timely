@@ -93,7 +93,7 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
     @Test
     public void testBasicAuthLogin() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             String metrics = "https://localhost:54322/api/metrics";
             query(metrics);
@@ -105,7 +105,7 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
     @Test(expected = UnauthorizedUserException.class)
     public void testBasicAuthLoginFailure() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             String metrics = "https://localhost:54322/api/metrics";
             query("test", "test2", metrics);
@@ -117,7 +117,7 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
     @Test
     public void testQueryWithVisibility() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",

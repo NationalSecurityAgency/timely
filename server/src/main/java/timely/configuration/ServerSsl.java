@@ -1,6 +1,7 @@
 package timely.configuration;
 
 import java.util.List;
+import java.util.Objects;
 
 import com.google.common.collect.Lists;
 import timely.validator.NotEmptyIfFieldSet;
@@ -75,5 +76,25 @@ public class ServerSsl {
 
     public void setUseCiphers(List<String> useCiphers) {
         this.useCiphers = useCiphers;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        ServerSsl serverSsl = (ServerSsl) o;
+        return useGeneratedKeypair == serverSsl.useGeneratedKeypair && useOpenssl == serverSsl.useOpenssl
+                && Objects.equals(certificateFile, serverSsl.certificateFile)
+                && Objects.equals(keyFile, serverSsl.keyFile) && Objects.equals(keyPassword, serverSsl.keyPassword)
+                && Objects.equals(trustStoreFile, serverSsl.trustStoreFile)
+                && Objects.equals(useCiphers, serverSsl.useCiphers);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(certificateFile, keyFile, keyPassword, trustStoreFile, useGeneratedKeypair, useOpenssl,
+                useCiphers);
     }
 }

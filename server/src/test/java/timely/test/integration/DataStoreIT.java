@@ -59,7 +59,7 @@ public class DataStoreIT extends OneWaySSLBase {
         conf.setMetricAgeOffDays(ageOffSettings);
 
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + ONE_HOUR) + " 3.0 tag1=value1 tag2=value2",
@@ -106,7 +106,7 @@ public class DataStoreIT extends OneWaySSLBase {
         conf.setMetricAgeOffDays(ageOffSettings);
 
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         // @formatter:off
         /*
          * TEST_TIME = System.currentTimeMillis() - ONE_DAY

@@ -53,6 +53,7 @@ public class UdpClientIT extends MacITBase {
                 }
             }
         });
+        setupSSL();
     }
 
     @After
@@ -63,7 +64,7 @@ public class UdpClientIT extends MacITBase {
     @Test
     public void testPut() throws Exception {
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (UdpClient client = new UdpClient("127.0.0.1", 54325)) {
             client.open();
             client.write(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n"));
@@ -93,7 +94,7 @@ public class UdpClientIT extends MacITBase {
     public void testPutMultiple() throws Exception {
 
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (UdpClient client = new UdpClient("127.0.0.1", 54325)) {
             client.open();
             client.write(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle "
@@ -135,7 +136,7 @@ public class UdpClientIT extends MacITBase {
     @Test
     public void testPutInvalidTimestamp() throws Exception {
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (UdpClient client = new UdpClient("127.0.0.1", 54325)) {
             client.open();
             client.write(("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n"));
@@ -149,7 +150,7 @@ public class UdpClientIT extends MacITBase {
     @Test
     public void testPersistence() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
@@ -193,7 +194,7 @@ public class UdpClientIT extends MacITBase {
     @Test
     public void testPersistenceWithVisibility() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",

@@ -56,7 +56,7 @@ public class TimelyTcpIT extends MacITBase {
     @Test
     public void testVersion() throws Exception {
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (Socket sock = new Socket("127.0.0.1", 54321);
                 PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
             writer.write("version\n");
@@ -76,7 +76,7 @@ public class TimelyTcpIT extends MacITBase {
     @Test
     public void testPut() throws Exception {
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (Socket sock = new Socket("127.0.0.1", 54321);
                 PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
             writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n");
@@ -107,7 +107,7 @@ public class TimelyTcpIT extends MacITBase {
     public void testPutMultiple() throws Exception {
 
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (Socket sock = new Socket("127.0.0.1", 54321);
                 PrintWriter writer = new PrintWriter(sock.getOutputStream(), true)) {
             // @formatter:off
@@ -190,7 +190,7 @@ public class TimelyTcpIT extends MacITBase {
         LOG.debug("Sending {} bytes", data.length);
 
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (Socket sock = new Socket("127.0.0.1", 54321);) {
             sock.getOutputStream().write(data);
             sock.getOutputStream().flush();
@@ -233,7 +233,7 @@ public class TimelyTcpIT extends MacITBase {
     @Test
     public void testPutInvalidTimestamp() throws Exception {
         final TestServer m = new TestServer(conf);
-        m.run();
+        m.run(getSslContext());
         try (Socket sock = new Socket("127.0.0.1", 54321);
                 PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));) {
@@ -249,7 +249,7 @@ public class TimelyTcpIT extends MacITBase {
     @Test
     public void testPersistence() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
@@ -293,7 +293,7 @@ public class TimelyTcpIT extends MacITBase {
     @Test
     public void testPersistenceWithVisibility() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",

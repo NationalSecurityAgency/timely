@@ -13,7 +13,7 @@ public class StaticFileServerIT extends OneWaySSLBase {
     @Before
     public void before() throws Exception {
         s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
     }
 
     @After

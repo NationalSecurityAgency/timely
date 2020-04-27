@@ -5,13 +5,14 @@ import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 
 /**
  * Value consists of a long timestamp and a double measurement
  */
-public class Value implements Comparator<Value>, Serializable {
+public class Value implements Comparator<Value>, ObjectSizeOf, Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -89,5 +90,16 @@ public class Value implements Comparator<Value>, Serializable {
     @Override
     public String toString() {
         return "Value{" + "timestamp=" + timestamp + ", measure=" + measure + "}";
+    }
+
+    @JsonIgnore
+    @Override
+    public long sizeInBytes() {
+        long l = 0;
+        l += Sizer.OBJECT_OVERHEAD;
+        l += 2 * Sizer.REFERENCE;
+        l += Sizer.NUMBER_SIZE;
+        l += Sizer.NUMBER_SIZE;
+        return Sizer.roundUp(l);
     }
 }

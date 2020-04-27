@@ -189,7 +189,7 @@ public class WebSocketIT extends OneWaySSLBase {
     @Before
     public void setup() throws Exception {
         s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
 
         Connector con = mac.getConnector("root", "secret");
         con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));

@@ -132,6 +132,7 @@ public class Server {
     private static final String OS_VERSION = "os.version";
     private static final String WS_PATH = "/websocket";
 
+    private SslContext sslCtx = null;
     private CuratorFramework curatorFramework;
     protected static final CountDownLatch LATCH = new CountDownLatch(1);
     static ConfigurableApplicationContext applicationContext;
@@ -238,7 +239,7 @@ public class Server {
 
         Server server = new Server(conf);
         try {
-            server.run();
+            server.run(createSSLContext(conf));
             LATCH.await();
         } catch (final InterruptedException e) {
             LOG.info("Server shutting down.");
@@ -355,18 +356,22 @@ public class Server {
             }
         });
 
-        try {
-            LOG.info("Closing dataStore");
-            dataStore.close();
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
+        if (dataStore != null) {
+            try {
+                LOG.info("Closing dataStore");
+                dataStore.close();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
         }
 
-        try {
-            LOG.info("Closing dataStoreCache");
-            dataStoreCache.close();
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
+        if (dataStoreCache != null) {
+            try {
+                LOG.info("Closing dataStoreCache");
+                dataStoreCache.close();
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
         }
 
         try {
@@ -431,7 +436,7 @@ public class Server {
         }
     }
 
-    public void run() throws Exception {
+    public void run(SslContext sslCtx) throws Exception {
 
         RetryPolicy retryPolicy = new RetryForever(1000);
         int timeout = Long.valueOf(AccumuloConfiguration.getTimeInMillis(config.getAccumulo().getZookeeperTimeout()))
@@ -498,7 +503,6 @@ public class Server {
 
         final int httpPort = config.getHttp().getPort();
         final String httpIp = config.getHttp().getIp();
-        SslContext sslCtx = createSSLContext(config);
         if (sslCtx instanceof OpenSslServerContext) {
             OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
             String application = "Timely_" + httpPort;
@@ -555,7 +559,7 @@ public class Server {
                 tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
     }
 
-    protected SslContext createSSLContext(Configuration config) throws Exception {
+    public static SslContext createSSLContext(Configuration config) throws Exception {
 
         ServerSsl sslCfg = config.getSecurity().getServerSsl();
         Boolean generate = sslCfg.isUseGeneratedKeypair();

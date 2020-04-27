@@ -58,7 +58,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testSuggest() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
@@ -86,7 +86,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testMetrics() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
       // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
@@ -120,7 +120,7 @@ public class HttpApiIT extends OneWaySSLBase {
     // @formatter:off
 
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
@@ -175,7 +175,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testLookup() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
@@ -211,7 +211,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithMsResolution() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
@@ -259,7 +259,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithoutMsResolution() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
@@ -298,7 +298,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithNoTags() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
@@ -334,7 +334,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithNoTagsMultipleSeries() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1",
                     "sys.cpu.user " + TEST_TIME + " 2.0 tag1=value1 tag2=value2 host=h2",
@@ -375,7 +375,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test(expected = NotSuccessfulException.class)
     public void testQueryWithNoMatchingTags() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
@@ -399,7 +399,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagWildcard() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
     // @formatter:off
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
@@ -464,7 +464,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagWildcard2() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
     // @formatter:off
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
@@ -524,7 +524,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagOr() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
       // @formatter:off
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
@@ -608,7 +608,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagRegex() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             System.out.println("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1");
             System.out.println("sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2");
@@ -674,7 +674,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testQueryWithTagRegex2() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
                     "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
@@ -730,7 +730,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testRateQuery() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             // @formatter:off
             put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
@@ -782,7 +782,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testRateCounterQuery() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
       // @formatter:off
             put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
@@ -836,7 +836,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testRateCounterWithOptions() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
       // @formatter:off
             put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
@@ -892,7 +892,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testGetVersion() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             String response = query("https://127.0.0.1:54322/version", "application/json");
             assertNotNull(response);
@@ -905,7 +905,7 @@ public class HttpApiIT extends OneWaySSLBase {
     @Test
     public void testPutMetric() throws Exception {
         final Server s = new Server(conf);
-        s.run();
+        s.run(getSslContext());
         try {
             Metric m = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1"))
                     .build();

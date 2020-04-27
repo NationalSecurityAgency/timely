@@ -4,8 +4,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.ColumnUpdate;
@@ -249,6 +256,52 @@ public class DownsampleIteratorTest {
             totalBuckets = totalBuckets + entry.getValue().getNumBuckets();
         }
         assertEquals((elapsedTime / sampleInterval) * numTagVariations, totalBuckets);
+    }
+
+    @Test
+    public void test() {
+        String hello = new String("this is a longer string");
+        long maybe = ObjectSizeOf.Sizer.OBJECT_OVERHEAD + // for String
+                ObjectSizeOf.Sizer.REFERENCE + // for array of char
+                ObjectSizeOf.Sizer.getPrimitiveObjectSize(int.class) +
+
+                ObjectSizeOf.Sizer.ARRAY_OVERHEAD + // for array of char
+                hello.length() * ObjectSizeOf.Sizer.getPrimitiveObjectSize(char.class);
+
+        maybe = ObjectSizeOf.Sizer.roundUp(maybe);
+
+        long size = ObjectSizeOf.Sizer.getObjectSize(hello, true, true);
+        System.out.println("size = " + size);
+        System.out.println("maybe = " + maybe);
+    }
+
+    @Test
+    public void test2() {
+        System.out.println(ObjectSizeOf.Sizer.getObjectSize(new Long(100)));
+    }
+
+    @Test
+    public void testDownsampleMemoryCalculation() throws Exception {
+
+        int numTagVariations = 1;
+        int sampleInterval = 50;
+        int elapsedTime = 100;
+        int skipInterval = 10;
+        SortedMap<Key, Value> testData3 = createTestData3(elapsedTime, skipInterval, numTagVariations);
+        DownsampleIterator iter = new DownsampleIterator();
+        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData3, sampleInterval, 1000);
+        assertEquals(numTagVariations, samples.size());
+        long totalBuckets = 0;
+        for (Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
+            Set<Tag> tagSet = entry.getKey();
+            Downsample downsample = entry.getValue();
+            for (Tag tag : tagSet) {
+                assertEquals(ObjectSizeOf.Sizer.getObjectSize(tag, true, true),
+                        ObjectSizeOf.Sizer.getObjectSize(tag, false, true));
+            }
+
+        }
+
     }
 
     private Map<Set<Tag>, Downsample> runQuery(SortedKeyValueIterator<Key, Value> iter, SortedMap<Key, Value> testData,

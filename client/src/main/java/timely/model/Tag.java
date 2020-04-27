@@ -18,7 +18,7 @@ import timely.model.parse.TagParser;
  * Tag consists of key value pair
  */
 @JsonRootName("tag")
-public class Tag implements Comparable<Tag>, Serializable {
+public class Tag implements Comparable<Tag>, ObjectSizeOf, Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -26,6 +26,12 @@ public class Tag implements Comparable<Tag>, Serializable {
 
     private String key;
     private String value;
+
+    @JsonIgnore
+    private boolean mustRecalculateLength = true;
+
+    @JsonIgnore
+    private long length;
 
     public Tag() {
     }
@@ -55,6 +61,7 @@ public class Tag implements Comparable<Tag>, Serializable {
     public void set(String key, String value) {
         this.key = key;
         this.value = value;
+        this.mustRecalculateLength = true;
     }
 
     @JsonIgnore
@@ -64,6 +71,7 @@ public class Tag implements Comparable<Tag>, Serializable {
 
     public void setKey(String key) {
         this.key = key;
+        this.mustRecalculateLength = true;
     }
 
     @JsonIgnore
@@ -73,6 +81,7 @@ public class Tag implements Comparable<Tag>, Serializable {
 
     public void setValue(String value) {
         this.value = value;
+        this.mustRecalculateLength = true;
     }
 
     /**
@@ -106,4 +115,26 @@ public class Tag implements Comparable<Tag>, Serializable {
     public int compareTo(Tag other) {
         return new CompareToBuilder().append(this.key, other.key).append(this.value, other.value).toComparison();
     }
+
+    @JsonIgnore
+    @Override
+    public long sizeInBytes() {
+        if (this.mustRecalculateLength) {
+            calculateLength();
+            this.mustRecalculateLength = false;
+        }
+        return this.length;
+    }
+
+    private void calculateLength() {
+        long l = 0;
+        l += 2 * Sizer.REFERENCE;
+        l += Sizer.OBJECT_OVERHEAD;
+        l += Sizer.getPrimitiveObjectSize(long.class);
+        l += Sizer.getPrimitiveObjectSize(boolean.class);
+        l += Sizer.getStringSize(key);
+        l += Sizer.getStringSize(value);
+        this.length = Sizer.roundUp(l);
+    }
+
 }
