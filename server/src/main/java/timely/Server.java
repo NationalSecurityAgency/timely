@@ -77,6 +77,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
+import timely.auth.JWTTokenHandler;
 import timely.auth.VisibilityCache;
 import timely.configuration.Configuration;
 import timely.configuration.Cors;
@@ -449,12 +450,10 @@ public class Server {
             dataStoreCache.setInternalMetrics(dataStore.getInternalMetrics());
             dataStore.setCache(dataStoreCache);
         }
-        // Initialize the MetaCache
         MetaCacheFactory.getCache(config);
-        // initialize the auth cache
         AuthCache.configure(config.getSecurity());
-        // Initialize the VisibilityCache
         VisibilityCache.init(config);
+        JWTTokenHandler.init(config.getSecurity());
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;

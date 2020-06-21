@@ -762,7 +762,7 @@ public class WebSocketIT extends OneWaySSLBase {
                     "{\n" +
                     "    \"operation\" : \"suggest\",\n" +
                     "    \"type\": \"metrics\",\n" +
-                    "    \"q\": \"sys.cpu.user\",\n" +
+                    "    \"m\": \"sys.cpu.user\",\n" +
                     "    \"max\": 30\n" +
                     "}";
             // @formatter:on

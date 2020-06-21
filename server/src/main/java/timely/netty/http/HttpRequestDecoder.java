@@ -1,5 +1,7 @@
 package timely.netty.http;
 
+import static timely.auth.AuthenticationService.AUTH_HEADER;
+
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
@@ -111,7 +113,10 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
                 ((AuthenticatedRequest) request).addHeaders(headers);
                 X509Certificate clientCert = AuthenticationService.getClientCertificate(ctx);
                 TimelyAuthenticationToken token;
-                if (StringUtils.isNotBlank(sessionId)) {
+                String authHeader = HttpHeaderUtils.getSingleHeader(headers, AUTH_HEADER, true);
+                if (authHeader != null) {
+                    token = AuthenticationService.getAuthenticationToken(headers);
+                } else if (StringUtils.isNotBlank(sessionId)) {
                     TimelyPrincipal principal;
                     ((AuthenticatedRequest) request).setSessionId(sessionId);
                     if (AuthCache.containsKey(sessionId)) {

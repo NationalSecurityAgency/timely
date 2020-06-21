@@ -1,0 +1,51 @@
+/* color of input fields */
+div.timely input.form-control {
+    color: #c7d0d9;
+    background-color: #0b0c0e;
+}
+
+div.timely .dropdown-item {
+    color: #C7D0D9;
+    background-color: #0B0C0E;
+}
+
+div.timely .dropdown-item-text {
+    color: #C7D0D9;
+    background-color: #0B0C0E;
+}
+
+div.timely .dropdown-item:hover, .dropdown-item:focus {
+    background-color: #4F5255;
+}
+
+div.timely .dropdown-item.active, .dropdown-item:active {
+    background-color: #4F5255;
+}
+
+div.timely .dropdown-item.disabled, .dropdown-item:disabled {
+    color: #0B0C0E;
+}
+
+div.timely .dropdown-header {
+    color: #0B0C0E;
+}
+
+div.timely .dropdown-menu {
+    background-color: #0B0C0E;
+    box-shadow: 0px 2px 2px 2px #31343b;
+}
+
+div.timely input.form-control:focus {
+    outline: 0;
+    box-shadow: 0px 0px 0px 2px #141619, 0px 0px 0px 4px #1F60C4;
+    outline-offset: 2px;
+    transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1) 0s;
+}
+
+/* color of highlighted text in autocomplete */
+div.timely mark.rbt-highlight-text {
+    background: linear-gradient(90deg, #56585C, #4c5057);
+    color: #ff0;
+}
+
+/*# sourceMappingURL=dark.css.map*/

@@ -436,7 +436,7 @@ public class HttpRequestDecoderTest {
     public void testSuggestWithValidTypeAndQuery() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=metrics&q=sys.cpu.user");
+                "/api/suggest?type=metrics&m=sys.cpu.user");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -454,7 +454,7 @@ public class HttpRequestDecoderTest {
         String content =
         "{\n" +
         "    \"type\": \"metrics\",\n" +
-        "    \"q\": \"sys.cpu.user\"\n" +
+        "    \"m\": \"sys.cpu.user\"\n" +
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
@@ -476,7 +476,7 @@ public class HttpRequestDecoderTest {
     public void testSuggestWithValidTypeAndQueryAndMax() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=metrics&q=sys.cpu.user&max=30");
+                "/api/suggest?type=metrics&m=sys.cpu.user&max=30");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -494,7 +494,7 @@ public class HttpRequestDecoderTest {
         String content =
         "{\n" +
         "    \"type\": \"metrics\",\n" +
-        "    \"q\": \"sys.cpu.user\",\n" +
+        "    \"m\": \"sys.cpu.user\",\n" +
         "    \"max\": 30\n" +
         "}";
         // @formatter:on

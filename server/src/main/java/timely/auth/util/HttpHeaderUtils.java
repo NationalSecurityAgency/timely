@@ -1,7 +1,6 @@
 package timely.auth.util;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -23,17 +22,16 @@ public class HttpHeaderUtils {
 
     public static String getSingleHeader(Multimap<String, String> headers, String headerName, boolean enforceOneValue)
             throws IllegalArgumentException {
-        String value = null;
-        // lower case for HTTP/2 compatibility; even for HTTP/1, these were always
-        // case-insensitive
-        headerName = headerName.toLowerCase();
-        Collection<String> values = (headers == null) ? null : headers.get(headerName);
-        if (values != null && !values.isEmpty()) {
+        if (headers == null) {
+            return null;
+        } else {
+            Set<String> values = new HashSet<>();
+            values.addAll(headers.get(headerName));
+            values.addAll(headers.get(headerName.toLowerCase()));
             if (values.size() > 1 && enforceOneValue) {
                 throw new IllegalArgumentException(headerName + " was specified multiple times, which is not allowed");
             }
-            value = values.stream().findFirst().orElse(null);
+            return values.stream().findFirst().orElse(null);
         }
-        return value;
     }
 }

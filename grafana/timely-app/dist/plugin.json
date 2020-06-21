@@ -1,41 +1,42 @@
 {
-  "type": "app",
+  "type": "datasource",
   "name": "Timely",
-  "id": "timely-app",
-
-  "css": {
-    "dark":  "css/dark.css",
-    "light":  "css/light.css"
-  },
-
+  "id": "nsa-timely-datasource",
+  "category": "tsdb",
+  "metrics": true,
+  "backend": true,
+  "alerting": true,
+  "executable": "timely_datasource_backend",
   "info": {
-    "description": "Timely App",
+    "description": "Open source time series database backed by Accumulo",
     "author": {
-      "name": "National Security Agency",
-      "url": "http://github.com/NationalSecurityAgency"
+      "name": "National Security Agency"
     },
-    "keywords": ["timely app datasource"],
+    "keywords": [
+      "Simple"
+    ],
     "logos": {
-      "small": "img/brand_small.png",
-      "large": "img/brand_large.png"
+      "small": "static/img/timely_square_small.png",
+      "large": "static/img/timely_square_large.png"
     },
     "links": [
-      {"name": "Project site", "url": "https://github.com/NationalSecurityAgency/timely"},
-      {"name": "License & Terms", "url": "https://raw.githubusercontent.com/NationalSecurityAgency/timely/master/LICENSE"}
+      {
+        "name": "Website",
+        "url": "https://code.nsa.gov/timely"
+      },
+      {
+        "name": "License",
+        "url": "https://github.com/NationalSecurityAgency/timely/blob/master/LICENSE"
+      }
     ],
-    "version": "1.2.8-SNAPSHOT",
-    "updated": "2020-02-21"
+    "screenshots": [],
+    "version": "1.0.0",
+    "updated": "2020-09-15"
   },
-
-  "includes": [
-    {"type": "datasource", "name": "Timely"},
-    { "type": "page", "name": "Login", "component": "AuthsPageCtrl", "role": "Viewer", "addToNav": true},
-    { "type": "page", "name": "Metrics", "component": "MetricsPageCtrl", "role": "Viewer", "addToNav": true}
-  ],
-
   "dependencies": {
-    "grafanaVersion": "4.x.x",
+    "classnames": "2.2.6",
+    "slate-plain-serializer": "0.7.10",
+    "grafanaVersion": "6.5.x",
     "plugins": []
   }
-
 }

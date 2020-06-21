@@ -138,7 +138,7 @@ public class MetaCacheImpl implements MetaCache {
 
     @Override
     public Iterator<Meta> iterator() {
-        return cache.asMap().keySet().iterator();
+        return new TreeSet<Meta>(cache.asMap().keySet()).iterator();
     }
 
     @Override

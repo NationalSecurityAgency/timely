@@ -1,5 +1,7 @@
 package timely.netty.websocket;
 
+import static timely.auth.AuthenticationService.AUTH_HEADER;
+
 import java.security.cert.X509Certificate;
 import java.util.List;
 
@@ -24,6 +26,7 @@ import timely.auth.AuthCache;
 import timely.auth.AuthenticationService;
 import timely.auth.SubjectIssuerDNPair;
 import timely.auth.TimelyPrincipal;
+import timely.auth.util.HttpHeaderUtils;
 import timely.configuration.Security;
 import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.subscription.SubscriptionRegistry;
@@ -58,7 +61,10 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
                     ((AuthenticatedRequest) request).addHeaders(headers);
                 }
                 TimelyAuthenticationToken token;
-                if (StringUtils.isNotBlank(sessionId)) {
+                String authHeader = HttpHeaderUtils.getSingleHeader(headers, AUTH_HEADER, true);
+                if (authHeader != null) {
+                    token = AuthenticationService.getAuthenticationToken(headers);
+                } else if (StringUtils.isNotBlank(sessionId)) {
                     TimelyPrincipal principal;
                     ((AuthenticatedRequest) request).setSessionId(sessionId);
                     if (AuthCache.containsKey(sessionId)) {

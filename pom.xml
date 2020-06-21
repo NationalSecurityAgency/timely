@@ -65,6 +65,7 @@
     <version.javacsv>2.0</version.javacsv>
     <version.javassist>3.24.1-GA</version.javassist>
     <version.jcip-annotations>1.0</version.jcip-annotations>
+    <version.jjwt>0.11.2</version.jjwt>
     <version.jsoup>1.11.3</version.jsoup>
     <version.junit>4.12</version.junit>
     <version.log4j>2.13.3</version.log4j>
@@ -142,6 +143,16 @@
         <groupId>io.github.lukehutch</groupId>
         <artifactId>fast-classpath-scanner</artifactId>
         <version>${version.fast-classpath-scanner}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <version>${version.jjwt}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
+        <version>${version.jjwt}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>

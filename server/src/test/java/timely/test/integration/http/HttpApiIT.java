@@ -68,11 +68,11 @@ public class HttpApiIT extends OneWaySSLBase {
 
             String suggest = "https://localhost:54322/api/suggest?";
             // Test prefix matching
-            String result = query(suggest + "type=metrics&q=sys&max=10");
+            String result = query(suggest + "type=metrics&m=sys&max=10");
             assertEquals("[\"sys.cpu.idle\",\"sys.cpu.user\"]", result);
 
             // Test max
-            result = query(suggest + "type=metrics&q=sys&max=1");
+            result = query(suggest + "type=metrics&m=sys&max=1");
             assertEquals("[\"sys.cpu.idle\"]", result);
 
             // Test empty query

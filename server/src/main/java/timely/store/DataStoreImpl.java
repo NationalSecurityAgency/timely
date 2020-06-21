@@ -444,6 +444,9 @@ public class DataStoreImpl implements DataStore {
                 for (Meta m : metaCache) {
                     if (query == null || m.getMetric().contains(query)) {
                         metrics.add(m.getMetric());
+                        if (request.getMax() >= 0 && metrics.size() >= request.getMax()) {
+                            break;
+                        }
                     }
                 }
                 result.setSuggestions(new ArrayList<>(metrics));
@@ -454,6 +457,9 @@ public class DataStoreImpl implements DataStore {
                     for (Meta m : metaCache) {
                         if (m.getMetric().equals(metric)) {
                             tagKeys.add(m.getTagKey());
+                            if (request.getMax() >= 0 && tagKeys.size() >= request.getMax()) {
+                                break;
+                            }
                         }
                     }
                 }
@@ -467,6 +473,9 @@ public class DataStoreImpl implements DataStore {
                     for (Meta m : metaCache) {
                         if (m.getMetric().equals(metric) && m.getTagKey().equals(tagKey)) {
                             tagValues.add(m.getTagValue());
+                            if (request.getMax() >= 0 && tagValues.size() >= request.getMax()) {
+                                break;
+                            }
                         }
                     }
                 }

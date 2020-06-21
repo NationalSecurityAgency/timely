@@ -27,6 +27,9 @@ timely-balancer:
       trustStoreFile:
       trustStoreType: jks
       #trustStorePassword:
+    jwtCheckKeyStore:
+    jwtCheckKeyType:
+    jwtCheckKeyPassword:
   cache:
     enabled: false
     metric-age-off-hours:

@@ -35,6 +35,9 @@ timely:
       trust-store-file:
       use-openssl: true
       #use-ciphers:
+    jwtCheckKeyStore:
+    jwtCheckKeyType:
+    jwtCheckKeyPassword:
   server:
     ip: 0.0.0.0
     tcp-port: 4242

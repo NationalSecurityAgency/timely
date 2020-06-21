@@ -1,13 +1,7 @@
 package timely.auth;
 
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.ServiceConfigurationError;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -26,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.response.TimelyException;
 import timely.auth.util.DnUtils;
+import timely.auth.util.HttpHeaderUtils;
 import timely.netty.http.auth.TimelyAuthenticationToken;
 import timely.netty.http.auth.TimelyUserDetails;
 
@@ -38,6 +33,8 @@ public class AuthenticationService {
     private static ConcurrentHashMap<String, Object> fetchingPrincipal = new ConcurrentHashMap<>();
     private static Collection<String> requiredRoles;
     private static Collection<String> requiredAuths;
+    public static final String AUTH_HEADER = "Authorization";
+    public static final String PRINCIPALS_CLAIM = "principals";
 
     static {
         try {
@@ -114,8 +111,9 @@ public class AuthenticationService {
     public static void enforceAccess(AuthenticatedRequest request) throws Exception {
         String sessionId = request.getSessionId();
         X509Certificate clientCert = request.getToken().getClientCert();
-        TimelyPrincipal verifiedPrincipal = null;
-        if (StringUtils.isBlank(sessionId) && clientCert == null) {
+        TimelyPrincipal verifiedPrincipal;
+        String oauthToken = request.getRequestHeader(AUTH_HEADER);
+        if (StringUtils.isBlank(sessionId) && StringUtils.isBlank(oauthToken) && clientCert == null) {
             throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
                     "Anonymous access is disabled.  User must either send a client certificate or log in");
         } else if (StringUtils.isNotBlank(sessionId)) {
@@ -129,42 +127,53 @@ public class AuthenticationService {
                 TimelyAuthenticationToken token = request.getToken();
                 TimelyPrincipal requestPrincipal = token.getTimelyPrincipal();
                 String entity = requestPrincipal.getName();
-                verifiedPrincipal = AuthCache.get(entity);
-                if (verifiedPrincipal == null) {
-                    Object newObj = new Object();
-                    Object o = fetchingPrincipal.getOrDefault(entity, newObj);
-                    if (o == null) {
-                        o = newObj;
+                if (oauthToken != null) {
+                    // if the requestPrincipal came from an oauthToken, use that
+                    TimelyPrincipal cachedPrincipal = AuthCache.get(entity);
+                    if (cachedPrincipal == null
+                            || (cachedPrincipal.getCreationTime() != requestPrincipal.getCreationTime())) {
+                        AuthCache.put(entity, requestPrincipal);
                     }
-                    try {
-                        synchronized (o) {
-                            // check again if in the AuthCache
-                            verifiedPrincipal = AuthCache.get(entity);
-                            if (verifiedPrincipal == null) {
-                                // first thread here, so authenticate all entities in requestPrincipal
-                                List<TimelyUser> authenticatedTimelyUsers = new ArrayList<>();
-                                for (TimelyUser user : requestPrincipal.getProxiedUsers()) {
-                                    SubjectIssuerDNPair p = user.getDn();
-                                    TimelyAuthenticationToken entityToken = getAuthenticationToken(clientCert,
-                                            p.subjectDN(), p.issuerDN());
-                                    TimelyPrincipal entityPrincipal = authenticate(entityToken, p,
-                                            entityToken.getTimelyPrincipal().getName());
-                                    authenticatedTimelyUsers.addAll(entityPrincipal.getProxiedUsers());
-                                }
-                                verifiedPrincipal = new TimelyPrincipal(authenticatedTimelyUsers);
-                                AuthCache.put(verifiedPrincipal.getName(), verifiedPrincipal);
-                                LOG.debug("Authenticated user {} for request {} with authorizations {}",
-                                        verifiedPrincipal.getName(), request.toString(),
-                                        verifiedPrincipal.getAuthorizationsString());
-                            } else {
-                                LOG.trace("Verified principal {} in AuthCache on 2nd attempt", entity);
-                            }
-                        }
-                    } finally {
-                        fetchingPrincipal.remove(entity);
-                    }
+                    verifiedPrincipal = requestPrincipal;
+                    LOG.trace("Got principal {} from oauth token", entity);
                 } else {
-                    LOG.trace("Verified principal {} in AuthCache on 1st attempt", entity);
+                    verifiedPrincipal = AuthCache.get(entity);
+                    if (verifiedPrincipal == null) {
+                        Object newObj = new Object();
+                        Object o = fetchingPrincipal.getOrDefault(entity, newObj);
+                        if (o == null) {
+                            o = newObj;
+                        }
+                        try {
+                            synchronized (o) {
+                                // check again if in the AuthCache
+                                verifiedPrincipal = AuthCache.get(entity);
+                                if (verifiedPrincipal == null) {
+                                    // first thread here, so authenticate all entities in requestPrincipal
+                                    List<TimelyUser> authenticatedTimelyUsers = new ArrayList<>();
+                                    for (TimelyUser user : requestPrincipal.getProxiedUsers()) {
+                                        SubjectIssuerDNPair p = user.getDn();
+                                        TimelyAuthenticationToken entityToken = getAuthenticationToken(clientCert,
+                                                p.subjectDN(), p.issuerDN());
+                                        TimelyPrincipal entityPrincipal = authenticate(entityToken, p,
+                                                entityToken.getTimelyPrincipal().getName());
+                                        authenticatedTimelyUsers.addAll(entityPrincipal.getProxiedUsers());
+                                    }
+                                    verifiedPrincipal = new TimelyPrincipal(authenticatedTimelyUsers);
+                                    AuthCache.put(verifiedPrincipal.getName(), verifiedPrincipal);
+                                    LOG.debug("Authenticated user {} for request {} with authorizations {}",
+                                            verifiedPrincipal.getName(), request.toString(),
+                                            verifiedPrincipal.getAuthorizationsString());
+                                } else {
+                                    LOG.trace("Verified principal {} in AuthCache on 2nd attempt", entity);
+                                }
+                            }
+                        } finally {
+                            fetchingPrincipal.remove(entity);
+                        }
+                    } else {
+                        LOG.trace("Verified principal {} in AuthCache on 1st attempt", entity);
+                    }
                 }
             } catch (RuntimeException e) {
                 LOG.error(e.getMessage(), e);
@@ -231,6 +240,27 @@ public class AuthenticationService {
             }
         }
         return clientCert;
+    }
+
+    public static TimelyPrincipal createPrincipalFromToken(String token) {
+        return new TimelyPrincipal(JWTTokenHandler.createUsersFromToken(token, PRINCIPALS_CLAIM));
+    }
+
+    public static TimelyPrincipal createPrincipalFromHeaders(Multimap<String, String> httpHeaders) {
+        String header = HttpHeaderUtils.getSingleHeader(httpHeaders, AUTH_HEADER, true);
+        String token = header.substring("Bearer".length()).trim();
+        return createPrincipalFromToken(token);
+    }
+
+    public static TimelyAuthenticationToken getAuthenticationToken(Multimap<String, String> headers) {
+        TimelyAuthenticationToken authenticationToken = null;
+        try {
+            TimelyPrincipal timelyPrincipal = createPrincipalFromHeaders(headers);
+            authenticationToken = new TimelyAuthenticationToken(timelyPrincipal, headers);
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+        return authenticationToken;
     }
 
     public static TimelyAuthenticationToken getAuthenticationToken(X509Certificate clientCert,

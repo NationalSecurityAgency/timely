@@ -70,6 +70,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
+import timely.auth.JWTTokenHandler;
 import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.configuration.ClientSsl;
 import timely.balancer.configuration.SpringBootstrap;
@@ -385,6 +386,7 @@ public class Balancer {
         ensureZkPaths(curatorFramework, zkPaths);
 
         AuthCache.configure(balancerConfig.getSecurity());
+        JWTTokenHandler.init(balancerConfig.getSecurity());
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;

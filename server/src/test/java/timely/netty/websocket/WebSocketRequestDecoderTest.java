@@ -346,7 +346,7 @@ public class WebSocketRequestDecoderTest {
                 "    \"operation\" : \"suggest\",\n" +
                 "    \"sessionId\" : \"1234\",\n" +
                 "    \"type\": \"metrics\",\n" +
-                "    \"q\": \"sys.cpu.user\",\n" +
+                "    \"m\": \"sys.cpu.user\",\n" +
                 "    \"max\": 30\n" +
                 "}";
         // @formatter:on

@@ -26,6 +26,13 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
     private X509Certificate clientCert = null;
     private TimelyPrincipal timelyPrincipal;
 
+    public TimelyAuthenticationToken(TimelyPrincipal timelyPrincipal, Multimap<String, String> httpHeaders) {
+        super(timelyPrincipal.getPrimaryUser().getDn(), null);
+        this.httpHeaders = httpHeaders;
+        this.timelyPrincipal = timelyPrincipal;
+        LOG.trace("Created TimelyAuthenticationToken: {}", timelyPrincipal.getName());
+    }
+
     public TimelyAuthenticationToken(String subjectDn, Object clientCert, Multimap<String, String> httpHeaders) {
         super(subjectDn, clientCert);
         if (httpHeaders == null) {

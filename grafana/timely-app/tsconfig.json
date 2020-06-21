@@ -1,0 +1,15 @@
+{
+  "extends": "@grafana/toolkit/src/config/tsconfig.plugin.json",
+  "include": ["src", "types"],
+  "paths": {
+    "@grafana/slate-react": ["./node_modules/@types/slate-react"]
+  },
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "rootDir": "./src",
+    "baseUrl": "./src",
+    "typeRoots": ["./node_modules/@types"],
+    "jsx": "react",
+    "allowJs": true
+  }
+}

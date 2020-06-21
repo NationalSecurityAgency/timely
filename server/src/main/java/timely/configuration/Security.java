@@ -11,6 +11,10 @@ public class Security {
     private int sessionMaxAge = 86400;
     private int cacheExpirationMinutes = 60;
     private int cacheRefreshMinutes = 5;
+    private String jwtCheckKeyStore;
+    private String jwtCheckKeyType;
+    private String jwtCheckKeyPassword;
+
     @Valid
     @NestedConfigurationProperty
     private ServerSsl serverSsl = new ServerSsl();
@@ -57,5 +61,29 @@ public class Security {
 
     public ServerSsl getServerSsl() {
         return serverSsl;
+    }
+
+    public String getJwtCheckKeyStore() {
+        return jwtCheckKeyStore;
+    }
+
+    public void setJwtCheckKeyStore(String jwtCheckKeyStore) {
+        this.jwtCheckKeyStore = jwtCheckKeyStore;
+    }
+
+    public String getJwtCheckKeyType() {
+        return jwtCheckKeyType;
+    }
+
+    public void setJwtCheckKeyType(String jwtCheckKeyType) {
+        this.jwtCheckKeyType = jwtCheckKeyType;
+    }
+
+    public String getJwtCheckKeyPassword() {
+        return jwtCheckKeyPassword;
+    }
+
+    public void setJwtCheckKeyPassword(String jwtCheckKeyPassword) {
+        this.jwtCheckKeyPassword = jwtCheckKeyPassword;
     }
 }
