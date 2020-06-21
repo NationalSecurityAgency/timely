@@ -30,8 +30,12 @@ public class SuggestRequest extends AuthenticatedRequest implements HttpGetReque
     }
 
     private String type;
-    @JsonProperty("q")
-    private Optional<String> query = Optional.empty();
+    @JsonProperty("m")
+    private Optional<String> metric = Optional.empty();
+
+    @JsonProperty("t")
+    private Optional<String> tag = Optional.empty();
+
     private int max = 25;
 
     public String getType() {
@@ -42,12 +46,20 @@ public class SuggestRequest extends AuthenticatedRequest implements HttpGetReque
         this.type = type;
     }
 
-    public Optional<String> getQuery() {
-        return query;
+    public Optional<String> getMetric() {
+        return metric;
     }
 
-    public void setQuery(Optional<String> query) {
-        this.query = query;
+    public void setMetric(Optional<String> metric) {
+        this.metric = metric;
+    }
+
+    public Optional<String> getTag() {
+        return tag;
+    }
+
+    public void setTag(Optional<String> tag) {
+        this.tag = tag;
     }
 
     public int getMax() {
@@ -68,8 +80,9 @@ public class SuggestRequest extends AuthenticatedRequest implements HttpGetReque
     @Override
     public String toString() {
         ToStringBuilder tsb = new ToStringBuilder(this);
-        tsb.append("query", query);
         tsb.append("type", type);
+        tsb.append("metric", metric);
+        tsb.append("tag", tag);
         tsb.append("max", max);
         return tsb.toString();
     }
@@ -94,8 +107,11 @@ public class SuggestRequest extends AuthenticatedRequest implements HttpGetReque
     public HttpGetRequest parseQueryParameters(QueryStringDecoder decoder) throws Exception {
         final SuggestRequest suggest = new SuggestRequest();
         suggest.setType(decoder.parameters().get("type").get(0));
-        if (decoder.parameters().containsKey("q")) {
-            suggest.setQuery(Optional.of(decoder.parameters().get("q").get(0)));
+        if (decoder.parameters().containsKey("m")) {
+            suggest.setMetric(Optional.of(decoder.parameters().get("m").get(0)));
+        }
+        if (decoder.parameters().containsKey("t")) {
+            suggest.setTag(Optional.of(decoder.parameters().get("t").get(0)));
         }
         if (decoder.parameters().containsKey("max")) {
             suggest.setMax(Integer.parseInt(decoder.parameters().get("max").get(0)));

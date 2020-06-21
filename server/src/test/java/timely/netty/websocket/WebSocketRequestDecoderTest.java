@@ -358,7 +358,7 @@ public class WebSocketRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.get(0).getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertEquals("sys.cpu.user", suggest.getQuery().get());
+        Assert.assertEquals("sys.cpu.user", suggest.getMetric().get());
         Assert.assertEquals(30, suggest.getMax());
         suggest.validate();
     }

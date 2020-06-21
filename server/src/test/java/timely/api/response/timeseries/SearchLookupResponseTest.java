@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
+import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.util.JsonUtil;
 
@@ -38,6 +39,17 @@ public class SearchLookupResponseTest {
         Assert.assertEquals(expected, r);
         SearchLookupResponse slr = JsonUtil.getObjectMapper().readValue(r, SearchLookupResponse.class);
         Assert.assertEquals(response, slr);
+    }
+
+    @Test
+    public void testMetricRequest() {
+        try {
+            String r = "{\"operation\":\"lookup\", \"metric\":\"testmetric\", \"tags\":[{\"host\":\".*\"}]}";
+            SearchLookupRequest req = JsonUtil.getObjectMapper().readValue(r, SearchLookupRequest.class);
+            System.out.println(req);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

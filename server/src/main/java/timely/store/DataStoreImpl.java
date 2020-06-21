@@ -7,7 +7,6 @@ import static timely.adapter.accumulo.MetricAdapter.VISIBILITY_TAG;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -438,34 +437,40 @@ public class DataStoreImpl implements DataStore {
         SuggestResponse result = new SuggestResponse();
         Scanner scanner = null;
         try {
+            Optional<String> metricOpt = request.getMetric();
             if (request.getType().equals("metrics")) {
-                Range range;
-                if (request.getQuery().isPresent()) {
-                    Text start = new Text(Meta.METRIC_PREFIX + request.getQuery().get());
-                    Text endRow = new Text(start);
-                    endRow.append(new byte[] { (byte) 0xff }, 0, 1);
-                    range = new Range(start, endRow);
-                } else {
-                    // kind of a hack, maybe someone wants a metric with >100
-                    // 0xff bytes?
-                    Text start = new Text(Meta.METRIC_PREFIX);
-                    byte last = (byte) 0xff;
-                    byte[] lastBytes = new byte[100];
-                    Arrays.fill(lastBytes, last);
-                    Text end = new Text(Meta.METRIC_PREFIX);
-                    end.append(lastBytes, 0, lastBytes.length);
-                    range = new Range(start, end);
-                }
-                scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
-                scanner.setRange(range);
-                List<String> metrics = new ArrayList<>();
-                for (Entry<Key, Value> metric : scanner) {
-                    metrics.add(metric.getKey().getRow().toString().substring(Meta.METRIC_PREFIX.length()));
-                    if (metrics.size() >= request.getMax()) {
-                        break;
+                Set<String> metrics = new TreeSet<>();
+                String query = metricOpt.isPresent() ? metricOpt.get() : null;
+                for (Meta m : metaCache) {
+                    if (query == null || m.getMetric().contains(query)) {
+                        metrics.add(m.getMetric());
                     }
                 }
-                result.setSuggestions(metrics);
+                result.setSuggestions(new ArrayList<>(metrics));
+            } else if (request.getType().equals("tagk")) {
+                Set<String> tagKeys = new TreeSet<>();
+                if (metricOpt.isPresent()) {
+                    String metric = metricOpt.get();
+                    for (Meta m : metaCache) {
+                        if (m.getMetric().equals(metric)) {
+                            tagKeys.add(m.getTagKey());
+                        }
+                    }
+                }
+                result.setSuggestions(new ArrayList<>(tagKeys));
+            } else if (request.getType().equals("tagv")) {
+                Set<String> tagValues = new TreeSet<>();
+                Optional<String> tagKeyOpt = request.getTag();
+                if (metricOpt.isPresent() && tagKeyOpt.isPresent()) {
+                    String metric = metricOpt.get();
+                    String tagKey = tagKeyOpt.get();
+                    for (Meta m : metaCache) {
+                        if (m.getMetric().equals(metric) && m.getTagKey().equals(tagKey)) {
+                            tagValues.add(m.getTagValue());
+                        }
+                    }
+                }
+                result.setSuggestions(new ArrayList<>(tagValues));
             }
         } catch (Exception ex) {
             LOG.error("Error during suggest: " + ex.getMessage(), ex);

@@ -343,7 +343,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("foo", suggest.getType());
-        Assert.assertFalse(suggest.getQuery().isPresent());
+        Assert.assertFalse(suggest.getMetric().isPresent());
         Assert.assertEquals(25, suggest.getMax());
     }
 
@@ -358,7 +358,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("foo", suggest.getType());
-        Assert.assertFalse(suggest.getQuery().isPresent());
+        Assert.assertFalse(suggest.getMetric().isPresent());
         Assert.assertEquals(25, suggest.getMax());
     }
 
@@ -373,7 +373,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("foo", suggest.getType());
-        Assert.assertFalse(suggest.getQuery().isPresent());
+        Assert.assertFalse(suggest.getMetric().isPresent());
         Assert.assertEquals(25, suggest.getMax());
         suggest.validate();
     }
@@ -388,7 +388,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertFalse(suggest.getQuery().isPresent());
+        Assert.assertFalse(suggest.getMetric().isPresent());
         Assert.assertEquals(25, suggest.getMax());
         suggest.validate();
     }
@@ -404,7 +404,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertFalse(suggest.getQuery().isPresent());
+        Assert.assertFalse(suggest.getMetric().isPresent());
         Assert.assertEquals(25, suggest.getMax());
         suggest.validate();
     }
@@ -427,7 +427,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertFalse(suggest.getQuery().isPresent());
+        Assert.assertFalse(suggest.getMetric().isPresent());
         Assert.assertEquals(25, suggest.getMax());
         suggest.validate();
     }
@@ -443,7 +443,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertEquals("sys.cpu.user", suggest.getQuery().get());
+        Assert.assertEquals("sys.cpu.user", suggest.getMetric().get());
         Assert.assertEquals(25, suggest.getMax());
         suggest.validate();
     }
@@ -467,7 +467,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertEquals("sys.cpu.user", suggest.getQuery().get());
+        Assert.assertEquals("sys.cpu.user", suggest.getMetric().get());
         Assert.assertEquals(25, suggest.getMax());
         suggest.validate();
     }
@@ -483,7 +483,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertEquals("sys.cpu.user", suggest.getQuery().get());
+        Assert.assertEquals("sys.cpu.user", suggest.getMetric().get());
         Assert.assertEquals(30, suggest.getMax());
         suggest.validate();
     }
@@ -508,7 +508,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
         SuggestRequest suggest = (SuggestRequest) results.iterator().next();
         Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertEquals("sys.cpu.user", suggest.getQuery().get());
+        Assert.assertEquals("sys.cpu.user", suggest.getMetric().get());
         Assert.assertEquals(30, suggest.getMax());
         suggest.validate();
     }
