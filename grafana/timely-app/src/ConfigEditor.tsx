@@ -43,6 +43,55 @@ export class ConfigEditor extends PureComponent<Props, State> {
     onOptionsChange({ ...options, jsonData });
   };
 
+  onUseClientCertWhenOAuthMissingChange = (
+    event: React.SyntheticEvent<HTMLInputElement>
+  ) => {
+    const { onOptionsChange, options } = this.props;
+    const jsonData = {
+      ...options.jsonData,
+      useClientCertWhenOAuthMissing: event.currentTarget.checked
+    };
+    onOptionsChange({ ...options, jsonData });
+  };
+
+  onClientCertificatePathChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onOptionsChange, options } = this.props;
+    const jsonData = {
+      ...options.jsonData,
+      clientCertificatePath: event.target.value
+    };
+    onOptionsChange({ ...options, jsonData });
+  };
+
+  onClientKeyPathChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onOptionsChange, options } = this.props;
+    const jsonData = {
+      ...options.jsonData,
+      clientKeyPath: event.target.value
+    };
+    onOptionsChange({ ...options, jsonData });
+  };
+
+  onCertificateAuthorityPathChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onOptionsChange, options } = this.props;
+    const jsonData = {
+      ...options.jsonData,
+      certificateAuthorityPath: event.target.value
+    };
+    onOptionsChange({ ...options, jsonData });
+  };
+
+  onAllowInsecureSslChange = (
+    event: React.SyntheticEvent<HTMLInputElement>
+  ) => {
+    const { onOptionsChange, options } = this.props;
+    const jsonData = {
+      ...options.jsonData,
+      allowInsecureSsl: event.currentTarget.checked
+    };
+    onOptionsChange({ ...options, jsonData });
+  };
+
   render() {
     const { options } = this.props;
     const { jsonData } = options;
@@ -63,7 +112,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
         </div>
         <div className="gf-form">
           <FormField
-            label={"HTTPS Port"}
+            label={"Https port"}
             labelWidth={10}
             inputWidth={20}
             onChange={this.onHttpsPortChange}
@@ -73,13 +122,70 @@ export class ConfigEditor extends PureComponent<Props, State> {
         </div>
         <div className="gf-form">
           <Switch
-            label={"Use OAuth Token"}
+            label={"Use OAuth token"}
             labelClass="width-10"
             tooltipPlacement={"top"}
+            tooltip={"Send OAuth token if available"}
             checked={jsonData.oauthPassThru || false}
             onChange={this.onUseOAuthChange}
           />
         </div>
+        <div className="gf-form">
+          <Switch
+            label={"Client cert for users"}
+            labelClass="width-10"
+            tooltipPlacement={"top"}
+            tooltip={"If user is missing OAuth token, use client cert instead"}
+            checked={jsonData.useClientCertWhenOAuthMissing || false}
+            onChange={this.onUseClientCertWhenOAuthMissingChange}
+          />
+        </div>
+        <div className="gf-form">
+          <FormField
+            label={"Client cert path"}
+            labelWidth={10}
+            inputWidth={40}
+            disabled={false}
+            onChange={this.onClientCertificatePathChange}
+            tooltip={"Full path to client certificate"}
+            value={jsonData.clientCertificatePath || ""}
+          />
+        </div>
+        <div className="gf-form">
+          <FormField
+            label={"Client key path"}
+            labelWidth={10}
+            inputWidth={40}
+            disabled={false}
+            onChange={this.onClientKeyPathChange}
+            tooltip={"Full path to client key"}
+            value={jsonData.clientKeyPath || ""}
+          />
+        </div>
+        <div className="gf-form">
+          <FormField
+            label={"CA path"}
+            labelWidth={10}
+            inputWidth={40}
+            disabled={false}
+            onChange={this.onCertificateAuthorityPathChange}
+            tooltip={"Full path to certificate authority"}
+            value={jsonData.certificateAuthorityPath || ""}
+          />
+        </div>
+        <div className="gf-form">
+          <Switch
+            label={"Allow insecure ssl"}
+            labelClass="width-10"
+            tooltipPlacement={"top"}
+            tooltip={
+              "Allow ssl connection with unverified or self-signed certificates"
+            }
+            checked={jsonData.allowInsecureSsl || false}
+            onChange={this.onAllowInsecureSslChange}
+          />
+        </div>
+
         <div className="gf-form">
           <p>
             <a

@@ -24,6 +24,11 @@ export interface TimelyDataSourceOptions extends DataSourceJsonData {
   timelyHost: string;
   httpsPort: string;
   oauthPassThru: boolean;
+  useClientCertWhenOAuthMissing: boolean;
+  clientCertificatePath: string;
+  clientKeyPath: string;
+  certificateAuthorityPath: string;
+  allowInsecureSsl: boolean;
 }
 
 export interface TimelyErrors {

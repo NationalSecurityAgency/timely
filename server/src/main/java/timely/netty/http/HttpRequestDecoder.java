@@ -157,7 +157,8 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
             }
         } catch (Exception e) {
             out.clear();
-            throw e;
+            // route to TimelyExceptionHandler
+            out.add(e);
         }
 
     }

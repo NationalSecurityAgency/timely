@@ -12,6 +12,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.api.response.TimelyException;
+import timely.api.response.TimelyExceptionResponse;
 import timely.netty.Constants;
 import timely.util.JsonUtil;
 
@@ -21,8 +22,7 @@ public interface TimelyHttpHandler {
 
     default void sendHttpError(ChannelHandlerContext ctx, TimelyException e) throws JsonProcessingException {
         LOG.error("Error in pipeline, response code: {}, message: {}", e.getCode(), e.getMessage());
-        byte[] buf = JsonUtil.getObjectMapper()
-                .writeValueAsBytes("ResponseCode: " + e.getCode() + " Message: " + e.getMessage());
+        byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(new TimelyExceptionResponse(e));
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                 HttpResponseStatus.valueOf(e.getCode()), Unpooled.copiedBuffer(buf));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);

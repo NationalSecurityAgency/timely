@@ -2,32 +2,35 @@ package main
 
 import (
     "bytes"
-    "context"
     "crypto/tls"
+    "crypto/x509"
     "fmt"
     "github.com/grafana/grafana-plugin-sdk-go/backend"
     "github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
     "github.com/grafana/grafana-plugin-sdk-go/data"
+    "github.com/hashicorp/go-hclog"
     "sort"
     "strconv"
     "time"
-
-    "golang.org/x/net/context/ctxhttp"
 
     "encoding/json"
     "io/ioutil"
     "net/http"
     "net/url"
-
-    "github.com/grafana/grafana-plugin-sdk-go/backend/log"
 )
 
 var (
-    logger log.Logger
+    logger = hclog.New(&hclog.LoggerOptions{
+        // Use debug as level since anything less severe is suppressed.
+        Level: hclog.Debug,
+        // Use JSON format to make the output in Grafana format and work
+        // when using multiple arguments such as Debug("message", "key", "value").
+        JSONFormat: true,
+        Name: "timely",
+    })
 )
 
 func init() {
-    logger = log.New()
     http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 }
 
@@ -40,7 +43,7 @@ type TimelyDatasource struct {
     im instancemgmt.InstanceManager
 }
 
-func (dataSource *TimelyDatasource) Query(ctx context.Context, queryDataRequest *backend.QueryDataRequest, dataQuery backend.DataQuery) (*backend.DataResponse, error) {
+func (dataSource *TimelyDatasource) Query(queryDataRequest *backend.QueryDataRequest, dataQuery backend.DataQuery) (*backend.DataResponse, error) {
 
     timelyRequest := TimelyRequest {
         MsResolution:      true,
@@ -52,9 +55,10 @@ func (dataSource *TimelyDatasource) Query(ctx context.Context, queryDataRequest 
     var timelyQueryForm TimelyQueryForm
     var timelyQueryServer TimelyQueryServer
     var err error
-    var settings *TimelyDatasourceInstanceSettings
+    var isUser bool
 
     if queryDataRequest.PluginContext.User == nil {
+        isUser = false
         err = json.Unmarshal(dataQuery.JSON, &timelyQueryServer)
         if err == nil {
             timelyQueryForm = TimelyQueryForm {
@@ -76,6 +80,7 @@ func (dataSource *TimelyDatasource) Query(ctx context.Context, queryDataRequest 
             }
         }
     } else {
+        isUser = true
         err = json.Unmarshal(dataQuery.JSON, &timelyQueryForm)
     }
 
@@ -83,17 +88,8 @@ func (dataSource *TimelyDatasource) Query(ctx context.Context, queryDataRequest 
         logger.Error("Failed parsing timelyQuery", "error", err)
         return nil, err
     }
-    logger.Debug("Query", "timelyQueryForm", timelyQueryForm)
 
     timelyQuery := dataSource.convertTimelyQuery(&timelyQueryForm)
-    settings, err = dataSource.getSettings(queryDataRequest.PluginContext)
-    if err != nil {
-        logger.Error("Failed to get datasource settings", "error", err)
-        return nil, err
-    }
-
-    logger.Debug("QueryData", "timelyQuery", timelyQuery)
-
     timelyRequest.Queries = append(timelyRequest.Queries, *timelyQuery)
 
     logger.Debug("Query", "timelyRequest", timelyRequest)
@@ -113,19 +109,24 @@ func (dataSource *TimelyDatasource) Query(ctx context.Context, queryDataRequest 
         return nil, err
     }
 
-    oauthToken, ok := queryDataRequest.Headers["Authorization"]
-    if ok {
+    oauthToken, tokenExists := queryDataRequest.Headers["Authorization"]
+    if tokenExists {
         logger.Debug("Adding Authorization:" + oauthToken)
         httpRequest.Header.Add("Authorization", oauthToken)
     }
 
-    httpClient := settings.httpClient
-    res, err := ctxhttp.Do(ctx, httpClient, httpRequest)
+    var useClientCertIfAvailable = !isUser || (!tokenExists && timelyDatasourceOptions.UseClientCertWhenOAuthMissing)
+    httpClient, err := GetHttpClient(timelyDatasourceOptions, useClientCertIfAvailable)
+    if err != nil {
+        return nil, err
+    }
+
+    res, err := httpClient.Do(httpRequest)
     if err != nil {
         logger.Error("Error executing query", "error", err)
         return nil, err
     }
-    return dataSource.parseResponse(*timelyQuery, res)
+    return dataSource.parseResponse(res)
 }
 
 func (e *TimelyDatasource) createRequest(tdo TimelyDataSourceOptions, data TimelyRequest) (*http.Request, error) {
@@ -155,7 +156,7 @@ func (e *TimelyDatasource) createRequest(tdo TimelyDataSourceOptions, data Timel
     return req, err
 }
 
-func (e *TimelyDatasource) parseResponse(query TimelyQuery, res *http.Response) (*backend.DataResponse, error) {
+func (e *TimelyDatasource) parseResponse(res *http.Response) (*backend.DataResponse, error) {
 
     body, err := ioutil.ReadAll(res.Body)
     defer res.Body.Close()
@@ -164,15 +165,20 @@ func (e *TimelyDatasource) parseResponse(query TimelyQuery, res *http.Response) 
     }
 
     if res.StatusCode/100 != 2 {
-        logger.Error("Request failed", "status", res.Status, "body", string(body))
-        return nil, fmt.Errorf("Request failed status: %v", res.Status)
+        var errorResponse TimelyErrorResponse
+        err = json.Unmarshal(body, &errorResponse)
+        if err != nil {
+            logger.Error("Query failed", "status", res.Status, "body", string(body))
+            return nil, fmt.Errorf("Query failed - %v: %s", res.Status, string(body))
+        }
+        logger.Error("Query failed", "status", res.Status, "message", errorResponse.Message, "detailMessage", errorResponse.DetailMessage)
+        return nil, fmt.Errorf("Query failed - %v [%s] [%s]", res.Status, errorResponse.Message, errorResponse.DetailMessage)
     }
 
     var object []TimelyResponse
     err = json.Unmarshal(body, &object)
     if err != nil {
-        logger.Error("Failed to unmarshal Timely response", "error", err, "status", res.Status, "body", string(body))
-        return nil, err
+        return nil, fmt.Errorf("Failed to unmarshal Timely response - body: %s status: %v", string(body), res.Status)
     }
 
     response := backend.DataResponse{}
@@ -264,4 +270,44 @@ func (e *TimelyDatasource) convertTimelyQuery(timelyQueryForm *TimelyQueryForm) 
     }
 
     return &timelyQuery
+}
+
+func GetHttpClient(settings TimelyDataSourceOptions, useClientCertIfAvailable bool) (*http.Client, error) {
+    // handle call back
+    logger.Debug("Getting client", "allowInsecureSsl", strconv.FormatBool(settings.AllowInsecureSsl))
+    tr := &http.Transport{
+        Proxy: http.ProxyFromEnvironment,
+        TLSClientConfig: &tls.Config{
+            InsecureSkipVerify: settings.AllowInsecureSsl,
+        },
+    }
+    httpClient := &http.Client{
+        Transport: tr,
+    }
+
+    logger.Debug("Getting httpClient", "useClientCertIfAvailable", strconv.FormatBool(useClientCertIfAvailable))
+    if useClientCertIfAvailable {
+        if settings.ClientCertificatePath != "" || settings.ClientKeyPath != "" {
+            cert, err := tls.LoadX509KeyPair(settings.ClientCertificatePath, settings.ClientKeyPath)
+            if err != nil {
+                logger.Error("Failed to setup client certificate", "cert_path", settings.ClientCertificatePath, "key_path", settings.ClientKeyPath, "error", err)
+                return nil, fmt.Errorf("Failed to setup client certificate")
+            }
+            logger.Debug("Adding certificate", "ca_path", settings.ClientCertificatePath, "key_path", settings.ClientKeyPath)
+            tr.TLSClientConfig.Certificates = append(tr.TLSClientConfig.Certificates, cert)
+        }
+    }
+
+    if settings.CertificateAuthorityPath != "" {
+        caCert, err := ioutil.ReadFile(settings.CertificateAuthorityPath)
+        if err != nil {
+            logger.Error("Failed to setup certificate authority", "ca_path", settings.CertificateAuthorityPath, "error", err)
+            return nil, fmt.Errorf("Failed to setup certificate authority")
+        }
+        logger.Debug("Adding CA", "ca_path", settings.CertificateAuthorityPath)
+        caCertPool := x509.NewCertPool()
+        caCertPool.AppendCertsFromPEM(caCert)
+        tr.TLSClientConfig.RootCAs = caCertPool
+    }
+    return httpClient, nil
 }

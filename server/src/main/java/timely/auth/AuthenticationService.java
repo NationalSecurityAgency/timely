@@ -114,12 +114,12 @@ public class AuthenticationService {
         TimelyPrincipal verifiedPrincipal;
         String oauthToken = request.getRequestHeader(AUTH_HEADER);
         if (StringUtils.isBlank(sessionId) && StringUtils.isBlank(oauthToken) && clientCert == null) {
-            throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
-                    "Anonymous access is disabled.  User must either send a client certificate or log in");
+            throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must authenticate",
+                    "User must authenticate with a client certificate, OAuth token, or login credentials");
         } else if (StringUtils.isNotBlank(sessionId)) {
             verifiedPrincipal = AuthCache.get(sessionId);
             if (verifiedPrincipal == null) {
-                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must log in",
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must authenticate",
                         "Unknown session id was submitted, log in again");
             }
         } else {

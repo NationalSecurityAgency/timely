@@ -27,7 +27,7 @@ public class TimelyExceptionHandler extends SimpleChannelInboundHandler<TimelyEx
         if (ignoreSslHandshakeErrors && cause.getCause() instanceof SSLHandshakeException) {
             return;
         }
-        LOG.error("Unhandled exception in pipeline", cause);
+        LOG.error("Exception in pipeline", cause);
         if (cause instanceof TimelyException) {
             this.sendHttpError(ctx, (TimelyException) cause);
         } else if (null != cause.getCause() && cause.getCause() instanceof TimelyException) {

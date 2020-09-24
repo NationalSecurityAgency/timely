@@ -138,7 +138,7 @@ public class WebSocketRequestDecoderTest {
         Assert.assertNotNull(ctx.msg);
         Assert.assertEquals(CloseWebSocketFrame.class, ctx.msg.getClass());
         Assert.assertEquals(1008, ((CloseWebSocketFrame) ctx.msg).statusCode());
-        Assert.assertEquals("User must log in", ((CloseWebSocketFrame) ctx.msg).reasonText());
+        Assert.assertEquals("User must authenticate", ((CloseWebSocketFrame) ctx.msg).reasonText());
     }
 
     @Test
@@ -158,7 +158,7 @@ public class WebSocketRequestDecoderTest {
         Assert.assertNotNull(ctx.msg);
         Assert.assertEquals(CloseWebSocketFrame.class, ctx.msg.getClass());
         Assert.assertEquals(1008, ((CloseWebSocketFrame) ctx.msg).statusCode());
-        Assert.assertEquals("User must log in", ((CloseWebSocketFrame) ctx.msg).reasonText());
+        Assert.assertEquals("User must authenticate", ((CloseWebSocketFrame) ctx.msg).reasonText());
     }
 
     @Test

@@ -99,14 +99,15 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(request, results.get(0));
     }
 
-    @Test(expected = TimelyException.class)
+    @Test
     public void testAggregatorsURINoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "/api/aggregators");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
-        Assert.assertEquals(AggregatorsRequest.class, results.iterator().next().getClass());
+        Object o = results.get(0);
+        Assert.assertTrue(o instanceof TimelyException);
     }
 
     @Test
@@ -130,12 +131,15 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(AggregatorsRequest.class, results.iterator().next().getClass());
     }
 
-    @Test(expected = TimelyException.class)
+    @Test
     public void testAggregatorsPostNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                 "/api/aggregators");
         decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Object o = results.get(0);
+        Assert.assertTrue(o instanceof TimelyException);
     }
 
     @Test
@@ -378,19 +382,15 @@ public class HttpRequestDecoderTest {
         suggest.validate();
     }
 
-    @Test(expected = TimelyException.class)
+    @Test
     public void testSuggestURIWithValidTypeNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "/api/suggest?type=metrics");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
-        Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
-        SuggestRequest suggest = (SuggestRequest) results.iterator().next();
-        Assert.assertEquals("metrics", suggest.getType());
-        Assert.assertFalse(suggest.getMetric().isPresent());
-        Assert.assertEquals(25, suggest.getMax());
-        suggest.validate();
+        Object o = results.get(0);
+        Assert.assertTrue(o instanceof TimelyException);
     }
 
     @Test
@@ -513,12 +513,15 @@ public class HttpRequestDecoderTest {
         suggest.validate();
     }
 
-    @Test(expected = TimelyException.class)
+    @Test
     public void testQueryWithNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         decoder.decode(null, request, results);
+        Assert.assertEquals(1, results.size());
+        Object o = results.get(0);
+        Assert.assertTrue(o instanceof TimelyException);
     }
 
     @Test

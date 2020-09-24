@@ -21,15 +21,16 @@ func (ds *TimelyDatasource) CallResource(ctx context.Context, request *backend.C
     var response backend.CallResourceResponse
     pluginContext := request.PluginContext
     var httpResponse *http.Response;
-    settings, err := ds.getSettings(pluginContext)
-    if err != nil {
-        logger.Error("Error getting datasource settings", "error", err)
-        return err
-    }
-    var tdo TimelyDataSourceOptions
-    err = json.Unmarshal(pluginContext.DataSourceInstanceSettings.JSONData, &tdo)
+    var timelyDataSourceOptions TimelyDataSourceOptions
+    err := json.Unmarshal(pluginContext.DataSourceInstanceSettings.JSONData, &timelyDataSourceOptions)
     if err != nil {
         logger.Error("Error unmarshalling datasource JSONData", "error", err)
+        return err
+    }
+
+    httpClient, err := GetHttpClient(timelyDataSourceOptions, true)
+    if err != nil {
+        logger.Error("Error getting httpClient", "error", err)
         return err
     }
 
@@ -47,17 +48,17 @@ func (ds *TimelyDatasource) CallResource(ctx context.Context, request *backend.C
                     finalParams = params;
                 }
             }
-            url, err := url.Parse("https://" + tdo.TimelyHost + ":" + tdo.HttpsPort + request.Path + finalParams);
+            url, err := url.Parse("https://" + timelyDataSourceOptions.TimelyHost + ":" + timelyDataSourceOptions.HttpsPort + request.Path + finalParams);
             if err != nil {
                 return err
             }
-            httpResponse, err = settings.httpClient.Get(url.String())
+            httpResponse, err = httpClient.Get(url.String())
         } else if (request.Method == "POST") {
-            url, err := url.Parse("https://" + tdo.TimelyHost + ":" + tdo.HttpsPort + request.Path);
+            url, err := url.Parse("https://" + timelyDataSourceOptions.TimelyHost + ":" + timelyDataSourceOptions.HttpsPort + request.Path);
             if err != nil {
                 return err
             }
-            httpResponse, err = settings.httpClient.Post(url.String(), "application/json", bytes.NewReader(request.Body))
+            httpResponse, err = httpClient.Post(url.String(), "application/json", bytes.NewReader(request.Body))
         }
 
         if err != nil {

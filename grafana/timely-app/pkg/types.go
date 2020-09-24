@@ -82,8 +82,18 @@ type TimelyResponse struct {
 }
 
 type TimelyDataSourceOptions struct {
-    TimelyHost      string `json:"timelyHost"`
-    HttpsPort       string `json:"httpsPort"`
-    BasicAuths      bool   `json:"basicAuths"`
-    WithCredentials bool   `json:"withCredentials"`
+    TimelyHost                      string `json:"timelyHost"`
+    HttpsPort                       string `json:"httpsPort"`
+    OauthPassThru                   bool `json:"oauthPassThru"`
+    UseClientCertWhenOAuthMissing   bool `json:"useClientCertWhenOAuthMissing"`
+    ClientCertificatePath           string `json:"clientCertificatePath"`
+    ClientKeyPath                   string `json:"clientKeyPath"`
+    CertificateAuthorityPath        string `json:"certificateAuthorityPath"`
+    AllowInsecureSsl                bool `json:"allowInsecureSsl"`
+}
+
+type TimelyErrorResponse struct {
+    ResponseCode                    int32 `json:responseCode`
+    Message                         string `json:message`
+    DetailMessage                   string `json:detailMessage`
 }

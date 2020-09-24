@@ -2,24 +2,18 @@ package main
 
 import (
     "context"
-    "crypto/tls"
     "github.com/grafana/grafana-plugin-sdk-go/backend"
     "github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
     "github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
-    "net/http"
 )
 
 type TimelyDatasourceInstanceSettings struct {
-    httpClient *http.Client
+
 }
 
 func newDataSourceInstance(setting backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-    transport := &http.Transport{
-        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-    }
-
     return &TimelyDatasourceInstanceSettings{
-        httpClient: &http.Client{Transport: transport},
+
     }, nil
 }
 
@@ -63,13 +57,17 @@ func (td *TimelyDatasource) QueryData(ctx context.Context, req *backend.QueryDat
 
     // loop over queries and execute them individually.
     for _, q := range req.Queries {
-        res, error := td.Query(ctx, req, q)
+        res, error := td.Query(req, q)
         if error != nil {
-            return nil, error
+            errorResponse := backend.DataResponse{
+                Error: error,
+            }
+            response.Responses[q.RefID] = errorResponse
+        } else {
+            // save the response in a hashmap
+            // based on with RefID as identifier
+            response.Responses[q.RefID] = *res
         }
-        // save the response in a hashmap
-        // based on with RefID as identifier
-        response.Responses[q.RefID] = *res
     }
     return response, nil
 }
