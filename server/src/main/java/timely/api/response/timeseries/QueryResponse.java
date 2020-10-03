@@ -1,17 +1,18 @@
 package timely.api.response.timeseries;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
+@JsonPropertyOrder({ "metric", "tags", "aggregatedTags", "dps" })
 public class QueryResponse {
 
     private String metric;
-    private Map<String, String> tags = new HashMap<>();
+    private Map<String, String> tags = new LinkedHashMap<>();
     private List<String> aggregatedTags = new ArrayList<>();
     private Map<String, Object> dps = new LinkedHashMap<>();
 

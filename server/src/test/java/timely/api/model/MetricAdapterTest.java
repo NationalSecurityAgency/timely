@@ -106,18 +106,8 @@ public class MetricAdapterTest {
         Metric m = Metric.newBuilder().name("sys.cpu.user").value(ts, 2.0D).tags(tags)
                 .tag(MetricAdapter.VISIBILITY_TAG, "(a&b)|(c&d)").build();
         String json = JsonUtil.getObjectMapper().writeValueAsString(MetricResponse.fromMetric(m, subscriptionId));
-        String expectedMetric = "\"metric\":\"sys.cpu.user\"";
-        Assert.assertTrue(json.contains(expectedMetric));
-        String expectedTimestamp = "\"timestamp\":1000";
-        Assert.assertTrue(json.contains(expectedTimestamp));
-        String expectedValue = "\"value\":2.0";
-        Assert.assertTrue(json.contains(expectedValue));
-        String expectedTag = "\"tags\":[{\"tag1\":\"value1\"},{\"viz\":\"(a&b)|(c&d)\"}]";
-        Assert.assertTrue(json.contains(expectedTag));
-        String expectedSubscriptionId = "\"subscriptionId\":\"12345\"";
-        Assert.assertTrue(json.contains(expectedSubscriptionId));
-        String expectedComplete = "\"complete\":false";
-        Assert.assertTrue(json.contains(expectedComplete));
+        String expected = "{\"metric\":\"sys.cpu.user\",\"timestamp\":1000,\"value\":2.0,\"tags\":[{\"tag1\":\"value1\"},{\"viz\":\"(a&b)|(c&d)\"}],\"subscriptionId\":\"12345\",\"complete\":false}";
+        Assert.assertEquals(expected, json);
     }
 
     @Test
