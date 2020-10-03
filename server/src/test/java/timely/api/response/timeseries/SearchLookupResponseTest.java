@@ -35,7 +35,7 @@ public class SearchLookupResponseTest {
         response.setResults(results);
         response.setTotalResults(results.size());
         String r = JsonUtil.getObjectMapper().writeValueAsString(response);
-        String expected = "{\"type\":\"LOOKUP\",\"metric\":\"sys.cpu.user\",\"tags\":{\"rack\":\"r1\",\"host\":\"localhost\"},\"limit\":0,\"time\":1500,\"totalResults\":2,\"results\":[{\"tags\":{\"rack\":\"r1\",\"host\":\"localhost\"},\"metric\":\"sys.cpu.idle\",\"tsuid\":\"000011000008203D00\"},{\"tags\":{\"rack\":\"r1\",\"host\":\"localhost\"},\"metric\":\"sys.cpu.user\",\"tsuid\":\"000011000008203D01\"}]}";
+        String expected = "{\"type\":\"LOOKUP\",\"metric\":\"sys.cpu.user\",\"tags\":{\"host\":\"localhost\",\"rack\":\"r1\"},\"limit\":0,\"time\":1500,\"totalResults\":2,\"results\":[{\"tags\":{\"host\":\"localhost\",\"rack\":\"r1\"},\"metric\":\"sys.cpu.idle\",\"tsuid\":\"000011000008203D00\"},{\"tags\":{\"host\":\"localhost\",\"rack\":\"r1\"},\"metric\":\"sys.cpu.user\",\"tsuid\":\"000011000008203D01\"}]}";
         Assert.assertEquals(expected, r);
         SearchLookupResponse slr = JsonUtil.getObjectMapper().readValue(r, SearchLookupResponse.class);
         Assert.assertEquals(response, slr);

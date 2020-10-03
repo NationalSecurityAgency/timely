@@ -1,18 +1,21 @@
 package timely.api.response.timeseries;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+@JsonPropertyOrder({ "type", "metric", "tags", "limit", "time", "totalResults", "results" })
 public class SearchLookupResponse {
 
+    @JsonPropertyOrder({ "tags", "metric", "tsuid" })
     public static class Result {
 
-        private Map<String, String> tags = new HashMap<>();
+        private Map<String, String> tags = new LinkedHashMap<>();
         private String metric;
         private String tsuid;
 
@@ -77,7 +80,7 @@ public class SearchLookupResponse {
 
     private String type;
     private String metric;
-    private Map<String, String> tags = new HashMap<>();
+    private Map<String, String> tags = new LinkedHashMap<>();
     private int limit;
     private int time;
     private int totalResults;
