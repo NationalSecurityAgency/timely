@@ -14,16 +14,16 @@
   "author": "Grafana Labs",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@grafana/toolkit": "^7.2.0"
+    "@grafana/toolkit": "^7.2.1"
   },
   "engines": {
     "node": ">=12 <13"
   },
   "dependencies": {
-    "@grafana/data": "7.2.0",
-    "@grafana/runtime": "7.2.0",
+    "@grafana/data": "7.2.1",
+    "@grafana/runtime": "7.2.1",
     "@grafana/slate-react": "0.22.9-grafana",
-    "@grafana/ui": "7.2.0",
+    "@grafana/ui": "7.2.1",
     "@material-ui/core": "^4.10.2",
     "@types/classnames": "2.2.6",
     "@types/lodash": "latest",

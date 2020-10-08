@@ -11,7 +11,7 @@ import (
     "strings"
 )
 
-func (ds *TimelyDatasource) CallResource(ctx context.Context, request *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
+func (dataSource *TimelyDatasource) CallResource(ctx context.Context, request *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
 
     if (request.Body == nil) {
         logger.Debug("CallResource", "Path", request.Path, "URL", request.URL)
@@ -28,7 +28,7 @@ func (ds *TimelyDatasource) CallResource(ctx context.Context, request *backend.C
         return err
     }
 
-    httpClient, err := GetHttpClient(timelyDataSourceOptions, true)
+    httpClient, err := dataSource.GetHttpClient(timelyDataSourceOptions, true)
     if err != nil {
         logger.Error("Error getting httpClient", "error", err)
         return err

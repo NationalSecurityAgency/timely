@@ -144,7 +144,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
           <FormField
             label={"Client cert path"}
             labelWidth={10}
-            inputWidth={40}
+            inputWidth={30}
             disabled={false}
             onChange={this.onClientCertificatePathChange}
             tooltip={"Full path to client certificate"}
@@ -155,7 +155,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
           <FormField
             label={"Client key path"}
             labelWidth={10}
-            inputWidth={40}
+            inputWidth={30}
             disabled={false}
             onChange={this.onClientKeyPathChange}
             tooltip={"Full path to client key"}
@@ -166,7 +166,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
           <FormField
             label={"CA path"}
             labelWidth={10}
-            inputWidth={40}
+            inputWidth={30}
             disabled={false}
             onChange={this.onCertificateAuthorityPathChange}
             tooltip={"Full path to certificate authority"}
