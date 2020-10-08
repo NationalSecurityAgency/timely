@@ -5,6 +5,7 @@ import (
     "github.com/grafana/grafana-plugin-sdk-go/backend"
     "github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
     "github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
+    "sync"
 )
 
 type TimelyDatasourceInstanceSettings struct {
@@ -28,7 +29,13 @@ func getServeOpts() datasource.ServeOpts {
     // for the first time or when a datasource configuration changed.
     im := datasource.NewInstanceManager(newDataSourceInstance)
     ds := &TimelyDatasource{
-        im: im,
+        im:          im,
+        CertPool:    nil,
+        Certificate: nil,
+        ClientCertificatePath: "",
+        ClientKeyPath: "",
+        CertificateAuthorityPath: "",
+        Mutex: &sync.Mutex{},
     }
 
     return datasource.ServeOpts{

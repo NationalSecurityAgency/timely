@@ -11,6 +11,7 @@ import (
     "github.com/hashicorp/go-hclog"
     "sort"
     "strconv"
+    "sync"
     "time"
 
     "encoding/json"
@@ -34,13 +35,14 @@ func init() {
     http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 }
 
-// TimelyDatasource is an example datasource used to scaffold
-// new datasource plugins with an backend.
 type TimelyDatasource struct {
-    // The instance manager can help with lifecycle management
-    // of datasource instances in plugins. It's not a requirements
-    // but a best practice that we recommend that you follow.
     im instancemgmt.InstanceManager
+    Certificate *tls.Certificate
+    CertPool *x509.CertPool
+    ClientCertificatePath string
+    ClientKeyPath string
+    CertificateAuthorityPath string
+    Mutex *sync.Mutex
 }
 
 func (dataSource *TimelyDatasource) Query(queryDataRequest *backend.QueryDataRequest, dataQuery backend.DataQuery) (*backend.DataResponse, error) {
@@ -116,7 +118,7 @@ func (dataSource *TimelyDatasource) Query(queryDataRequest *backend.QueryDataReq
     }
 
     var useClientCertIfAvailable = !isUser || (!tokenExists && timelyDatasourceOptions.UseClientCertWhenOAuthMissing)
-    httpClient, err := GetHttpClient(timelyDatasourceOptions, useClientCertIfAvailable)
+    httpClient, err := dataSource.GetHttpClient(timelyDatasourceOptions, useClientCertIfAvailable)
     if err != nil {
         return nil, err
     }
@@ -272,7 +274,17 @@ func (e *TimelyDatasource) convertTimelyQuery(timelyQueryForm *TimelyQueryForm) 
     return &timelyQuery
 }
 
-func GetHttpClient(settings TimelyDataSourceOptions, useClientCertIfAvailable bool) (*http.Client, error) {
+func (dataSource *TimelyDatasource) changedClientSSLSettings(settings TimelyDataSourceOptions) bool {
+
+    clientCertificatePath := settings.ClientCertificatePath
+    clientKeyPath := settings.ClientKeyPath
+    certificateAuthorityPath := settings.CertificateAuthorityPath
+    return clientCertificatePath != dataSource.ClientCertificatePath || clientKeyPath != dataSource.ClientKeyPath ||
+        certificateAuthorityPath != dataSource.CertificateAuthorityPath
+}
+
+func (dataSource *TimelyDatasource) GetHttpClient(settings TimelyDataSourceOptions, useClientCertIfAvailable bool) (*http.Client, error) {
+
     // handle call back
     logger.Debug("Getting client", "allowInsecureSsl", strconv.FormatBool(settings.AllowInsecureSsl))
     tr := &http.Transport{
@@ -285,29 +297,66 @@ func GetHttpClient(settings TimelyDataSourceOptions, useClientCertIfAvailable bo
         Transport: tr,
     }
 
-    logger.Debug("Getting httpClient", "useClientCertIfAvailable", strconv.FormatBool(useClientCertIfAvailable))
-    if useClientCertIfAvailable {
-        if settings.ClientCertificatePath != "" || settings.ClientKeyPath != "" {
-            cert, err := tls.LoadX509KeyPair(settings.ClientCertificatePath, settings.ClientKeyPath)
-            if err != nil {
-                logger.Error("Failed to setup client certificate", "cert_path", settings.ClientCertificatePath, "key_path", settings.ClientKeyPath, "error", err)
-                return nil, fmt.Errorf("Failed to setup client certificate")
+    clientCertificatePath := settings.ClientCertificatePath
+    clientKeyPath := settings.ClientKeyPath
+    certificateAuthorityPath := settings.CertificateAuthorityPath
+
+    if dataSource.changedClientSSLSettings(settings) {
+        dataSource.Mutex.Lock()
+        // check again to prevent double initialization
+        if dataSource.changedClientSSLSettings(settings) {
+            // if clientCertificatePath or clientKeyPath changed, then re-read the
+            // client cert into the datasource and also save the new paths
+            if clientCertificatePath != dataSource.ClientCertificatePath || clientKeyPath != dataSource.ClientKeyPath {
+                if clientCertificatePath != "" && clientKeyPath != "" {
+                    cert, err := tls.LoadX509KeyPair(clientCertificatePath, clientKeyPath)
+                    if err != nil {
+                        logger.Error("Failed to setup client certificate", "cert_path", clientCertificatePath, "key_path", clientKeyPath, "error", err)
+                        return nil, fmt.Errorf("Failed to setup client certificate")
+                    }
+                    dataSource.Certificate = &cert
+                    logger.Debug("Completed setup of client certificate", "cert_path", clientCertificatePath, "key_path", clientKeyPath)
+                } else {
+                    // if one but not both items have been configured
+                    if clientCertificatePath != "" || clientKeyPath != "" {
+                        logger.Info("Both cert_path and key_path are required. Client connection updated with no client certificate.")
+                    }
+                    dataSource.Certificate = nil
+                }
+                dataSource.ClientCertificatePath = clientCertificatePath
+                dataSource.ClientKeyPath = clientKeyPath
             }
-            logger.Debug("Adding certificate", "ca_path", settings.ClientCertificatePath, "key_path", settings.ClientKeyPath)
-            tr.TLSClientConfig.Certificates = append(tr.TLSClientConfig.Certificates, cert)
+
+            // if certificateAuthorityPath changed, then re-read the
+            // certificate authority into the datasource and also save the new path
+            if certificateAuthorityPath != dataSource.CertificateAuthorityPath {
+                if certificateAuthorityPath != "" {
+                    caCert, err := ioutil.ReadFile(certificateAuthorityPath)
+                    if err != nil {
+                        logger.Error("Failed to setup certificate authority", "ca_path", certificateAuthorityPath, "error", err)
+                        return nil, fmt.Errorf("Failed to setup certificate authority")
+                    }
+                    dataSource.CertPool = x509.NewCertPool()
+                    dataSource.CertPool.AppendCertsFromPEM(caCert)
+                    logger.Debug("Completed setup of certificate authority", "ca_path", certificateAuthorityPath)
+                } else {
+                    logger.Debug("Client connection updated with no certificate authority")
+                    dataSource.CertPool = nil
+                }
+                dataSource.CertificateAuthorityPath = certificateAuthorityPath
+            }
         }
+        dataSource.Mutex.Unlock()
     }
 
-    if settings.CertificateAuthorityPath != "" {
-        caCert, err := ioutil.ReadFile(settings.CertificateAuthorityPath)
-        if err != nil {
-            logger.Error("Failed to setup certificate authority", "ca_path", settings.CertificateAuthorityPath, "error", err)
-            return nil, fmt.Errorf("Failed to setup certificate authority")
-        }
-        logger.Debug("Adding CA", "ca_path", settings.CertificateAuthorityPath)
-        caCertPool := x509.NewCertPool()
-        caCertPool.AppendCertsFromPEM(caCert)
-        tr.TLSClientConfig.RootCAs = caCertPool
+    // protect against changes in-progress
+    dataSource.Mutex.Lock()
+    if useClientCertIfAvailable && dataSource.Certificate != nil {
+        tr.TLSClientConfig.Certificates = append(tr.TLSClientConfig.Certificates, *dataSource.Certificate)
     }
+    if dataSource.CertPool != nil {
+        tr.TLSClientConfig.RootCAs = dataSource.CertPool
+    }
+    dataSource.Mutex.Unlock()
     return httpClient, nil
 }
