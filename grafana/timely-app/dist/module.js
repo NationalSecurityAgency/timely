@@ -73571,16 +73571,7 @@ function (_super) {
       tooltip: "Allow ssl connection with unverified or self-signed certificates",
       checked: jsonData.allowInsecureSsl || false,
       onChange: this.onAllowInsecureSslChange
-    })), react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("div", {
-      className: "gf-form"
-    }, react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("p", null, react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("a", {
-      className: "external-link",
-      target: "_blank",
-      href: "",
-      onClick: function onClick() {
-        return window.open("https://" + jsonData.timelyHost + ":" + jsonData.httpsPort + "/version", "_blank");
-      }
-    }, "Open a new browser tab/window to test https access"))));
+    })));
   };
 
   return ConfigEditor;

@@ -185,28 +185,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
             onChange={this.onAllowInsecureSslChange}
           />
         </div>
-
-        <div className="gf-form">
-          <p>
-            <a
-              className="external-link"
-              target="_blank"
-              href=""
-              onClick={() =>
-                window.open(
-                  "https://" +
-                    jsonData.timelyHost +
-                    ":" +
-                    jsonData.httpsPort +
-                    "/version",
-                  "_blank"
-                )
-              }
-            >
-              Open a new browser tab/window to test https access
-            </a>
-          </p>
-        </div>
       </div>
     );
   }
