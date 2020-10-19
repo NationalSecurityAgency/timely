@@ -2,6 +2,7 @@ package timely.auth;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -55,7 +56,9 @@ public class AuthCacheTest {
         Collection<Authorizations> auths = AuthCache.getAuthorizations(cookie);
         Assert.assertEquals(1, auths.size());
         Authorizations a = auths.iterator().next();
-        Assert.assertEquals("A,B,C", a.toString());
+        String[] authStrings = a.toString().split(",");
+        Arrays.sort(authStrings);
+        Assert.assertEquals("[A, B, C]", Arrays.toString(authStrings));
     }
 
 }

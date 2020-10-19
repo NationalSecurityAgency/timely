@@ -24,7 +24,7 @@ public class QueryResponseTest {
         r.putDps("1234567900", 3.5);
         r.putDps("1234567910", 2.5);
         String result = JsonUtil.getObjectMapper().writeValueAsString(Collections.singletonList(r));
-        String expected = "[{\"metric\":\"sys.cpu.user\",\"tags\":{\"rack\":\"r1\",\"host\":\"localhost\"},\"aggregatedTags\":[],\"dps\":{\"1234567890\":4.5,\"1234567900\":3.5,\"1234567910\":2.5}}]";
+        String expected = "[{\"metric\":\"sys.cpu.user\",\"tags\":{\"host\":\"localhost\",\"rack\":\"r1\"},\"aggregatedTags\":[],\"dps\":{\"1234567890\":4.5,\"1234567900\":3.5,\"1234567910\":2.5}}]";
         Assert.assertEquals(expected, result);
     }
 }
