@@ -386,7 +386,7 @@ public class Balancer {
         ensureZkPaths(curatorFramework, zkPaths);
 
         AuthCache.configure(balancerConfig.getSecurity());
-        JWTTokenHandler.init(balancerConfig.getSecurity());
+        JWTTokenHandler.init(balancerConfig.getSecurity(), null);
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;
@@ -529,7 +529,7 @@ public class Balancer {
 
                 ch.pipeline().addLast("ssl", new NonSslRedirectHandler(balancerConfig.getHttp(), sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
-                ch.pipeline().addLast("decoder", new HttpRequestDecoder());
+                ch.pipeline().addLast("decoder", new HttpRequestDecoder(4096, 32768, 8192, true, 128));
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));

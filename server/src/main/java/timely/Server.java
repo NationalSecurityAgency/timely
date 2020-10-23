@@ -453,7 +453,7 @@ public class Server {
         MetaCacheFactory.getCache(config);
         AuthCache.configure(config.getSecurity());
         VisibilityCache.init(config);
-        JWTTokenHandler.init(config.getSecurity());
+        JWTTokenHandler.init(config.getSecurity(), config.getAccumulo());
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;
@@ -604,7 +604,7 @@ public class Server {
 
                 ch.pipeline().addLast("ssl", new NonSslRedirectHandler(config.getHttp(), sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
-                ch.pipeline().addLast("decoder", new HttpRequestDecoder());
+                ch.pipeline().addLast("decoder", new HttpRequestDecoder(4096, 32768, 8192, true, 128));
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));

@@ -134,11 +134,15 @@ public class AuthCache {
         }
         TimelyAuthenticationToken token = request.getToken();
         String sessionId = request.getSessionId();
-        if (StringUtils.isBlank(sessionId) && token.getClientCert() == null) {
+        String oauthToken = request.getRequestHeader(AuthenticationService.AUTH_HEADER);
+        if (oauthToken != null) {
+            auths = getAuthorizations(token.getTimelyPrincipal().getName());
+        } else if (StringUtils.isBlank(sessionId) && token.getClientCert() == null) {
             if (anonAccessAllowed) {
                 auths = Collections.singletonList(Authorizations.EMPTY);
             } else {
-                throw new IllegalArgumentException("User must provide either a sessionId or a client certificate");
+                throw new IllegalArgumentException(
+                        "User must authenticate with a client certificate, OAuth token, or login credentials");
             }
         } else if (StringUtils.isNotBlank(sessionId)) {
             auths = getAuthorizations(sessionId);
