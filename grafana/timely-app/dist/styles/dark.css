@@ -36,6 +36,7 @@ div.timely .dropdown-menu {
 }
 
 div.timely input.form-control:focus {
+    color: #c7d0d9;
     outline: 0;
     box-shadow: 0px 0px 0px 2px #141619, 0px 0px 0px 4px #1F60C4;
     outline-offset: 2px;

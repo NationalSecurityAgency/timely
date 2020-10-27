@@ -1,20 +1,14 @@
 div.timely .form-control {
     display: block;
     width: 100%;
-    /*height: calc(1.5em + 0.75rem + 2px);*/
     height: 32px;
-    /*padding: 0.375rem 0.75rem;*/
     padding: 0px 8px;
-    /*font-size: 1rem;*/
     font-size: 14px;
     font-weight: 400;
     line-height: 1.5;
     border: 1px solid #ced4da;
-    /*border-radius: 0.25rem;*/
     border-radius: 2px;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    color: #495057;
-    background-color: #fff;
     background-clip: padding-box;
 }
 
@@ -34,41 +28,6 @@ div.timely .form-control:focus, div.timely input:focus {
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-div.timely .form-control::-webkit-input-placeholder {
-    color: #6c757d;
-    opacity: 1;
-}
-
-div.timely .form-control::-moz-placeholder {
-    color: #6c757d;
-    opacity: 1;
-}
-
-div.timely .form-control:-ms-input-placeholder {
-    color: #6c757d;
-    opacity: 1;
-}
-
-div.timely .form-control::-ms-input-placeholder {
-    color: #6c757d;
-    opacity: 1;
-}
-
-div.timely .form-control::placeholder {
-    color: #6c757d;
-    opacity: 1;
-}
-
-div.timely .form-control:disabled, div.timely .form-control[readonly] {
-    background-color: #e9ecef;
-    opacity: 1;
-}
-
-div.timely select.form-control:focus::-ms-value {
-    color: #495057;
-    background-color: #fff;
-}
-
 div.timely .form-control-file,
 div.timely .form-control-range {
     display: block;
@@ -82,8 +41,6 @@ div.timely .form-control-plaintext {
     margin-bottom: 0;
     font-size: 1rem;
     line-height: 1.5;
-    color: #212529;
-    background-color: transparent;
     border: solid transparent;
     border-width: 1px 0;
 }
@@ -143,7 +100,6 @@ div.timely .dropdown-item.active, div.timely .dropdown-item:active {
 }
 
 div.timely .dropdown-item.disabled, div.timely .dropdown-item:disabled {
-    color: #6c757d;
     pointer-events: none;
     background-color: transparent;
 }
@@ -191,7 +147,6 @@ div.timely .dropdown-menu {
     padding: 0.5rem 0;
     margin: 0.125rem 0 0;
     font-size: 1rem;
-    color: #212529;
     text-align: left;
     list-style: none;
     background-color: #fff;
@@ -334,7 +289,6 @@ div.timely .dropdown-item.active, div.timely .dropdown-item:active {
 }
 
 div.timely .dropdown-item.disabled, div.timely .dropdown-item:disabled {
-    color: #6c757d;
     pointer-events: none;
     background-color: transparent;
 }
@@ -348,12 +302,10 @@ div.timely .dropdown-header {
     padding: 0.5rem 1.5rem;
     margin-bottom: 0;
     font-size: 0.875rem;
-    color: #6c757d;
     white-space: nowrap;
 }
 
 div.timely .dropdown-item-text {
     display: block;
     padding: 0.25rem 1.5rem;
-    color: #212529;
 }
