@@ -350,7 +350,7 @@ public class DataStoreCache {
     }
 
     private void ageOffGorillaStores() {
-        long stamp = gorillaMapLock.readLock();
+        long stamp = gorillaMapLock.writeLock();
         try {
             long numRemovedTotal = 0;
             long now = System.currentTimeMillis();
@@ -393,7 +393,7 @@ public class DataStoreCache {
             }
             LOG.trace("ageOffGorillaStores aged off {} archived Gorilla compressors", numRemovedTotal);
         } finally {
-            gorillaMapLock.unlockRead(stamp);
+            gorillaMapLock.unlockWrite(stamp);
         }
     }
 
