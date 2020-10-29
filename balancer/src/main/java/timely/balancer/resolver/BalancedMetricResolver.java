@@ -550,7 +550,8 @@ public class BalancedMetricResolver implements MetricResolver {
                     // sort metrics by rate
                     Map<Double, String> rateSortedMetrics = new TreeMap<>(Collections.reverseOrder());
                     for (Map.Entry<String, ArrivalRate> e : tempMetricMap.entrySet()) {
-                        if (metricToHostMap.get(e.getKey()).equals(h)) {
+                        TimelyBalancedHost tbh = metricToHostMap.get(e.getKey());
+                        if (tbh != null && tbh.equals(h)) {
                             rateSortedMetrics.put(e.getValue().getRate(), e.getKey());
                         }
                     }
@@ -737,18 +738,26 @@ public class BalancedMetricResolver implements MetricResolver {
         boolean chooseMetricSpecificHost;
         try {
             chooseMetricSpecificHost = shouldCache(metric) ? true : false;
+            ArrivalRate rate = metricMap.get(metric);
+            if ((chooseMetricSpecificHost && rate == null) || (!chooseMetricSpecificHost && rate != null)) {
+                if (!balancerLock.isWriteLockedByCurrentThread()) {
+                    balancerLock.readLock().unlock();
+                    balancerLock.writeLock().lock();
+                }
+            }
+
             if (chooseMetricSpecificHost) {
-                ArrivalRate rate = metricMap.get(metric);
                 if (rate == null) {
                     rate = new ArrivalRate(arrivalRateExecutor);
-                    if (!balancerLock.isWriteLockedByCurrentThread()) {
-                        balancerLock.readLock().unlock();
-                        balancerLock.writeLock().lock();
-                    }
+                    // already write locked above
                     metricMap.put(metric, rate);
                 }
                 rate.arrived();
             } else {
+                if (rate != null) {
+                    // already write locked above
+                    metricMap.remove(metric);
+                }
                 metric = null;
             }
 
@@ -964,6 +973,9 @@ public class BalancedMetricResolver implements MetricResolver {
             } finally {
                 nonCachedMetricsLocalLock.readLock().unlock();
             }
+            // remove metric from metricMap (ArrivalRate) if not being cached
+            metricMap.entrySet().removeIf(e -> !metricToHostMap.containsKey(e.getKey()));
+
             assignmentsLastUpdatedLocal.set(assignmentsLastUpdatedInHdfs.get().postValue());
             LOG.info("Read {} assignments from hdfs lastHdfsUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
                     new Date(assignmentsLastUpdatedLocal.get()));
