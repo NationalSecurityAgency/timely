@@ -1038,6 +1038,8 @@ public class BalancedMetricResolver implements MetricResolver {
                     }
                     LOG.debug("Wrote {} assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})",
                             metricToHostMap.size(), new Date(assignmentsLastUpdatedLocal.get()));
+                    // remove metric from metricMap (ArrivalRate) if not being cached
+                    metricMap.entrySet().removeIf(e -> !metricToHostMap.containsKey(e.getKey()));
                 }
             } finally {
                 nonCachedMetricsLocalLock.readLock().unlock();
