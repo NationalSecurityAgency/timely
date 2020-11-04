@@ -96,17 +96,42 @@ public class TcpClient implements AutoCloseable {
     private synchronized int connect() {
         if (null == sock || !sock.isConnected()) {
             if (System.currentTimeMillis() > (connectTime + backoff)) {
+                OutputStreamWriter osw = null;
                 try {
                     connectTime = System.currentTimeMillis();
                     sock = new Socket(host, port);
-                    out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()));
+                    osw = new OutputStreamWriter(sock.getOutputStream());
+                    out = new BufferedWriter(osw);
                     backoff = 2000;
                     LOG.trace("Connected to Timely at {}:{}", host, port);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     LOG.error("Error connecting to Timely at {}:" + host + ":" + port + ". Error: " + e.getMessage());
+                    if (sock != null) {
+                        try {
+                            sock.close();
+                        } catch (IOException e1) {
+                            LOG.error(e1.getMessage());
+                        } finally {
+                            sock = null;
+                        }
+                    }
+                    if (osw != null) {
+                        try {
+                            osw.close();
+                        } catch (IOException e1) {
+                            LOG.error(e1.getMessage());
+                        }
+                    }
+                    if (out != null) {
+                        try {
+                            out.close();
+                        } catch (IOException e1) {
+                            LOG.error(e1.getMessage());
+                        } finally {
+                            out = null;
+                        }
+                    }
                     backoff = backoff * 2;
-                    sock = null;
-                    out = null;
                     LOG.info("Will retry connection in {} ms.", backoff);
                     return -1;
                 }
