@@ -134,15 +134,13 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
                 }
                 ((AuthenticatedRequest) request).setToken(token);
             }
-            request.setHttpRequest(msg.copy());
+            request.setHttpRequest(msg.retain());
             LOG.trace(LOG_PARSED_REQUEST, request);
             request.validate();
             out.add(request);
         } catch (UnsupportedOperationException | NullPointerException e) {
-            // Return the original http request to route to the static file
-            // server
-            msg.retain();
-            out.add(msg);
+            // Return the original http request to route to the static file server
+            out.add(msg.retain());
             return;
         }
         try {

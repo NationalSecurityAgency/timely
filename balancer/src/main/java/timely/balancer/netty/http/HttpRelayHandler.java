@@ -142,7 +142,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                         e.getMessage(), e.getLocalizedMessage(), e));
                 return;
             } finally {
-                if (request != null && request instanceof AutoCloseable) {
+                if (request != null) {
                     ReferenceCountUtil.release(request);
                 }
             }
