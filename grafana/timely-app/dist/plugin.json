@@ -30,8 +30,8 @@
       }
     ],
     "screenshots": [],
-    "version": "1.3.2-SNAPSHOT",
-    "updated": "2020-10-27"
+    "version": "1.3.2",
+    "updated": "2020-11-06"
   },
   "dependencies": {
     "classnames": "2.2.6",
