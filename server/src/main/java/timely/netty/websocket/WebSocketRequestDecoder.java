@@ -142,7 +142,7 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
             }
         } else if (evt instanceof SslCompletionEvent) {
             LOG.debug("{}", ((SslCompletionEvent) evt).getClass().getSimpleName());
-        } else if (evt instanceof WebSocketServerProtocolHandler.ServerHandshakeStateEvent) {
+        } else if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
             // The handshake completed succesfully and the channel was upgraded to
             // websockets
             LOG.trace("SSL handshake completed successfully, upgraded channel to websockets");

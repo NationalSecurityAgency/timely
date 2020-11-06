@@ -88,7 +88,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                         if (metricToClientMap != null) {
                             synchronized (metricToClientMap) {
                                 // close all clients for this subscriptionId
-                                LOG.info("Channel closed, closing subscriptions for subscriptionId:%s",
+                                LOG.debug("Channel closed, closing subscriptions for subscriptionId:{}",
                                         currentSubscriptionId);
                                 for (Map.Entry<String, WsClientHolder> entry : metricToClientMap.entrySet()) {
                                     entry.getValue().close(wsClientPool);
@@ -108,7 +108,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                 if (origContext == null) {
                     // send error because user never sent a CreateSubscription
                     // and we have nowhere to send the results
-                    LOG.info("ChannelHandlerContext not found for subscriptionId:%s - createSubscription not called?",
+                    LOG.info("ChannelHandlerContext not found for subscriptionId:{} - createSubscription not called?",
                             subscriptionId);
                     sendErrorResponse(ctx, HttpResponseStatus.BAD_REQUEST,
                             new IllegalArgumentException("Must call create first"));
@@ -162,7 +162,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                         if (hostClientHolder != null) {
                             hostClientHolder.getClient().removeSubscription(metric);
                         } else {
-                            LOG.info("client not found for subscriptionId:%s metric:%s", subscriptionId, metric);
+                            LOG.info("client not found for subscriptionId:{} metric:{}", subscriptionId, metric);
                         }
                     }
                 }
