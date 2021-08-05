@@ -12,9 +12,7 @@
     "author": {
       "name": "National Security Agency"
     },
-    "keywords": [
-      "Simple"
-    ],
+    "keywords": ["Simple"],
     "logos": {
       "small": "static/img/timely_square_small.png",
       "large": "static/img/timely_square_large.png"
@@ -31,7 +29,7 @@
     ],
     "screenshots": [],
     "version": "1.3.3-SNAPSHOT",
-    "updated": "2020-11-06"
+    "updated": "2021-08-06"
   },
   "dependencies": {
     "classnames": "2.2.6",

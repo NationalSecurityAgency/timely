@@ -14,26 +14,27 @@
   "author": "Grafana Labs",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@grafana/toolkit": "^7.2.1"
+    "@grafana/toolkit": "^8.1.0"
   },
   "engines": {
     "node": ">=12 <13"
   },
   "dependencies": {
-    "@grafana/data": "7.2.1",
-    "@grafana/runtime": "7.2.1",
-    "@grafana/slate-react": "0.22.9-grafana",
-    "@grafana/ui": "7.2.1",
-    "@material-ui/core": "^4.10.2",
-    "@types/classnames": "2.2.6",
+    "@grafana/data": "8.1.0",
+    "@grafana/runtime": "8.1.0",
+    "@grafana/slate-react": "0.22.10-grafana",
+    "@grafana/ui": "8.1.0",
+    "@material-ui/core": "4.12.3",
+    "@types/classnames": "2.3.1",
     "@types/lodash": "latest",
-    "@types/react-bootstrap-typeahead": "^3.4.6",
+    "@types/react-bootstrap-typeahead": "5.1.7",
     "@types/slate-plain-serializer": "0.7.0",
-    "@types/slate-react": "0.22.9",
-    "classnames": "2.2.6",
-    "dayjs": "^1.8.28",
+    "@types/slate-react": "0.50.1",
+    "classnames": "2.3.1",
+    "dayjs": "1.10.6",
     "react-bootstrap-typeahead": "5.1.1",
-    "rxjs": "6.6.2",
-    "slate-plain-serializer": "0.7.0"
+    "rxjs": "6.6.3",
+    "slate-plain-serializer": "0.7.13",
+    "tslib": "^2.3.0"
   }
 }

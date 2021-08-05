@@ -1,6 +1,6 @@
 # Test against the latest version of this Node.js version
 environment:
-  nodejs_version: "10"
+  nodejs_version: '10'
 
 # Local NPM Modules
 cache:
@@ -22,5 +22,5 @@ test_script:
 
 # Run the build
 build_script:
-  - yarn dev   # This will also run prettier!
+  - yarn dev # This will also run prettier!
   - yarn build # make sure both scripts work

@@ -1,4 +1,4 @@
-import { DataQuery, DataSourceJsonData, ScopedVars } from "@grafana/data";
+import { DataQuery, DataSourceJsonData, ScopedVars } from '@grafana/data';
 
 export interface TimelyQueryForm extends DataQuery {
   metric?: string;

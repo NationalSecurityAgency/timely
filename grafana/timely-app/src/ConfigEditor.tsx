@@ -1,35 +1,33 @@
-import { DataSourcePluginOptionsEditorProps } from "@grafana/data";
-import { LegacyForms } from "@grafana/ui";
-import { ChangeEvent, PureComponent } from "react";
-import { TimelyDataSourceOptions } from "./types";
-import React from "react";
+import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
+import { LegacyForms } from '@grafana/ui';
+import { TimelyDataSourceOptions } from './types';
+import * as React from 'react';
 
 const { FormField, Switch } = LegacyForms;
 
-interface Props
-  extends DataSourcePluginOptionsEditorProps<TimelyDataSourceOptions> {}
+interface Props extends DataSourcePluginOptionsEditorProps<TimelyDataSourceOptions> {}
 
 interface State {}
 
-export class ConfigEditor extends PureComponent<Props, State> {
+export class ConfigEditor extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
   }
 
-  onTimelyHostChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onTimelyHostChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      timelyHost: event.target.value
+      timelyHost: event.target.value,
     };
     onOptionsChange({ ...options, jsonData });
   };
 
-  onHttpsPortChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onHttpsPortChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      httpsPort: event.target.value
+      httpsPort: event.target.value,
     };
     onOptionsChange({ ...options, jsonData });
   };
@@ -38,56 +36,52 @@ export class ConfigEditor extends PureComponent<Props, State> {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      oauthPassThru: event.currentTarget.checked
+      oauthPassThru: event.currentTarget.checked,
     };
     onOptionsChange({ ...options, jsonData });
   };
 
-  onUseClientCertWhenOAuthMissingChange = (
-    event: React.SyntheticEvent<HTMLInputElement>
-  ) => {
+  onUseClientCertWhenOAuthMissingChange = (event: React.SyntheticEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      useClientCertWhenOAuthMissing: event.currentTarget.checked
+      useClientCertWhenOAuthMissing: event.currentTarget.checked,
     };
     onOptionsChange({ ...options, jsonData });
   };
 
-  onClientCertificatePathChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onClientCertificatePathChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      clientCertificatePath: event.target.value
+      clientCertificatePath: event.target.value,
     };
     onOptionsChange({ ...options, jsonData });
   };
 
-  onClientKeyPathChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onClientKeyPathChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      clientKeyPath: event.target.value
+      clientKeyPath: event.target.value,
     };
     onOptionsChange({ ...options, jsonData });
   };
 
-  onCertificateAuthorityPathChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onCertificateAuthorityPathChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      certificateAuthorityPath: event.target.value
+      certificateAuthorityPath: event.target.value,
     };
     onOptionsChange({ ...options, jsonData });
   };
 
-  onAllowInsecureSslChange = (
-    event: React.SyntheticEvent<HTMLInputElement>
-  ) => {
+  onAllowInsecureSslChange = (event: React.SyntheticEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
-      allowInsecureSsl: event.currentTarget.checked
+      allowInsecureSsl: event.currentTarget.checked,
     };
     onOptionsChange({ ...options, jsonData });
   };
@@ -100,87 +94,85 @@ export class ConfigEditor extends PureComponent<Props, State> {
       <div className="gf-form-group">
         <div className="gf-form">
           <FormField
-            label={"Hostname or IP"}
+            label={'Hostname or IP'}
             labelWidth={10}
             inputWidth={20}
             disabled={false}
             onChange={this.onTimelyHostChange}
-            tooltip={"Hostname or IP of Timely Server"}
-            value={jsonData.timelyHost || ""}
-            placeholder={"localhost"}
+            tooltip={'Hostname or IP of Timely Server'}
+            value={jsonData.timelyHost || ''}
+            placeholder={'localhost'}
           />
         </div>
         <div className="gf-form">
           <FormField
-            label={"Https port"}
+            label={'Https port'}
             labelWidth={10}
             inputWidth={20}
             onChange={this.onHttpsPortChange}
-            value={jsonData.httpsPort || ""}
-            placeholder={"4243"}
+            value={jsonData.httpsPort || ''}
+            placeholder={'4243'}
           />
         </div>
         <div className="gf-form">
           <Switch
-            label={"Use OAuth token"}
+            label={'Use OAuth token'}
             labelClass="width-10"
-            tooltipPlacement={"top"}
-            tooltip={"Send OAuth token if available"}
+            tooltipPlacement={'top'}
+            tooltip={'Send OAuth token if available'}
             checked={jsonData.oauthPassThru || false}
             onChange={this.onUseOAuthChange}
           />
         </div>
         <div className="gf-form">
           <Switch
-            label={"Client cert for users"}
+            label={'Client cert for users'}
             labelClass="width-10"
-            tooltipPlacement={"top"}
-            tooltip={"If user is missing OAuth token, use client cert instead"}
+            tooltipPlacement={'top'}
+            tooltip={'If user is missing OAuth token, use client cert instead'}
             checked={jsonData.useClientCertWhenOAuthMissing || false}
             onChange={this.onUseClientCertWhenOAuthMissingChange}
           />
         </div>
         <div className="gf-form">
           <FormField
-            label={"Client cert path"}
+            label={'Client cert path'}
             labelWidth={10}
             inputWidth={30}
             disabled={false}
             onChange={this.onClientCertificatePathChange}
-            tooltip={"Full path to client certificate"}
-            value={jsonData.clientCertificatePath || ""}
+            tooltip={'Full path to client certificate'}
+            value={jsonData.clientCertificatePath || ''}
           />
         </div>
         <div className="gf-form">
           <FormField
-            label={"Client key path"}
+            label={'Client key path'}
             labelWidth={10}
             inputWidth={30}
             disabled={false}
             onChange={this.onClientKeyPathChange}
-            tooltip={"Full path to client key"}
-            value={jsonData.clientKeyPath || ""}
+            tooltip={'Full path to client key'}
+            value={jsonData.clientKeyPath || ''}
           />
         </div>
         <div className="gf-form">
           <FormField
-            label={"CA path"}
+            label={'CA path'}
             labelWidth={10}
             inputWidth={30}
             disabled={false}
             onChange={this.onCertificateAuthorityPathChange}
-            tooltip={"Full path to certificate authority"}
-            value={jsonData.certificateAuthorityPath || ""}
+            tooltip={'Full path to certificate authority'}
+            value={jsonData.certificateAuthorityPath || ''}
           />
         </div>
         <div className="gf-form">
           <Switch
-            label={"Allow insecure ssl"}
+            label={'Allow insecure ssl'}
             labelClass="width-10"
-            tooltipPlacement={"top"}
-            tooltip={
-              "Allow ssl connection with unverified or self-signed certificates"
-            }
+            tooltipPlacement={'top'}
+            tooltip={'Allow ssl connection with unverified or self-signed certificates'}
             checked={jsonData.allowInsecureSsl || false}
             onChange={this.onAllowInsecureSslChange}
           />

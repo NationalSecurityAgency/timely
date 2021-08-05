@@ -12,9 +12,7 @@
     "author": {
       "name": "National Security Agency"
     },
-    "keywords": [
-      "Simple"
-    ],
+    "keywords": ["Simple"],
     "logos": {
       "small": "static/img/timely_square_small.png",
       "large": "static/img/timely_square_large.png"
