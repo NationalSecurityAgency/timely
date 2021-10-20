@@ -358,14 +358,18 @@ public class Server {
 
         try {
             LOG.info("Closing dataStore");
-            dataStore.close();
+            if (dataStore != null) {
+                dataStore.close();
+            }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
 
         try {
             LOG.info("Closing dataStoreCache");
-            dataStoreCache.close();
+            if (dataStoreCache != null) {
+                dataStoreCache.close();
+            }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }

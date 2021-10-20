@@ -25,6 +25,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -209,16 +210,23 @@ public class DataStoreImpl implements DataStore {
                     // don't care
                 }
             }
-            try {
-                this.removeAgeOffIterators(connector, metricsTable);
-                this.applyMetricAgeOffIterator(connector, metricsTable);
-            } catch (Exception e1) {
-                Throwable cause = e1.getCause();
-                if (cause.getMessage().contains("conflict")) {
-                    LOG.info("ignoring iterator conflict due to multiple instances starting up");
-                } else {
-                    throw e1;
-                }
+
+            // remove iterator and related settings (ageoffs) to ensure current values used
+            if (iteratorOperation((c, t) -> {
+                this.removeAgeOffIterators(c, t);
+            }, connector, metricsTable, 2)) {
+                LOG.debug("remove ageoff for " + metricsTable + " completed");
+            } else {
+                LOG.error("remove ageoff for " + metricsTable + " failed");
+            }
+
+            // add iterator and related settings (ageoffs) to ensure current values used
+            if (iteratorOperation((c, t) -> {
+                this.applyMetricAgeOffIterator(c, t);
+            }, connector, metricsTable, 10)) {
+                LOG.debug("apply ageoff for " + metricsTable + " completed");
+            } else {
+                LOG.error("apply ageoff for " + metricsTable + " failed");
             }
 
             metaTable = conf.getMetaTable();
@@ -230,16 +238,23 @@ public class DataStoreImpl implements DataStore {
                     // don't care
                 }
             }
-            try {
-                this.removeAgeOffIterators(connector, metaTable);
-                this.applyMetaAgeOffIterator(connector, metaTable);
-            } catch (Exception e1) {
-                Throwable cause = e1.getCause();
-                if (cause.getMessage().contains("conflict")) {
-                    LOG.info("ignoring iterator conflict due to multiple instances starting up");
-                } else {
-                    throw e1;
-                }
+
+            // remove iterator and related settings (ageoffs) to ensure current values used
+            if (iteratorOperation((c, t) -> {
+                this.removeAgeOffIterators(c, t);
+            }, connector, metaTable, 2)) {
+                LOG.debug("remove ageoff for " + metaTable + " completed");
+            } else {
+                LOG.error("remove ageoff for " + metaTable + " failed");
+            }
+
+            // add iterator and related settings (ageoffs) to ensure current values used
+            if (iteratorOperation((c, t) -> {
+                this.applyMetaAgeOffIterator(c, t);
+            }, connector, metaTable, 10)) {
+                LOG.debug("apply ageoff for " + metaTable + " completed");
+            } else {
+                LOG.error("apply ageoff for " + metaTable + " failed");
             }
 
             internalMetrics = new InternalMetrics(conf);
@@ -248,9 +263,9 @@ public class DataStoreImpl implements DataStore {
                     METRICS_PERIOD, TimeUnit.MILLISECONDS);
 
             this.metaCache = MetaCacheFactory.getCache(conf);
-        } catch (Exception e2) {
+        } catch (Exception e) {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStoreImpl",
-                    e2.getMessage(), e2);
+                    e.getMessage(), e);
         }
     }
 
@@ -270,6 +285,35 @@ public class DataStoreImpl implements DataStore {
     }
 
     private static final EnumSet<IteratorScope> AGEOFF_SCOPES = EnumSet.allOf(IteratorScope.class);
+
+    public interface RetryableIteratorOperation {
+
+        void execute(Connector con, String tableName) throws Exception;
+    }
+
+    private boolean iteratorOperation(RetryableIteratorOperation op, Connector connector, String table, int retries) {
+        boolean success = false;
+        int attempt = 1;
+        while (!success && attempt++ <= retries) {
+            try {
+                op.execute(connector, table);
+                success = true;
+            } catch (Exception e) {
+                Throwable cause = e.getCause();
+                if (cause.getMessage().contains("conflict")) {
+                    try {
+                        Thread.sleep(ThreadLocalRandom.current().nextLong(500));
+                    } catch (InterruptedException e1) {
+                        // ignore
+                    }
+                } else {
+                    LOG.error(e.getMessage(), e);
+                    return false;
+                }
+            }
+        }
+        return success;
+    }
 
     private void removeAgeOffIterators(Connector con, String tableName) throws Exception {
         Map<String, EnumSet<IteratorScope>> iters = con.tableOperations().listIterators(tableName);
