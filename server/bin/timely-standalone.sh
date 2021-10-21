@@ -10,7 +10,7 @@ fi
 
 THIS_DIR="${THIS_SCRIPT%/*}"
 NATIVE_DIR="${THIS_DIR}/META-INF/native"
-BASE_DIR=${THIS_DIR}/..
+BASE_DIR=$(cd $THIS_DIR/.. && pwd)
 TMP_DIR="${BASE_DIR}/tmp"
 CONF_DIR="${BASE_DIR}/conf"
 LIB_DIR="${BASE_DIR}/lib"
