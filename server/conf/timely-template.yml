@@ -1,0 +1,74 @@
+timely:
+  instance: ${INSTANCE}
+  metrics-table: timely.metrics
+  meta-table: timely.meta
+  metric-age-off-days:
+    default: ${AGE_OFF_DAYS}
+  cache:
+    enabled: true
+    age-off-hours:
+      default: 26
+  metrics-report-ignored-tags:
+  defaultVisibility:
+  accumulo:
+    instance-name: accumulo
+    zookeepers: ${ZOOKEEPERS}
+    username: ${ACCUMULO_USER}
+    password: ${ACCUMULO_PASSWORD}
+    write:
+      latency: 5s
+      threads: 3
+      bufferSize: 52428800
+    scan:
+      threads: 4
+      max-downsample-memory: 10000000
+  security:
+    session-max-age: 86400
+    cache-expiration-minutes: 60
+    cache-refresh-minutes: 5
+    allow-anonymous-http-access: true
+    allow-anonymous-ws-access: true
+    server-ssl:
+      certificate-file:
+      key-file:
+      key-password:
+      use-generated-keypair: true
+      trust-store-file:
+      use-openssl: true
+      #use-ciphers:
+    jwtCheckKeyStore:
+    jwtCheckKeyType:
+    jwtCheckKeyPassword:
+  server:
+    ip: ${HOST_IP}
+    tcp-port: ${TCP_PORT}
+    udp-port: ${UDP_PORT}
+  http:
+    host: ${HOST}
+    ip: ${HOST_IP}
+    port: ${HTTP_PORT}
+    redirect-path: /secure-me
+    strict-transport-max-age: 608400
+    cors:
+      allow-any-origin: false
+      allow-null-origin: false
+      allow-credentials: true
+      allowed-origins:
+      allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+      allowed-headers: content-type
+  websocket:
+    ip: ${HOST_IP}
+    port: ${WEBSOCKET_PORT}
+    timeout: 60
+    subscription-lag: 120
+    scanner-batch-size: 10000
+    flush-interval-seconds: 30
+    scanner-read-ahead: 1
+    subscription-batch-size: 5000
+  meta-cache:
+    expiration-minutes: 1440
+    cache-refresh-minutes: 60
+    max-tag-values: 100
+  visibility-cache:
+    expiration-minutes: 60
+

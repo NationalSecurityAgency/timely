@@ -7,7 +7,7 @@ else
 fi
 
 THIS_DIR="${THIS_SCRIPT%/*}"
-BASE_DIR=${THIS_DIR}/..
+BASE_DIR=$(cd $THIS_DIR/.. && pwd)
 CONF_DIR="${BASE_DIR}/conf"
 LIB_DIR="${BASE_DIR}/lib"
 

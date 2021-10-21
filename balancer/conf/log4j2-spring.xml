@@ -5,25 +5,19 @@
     <Property name="LOG_PATTERN">%clr{%d{yyyy-MM-dd HH:mm:ss.SSS}}{faint} %clr{%5p} %clr{${sys:PID}}{magenta} %clr{---}{faint} %clr{[%15.15t]}{faint} %clr{%-40.40c{1.}}{cyan} %clr{:}{faint} %m%n%wEx</Property>
   </Properties>
   <Appenders>
-    <RollingRandomAccessFile name="Rolling" fileName="/srv/logs/timely/timely-balancer.log"
-    						 filePattern="/srv/logs/timely/$${date:yyyy-MM}/timely-balancer-%d{MM-dd-yyyy}-%i.log.gz">
+    <RollingRandomAccessFile name="Rolling" fileName="${env:LOG_DIR}/timely-balancer${env:PROFILE_NUM}.log"
+    						 filePattern="${env:LOG_DIR}/$${date:yyyy-MM}/timely-balancer${env:PROFILE_NUM}-%d{MM-dd-yyyy}-%i.log.gz">
       <PatternLayout pattern="${LOG_PATTERN}"/>
       <Policies>
       	<SizeBasedTriggeringPolicy size="1024 MB" />
       </Policies>
       <DefaultRolloverStrategy max="10" />
     </RollingRandomAccessFile>
-    <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="${LOG_PATTERN}"/>
-    </Console>
   </Appenders>
   <Loggers>
-    <Root level="trace" includeLocation="false">
-      <AppenderRef ref="Console" level="warn" />
-      <AppenderRef ref="Rolling" level="trace" />
+    <Root level="warn" includeLocation="false">
+      <AppenderRef ref="Rolling"/>
     </Root>
-    <Logger name="timely" additivity="false">
-      <AppenderRef ref="Console" level="debug" />
-    </Logger>
+    <Logger name="timely" level="debug"/>
   </Loggers>
 </Configuration>

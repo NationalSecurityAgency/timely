@@ -1,0 +1,134 @@
+timely-balancer:
+  zooKeeper:
+    servers: ${ZOOKEEPERS}
+    timeout: 30s
+  checkServerHealthInterval: 10000
+  serverFailuresBeforeDown: 6
+  serverSuccessesBeforeUp: 1
+  assignmentFile: /timely/balancer/assignments.csv
+  security:
+    session-max-age: 86400
+    cache-expiration-minutes: 60
+    cache-refresh-minutes: 5
+    allow-anonymous-http-access: true
+    allow-anonymous-ws-access: true
+    serverSsl:
+      certificate-file: ${SERVER_CERTIFICATE_FILE}
+      key-file: ${SERVER_KEY_FILE}
+      key-password: ${SERVER_KEY_PASSWORD}
+      use-generated-keypair: ${SERVER_USE_GENERATED_KEYPAIR}
+      trust-store-file: ${TRUST_STORE_PEM}
+      use-openssl: true
+      #use-ciphers:
+    clientSsl:
+      keyFile: ${CLIENT_KEY_FILE}
+      keyType: ${CLIENT_KEY_TYPE}
+      keyPassword: ${CLIENT_KEY_PASSWORD}
+      trustStoreFile: ${TRUST_STORE_JKS}
+      trustStoreType: jks
+      trustStorePassword: ${TRUST_STORE_PASSWORD}
+    jwtCheckKeyStore:
+    jwtCheckKeyType:
+    jwtCheckKeyPassword:
+  cache:
+    enabled: false
+    metric-age-off-hours:
+      default: 26
+    nonCachedMetrics:
+  server:
+    ip: ${HOST_IP}
+    tcpPort: ${TCP_PORT}
+    numTcpPools: 1
+    tcpBufferSize: 100
+    tcpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+      testOnBorrow: false
+      testOnReturn: false
+    udpPort: ${UDP_PORT}
+    udpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+      testOnBorrow: false
+      testOnReturn: false
+  http:
+    host: ${HOST}
+    ip: ${HOST_IP}
+    port: ${HTTP_PORT}
+    redirect-path: /secure-me
+    strict-transport-max-age: 608400
+    cors:
+      allow-any-origin: false
+      allow-null-origin: false
+      allow-credentials: true
+      allowed-origins:
+      allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+      allowed-headers: content-type
+    httpClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+      testOnBorrow: false
+      testOnReturn: false
+  websocket:
+    ip: ${HOST_IP}
+    port: ${WEBSOCKET_PORT}
+    timeout: 60
+    subscription-lag: 120
+    scanner-batch-size: 10000
+    flush-interval-seconds: 30
+    scanner-read-ahead: 1
+    subscription-batch-size: 5000
+    incomingBufferSize: 50000000
+    wsClientPool:
+      minIdlePerKey: 0
+      maxIdlePerKey: 40
+      maxTotalPerKey: 40
+      maxTotal: -1
+      lifo: true
+      fairness: false
+      maxWaitMillis: -1
+      minEvictableIdleTimeMillis: 1800000
+      evictorShutdownTimeoutMillis: 10000
+      softMinEvictableIdleTimeMillis: -1
+      numTestsPerEvictionRun: 3
+      timeBetweenEvictionRunsMillis: -1
+      blockWhenExhausted: true
+      jmxEnabled: true
+      testOnBorrow: false
+      testOnReturn: false
