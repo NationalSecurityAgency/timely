@@ -135,7 +135,7 @@ public class DataStoreImpl implements DataStore {
     private final ThreadLocal<BatchWriter> metaWriter = new ThreadLocal<>();
     private final ThreadLocal<BatchWriter> batchWriter = new ThreadLocal<>();
     private final Security security;
-    private final Map<String, String> ageOff;
+    private final Map<String, String> ageOffSettings;
     private final long defaultAgeOffMilliSec;
     private DataStoreCache cache = null;
     private final String defaultVisibility;
@@ -198,7 +198,7 @@ public class DataStoreImpl implements DataStore {
                     }
                 }
             }
-            ageOff = getAgeOff(conf);
+            ageOffSettings = getAgeOff(conf);
             defaultAgeOffMilliSec = this.getAgeOffForMetric(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY);
 
             final Map<String, String> tableIdMap = connector.tableOperations().tableIdMap();
@@ -211,24 +211,6 @@ public class DataStoreImpl implements DataStore {
                 }
             }
 
-            // remove iterator and related settings (ageoffs) to ensure current values used
-            if (iteratorOperation((c, t) -> {
-                this.removeAgeOffIterators(c, t);
-            }, connector, metricsTable, 2)) {
-                LOG.debug("remove ageoff for " + metricsTable + " completed");
-            } else {
-                LOG.error("remove ageoff for " + metricsTable + " failed");
-            }
-
-            // add iterator and related settings (ageoffs) to ensure current values used
-            if (iteratorOperation((c, t) -> {
-                this.applyMetricAgeOffIterator(c, t);
-            }, connector, metricsTable, 10)) {
-                LOG.debug("apply ageoff for " + metricsTable + " completed");
-            } else {
-                LOG.error("apply ageoff for " + metricsTable + " failed");
-            }
-
             metaTable = conf.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
                 try {
@@ -237,24 +219,6 @@ public class DataStoreImpl implements DataStore {
                 } catch (final TableExistsException ex) {
                     // don't care
                 }
-            }
-
-            // remove iterator and related settings (ageoffs) to ensure current values used
-            if (iteratorOperation((c, t) -> {
-                this.removeAgeOffIterators(c, t);
-            }, connector, metaTable, 2)) {
-                LOG.debug("remove ageoff for " + metaTable + " completed");
-            } else {
-                LOG.error("remove ageoff for " + metaTable + " failed");
-            }
-
-            // add iterator and related settings (ageoffs) to ensure current values used
-            if (iteratorOperation((c, t) -> {
-                this.applyMetaAgeOffIterator(c, t);
-            }, connector, metaTable, 10)) {
-                LOG.debug("apply ageoff for " + metaTable + " completed");
-            } else {
-                LOG.error("apply ageoff for " + metaTable + " failed");
             }
 
             internalMetrics = new InternalMetrics(conf);
@@ -266,6 +230,46 @@ public class DataStoreImpl implements DataStore {
         } catch (Exception e) {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStoreImpl",
                     e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void applyAgeOffSettings() {
+
+        // remove iterator and related settings (ageoffs) to ensure current values used
+        if (iteratorOperation((c, t) -> {
+            this.removeAgeOffIterators(c, t);
+        }, connector, metricsTable, 5)) {
+            LOG.info("Remove ageoff for " + metricsTable + " completed");
+        } else {
+            LOG.error("Remove ageoff for " + metricsTable + " failed");
+        }
+
+        // add iterator and related settings (ageoffs) to ensure current values used
+        if (iteratorOperation((c, t) -> {
+            this.applyMetricAgeOffIterator(c, t);
+        }, connector, metricsTable, 5)) {
+            LOG.info("Apply ageoff for " + metricsTable + " completed");
+        } else {
+            LOG.error("Apply ageoff for " + metricsTable + " failed");
+        }
+
+        // remove iterator and related settings (ageoffs) to ensure current values used
+        if (iteratorOperation((c, t) -> {
+            this.removeAgeOffIterators(c, t);
+        }, connector, metaTable, 5)) {
+            LOG.info("Remove ageoff for " + metaTable + " completed");
+        } else {
+            LOG.error("Remove ageoff for " + metaTable + " failed");
+        }
+
+        // add iterator and related settings (ageoffs) to ensure current values used
+        if (iteratorOperation((c, t) -> {
+            this.applyMetaAgeOffIterator(c, t);
+        }, connector, metaTable, 5)) {
+            LOG.info("Apply ageoff for " + metaTable + " completed");
+        } else {
+            LOG.error("Apply ageoff for " + metaTable + " failed");
         }
     }
 
@@ -315,24 +319,24 @@ public class DataStoreImpl implements DataStore {
         return success;
     }
 
-    private void removeAgeOffIterators(Connector con, String tableName) throws Exception {
-        Map<String, EnumSet<IteratorScope>> iters = con.tableOperations().listIterators(tableName);
+    private void removeAgeOffIterators(Connector connector, String tableName) throws Exception {
+        Map<String, EnumSet<IteratorScope>> iters = connector.tableOperations().listIterators(tableName);
         for (String name : iters.keySet()) {
             if (name.startsWith("ageoff")) {
-                con.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
+                connector.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
             }
         }
     }
 
-    private void applyMetricAgeOffIterator(Connector con, String tableName) throws Exception {
+    private void applyMetricAgeOffIterator(Connector connector, String tableName) throws Exception {
         IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoffmetrics", MetricAgeOffIterator.class,
-                this.ageOff);
+                this.ageOffSettings);
         connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
 
-    private void applyMetaAgeOffIterator(Connector con, String tableName) throws Exception {
+    private void applyMetaAgeOffIterator(Connector connector, String tableName) throws Exception {
         IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoffmeta", MetaAgeOffIterator.class,
-                this.ageOff);
+                this.ageOffSettings);
         connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
 
@@ -1059,7 +1063,7 @@ public class DataStoreImpl implements DataStore {
 
     @Override
     public long getAgeOffForMetric(String metricName) {
-        String age = this.ageOff.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
+        String age = this.ageOffSettings.get(MetricAgeOffIterator.AGE_OFF_PREFIX + metricName);
         if (null == age) {
             return this.defaultAgeOffMilliSec;
         } else {

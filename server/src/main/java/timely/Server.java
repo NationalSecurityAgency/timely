@@ -64,6 +64,8 @@ import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.retry.RetryForever;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
@@ -125,6 +127,7 @@ import timely.store.cache.DataStoreCache;
 public class Server {
 
     final public static String SERVICE_DISCOVERY_PATH = "/timely/server/instances";
+    final public static String LEADER_LATCH_PATH = "/timely/server/leader";
     private static final Logger LOG = LoggerFactory.getLogger(Server.class);
     private static final int EPOLL_MIN_MAJOR_VERSION = 2;
     private static final int EPOLL_MIN_MINOR_VERSION = 6;
@@ -154,8 +157,9 @@ public class Server {
     protected DataStoreCache dataStoreCache = null;
     protected volatile boolean shutdown = false;
     private final int DEFAULT_EVENT_LOOP_THREADS;
+    private LeaderLatch leaderLatch;
 
-    private String[] zkPaths = new String[] { SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS,
+    private String[] zkPaths = new String[] { SERVICE_DISCOVERY_PATH, LEADER_LATCH_PATH, NON_CACHED_METRICS,
             NON_CACHED_METRICS_LOCK_PATH };
 
     private static boolean useEpoll() {
@@ -436,6 +440,28 @@ public class Server {
         }
     }
 
+    private void startLeaderLatch(CuratorFramework curatorFramework) {
+        try {
+            this.leaderLatch = new LeaderLatch(curatorFramework, LEADER_LATCH_PATH);
+            this.leaderLatch.start();
+            this.leaderLatch.addListener(new LeaderLatchListener() {
+
+                @Override
+                public void isLeader() {
+                    LOG.info("This server is the leader, applying ageoff settings to Accumulo");
+                    dataStore.applyAgeOffSettings();
+                }
+
+                @Override
+                public void notLeader() {
+                    LOG.info("This server is not the leader");
+                }
+            });
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
     public void run() throws Exception {
 
         RetryPolicy retryPolicy = new RetryForever(1000);
@@ -454,6 +480,7 @@ public class Server {
             dataStoreCache.setInternalMetrics(dataStore.getInternalMetrics());
             dataStore.setCache(dataStoreCache);
         }
+        startLeaderLatch(curatorFramework);
         MetaCacheFactory.getCache(config);
         AuthCache.configure(config.getSecurity());
         VisibilityCache.init(config);
