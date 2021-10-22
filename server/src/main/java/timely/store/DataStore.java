@@ -31,6 +31,8 @@ public interface DataStore {
 
     long getAgeOffForMetric(String metricName);
 
+    void applyAgeOffSettings();
+
     List<Range> getQueryRanges(String metric, long start, long end, Set<Tag> colFamValues);
 
     Set<Tag> getColumnFamilies(String metric, Map<String, String> tags) throws TableNotFoundException;

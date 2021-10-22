@@ -18,4 +18,9 @@
     <!-- https://github.com/spotbugs/spotbugs/issues/756 -->
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
   </Match>
+  <Match>
+    <Class name="timely.store.DataStoreImpl" />
+    <Method name="&lt;init&gt;" />
+    <Bug pattern="REC_CATCH_EXCEPTION" />
+  </Match>
 </FindBugsFilter>
