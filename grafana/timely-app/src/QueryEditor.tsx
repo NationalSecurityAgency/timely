@@ -1,25 +1,17 @@
-import _ from "lodash";
-import { QueryEditorProps } from "@grafana/data";
-import { Input, Select, LegacyForms } from "@grafana/ui";
-import React, { Component } from "react";
-import { TimelyDataSource } from "./TimelyDataSource";
-import {
-  TimelyDataSourceOptions,
-  TimelyErrors,
-  TimelyQueryForm
-} from "./types";
-import { SelectableValue } from "@grafana/data/types/select";
-import dayjs from "dayjs";
-import { TagEditor } from "./TagEditor";
-import { AsyncTypeahead, TypeaheadModel } from "react-bootstrap-typeahead";
+import _ from 'lodash';
+import { QueryEditorProps } from '@grafana/data';
+import { Input, Select, LegacyForms } from '@grafana/ui';
+import React, { Component } from 'react';
+import { TimelyDataSource } from './TimelyDataSource';
+import { TimelyDataSourceOptions, TimelyErrors, TimelyQueryForm } from './types';
+import { SelectableValue } from '@grafana/data/types/select';
+import dayjs from 'dayjs';
+import { TagEditor } from './TagEditor';
+import { AsyncTypeahead, TypeaheadModel } from 'react-bootstrap-typeahead';
 
 const { Switch } = LegacyForms;
 
-export type Props = QueryEditorProps<
-  TimelyDataSource,
-  TimelyQueryForm,
-  TimelyDataSourceOptions
->;
+export type Props = QueryEditorProps<TimelyDataSource, TimelyQueryForm, TimelyDataSourceOptions>;
 
 interface State {
   aggregatorTypes: string[];
@@ -35,37 +27,33 @@ export class QueryEditor extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     const defaultQuery: Partial<TimelyQueryForm> = {
-      metric: "",
-      alias: "",
-      aggregator: "none",
-      refId: "A",
-      queryType: "metricQuery",
+      metric: '',
+      alias: '',
+      aggregator: 'none',
+      refId: 'A',
+      queryType: 'metricQuery',
       disableDownsampling: false,
-      downsampleFillPolicy: "none",
-      downsampleInterval: "1m",
-      downsampleAggregator: "avg",
+      downsampleFillPolicy: 'none',
+      downsampleInterval: '1m',
+      downsampleAggregator: 'avg',
       shouldComputeRate: false,
       isCounter: false,
-      tags: {}
+      tags: {},
     };
     this.state = {
-      aggregatorTypes: ["none", "avg", "dev", "max", "min", "sum", "count"],
+      aggregatorTypes: ['none', 'avg', 'dev', 'max', 'min', 'sum', 'count'],
       errors: {
-        downsample: undefined
+        downsample: undefined,
       },
       query: Object.assign({}, defaultQuery, props.query),
       queryOptionsLoading: false,
-      queryOptions: []
+      queryOptions: [],
     };
     this.getAggregators();
     this.getMetrics();
   }
 
-  shouldComponentUpdate(
-    nextProps: Readonly<Props>,
-    nextState: Readonly<State>,
-    nextContext: any
-  ): boolean {
+  shouldComponentUpdate(nextProps: Readonly<Props>, nextState: Readonly<State>, nextContext: any): boolean {
     return true;
   }
 
@@ -180,16 +168,15 @@ export class QueryEditor extends Component<Props, State> {
       try {
         let valid = false;
         if (downsampleInterval) {
-          valid = dayjs("", "").isValid();
+          valid = dayjs('', '').isValid();
         }
         if (!valid) {
           this.setState((state, props) => {
             this.setState(
               {
                 errors: {
-                  downsample:
-                    "You must supply a downsample interval (e.g. '1m' or '1h')."
-                }
+                  downsample: "You must supply a downsample interval (e.g. '1m' or '1h').",
+                },
               },
               this.updateQueryFromState
             );
@@ -199,9 +186,8 @@ export class QueryEditor extends Component<Props, State> {
         this.setState(
           {
             errors: {
-              downsample:
-                "You must supply a downsample interval (e.g. '1m' or '1h')."
-            }
+              downsample: "You must supply a downsample interval (e.g. '1m' or '1h').",
+            },
           },
           this.updateQueryFromState
         );
@@ -210,28 +196,24 @@ export class QueryEditor extends Component<Props, State> {
   };
 
   getAggregators = () => {
-    this.props.datasource
-      .getResource("/api/aggregators")
-      .then((result: any) => {
-        if (result && _.isArray(result)) {
-          this.setState({ aggregatorTypes: result }, this.updateQueryFromState);
-        }
-      });
+    this.props.datasource.getResource('/api/aggregators').then((result: any) => {
+      if (result && _.isArray(result)) {
+        this.setState({ aggregatorTypes: result }, this.updateQueryFromState);
+      }
+    });
   };
 
   getMetrics = () => {
-    this.props.datasource
-      .getResource("/api/suggest", { type: "metrics", max: "-1" })
-      .then((result: any) => {
-        if (result && _.isArray(result)) {
-          const metrics: string[] = result;
-          this.metricArray = metrics
-            .map(value => {
-              return value;
-            })
-            .concat();
-        }
-      });
+    this.props.datasource.getResource('/api/suggest', { type: 'metrics', max: '-1' }).then((result: any) => {
+      if (result && _.isArray(result)) {
+        const metrics: string[] = result;
+        this.metricArray = metrics
+          .map((value) => {
+            return value;
+          })
+          .concat();
+      }
+    });
   };
 
   updateTags = (tags: { [key: string]: string }) => {
@@ -244,18 +226,15 @@ export class QueryEditor extends Component<Props, State> {
 
   handleSearch = (query: string) => {
     const results = this.metricArray
-      .filter(
-        metric =>
-          query === "" || metric.toLowerCase().includes(query.toLowerCase())
-      )
-      .map(value => {
+      .filter((metric) => query === '' || metric.toLowerCase().includes(query.toLowerCase()))
+      .map((value) => {
         return value;
       });
     this.setState({ queryOptions: results });
   };
 
   getInputValue = (id: string): string | null => {
-    var fullId = "div#" + id + " div div input.rbt-input-main";
+    var fullId = 'div#' + id + ' div div input.rbt-input-main';
     var inputElement = document.querySelector(fullId);
     if (inputElement !== null) {
       return (inputElement as HTMLInputElement).value;
@@ -264,29 +243,15 @@ export class QueryEditor extends Component<Props, State> {
   };
 
   render() {
-    var queryEditorId = Math.random()
-      .toString(36)
-      .substr(2, 9);
+    var queryEditorId = Math.random().toString(36).substr(2, 9);
     const { metric, aggregator, alias } = this.state.query;
-    const {
-      downsampleInterval,
-      downsampleAggregator,
-      disableDownsampling
-    } = this.state.query;
+    const { downsampleInterval, downsampleAggregator, disableDownsampling } = this.state.query;
     const { tags } = this.state.query;
-    const {
-      shouldComputeRate,
-      isCounter,
-      counterResetValue,
-      counterMax
-    } = this.state.query;
-    const aggregatorOptions: Array<{}> = _.map(
-      this.state.aggregatorTypes,
-      (value: string) => ({
-        label: value,
-        value: value
-      })
-    );
+    const { shouldComputeRate, isCounter, counterResetValue, counterMax } = this.state.query;
+    const aggregatorOptions: Array<{}> = _.map(this.state.aggregatorTypes, (value: string) => ({
+      label: value,
+      value: value,
+    }));
     const { queryOptionsLoading, queryOptions } = this.state;
 
     var multiplier = 7.5;
@@ -300,22 +265,15 @@ export class QueryEditor extends Component<Props, State> {
     }
 
     var dynamicStyle =
-      "div.timely-query input.form-control, div#timelyQuery-" +
+      'div.timely-query input.form-control, div#timelyQuery-' +
       queryEditorId +
-      " { " +
-      "width:" +
+      ' { ' +
+      'width:' +
       metricWidth +
-      "px!important " +
-      "}";
+      'px!important ' +
+      '}';
 
-    dynamicStyle +=
-      "#timelyAlias-" +
-      queryEditorId +
-      " { " +
-      "width:" +
-      aliasWidth +
-      "px!important " +
-      "}";
+    dynamicStyle += '#timelyAlias-' + queryEditorId + ' { ' + 'width:' + aliasWidth + 'px!important ' + '}';
 
     return (
       <div className="timely-edior-row">
@@ -323,73 +281,58 @@ export class QueryEditor extends Component<Props, State> {
           <style>{dynamicStyle}</style>
           <div className="gf-form timely">
             <label className="gf-form-label width-10">Metric</label>
-            <div
-              id={"timelyQuery-" + queryEditorId}
-              className="timely timely-query"
-            >
+            <div id={'timelyQuery-' + queryEditorId} className="timely timely-query">
               <AsyncTypeahead
-                id={"timelyQuery-" + queryEditorId + "-Typeahead"}
+                id={'timelyQuery-' + queryEditorId + '-Typeahead'}
                 inputProps={{ spellCheck: false }}
                 defaultInputValue={metric}
                 isLoading={queryOptionsLoading}
-                onSearch={query => {
+                onSearch={(query) => {
                   this.setState({ queryOptionsLoading: true });
                   this.handleSearch(query);
                   this.setState({ queryOptionsLoading: false });
                 }}
-                onChange={e => {
-                  var inputValue = this.getInputValue(
-                    "timelyQuery-" + queryEditorId
-                  );
+                onChange={(e) => {
+                  var inputValue = this.getInputValue('timelyQuery-' + queryEditorId);
                   if (inputValue !== null) {
                     this.onMetricTextChange(inputValue);
                   }
                 }}
-                onBlur={e => {
-                  var inputValue = this.getInputValue(
-                    "timelyQuery-" + queryEditorId
-                  );
+                onBlur={(e) => {
+                  var inputValue = this.getInputValue('timelyQuery-' + queryEditorId);
                   if (inputValue !== null) {
                     this.onMetricTextChange(inputValue);
                   }
                 }}
-                onFocus={e => {
-                  var inputValue = this.getInputValue(
-                    "timelyQuery-" + queryEditorId
-                  );
-                  if (
-                    queryOptions.length === 0 ||
-                    inputValue === null ||
-                    inputValue.length === 0
-                  ) {
-                    this.handleSearch("");
+                onFocus={(e) => {
+                  var inputValue = this.getInputValue('timelyQuery-' + queryEditorId);
+                  if (queryOptions.length === 0 || inputValue === null || inputValue.length === 0) {
+                    this.handleSearch('');
                   }
                 }}
                 options={queryOptions}
                 selectHintOnEnter={true}
-                align={"left"}
+                align={'left'}
                 allowNew={true}
-                newSelectionPrefix={""}
-                bodyContainer={true}
+                newSelectionPrefix={''}
                 paginate={true}
-                paginationText={"more"}
+                paginationText={'more'}
                 minLength={0}
                 maxResults={100}
                 caseSensitive={false}
-                placeholder={"metric"}
+                placeholder={'metric'}
               />
             </div>
           </div>
           <div className="gf-form timely">
             <label className="gf-form-label width-5">Alias</label>
             <Input
-              id={"timelyAlias-" + queryEditorId}
-              css={""}
+              id={'timelyAlias-' + queryEditorId}
               className="min-width-10 flex-grow-1"
               spellCheck={false}
-              value={alias || ""}
+              value={alias || ''}
               onChange={this.onAliasChange}
-              placeholder={"series alias"}
+              placeholder={'series alias'}
             />
           </div>
         </div>
@@ -398,31 +341,28 @@ export class QueryEditor extends Component<Props, State> {
           <div className="gf-form timely">
             <label className="gf-form-label width-10">Downsample</label>
             <Input
-              className={"min-width-5 flex-grow-1"}
-              css={""}
+              className={'min-width-5 flex-grow-1'}
               spellCheck={false}
-              value={downsampleInterval || ""}
+              value={downsampleInterval || ''}
               onChange={this.onDownsampleChange}
-              placeholder={"interval"}
+              placeholder={'interval'}
             />
           </div>
           <div className="gf-form timely">
-            <label className="gf-form-label width-10">
-              Downsample Aggregator
-            </label>
+            <label className="gf-form-label width-10">Downsample Aggregator</label>
             <Select
-              className={"min-width-5 flex-grow-1"}
+              className={'min-width-5 flex-grow-1'}
               isSearchable={false}
               options={aggregatorOptions}
               value={downsampleAggregator}
-              placeholder={"aggregator"}
+              placeholder={'aggregator'}
               onChange={this.onDownsampleAggregatorChange}
-              menuPlacement={"bottom"}
+              menuPlacement={'bottom'}
             />
           </div>
           <div className="gf-form timely">
             <Switch
-              label={"Disable downsampling"}
+              label={'Disable downsampling'}
               labelClass="width-10"
               checked={disableDownsampling || false}
               onChange={this.onDisableDownsamplingChange}
@@ -431,55 +371,48 @@ export class QueryEditor extends Component<Props, State> {
         </div>
         <div className="gf-form-inline">
           <div className="gf-form timely">
-            <label className="gf-form-label width-10">
-              All Results Aggregator
-            </label>
+            <label className="gf-form-label width-10">All Results Aggregator</label>
             <Select
-              className={"min-width-5 flex-grow-1"}
+              className={'min-width-5 flex-grow-1'}
               isSearchable={false}
               options={aggregatorOptions}
               value={aggregator}
-              placeholder={"aggregator"}
+              placeholder={'aggregator'}
               onChange={this.onAggregatorChange}
-              menuPlacement={"bottom"}
+              menuPlacement={'bottom'}
             />
           </div>
           <div className="gf-form timely">
             <Switch
-              label={"Rate"}
+              label={'Rate'}
               labelClass="width-5"
               checked={shouldComputeRate || false}
               onChange={this.onRateChange}
             />
             <div hidden={!shouldComputeRate}>
               <Switch
-                label={"Counter"}
+                label={'Counter'}
                 labelClass="width-10"
                 checked={isCounter || false}
                 onChange={this.onCounterChange}
               />
             </div>
-            <div
-              className="gf-form timely"
-              hidden={!shouldComputeRate || !isCounter}
-            >
+            <div className="gf-form timely" hidden={!shouldComputeRate || !isCounter}>
               <label className="gf-form-label width-10">Max Value</label>
               <Input
-                className={"min-width-6 flex-grow-1"}
-                css={""}
+                className={'min-width-6 flex-grow-1'}
                 spellCheck={false}
-                value={counterMax || ""}
+                value={counterMax || ''}
                 onChange={this.onCounterMaxChange}
-                placeholder={"max value"}
+                placeholder={'max value'}
               />
               <label className="gf-form-label width-10">Reset Value</label>
               <Input
-                className={"min-width-6 flex-grow-1"}
-                css={""}
+                className={'min-width-6 flex-grow-1'}
                 spellCheck={false}
-                value={counterResetValue || ""}
+                value={counterResetValue || ''}
                 onChange={this.onCounterResetValueChange}
-                placeholder={"reset value"}
+                placeholder={'reset value'}
               />
             </div>
           </div>

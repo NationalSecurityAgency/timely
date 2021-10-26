@@ -1,4 +1,4 @@
-import _ from "lodash";
+import _ from 'lodash';
 import {
   DataQuery,
   DataQueryRequest,
@@ -6,35 +6,28 @@ import {
   DataSourceInstanceSettings,
   Field,
   Labels,
-  MetricFindValue
-} from "@grafana/data";
-import { DataSourceWithBackend, getTemplateSrv } from "@grafana/runtime";
-import { TimelyDataSourceOptions, TimelyQueryForm } from "./types";
-import { Observable } from "rxjs";
-import { HealthCheckResult } from "@grafana/runtime/utils/DataSourceWithBackend";
-import { DataFrame } from "@grafana/data/types/dataFrame";
-import { ScopedVars } from "@grafana/data/types/ScopedVars";
-import { map } from "rxjs/operators";
+  MetricFindValue,
+} from '@grafana/data';
+import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
+import { TimelyDataSourceOptions, TimelyQueryForm } from './types';
+import { Observable } from 'rxjs';
+import { HealthCheckResult } from '@grafana/runtime/utils/DataSourceWithBackend';
+import { DataFrame } from '@grafana/data/types/dataFrame';
+import { ScopedVars } from '@grafana/data/types/ScopedVars';
+import { map } from 'rxjs/operators';
 
-export class TimelyDataSource extends DataSourceWithBackend<
-  TimelyQueryForm,
-  TimelyDataSourceOptions
-> {
-  constructor(
-    instanceSettings: DataSourceInstanceSettings<TimelyDataSourceOptions>
-  ) {
+export class TimelyDataSource extends DataSourceWithBackend<TimelyQueryForm, TimelyDataSourceOptions> {
+  constructor(instanceSettings: DataSourceInstanceSettings<TimelyDataSourceOptions>) {
     super(instanceSettings);
   }
 
   /**
    * Ideally final -- any other implementation may not work as expected
    */
-  query(
-    request: DataQueryRequest<TimelyQueryForm>
-  ): Observable<DataQueryResponse> {
+  query(request: DataQueryRequest<TimelyQueryForm>): Observable<DataQueryResponse> {
     // match query refId to TimelyQueryForm for correlation to results
     var targetIndex: { [key: string]: TimelyQueryForm } = {};
-    request.targets.forEach(target => {
+    request.targets.forEach((target) => {
       var query = target as TimelyQueryForm;
       targetIndex[query.refId] = query;
     });
@@ -43,19 +36,14 @@ export class TimelyDataSource extends DataSourceWithBackend<
     // to set the series name for display in the legend
     // there should be a better way to do this, but there isn't yet AFAIK
     return super.query(request).pipe(
-      map(dataQueryResponse => {
-        dataQueryResponse.data.forEach(data => {
+      map((dataQueryResponse) => {
+        dataQueryResponse.data.forEach((data) => {
           var dataFrame = data as DataFrame;
           var currentQuery = targetIndex[dataFrame.refId!];
           // prevent grafana from prepending the dataFrame name
           // to the series names by naming them all the same
-          dataFrame.fields.forEach(field => {
-            this.setSeriesName(
-              currentQuery,
-              request.scopedVars,
-              field,
-              currentQuery.alias
-            );
+          dataFrame.fields.forEach((field) => {
+            this.setSeriesName(currentQuery, request.scopedVars, field, currentQuery.alias);
           });
         });
         return dataQueryResponse;
@@ -75,25 +63,18 @@ export class TimelyDataSource extends DataSourceWithBackend<
     return singleName;
   }
 
-  joinLabels(labels: Labels, defaultValue = ""): string {
+  joinLabels(labels: Labels, defaultValue = ''): string {
     if (!labels || Object.keys(labels).length === 0) {
       return defaultValue;
     }
     const labelKeys = Object.keys(labels).sort();
-    const cleanSelector = labelKeys
-      .map(key => `${key}="${labels[key]}"`)
-      .join(", ");
-    return ["{", cleanSelector, "}"].join("");
+    const cleanSelector = labelKeys.map((key) => `${key}="${labels[key]}"`).join(', ');
+    return ['{', cleanSelector, '}'].join('');
   }
 
-  setSeriesName(
-    query: TimelyQueryForm,
-    scopedVars: ScopedVars,
-    field: Field,
-    alias: string | undefined
-  ) {
+  setSeriesName(query: TimelyQueryForm, scopedVars: ScopedVars, field: Field, alias: string | undefined) {
     var title: string | null = null;
-    if (alias === undefined || alias === "") {
+    if (alias === undefined || alias === '') {
       if (field.labels === undefined) {
         title = query.metric!;
       } else {
@@ -101,25 +82,25 @@ export class TimelyDataSource extends DataSourceWithBackend<
         if (singleTagName === null) {
           title = query.metric! + this.joinLabels(field.labels);
         } else {
-          title = query.metric! + " " + field.labels[singleTagName];
+          title = query.metric! + ' ' + field.labels[singleTagName];
         }
       }
     } else {
       var newScopedVars = _.clone(scopedVars || {});
       for (const labelKey in field.labels) {
-        newScopedVars["tag_" + labelKey] = {
+        newScopedVars['tag_' + labelKey] = {
           text: field.labels[labelKey],
-          value: field.labels[labelKey]
+          value: field.labels[labelKey],
         };
       }
-      scopedVars["metric"] = {
+      scopedVars['metric'] = {
         text: query.metric,
-        value: query.metric
+        value: query.metric,
       };
       title = getTemplateSrv().replace(alias, newScopedVars);
     }
     field.config = {
-      displayName: title
+      displayName: title,
     };
   }
 
@@ -128,9 +109,7 @@ export class TimelyDataSource extends DataSourceWithBackend<
     if (timelyQuery.metric !== undefined) {
       timelyQuery.metric = getTemplateSrv().replace(timelyQuery.metric);
       for (let tagsKey in timelyQuery.tags) {
-        timelyQuery.tags[tagsKey] = getTemplateSrv().replace(
-          timelyQuery.tags[tagsKey]
-        );
+        timelyQuery.tags[tagsKey] = getTemplateSrv().replace(timelyQuery.tags[tagsKey]);
       }
     }
     return timelyQuery;
@@ -145,7 +124,7 @@ export class TimelyDataSource extends DataSourceWithBackend<
   }
 
   _performSuggestQuery(params: object): Promise<string[]> {
-    return this.postResource("/api/suggest", params).then(function(result) {
+    return this.postResource('/api/suggest', params).then(function (result) {
       return result;
     });
   }
@@ -167,10 +146,10 @@ export class TimelyDataSource extends DataSourceWithBackend<
       });
     }
 
-    var responseTransform = function(result: string[]): MetricFindValue[] {
-      return _.map(result, function(value) {
+    var responseTransform = function (result: string[]): MetricFindValue[] {
+      return _.map(result, function (value) {
         var mfv: MetricFindValue = {
-          text: value
+          text: value,
         };
         return mfv;
       }).concat();
@@ -185,47 +164,47 @@ export class TimelyDataSource extends DataSourceWithBackend<
     var metrics_query = interpolated.match(metrics_regex);
     if (metrics_query) {
       return this._performSuggestQuery({
-        type: "metrics",
+        type: 'metrics',
         m: metrics_query[1],
-        max: "1000"
+        max: '1000',
       }).then(responseTransform);
     }
 
     var tag_names_suggest_query = interpolated.match(tag_names_suggest_regex);
     if (tag_names_suggest_query) {
       return this._performSuggestQuery({
-        type: "tagk",
+        type: 'tagk',
         m: tag_names_suggest_query[1],
-        max: "1000"
+        max: '1000',
       }).then(responseTransform);
     }
 
     var tag_values_suggest_query = interpolated.match(tag_values_suggest_regex);
     if (tag_values_suggest_query) {
       return this._performSuggestQuery({
-        type: "tagv",
+        type: 'tagv',
         m: tag_values_suggest_query[1],
         t: tag_values_suggest_query[2],
-        max: "1000"
+        max: '1000',
       }).then(responseTransform);
     }
 
     var tag_names_query = interpolated.match(tag_names_regex);
     if (tag_names_query) {
       return this._performSuggestQuery({
-        type: "tagk",
+        type: 'tagk',
         m: tag_names_query[1],
-        max: "1000"
+        max: '1000',
       }).then(responseTransform);
     }
 
     var tag_values_query = interpolated.match(tag_values_regex);
     if (tag_values_query) {
       return this._performSuggestQuery({
-        type: "tagv",
+        type: 'tagv',
         m: tag_values_query[1],
         t: tag_values_query[2],
-        max: "1000"
+        max: '1000',
       }).then(responseTransform);
     }
 
@@ -246,43 +225,39 @@ export class TimelyDataSource extends DataSourceWithBackend<
 
   // DataSourceApi
   getTagKeys(options?: any): Promise<MetricFindValue[]> {
-    return this._performSuggestQuery({ type: "tagk", max: "10000" }).then(
-      (result: any) => {
-        if (result && _.isArray(result)) {
-          const metrics: string[] = result;
-          return metrics
-            .map(value => {
-              var mfv: MetricFindValue = {
-                text: value
-              };
-              return mfv;
-            })
-            .concat();
-        } else {
-          return [];
-        }
+    return this._performSuggestQuery({ type: 'tagk', max: '10000' }).then((result: any) => {
+      if (result && _.isArray(result)) {
+        const metrics: string[] = result;
+        return metrics
+          .map((value) => {
+            var mfv: MetricFindValue = {
+              text: value,
+            };
+            return mfv;
+          })
+          .concat();
+      } else {
+        return [];
       }
-    );
+    });
   }
 
   // DataSourceApi
   getTagValues(options: any): Promise<MetricFindValue[]> {
-    return this._performSuggestQuery({ type: "tagv", max: "10000" }).then(
-      (result: any) => {
-        if (result && _.isArray(result)) {
-          const metrics: string[] = result;
-          return metrics
-            .map(value => {
-              var mfv: MetricFindValue = {
-                text: value
-              };
-              return mfv;
-            })
-            .concat();
-        } else {
-          return [];
-        }
+    return this._performSuggestQuery({ type: 'tagv', max: '10000' }).then((result: any) => {
+      if (result && _.isArray(result)) {
+        const metrics: string[] = result;
+        return metrics
+          .map((value) => {
+            var mfv: MetricFindValue = {
+              text: value,
+            };
+            return mfv;
+          })
+          .concat();
+      } else {
+        return [];
       }
-    );
+    });
   }
 }

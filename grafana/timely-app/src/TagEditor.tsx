@@ -1,10 +1,10 @@
-import React, { Component } from "react";
-import { QueryEditor } from "./QueryEditor";
-import { withStyles } from "@material-ui/core/styles";
-import { Tooltip } from "@material-ui/core";
-import { Icon } from "@grafana/ui";
-import _ from "lodash";
-import { AsyncTypeahead, TypeaheadModel } from "react-bootstrap-typeahead";
+import React, { Component } from 'react';
+import { QueryEditor } from './QueryEditor';
+import { withStyles } from '@material-ui/core/styles';
+import { Tooltip } from '@material-ui/core';
+import { Icon } from '@grafana/ui';
+import _ from 'lodash';
+import { AsyncTypeahead, TypeaheadModel } from 'react-bootstrap-typeahead';
 
 export interface Props {
   tags: { [key: string]: string };
@@ -26,14 +26,14 @@ interface Tag {
   errors: string[] | undefined;
 }
 
-const HtmlTooltip = withStyles(theme => ({
+const HtmlTooltip = withStyles((theme) => ({
   tooltip: {
-    backgroundColor: "#f5f5f9",
-    color: "rgba(0, 0, 0, 0.87)",
+    backgroundColor: '#f5f5f9',
+    color: 'rgba(0, 0, 0, 0.87)',
     maxWidth: 220,
     fontSize: theme.typography.pxToRem(12),
-    border: "1px solid #dadde9"
-  }
+    border: '1px solid #dadde9',
+  },
 }))(Tooltip);
 
 export class TagEditor extends Component<Props, State> {
@@ -45,28 +45,24 @@ export class TagEditor extends Component<Props, State> {
           key: key,
           value: value,
           editing: false,
-          errors: undefined
+          errors: undefined,
         }))
         .concat(),
       tagKeyOptionsLoading: false,
       tagKeyOptions: [],
       tagValueOptionsLoading: false,
-      tagValueOptions: []
+      tagValueOptions: [],
     };
   }
 
-  shouldComponentUpdate(
-    nextProps: Readonly<Props>,
-    nextState: Readonly<State>,
-    nextContext: any
-  ): boolean {
+  shouldComponentUpdate(nextProps: Readonly<Props>, nextState: Readonly<State>, nextContext: any): boolean {
     return true;
   }
 
   validateTags = (tags: Tag[], tagNumber: number): boolean => {
     var count = new Map<string, number>();
     var anyErrors = false;
-    tags.forEach(tag => {
+    tags.forEach((tag) => {
       var n = count.get(tag.key);
       if (n === undefined) {
         count.set(tag.key, 1);
@@ -89,11 +85,11 @@ export class TagEditor extends Component<Props, State> {
         anyErrors = true;
       }
       if (tag.key.length === 0) {
-        tag.errors.push("tag key can not be empty");
+        tag.errors.push('tag key can not be empty');
         anyErrors = true;
       }
       if (tag.value.length === 0) {
-        tag.errors.push("tag value can not be empty");
+        tag.errors.push('tag value can not be empty');
         anyErrors = true;
       }
       if (tag.errors.length === 0) {
@@ -110,11 +106,11 @@ export class TagEditor extends Component<Props, State> {
       var tags = [
         ...stateTags,
         {
-          key: "",
-          value: "",
+          key: '',
+          value: '',
           editing: true,
-          errors: ["tag key can not be empty", "tag value can not be empty"]
-        }
+          errors: ['tag key can not be empty', 'tag value can not be empty'],
+        },
       ];
       return { tags: tags };
     });
@@ -177,19 +173,17 @@ export class TagEditor extends Component<Props, State> {
   };
 
   updateTags = (tags: Tag[]) => {
-    var entries = Object.fromEntries(
-      [...tags.values()].map(tag => [tag.key, tag.value]).concat()
-    );
+    var entries = Object.fromEntries([...tags.values()].map((tag) => [tag.key, tag.value]).concat());
     this.props.parent.updateTags(entries);
   };
 
   handleTagKeySearch = (query: string, metric: string | undefined) => {
     if (metric !== undefined) {
       this.props.parent.props.datasource
-        .postResource("/api/suggest", {
-          type: "tagk",
+        .postResource('/api/suggest', {
+          type: 'tagk',
           m: metric,
-          max: "1000"
+          max: '1000',
         })
         .then((result: any) => {
           if (result && _.isArray(result)) {
@@ -198,27 +192,21 @@ export class TagEditor extends Component<Props, State> {
 
             // find all tag keys that are being used in non-edited tags
             var existingTags = tags
-              .filter(t => t.editing === false)
-              .map(t => {
+              .filter((t) => t.editing === false)
+              .map((t) => {
                 return t.key;
               })
               .concat();
 
             // exclude keys that are bing used
-            var filteredResults = tagKeyArray.filter(t => {
-              return (
-                existingTags.find(existing => t === existing) === undefined
-              );
+            var filteredResults = tagKeyArray.filter((t) => {
+              return existingTags.find((existing) => t === existing) === undefined;
             });
 
             // exclude keys that don't match the search (if there is one)
             filteredResults = filteredResults
-              .filter(
-                tagKey =>
-                  query === "" ||
-                  tagKey.toLowerCase().includes(query.toLowerCase())
-              )
-              .map(value => {
+              .filter((tagKey) => query === '' || tagKey.toLowerCase().includes(query.toLowerCase()))
+              .map((value) => {
                 return value;
               });
             this.setState({ tagKeyOptions: filteredResults });
@@ -227,29 +215,21 @@ export class TagEditor extends Component<Props, State> {
     }
   };
 
-  handleTagValueSearch = (
-    query: string,
-    metric: string | undefined,
-    tagKey: string | undefined
-  ) => {
+  handleTagValueSearch = (query: string, metric: string | undefined, tagKey: string | undefined) => {
     if (metric !== undefined && tagKey !== undefined) {
       this.props.parent.props.datasource
-        .postResource("/api/suggest", {
-          type: "tagv",
+        .postResource('/api/suggest', {
+          type: 'tagv',
           m: metric,
           t: tagKey,
-          max: "1000"
+          max: '1000',
         })
         .then((result: any) => {
           if (result && _.isArray(result)) {
-            const tagValueArray: string[] = [".*", ...result];
+            const tagValueArray: string[] = ['.*', ...result];
             const filteredResults = tagValueArray
-              .filter(
-                tagValue =>
-                  query === "" ||
-                  tagValue.toLowerCase().includes(query.toLowerCase())
-              )
-              .map(value => {
+              .filter((tagValue) => query === '' || tagValue.toLowerCase().includes(query.toLowerCase()))
+              .map((value) => {
                 return value;
               });
             this.setState({ tagValueOptions: filteredResults });
@@ -259,7 +239,7 @@ export class TagEditor extends Component<Props, State> {
   };
 
   getInputValue = (id: string): string | null => {
-    var fullId = "div#" + id + " div div input.rbt-input-main";
+    var fullId = 'div#' + id + ' div div input.rbt-input-main';
     var inputElement = document.querySelector(fullId);
     if (inputElement !== null) {
       return (inputElement as HTMLInputElement).value;
@@ -268,39 +248,32 @@ export class TagEditor extends Component<Props, State> {
   };
 
   render() {
-    const {
-      tagKeyOptionsLoading,
-      tagKeyOptions,
-      tagValueOptionsLoading,
-      tagValueOptions
-    } = this.state;
+    const { tagKeyOptionsLoading, tagKeyOptions, tagValueOptionsLoading, tagValueOptions } = this.state;
     var { tags } = this.state;
-    var tagEditorId = Math.random()
-      .toString(36)
-      .substr(2, 9);
+    var tagEditorId = Math.random().toString(36).substr(2, 9);
     var lastSearchMetric: string;
     const { metric } = this.props.parent.state.query;
-    var allowAddNewTag = tags.filter(t => t.editing === true).length === 0;
+    var allowAddNewTag = tags.filter((t) => t.editing === true).length === 0;
 
     return (
       <div className="gf-form-inline">
         <div className="gf-form timely">
           <label className="gf-form-label width-10">Tags</label>
           {[...tags.values()].map((tag, tagNum) => (
-            <div id={"timelytag-" + tagNum.toString()}>
+            <div key={tagNum.toString()} id={'timelytag-' + tagNum.toString()}>
               <div hidden={tag.editing}>
                 <label className="gf-form-label">
                   {tag.key}&nbsp;=&nbsp;{tag.value}
                   <div className="timely tag edit">
-                    <HtmlTooltip title={"edit tag"} placement={"bottom"}>
+                    <HtmlTooltip title={'edit tag'} placement={'bottom'}>
                       <Icon
                         name="edit"
                         tabIndex={0}
-                        onClick={e => {
+                        onClick={(e) => {
                           this.beginEdit(tagNum);
                         }}
-                        onKeyPress={e => {
-                          if (e.key === "Enter") {
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
                             this.beginEdit(tagNum);
                           }
                         }}
@@ -308,15 +281,15 @@ export class TagEditor extends Component<Props, State> {
                     </HtmlTooltip>
                   </div>
                   <div className="timely tag delete">
-                    <HtmlTooltip title={"delete tag"} placement={"bottom"}>
+                    <HtmlTooltip title={'delete tag'} placement={'bottom'}>
                       <Icon
                         name="trash-alt"
                         tabIndex={0}
-                        onClick={e => {
+                        onClick={(e) => {
                           this.removeTag(tagNum);
                         }}
-                        onKeyPress={e => {
-                          if (e.key === "Enter") {
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
                             this.removeTag(tagNum);
                           }
                         }}
@@ -327,48 +300,40 @@ export class TagEditor extends Component<Props, State> {
               </div>
               <div className="gf-form" hidden={!tag.editing}>
                 <div
-                  id={"timelyTagKey-" + tagEditorId + "-" + tagNum.toString()}
+                  id={'timelyTagKey-' + tagEditorId + '-' + tagNum.toString()}
                   className="timely timely-tag-key"
-                  onMouseLeave={e => {
-                    var inputValue = this.getInputValue(
-                      "timelyTagKey-" + tagEditorId + "-" + tagNum.toString()
-                    );
+                  onMouseLeave={(e) => {
+                    var inputValue = this.getInputValue('timelyTagKey-' + tagEditorId + '-' + tagNum.toString());
                     if (inputValue !== null) {
                       this.updateTagKey(tagNum, inputValue);
                     }
                   }}
                 >
                   <AsyncTypeahead
-                    id={"timelyTagKey-" + tagEditorId + "-Typeahead"}
+                    id={'timelyTagKey-' + tagEditorId + '-Typeahead'}
                     selected={[tag.key]}
                     isLoading={tagKeyOptionsLoading}
                     inputProps={{ spellCheck: false }}
-                    onSearch={query => {
+                    onSearch={(query) => {
                       this.setState({ tagKeyOptionsLoading: true });
                       lastSearchMetric = metric!;
                       this.handleTagKeySearch(query, metric);
                       this.setState({ tagKeyOptionsLoading: false });
                     }}
-                    onChange={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagKey-" + tagEditorId + "-" + tagNum.toString()
-                      );
+                    onChange={(e) => {
+                      var inputValue = this.getInputValue('timelyTagKey-' + tagEditorId + '-' + tagNum.toString());
                       if (inputValue !== null) {
                         this.updateTagKey(tagNum, inputValue);
                       }
                     }}
-                    onBlur={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagKey-" + tagEditorId + "-" + tagNum.toString()
-                      );
+                    onBlur={(e) => {
+                      var inputValue = this.getInputValue('timelyTagKey-' + tagEditorId + '-' + tagNum.toString());
                       if (inputValue !== null) {
                         this.updateTagKey(tagNum, inputValue);
                       }
                     }}
-                    onFocus={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagKey-" + tagEditorId + "-" + tagNum.toString()
-                      );
+                    onFocus={(e) => {
+                      var inputValue = this.getInputValue('timelyTagKey-' + tagEditorId + '-' + tagNum.toString());
                       if (
                         tagKeyOptions.length === 0 ||
                         inputValue === null ||
@@ -377,14 +342,12 @@ export class TagEditor extends Component<Props, State> {
                       ) {
                         this.setState({ tagKeyOptionsLoading: true });
                         lastSearchMetric = metric!;
-                        this.handleTagKeySearch("", metric);
+                        this.handleTagKeySearch('', metric);
                         this.setState({ tagKeyOptionsLoading: false });
                       }
                     }}
-                    onKeyDown={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagKey-" + tagEditorId + "-" + tagNum.toString()
-                      );
+                    onKeyDown={(e) => {
+                      var inputValue = this.getInputValue('timelyTagKey-' + tagEditorId + '-' + tagNum.toString());
                       if (
                         tagKeyOptions.length === 0 ||
                         inputValue === null ||
@@ -393,115 +356,83 @@ export class TagEditor extends Component<Props, State> {
                       ) {
                         this.setState({ tagKeyOptionsLoading: true });
                         lastSearchMetric = metric!;
-                        this.handleTagKeySearch("", metric);
+                        this.handleTagKeySearch('', metric);
                         this.setState({ tagKeyOptionsLoading: false });
                       }
                     }}
                     autoFocus={tag.key.length === 0}
                     options={tagKeyOptions}
                     selectHintOnEnter={false}
-                    align={"left"}
+                    align={'left'}
                     allowNew={true}
-                    newSelectionPrefix={""}
-                    bodyContainer={true}
+                    newSelectionPrefix={''}
                     paginate={true}
-                    paginationText={"more"}
+                    paginationText={'more'}
                     minLength={0}
                     maxResults={100}
                     caseSensitive={false}
-                    placeholder={"key"}
+                    placeholder={'key'}
                   />
                 </div>
                 <div
-                  id={"timelyTagValue-" + tagEditorId + "-" + tagNum.toString()}
+                  id={'timelyTagValue-' + tagEditorId + '-' + tagNum.toString()}
                   className="timely timely-tag-value"
-                  onMouseLeave={e => {
-                    var inputValue = this.getInputValue(
-                      "timelyTagValue-" + tagEditorId + "-" + tagNum.toString()
-                    );
+                  onMouseLeave={(e) => {
+                    var inputValue = this.getInputValue('timelyTagValue-' + tagEditorId + '-' + tagNum.toString());
                     if (inputValue !== null) {
                       this.updateTagValue(tagNum, inputValue);
                     }
                   }}
                 >
                   <AsyncTypeahead
-                    id={"timelyTagValue-" + tagEditorId + "-Typeahead"}
+                    id={'timelyTagValue-' + tagEditorId + '-Typeahead'}
                     selected={[tag.value]}
                     isLoading={tagValueOptionsLoading}
                     inputProps={{ spellCheck: false }}
-                    onSearch={query => {
+                    onSearch={(query) => {
                       this.setState({ tagValueOptionsLoading: true });
                       this.handleTagValueSearch(query, metric, tag.key);
                       this.setState({ tagValueOptionsLoading: false });
                     }}
-                    onChange={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagValue-" +
-                          tagEditorId +
-                          "-" +
-                          tagNum.toString()
-                      );
+                    onChange={(e) => {
+                      var inputValue = this.getInputValue('timelyTagValue-' + tagEditorId + '-' + tagNum.toString());
                       if (inputValue !== null) {
                         this.updateTagValue(tagNum, inputValue);
                       }
                     }}
-                    onBlur={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagValue-" +
-                          tagEditorId +
-                          "-" +
-                          tagNum.toString()
-                      );
+                    onBlur={(e) => {
+                      var inputValue = this.getInputValue('timelyTagValue-' + tagEditorId + '-' + tagNum.toString());
                       if (inputValue !== null) {
                         this.updateTagValue(tagNum, inputValue);
                       }
                     }}
-                    onFocus={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagValue-" +
-                          tagEditorId +
-                          "-" +
-                          tagNum.toString()
-                      );
-                      if (
-                        tagValueOptions.length === 0 ||
-                        inputValue === null ||
-                        inputValue.length === 0
-                      ) {
+                    onFocus={(e) => {
+                      var inputValue = this.getInputValue('timelyTagValue-' + tagEditorId + '-' + tagNum.toString());
+                      if (tagValueOptions.length === 0 || inputValue === null || inputValue.length === 0) {
                         this.setState({ tagValueOptionsLoading: true });
-                        this.handleTagValueSearch("", metric, tag.key);
+                        this.handleTagValueSearch('', metric, tag.key);
                         this.setState({ tagValueOptionsLoading: false });
                       }
                     }}
-                    onKeyDown={e => {
-                      var inputValue = this.getInputValue(
-                        "timelyTagValue-" +
-                          tagEditorId +
-                          "-" +
-                          tagNum.toString()
-                      );
-                      if (
-                        tagValueOptions.length === 0 ||
-                        inputValue === null ||
-                        inputValue.length === 0
-                      ) {
+                    onKeyDown={(e) => {
+                      var inputValue = this.getInputValue('timelyTagValue-' + tagEditorId + '-' + tagNum.toString());
+                      if (tagValueOptions.length === 0 || inputValue === null || inputValue.length === 0) {
                         this.setState({ tagValueOptionsLoading: true });
-                        this.handleTagValueSearch("", metric, tag.key);
+                        this.handleTagValueSearch('', metric, tag.key);
                         this.setState({ tagValueOptionsLoading: false });
                       }
                     }}
                     options={tagValueOptions}
                     selectHintOnEnter={false}
-                    align={"left"}
+                    align={'left'}
                     allowNew={true}
-                    newSelectionPrefix={""}
-                    bodyContainer={true}
+                    newSelectionPrefix={''}
                     paginate={true}
-                    paginationText={"more"}
+                    paginationText={'more'}
                     minLength={0}
                     maxResults={100}
                     caseSensitive={false}
-                    placeholder={"value"}
+                    placeholder={'value'}
                   />
                 </div>
                 <label className="gf-form-label max-width-5 flex-shrink-1">
@@ -511,13 +442,13 @@ export class TagEditor extends Component<Props, State> {
                         title={
                           <React.Fragment>
                             <ul>
-                              {tag.errors.map(error => {
-                                return <li>{error}</li>;
+                              {tag.errors.map((error) => {
+                                return <li key={error}>{error}</li>;
                               })}
                             </ul>
                           </React.Fragment>
                         }
-                        placement={"bottom"}
+                        placement={'bottom'}
                       >
                         <Icon name="exclamation-triangle" />
                       </HtmlTooltip>
@@ -525,15 +456,15 @@ export class TagEditor extends Component<Props, State> {
                   )}
                   {tag.errors === undefined && (
                     <div className="timely tag save">
-                      <HtmlTooltip title={"save tag"} placement={"bottom"}>
+                      <HtmlTooltip title={'save tag'} placement={'bottom'}>
                         <Icon
                           name="save"
                           tabIndex={0}
-                          onClick={e => {
+                          onClick={(e) => {
                             this.endEdit(tagNum);
                           }}
-                          onKeyPress={e => {
-                            if (e.key === "Enter") {
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
                               this.endEdit(tagNum);
                             }
                           }}
@@ -542,15 +473,15 @@ export class TagEditor extends Component<Props, State> {
                     </div>
                   )}
                   <div className="timely tag delete">
-                    <HtmlTooltip title={"delete tag"} placement={"bottom"}>
+                    <HtmlTooltip title={'delete tag'} placement={'bottom'}>
                       <Icon
                         name="trash-alt"
                         tabIndex={0}
-                        onClick={e => {
+                        onClick={(e) => {
                           this.removeTag(tagNum);
                         }}
-                        onKeyPress={e => {
-                          if (e.key === "Enter") {
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
                             this.removeTag(tagNum);
                           }
                         }}
@@ -564,15 +495,15 @@ export class TagEditor extends Component<Props, State> {
           <div className="gf-form" hidden={!allowAddNewTag}>
             <label className="gf-form-label">
               <div className="timely tag addtag">
-                <HtmlTooltip title={"add tag"} placement={"bottom"}>
+                <HtmlTooltip title={'add tag'} placement={'bottom'}>
                   <Icon
                     name="plus"
                     tabIndex={0}
-                    onClick={e => {
+                    onClick={(e) => {
                       this.addTag();
                     }}
-                    onKeyPress={e => {
-                      if (e.key === "Enter") {
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
                         this.addTag();
                       }
                     }}
