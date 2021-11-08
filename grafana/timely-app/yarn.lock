@@ -1052,6 +1052,21 @@
     rxjs "7.3.0"
     xss "1.0.6"
 
+"@grafana/data@8.2.3":
+  version "8.2.3"
+  resolved "https://registry.yarnpkg.com/@grafana/data/-/data-8.2.3.tgz#e50deab3f5b7c097246e1cf5279a16f28b8f9a4b"
+  integrity sha512-7c0gNMm63sPgpFWyNNhGYZ0n/VRoQVKVb/XURJD7JNrkZQ1kxPTYjPaEw4FR5vuSSCEZXYU5EDqcBxMi01Rb+Q==
+  dependencies:
+    "@braintree/sanitize-url" "5.0.2"
+    "@grafana/schema" "8.2.3"
+    "@types/d3-interpolate" "^1.3.1"
+    date-fns "2.21.3"
+    eventemitter3 "4.0.7"
+    lodash "4.17.21"
+    marked "2.0.1"
+    rxjs "7.3.0"
+    xss "1.0.6"
+
 "@grafana/e2e-selectors@8.2.2":
   version "8.2.2"
   resolved "https://registry.yarnpkg.com/@grafana/e2e-selectors/-/e2e-selectors-8.2.2.tgz#67e758f458f3e457dbeb4a1b1761d6841e95fa61"
@@ -1095,6 +1110,11 @@
   version "8.2.2"
   resolved "https://registry.yarnpkg.com/@grafana/schema/-/schema-8.2.2.tgz#b0b680d8177157f8abd4420d51cc320c4023c686"
   integrity sha512-6fsovAYfFJcm0+E0/ZUjIHjrWiDvHdD+MRK6dNJEzaWFC2wngQAkeN+q7HkZ9AwC8c11rSRZI7Y4CaQJp8DXcA==
+
+"@grafana/schema@8.2.3":
+  version "8.2.3"
+  resolved "https://registry.yarnpkg.com/@grafana/schema/-/schema-8.2.3.tgz#77b4f289ae10b60ab52593a6c373c988ec2aa48d"
+  integrity sha512-JcIAy/WdAP81zXuJMYa8uXdWQOfSu3gPO73uiK1R6Zpz3CCUGVpR4Lla1+14VMjbVk+AwxYsoNUDptQPxnrpDw==
 
 "@grafana/slate-react@0.22.10-grafana":
   version "0.22.10-grafana"

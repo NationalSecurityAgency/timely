@@ -20,7 +20,7 @@
     "node": ">=12 <13"
   },
   "dependencies": {
-    "@grafana/data": "8.2.2",
+    "@grafana/data": "8.2.3",
     "@grafana/runtime": "8.2.2",
     "@grafana/slate-react": "0.22.10-grafana",
     "@grafana/ui": "8.2.2",
