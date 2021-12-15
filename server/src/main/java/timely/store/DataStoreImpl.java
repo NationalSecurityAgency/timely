@@ -483,7 +483,6 @@ public class DataStoreImpl implements DataStore {
     @Override
     public SuggestResponse suggest(SuggestRequest request) throws TimelyException {
         SuggestResponse result = new SuggestResponse();
-        Scanner scanner = null;
         try {
             Optional<String> metricOpt = request.getMetric();
             if (request.getType().equals("metrics")) {
@@ -533,10 +532,6 @@ public class DataStoreImpl implements DataStore {
             LOG.error("Error during suggest: " + ex.getMessage(), ex);
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                     "Error during suggest: " + ex.getMessage(), ex.getMessage(), ex);
-        } finally {
-            if (scanner != null) {
-                scanner.close();
-            }
         }
         return result;
     }

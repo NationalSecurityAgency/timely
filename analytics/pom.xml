@@ -170,6 +170,12 @@
               </artifactSet>
               <filters>
                 <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>**/module-info.class</exclude>
+                  </excludes>
+                </filter>
+                <filter>
                   <artifact>org.apache.flink:*</artifact>
                   <excludes>
                     <!-- exclude shaded google but include shaded curator -->
@@ -246,6 +252,14 @@
                   <artifactSet>
                     <excludes combine.self="override" />
                   </artifactSet>
+                  <filters>
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>**/module-info.class</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
                 </configuration>
               </execution>
             </executions>

@@ -41,7 +41,7 @@ public class JWTTokenHandler {
         if (StringUtils.isNotBlank(security.getJwtCheckKeyStore())) {
             try {
                 String type = security.getJwtCheckKeyType();
-                if (type.equals("X.509")) {
+                if (type != null && type.equals("X.509")) {
                     CertificateFactory factory = CertificateFactory.getInstance("X.509");
                     InputStream is = ResourceUtils.getURL(security.getJwtCheckKeyStore()).openStream();
                     X509Certificate certificate = (X509Certificate) factory.generateCertificate(is);

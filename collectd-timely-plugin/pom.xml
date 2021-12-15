@@ -51,6 +51,14 @@
           <artifactSet>
             <includes />
           </artifactSet>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>**/module-info.class</exclude>
+              </excludes>
+            </filter>
+          </filters>
           <createDependencyReducedPom>false</createDependencyReducedPom>
         </configuration>
         <executions>

@@ -2,7 +2,6 @@ package timely.store.compaction;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
@@ -16,7 +15,6 @@ import org.apache.accumulo.core.data.TabletId;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.apache.hadoop.io.Text;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 public class TabletRowAdapterTest {
@@ -72,8 +70,8 @@ public class TabletRowAdapterTest {
         EasyMock.replay(tid);
 
         String debug = TabletRowAdapter.toDebugOutput(tid);
-        assertThat(debug, CoreMatchers.containsString("prefix: sys.disk.disk_octets"));
-        assertThat(debug, CoreMatchers.containsString("date: 2019-04-11T05:59:42.848"));
-        assertThat(debug, CoreMatchers.containsString("millis: 1554962382848"));
+        assertTrue(debug, debug.contains("prefix: sys.disk.disk_octets"));
+        assertTrue(debug, debug.contains("date: 2019-04-11T05:59:42.848"));
+        assertTrue(debug, debug.contains("millis: 1554962382848"));
     }
 }

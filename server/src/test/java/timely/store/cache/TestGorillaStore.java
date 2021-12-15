@@ -34,7 +34,7 @@ public class TestGorillaStore {
         gStore.addValue(now += 100, 1.2345);
 
         List<WrappedGorillaDecompressor> decompressorList = gStore.getDecompressors(0, Long.MAX_VALUE);
-        Pair pair = null;
+        Pair pair;
         for (WrappedGorillaDecompressor w : decompressorList) {
             while ((pair = w.readPair()) != null) {
                 System.out.println(pair.getTimestamp() + " --> " + pair.getDoubleValue());

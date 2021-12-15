@@ -88,12 +88,10 @@ public class WriteNSQPlugin extends CollectDPluginParent
             if (client != null) {
                 clientPool.returnObject(client);
             }
-            if (null != out) {
                 try {
                     out.close();
                 } catch (IOException e) {
                 }
-            }
         }
         return 0;
     }

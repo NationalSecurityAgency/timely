@@ -58,7 +58,7 @@
     <version.guava>29.0-jre</version.guava>
     <version.hadoop>2.7.7</version.hadoop>
     <version.httpcomponents>4.5.13</version.httpcomponents>
-    <version.impsort>1.4.1</version.impsort>
+    <version.impsort>1.6.2</version.impsort>
     <version.jackson>2.10.0</version.jackson>
     <version.jackson.databind>2.10.0</version.jackson.databind>
     <version.jacoco>0.8.4</version.jacoco>
@@ -68,7 +68,7 @@
     <version.jjwt>0.11.2</version.jjwt>
     <version.jsoup>1.14.2</version.jsoup>
     <version.junit>4.13.1</version.junit>
-    <version.log4j>2.13.3</version.log4j>
+    <version.log4j>2.16.0</version.log4j>
     <version.maven-assembly>3.1.1</version.maven-assembly>
     <version.maven-build-helper>3.0.0</version.maven-build-helper>
     <version.maven-compiler>3.8.1</version.maven-compiler>
@@ -83,12 +83,27 @@
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.4</version.powermock>
     <version.slf4j>1.7.26</version.slf4j>
-    <version.spotbugs-maven>4.0.0</version.spotbugs-maven>
+    <version.spotbugs-maven>4.5.0.0</version.spotbugs-maven>
     <version.spring-boot>2.1.3.RELEASE</version.spring-boot>
     <version.tyrus>1.15</version.tyrus>
   </properties>
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-bom</artifactId>
+        <version>${version.log4j}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <!-- Import dependency management from Spring Boot -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${version.spring-boot}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-annotations</artifactId>
@@ -366,36 +381,10 @@
         <scope>runtime</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-api</artifactId>
-        <version>${version.log4j}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
-        <version>${version.log4j}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-slf4j-impl</artifactId>
-        <version>${version.log4j}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
         <groupId>org.javassist</groupId>
         <artifactId>javassist</artifactId>
         <version>${version.javassist}</version>
         <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <!-- Import dependency management from Spring Boot -->
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>${version.spring-boot}</version>
-        <type>pom</type>
-        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
@@ -448,15 +437,17 @@
         <plugin>
           <groupId>com.github.ekryd.sortpom</groupId>
           <artifactId>sortpom-maven-plugin</artifactId>
-          <version>2.10.0</version>
+          <version>3.0.0</version>
           <configuration>
-            <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
             <createBackupFile>false</createBackupFile>
-            <lineSeparator>\n</lineSeparator>
             <expandEmptyElements>false</expandEmptyElements>
+            <keepBlankLines>false</keepBlankLines>
+            <lineSeparator>\n</lineSeparator>
             <nrOfIndentSpace>2</nrOfIndentSpace>
+            <predefinedSortOrder>recommended_2008_06</predefinedSortOrder>
             <sortDependencies>scope,groupId,artifactId</sortDependencies>
             <sortProperties>true</sortProperties>
+            <spaceBeforeCloseEmptyElement>true</spaceBeforeCloseEmptyElement>
             <verifyFail>Stop</verifyFail>
           </configuration>
         </plugin>
