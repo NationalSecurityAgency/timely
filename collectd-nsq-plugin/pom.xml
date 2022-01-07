@@ -4,7 +4,7 @@
   <parent>
     <groupId>timely</groupId>
     <artifactId>timely</artifactId>
-    <version>1.3.5</version>
+    <version>1.3.6-SNAPSHOT</version>
   </parent>
   <artifactId>collectd-nsq-plugin</artifactId>
   <dependencies>
