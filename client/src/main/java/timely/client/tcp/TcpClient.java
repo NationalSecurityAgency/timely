@@ -4,13 +4,14 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TcpClient implements AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TcpClient.class);
+    private static final Logger log = LoggerFactory.getLogger(TcpClient.class);
 
     private final String host;
     private final int port;
@@ -75,7 +76,7 @@ public class TcpClient implements AutoCloseable {
      */
     @Override
     public void close() throws IOException {
-        LOG.trace("Shutting down connection to Timely at {}:{}", host, port);
+        log.trace("Shutting down connection to Timely at {}:{}", host, port);
         if (null != sock) {
             try {
                 if (null != out) {
@@ -86,7 +87,7 @@ public class TcpClient implements AutoCloseable {
                 }
                 sock.close();
             } catch (IOException e) {
-                LOG.error("Error closing connection to Timely at " + host + ":" + port + ". Error: " + e.getMessage());
+                log.error("Error closing connection to Timely at " + host + ":" + port + ". Error: " + e.getMessage());
             } finally {
                 sock = null;
             }
@@ -100,17 +101,17 @@ public class TcpClient implements AutoCloseable {
                 try {
                     connectTime = System.currentTimeMillis();
                     sock = new Socket(host, port);
-                    osw = new OutputStreamWriter(sock.getOutputStream());
+                    osw = new OutputStreamWriter(sock.getOutputStream(), StandardCharsets.UTF_8);
                     out = new BufferedWriter(osw);
                     backoff = 2000;
-                    LOG.trace("Connected to Timely at {}:{}", host, port);
+                    log.trace("Connected to Timely at {}:{}", host, port);
                 } catch (Exception e) {
-                    LOG.error("Error connecting to Timely at {}:{} - {}", host, port, e.getMessage());
+                    log.error("Error connecting to Timely at {}:{} - {}", host, port, e.getMessage());
                     if (sock != null) {
                         try {
                             sock.close();
                         } catch (IOException e1) {
-                            LOG.error(e1.getMessage());
+                            log.error(e1.getMessage());
                         } finally {
                             sock = null;
                         }
@@ -119,24 +120,24 @@ public class TcpClient implements AutoCloseable {
                         try {
                             osw.close();
                         } catch (IOException e1) {
-                            LOG.error(e1.getMessage());
+                            log.error(e1.getMessage());
                         }
                     }
                     if (out != null) {
                         try {
                             out.close();
                         } catch (IOException e1) {
-                            LOG.error(e1.getMessage());
+                            log.error(e1.getMessage());
                         } finally {
                             out = null;
                         }
                     }
                     backoff = backoff * 2;
-                    LOG.info("Will retry connection in {} ms.", backoff);
+                    log.info("Will retry connection in {} ms.", backoff);
                     return -1;
                 }
             } else {
-                LOG.warn("Not writing to Timely, waiting to reconnect");
+                log.warn("Not writing to Timely, waiting to reconnect");
                 return -1;
             }
         }

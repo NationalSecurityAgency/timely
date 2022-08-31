@@ -1,0 +1,16 @@
+timely:
+  loadtest:
+    test-data-file: ${BIN_DIR}/load-test-data.txt
+    host: localhost
+    tcp-port: 4242
+    http-port: 4243
+    num-threads: 8
+    backlog-minutes: 60
+    sample-period-ms: 1000
+    query-period-minutes: 60
+    test-duration-minutes: 10
+
+logging:
+  level:
+    ROOT: info
+    timey.application: debug

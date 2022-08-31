@@ -21,13 +21,13 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 import timely.api.response.TimelyException;
+import timely.auth.TimelyAuthenticationToken;
 import timely.auth.util.ProxiedEntityUtils;
 import timely.client.websocket.ClientHandler;
-import timely.netty.http.auth.TimelyAuthenticationToken;
 
 public class WsClientHandler extends ClientHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WsClientHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WsClientHandler.class);
     private final ChannelHandlerContext ctx;
     private final TimelyAuthenticationToken token;
     private ScheduledFuture<?> ping;
@@ -36,7 +36,7 @@ public class WsClientHandler extends ClientHandler {
         this.ctx = ctx;
         this.token = token;
         this.ping = this.ctx.executor().scheduleAtFixedRate(() -> {
-            LOG.trace("Sending ping on channel {}", ctx.channel());
+            log.trace("Sending ping on channel {}", ctx.channel());
             ctx.writeAndFlush(new PingWebSocketFrame());
         }, pingRate, pingRate, TimeUnit.SECONDS);
     }
@@ -64,7 +64,7 @@ public class WsClientHandler extends ClientHandler {
     public void onOpen(Session session, EndpointConfig config) {
         session.addMessageHandler(String.class, message -> {
             ctx.writeAndFlush(new TextWebSocketFrame(message));
-            LOG.debug("Message received on Websocket session {}: {}", session.getId(), message);
+            log.debug("Message received on Websocket session {}: {}", session.getId(), message);
         });
     }
 
@@ -72,7 +72,7 @@ public class WsClientHandler extends ClientHandler {
     public void onClose(Session session, CloseReason reason) {
         super.onClose(session, reason);
         if (!reason.getCloseCode().equals(CloseReason.CloseCodes.NORMAL_CLOSURE)) {
-            LOG.error("Abnormal close: " + reason.getReasonPhrase());
+            log.error("Abnormal close: " + reason.getReasonPhrase());
             Exception e = new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), reason.getReasonPhrase(), "");
             WsRelayHandler.sendErrorResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, e);
         }
@@ -84,7 +84,7 @@ public class WsClientHandler extends ClientHandler {
     @Override
     public void onError(Session session, Throwable t) {
         super.onError(session, t);
-        LOG.error(t.getMessage(), t);
+        log.error(t.getMessage(), t);
         Exception e = new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), t.getMessage(), "");
         WsRelayHandler.sendErrorResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, e);
         if (!ping.isCancelled()) {

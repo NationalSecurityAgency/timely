@@ -21,26 +21,26 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import timely.api.request.subscription.AddSubscription;
-import timely.api.request.subscription.CloseSubscription;
-import timely.api.request.subscription.CreateSubscription;
-import timely.api.request.subscription.RemoveSubscription;
-import timely.api.request.subscription.SubscriptionRequest;
+import timely.api.request.websocket.AddSubscription;
+import timely.api.request.websocket.CloseSubscription;
+import timely.api.request.websocket.CreateSubscription;
+import timely.api.request.websocket.RemoveSubscription;
+import timely.api.request.websocket.SubscriptionRequest;
 import timely.api.response.TimelyException;
 import timely.auth.util.ProxiedEntityUtils;
-import timely.balancer.configuration.BalancerConfiguration;
+import timely.balancer.MetricResolver;
+import timely.balancer.configuration.BalancerWebsocketProperties;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.ws.WsClientPool;
-import timely.balancer.resolver.MetricResolver;
 import timely.client.websocket.subscription.WebSocketSubscriptionClient;
 import timely.netty.http.TimelyHttpHandler;
 
 public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequest> implements TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WsRelayHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WsRelayHandler.class);
 
-    private final BalancerConfiguration balancerConfig;
-    private final WsClientPool wsClientPool;
+    private BalancerWebsocketProperties balancerWebsocketProperties;
+    private WsClientPool wsClientPool;
     private MetricResolver metricResolver;
     static private ObjectMapper mapper;
     Map<String,Map<String,WsClientHolder>> wsClients = new ConcurrentHashMap<>();
@@ -54,8 +54,8 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
         mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, true);
     }
 
-    public WsRelayHandler(BalancerConfiguration balancerConfig, MetricResolver metricResolver, WsClientPool wsClientPool) {
-        this.balancerConfig = balancerConfig;
+    public WsRelayHandler(BalancerWebsocketProperties balancerWebsocketProperties, MetricResolver metricResolver, WsClientPool wsClientPool) {
+        this.balancerWebsocketProperties = balancerWebsocketProperties;
         this.metricResolver = metricResolver;
         this.wsClientPool = wsClientPool;
     }
@@ -89,7 +89,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                         if (metricToClientMap != null) {
                             synchronized (metricToClientMap) {
                                 // close all clients for this subscriptionId
-                                LOG.debug("Channel closed, closing subscriptions for subscriptionId:{}", currentSubscriptionId);
+                                log.debug("Channel closed, closing subscriptions for subscriptionId:{}", currentSubscriptionId);
                                 for (Map.Entry<String,WsClientHolder> entry : metricToClientMap.entrySet()) {
                                     entry.getValue().close(wsClientPool);
                                 }
@@ -108,7 +108,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                 if (origContext == null) {
                     // send error because user never sent a CreateSubscription
                     // and we have nowhere to send the results
-                    LOG.info("ChannelHandlerContext not found for subscriptionId:{} - createSubscription not called?", subscriptionId);
+                    log.info("ChannelHandlerContext not found for subscriptionId:{} - createSubscription not called?", subscriptionId);
                     sendErrorResponse(ctx, HttpResponseStatus.BAD_REQUEST, new IllegalArgumentException("Must call create first"));
                 }
                 Map<String,WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
@@ -122,7 +122,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                     if (hostClientHolder == null) {
                         k = metricResolver.getHostPortKey(metric);
                         client = wsClientPool.borrowObject(k);
-                        client.open(new WsClientHandler(origContext, add.getToken(), (balancerConfig.getWebsocket().getTimeout() / 2)));
+                        client.open(new WsClientHandler(origContext, add.getToken(), (balancerWebsocketProperties.getTimeout() / 2)));
                         metricToClientMap.put(metric, new WsClientHolder(k, client));
                     } else {
                         client = hostClientHolder.getClient();
@@ -159,7 +159,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                         if (hostClientHolder != null) {
                             hostClientHolder.getClient().removeSubscription(metric);
                         } else {
-                            LOG.info("client not found for subscriptionId:{} metric:{}", subscriptionId, metric);
+                            log.info("client not found for subscriptionId:{} metric:{}", subscriptionId, metric);
                         }
                     }
                 }
@@ -180,11 +180,11 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                 ctx.writeAndFlush(new CloseWebSocketFrame(1000, "Client requested close."));
             }
         } catch (ConnectException e1) {
-            LOG.error(e1.getMessage(), e1);
+            log.error(e1.getMessage(), e1);
             ChannelHandlerContext errorCtx = origContext == null ? ctx : origContext;
             sendErrorResponse(errorCtx, HttpResponseStatus.INTERNAL_SERVER_ERROR, e1);
         } catch (Exception e2) {
-            LOG.error(e2.getMessage(), e2);
+            log.error(e2.getMessage(), e2);
             ChannelHandlerContext errorCtx = origContext == null ? ctx : origContext;
             sendErrorResponse(errorCtx, HttpResponseStatus.INTERNAL_SERVER_ERROR, e2);
         }
@@ -198,7 +198,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
             String json = mapper.writeValueAsString(te);
             ctx.writeAndFlush(new TextWebSocketFrame(json));
         } catch (JsonProcessingException e) {
-            LOG.error("Error serializing exception");
+            log.error("Error serializing exception");
         }
     }
 }

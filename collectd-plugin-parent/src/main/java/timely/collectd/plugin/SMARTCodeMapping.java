@@ -6,13 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class SMARTCodeMapping extends HashMap<Integer, String> {
+public class SMARTCodeMapping extends HashMap<Integer,String> {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Map<Integer, String> smart;
+    private static final Map<Integer,String> smart;
     static {
-        Map<Integer, String> map = new HashMap<>();
+        Map<Integer,String> map = new HashMap<>();
         /**
          * mapping from https://en.wikipedia.org/wiki/S.M.A.R.T.
          */
@@ -107,8 +107,7 @@ public class SMARTCodeMapping extends HashMap<Integer, String> {
         smart = Collections.unmodifiableMap(map);
     }
 
-    protected SMARTCodeMapping() {
-    }
+    protected SMARTCodeMapping() {}
 
     public int size() {
         return smart.size();
@@ -138,7 +137,7 @@ public class SMARTCodeMapping extends HashMap<Integer, String> {
         return smart.remove(key);
     }
 
-    public void putAll(Map<? extends Integer, ? extends String> m) {
+    public void putAll(Map<? extends Integer,? extends String> m) {
         smart.putAll(m);
     }
 
@@ -154,7 +153,7 @@ public class SMARTCodeMapping extends HashMap<Integer, String> {
         return smart.values();
     }
 
-    public Set<java.util.Map.Entry<Integer, String>> entrySet() {
+    public Set<java.util.Map.Entry<Integer,String>> entrySet() {
         return smart.entrySet();
     }
 

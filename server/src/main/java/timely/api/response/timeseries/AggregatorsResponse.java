@@ -16,13 +16,13 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseDeserializer;
 import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseSerializer;
-import timely.sample.Aggregator;
-import timely.sample.aggregators.Avg;
-import timely.sample.aggregators.Count;
-import timely.sample.aggregators.Dev;
-import timely.sample.aggregators.Max;
-import timely.sample.aggregators.Min;
-import timely.sample.aggregators.Sum;
+import timely.server.sample.Aggregator;
+import timely.server.sample.aggregators.Avg;
+import timely.server.sample.aggregators.Count;
+import timely.server.sample.aggregators.Dev;
+import timely.server.sample.aggregators.Max;
+import timely.server.sample.aggregators.Min;
+import timely.server.sample.aggregators.Sum;
 
 @JsonSerialize(using = AggregatorsResponseSerializer.class)
 @JsonDeserialize(using = AggregatorsResponseDeserializer.class)

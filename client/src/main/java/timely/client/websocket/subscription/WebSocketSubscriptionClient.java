@@ -18,29 +18,30 @@ import timely.api.AddSubscription;
 import timely.api.CloseSubscription;
 import timely.api.CreateSubscription;
 import timely.api.RemoveSubscription;
+import timely.api.VersionRequest;
 import timely.client.websocket.ClientHandler;
 import timely.client.websocket.WebSocketClient;
 import timely.serialize.JsonSerializer;
 
 public class WebSocketSubscriptionClient extends WebSocketClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WebSocketSubscriptionClient.class);
+    private static final Logger log = LoggerFactory.getLogger(WebSocketSubscriptionClient.class);
     private final String subscriptionId;
 
     public WebSocketSubscriptionClient(SSLContext ssl, String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean clientAuth, boolean doLogin,
-                    String timelyUsername, String timelyPassword, boolean hostVerificationEnabled, int bufferSize) {
-        super(ssl, timelyHostname, timelyHttpsPort, timelyWssPort, clientAuth, doLogin, timelyUsername, timelyPassword, hostVerificationEnabled, bufferSize);
+                    boolean hostVerificationEnabled, int bufferSize) {
+        super(ssl, timelyHostname, timelyHttpsPort, timelyWssPort, clientAuth, doLogin, hostVerificationEnabled, bufferSize);
         subscriptionId = UUID.randomUUID().toString();
-        LOG.trace("Created WebSocketClient with subscriptionId {}", this.subscriptionId);
+        log.trace("Created WebSocketClient with subscriptionId {}", this.subscriptionId);
     }
 
-    public WebSocketSubscriptionClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean clientAuth, boolean doLogin,
-                    String timelyUsername, String timelyPassword, String keyStoreFile, String keyStoreType, String keyStorePass, String trustStoreFile,
-                    String trustStoreType, String trustStorePass, boolean hostVerificationEnabled, int bufferSize) {
-        super(timelyHostname, timelyHttpsPort, timelyWssPort, clientAuth, doLogin, timelyUsername, timelyPassword, keyStoreFile, keyStoreType, keyStorePass,
-                        trustStoreFile, trustStoreType, trustStorePass, hostVerificationEnabled, bufferSize);
+    public WebSocketSubscriptionClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean clientAuth, boolean doLogin, String keyStoreFile,
+                    String keyStoreType, String keyStorePass, String trustStoreFile, String trustStoreType, String trustStorePass,
+                    boolean hostVerificationEnabled, int bufferSize) {
+        super(timelyHostname, timelyHttpsPort, timelyWssPort, clientAuth, doLogin, keyStoreFile, keyStoreType, keyStorePass, trustStoreFile, trustStoreType,
+                        trustStorePass, hostVerificationEnabled, bufferSize);
         subscriptionId = UUID.randomUUID().toString();
-        LOG.trace("Created WebSocketClient with subscriptionId {}", this.subscriptionId);
+        log.trace("Created WebSocketClient with subscriptionId {}", this.subscriptionId);
     }
 
     @Override
@@ -60,7 +61,7 @@ public class WebSocketSubscriptionClient extends WebSocketClient {
                 session.getBasicRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(close));
                 session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Client called close."));
             } catch (Exception e) {
-                LOG.info("Unable to send close message to server: {}", e.getMessage());
+                log.info("Unable to send close message to server: {}", e.getMessage());
             }
         }
         super.close();
@@ -84,4 +85,8 @@ public class WebSocketSubscriptionClient extends WebSocketClient {
         return session.getAsyncRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(remove));
     }
 
+    public Future<Void> requestVersion() throws Exception {
+        VersionRequest version = new VersionRequest();
+        return session.getAsyncRemote().sendText(JsonSerializer.getObjectMapper().writeValueAsString(version));
+    }
 }

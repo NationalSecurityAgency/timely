@@ -23,13 +23,11 @@ import org.collectd.api.ValueList;
 
 /**
  *
- * CollectD plugin that writes metrics collected by the StatsD plugin to NSQ.
- * NSQ can be configured to write statsd metrics to CollectD. If you do this,
- * set the statsd prefix in NSQ to 'nsq'.
+ * CollectD plugin that writes metrics collected by the StatsD plugin to NSQ. NSQ can be configured to write statsd metrics to CollectD. If you do this, set the
+ * statsd prefix in NSQ to 'nsq'.
  *
  */
-public class WriteNSQPlugin extends CollectDPluginParent
-        implements CollectdConfigInterface, CollectdShutdownInterface, CollectdWriteInterface {
+public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConfigInterface, CollectdShutdownInterface, CollectdWriteInterface {
 
     private String host = null;
     private int port = 0;
@@ -78,12 +76,10 @@ public class WriteNSQPlugin extends CollectDPluginParent
             if (client != null) {
                 try {
                     client.close();
-                } catch (IOException e1) {
-                }
+                } catch (IOException e1) {}
                 try {
                     clientPool.invalidateObject(client);
-                } catch (Exception e2) {
-                }
+                } catch (Exception e2) {}
             }
         } finally {
             if (client != null) {
@@ -91,8 +87,7 @@ public class WriteNSQPlugin extends CollectDPluginParent
             }
             try {
                 out.close();
-            } catch (IOException e) {
-            }
+            } catch (IOException e) {}
         }
         return 0;
     }
@@ -105,8 +100,7 @@ public class WriteNSQPlugin extends CollectDPluginParent
             Collectd.logError("Error writing metric: " + e.getMessage());
             try {
                 out.close(); // Should cause IOException in write.
-            } catch (IOException e1) {
-            }
+            } catch (IOException e1) {}
         }
     }
 

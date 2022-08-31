@@ -1,124 +1,58 @@
 package timely.balancer.configuration;
 
-import javax.validation.Valid;
+import javax.net.ssl.SSLContext;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.NestedConfigurationProperty;
-import org.springframework.stereotype.Component;
-import org.springframework.validation.annotation.Validated;
+import org.apache.curator.framework.CuratorFramework;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import timely.configuration.Cache;
+import io.netty.handler.ssl.SslContext;
+import timely.balancer.Balancer;
+import timely.balancer.HealthChecker;
+import timely.balancer.MetricResolver;
+import timely.common.component.AuthenticationService;
+import timely.common.configuration.CacheProperties;
+import timely.common.configuration.SecurityProperties;
+import timely.common.configuration.SslClientProperties;
+import timely.common.configuration.SslServerProperties;
+import timely.common.configuration.ZookeeperProperties;
 
-@Validated
-@Component
-@ConfigurationProperties(prefix = "timely-balancer")
+@Configuration
+@EnableConfigurationProperties({BalancerProperties.class, BalancerServerProperties.class, BalancerWebsocketProperties.class, BalancerHttpProperties.class})
 public class BalancerConfiguration {
 
-    @Valid
-    @NestedConfigurationProperty
-    private BalancerServer server = new BalancerServer();
-
-    @Valid
-    @NestedConfigurationProperty
-    private BalancerHttp http = new BalancerHttp();
-
-    @Valid
-    @NestedConfigurationProperty
-    private BalancerWebsocket websocket = new BalancerWebsocket();
-
-    @Valid
-    @NestedConfigurationProperty
-    private ZooKeeper zooKeeper = new ZooKeeper();
-
-    @Valid
-    @NestedConfigurationProperty
-    private BalancerSecurity security = new BalancerSecurity();
-
-    @Valid
-    @NestedConfigurationProperty
-    private Cache cache = new Cache();
-
-    private boolean loginRequired = false;
-
-    private String assignmentFile;
-
-    private Double controlBandPercentage = 0.05;
-
-    private long checkServerHealthInterval = 10000;
-
-    private int serverFailuresBeforeDown = 3;
-
-    private int serverSuccessesBeforeUp = 3;
-
-    public ZooKeeper getZooKeeper() {
-        return zooKeeper;
+    @Bean
+    @ConditionalOnMissingBean
+    public Balancer balancer(ApplicationContext applicationContext, @Qualifier("nettySslContext") SslContext serverSslContext,
+                    @Qualifier("outboundJDKSslContext") SSLContext clientSSLContext, AuthenticationService authenticationService, MetricResolver metricResolver,
+                    BalancerProperties balancerProperties, ZookeeperProperties zookeeperProperties, SecurityProperties securityProperties,
+                    SslServerProperties sslServerProperties, SslClientProperties sslClientProperties, BalancerServerProperties balancerServerProperties,
+                    BalancerHttpProperties balancerHttpProperties, BalancerWebsocketProperties balancerWebsocketProperties) {
+        Balancer balancer = new Balancer(applicationContext, serverSslContext, clientSSLContext, authenticationService, metricResolver, balancerProperties,
+                        zookeeperProperties, securityProperties, sslServerProperties, sslClientProperties, balancerServerProperties, balancerHttpProperties,
+                        balancerWebsocketProperties);
+        balancer.start();
+        return balancer;
     }
 
-    public void setLoginRequired(boolean loginRequired) {
-        this.loginRequired = loginRequired;
+    @Bean
+    @ConditionalOnMissingBean
+    public HealthChecker healthChecker(BalancerProperties balancerProperties, BalancerServerProperties balancerServerProperties) {
+        HealthChecker healthChecker = new HealthChecker(balancerProperties, balancerServerProperties);
+        healthChecker.start();
+        return healthChecker;
     }
 
-    public boolean isLoginRequired() {
-        return loginRequired;
-    }
-
-    public String getAssignmentFile() {
-        return assignmentFile;
-    }
-
-    public void setAssignmentFile(String assignmentFile) {
-        this.assignmentFile = assignmentFile;
-    }
-
-    public void setControlBandPercentage(Double controlBandPercentage) {
-        this.controlBandPercentage = controlBandPercentage;
-    }
-
-    public Double getControlBandPercentage() {
-        return controlBandPercentage;
-    }
-
-    public BalancerSecurity getSecurity() {
-        return security;
-    }
-
-    public BalancerServer getServer() {
-        return server;
-    }
-
-    public BalancerHttp getHttp() {
-        return http;
-    }
-
-    public BalancerWebsocket getWebsocket() {
-        return websocket;
-    }
-
-    public Cache getCache() {
-        return cache;
-    }
-
-    public void setCheckServerHealthInterval(long checkServerHealthInterval) {
-        this.checkServerHealthInterval = checkServerHealthInterval;
-    }
-
-    public long getCheckServerHealthInterval() {
-        return checkServerHealthInterval;
-    }
-
-    public int getServerFailuresBeforeDown() {
-        return serverFailuresBeforeDown;
-    }
-
-    public void setServerFailuresBeforeDown(int serverFailuresBeforeDown) {
-        this.serverFailuresBeforeDown = serverFailuresBeforeDown;
-    }
-
-    public int getServerSuccessesBeforeUp() {
-        return serverSuccessesBeforeUp;
-    }
-
-    public void setServerSuccessesBeforeUp(int serverSuccessesBeforeUp) {
-        this.serverSuccessesBeforeUp = serverSuccessesBeforeUp;
+    @Bean
+    @ConditionalOnMissingBean
+    public MetricResolver metricResolver(CuratorFramework curatorFramework, BalancerProperties balancerProperties, CacheProperties cacheProperties,
+                    HealthChecker healthChecker) {
+        MetricResolver metricResolver = new MetricResolver(curatorFramework, balancerProperties, cacheProperties, healthChecker);
+        metricResolver.start();
+        return metricResolver;
     }
 }

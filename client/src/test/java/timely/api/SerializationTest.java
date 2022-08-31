@@ -12,14 +12,6 @@ public class SerializationTest {
     private ObjectMapper mapper = JsonSerializer.getObjectMapper();
 
     @Test
-    public void testBasicAuth() throws Exception {
-        BasicAuthLogin login = new BasicAuthLogin();
-        login.setUsername("test");
-        login.setPassword("pass");
-        testSerialization(login);
-    }
-
-    @Test
     public void testCreateSubscription() throws Exception {
         CreateSubscription create = new CreateSubscription();
         create.setSubscriptionId("1234");

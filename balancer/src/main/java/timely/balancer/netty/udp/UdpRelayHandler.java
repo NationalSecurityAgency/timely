@@ -12,15 +12,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import timely.api.request.MetricRequest;
 import timely.api.request.UdpRequest;
+import timely.balancer.MetricResolver;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.udp.UdpClientPool;
-import timely.balancer.resolver.MetricResolver;
 import timely.client.udp.UdpClient;
 import timely.netty.Constants;
 
 public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UdpRelayHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(UdpRelayHandler.class);
     private static final String LOG_ERR_MSG = "Error storing put metric: {}";
     private static final String ERR_MSG = "Error storing put metric: ";
 
@@ -34,7 +34,7 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, UdpRequest msg) throws Exception {
-        LOG.trace("Received {}", msg);
+        log.trace("Received {}", msg);
         try {
             MetricRequest metricRequest = (MetricRequest) msg;
             String metricName = metricRequest.getMetric().getName();
@@ -50,10 +50,10 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
             }
 
         } catch (Exception e) {
-            LOG.error(LOG_ERR_MSG, msg, e);
+            log.error(LOG_ERR_MSG, msg, e);
             ChannelFuture cf = ctx.writeAndFlush(Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
             if (!cf.isSuccess()) {
-                LOG.error(Constants.ERR_WRITING_RESPONSE, cf.cause());
+                log.error(Constants.ERR_WRITING_RESPONSE, cf.cause());
             }
         }
     }
@@ -69,7 +69,7 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
             } catch (Exception e1) {
                 failures++;
                 client = null;
-                LOG.error(e1.getMessage(), e1);
+                log.error(e1.getMessage(), e1);
                 try {
                     Thread.sleep(failures < 10 ? 500 : 60000);
                 } catch (InterruptedException e2) {

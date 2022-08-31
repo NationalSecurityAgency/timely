@@ -1,21 +1,22 @@
 package timely.balancer;
 
 import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getTimeInMillis;
-import static timely.Server.SERVICE_DISCOVERY_PATH;
-import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
-import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
+import static timely.Constants.NON_CACHED_METRICS;
+import static timely.Constants.NON_CACHED_METRICS_LOCK_PATH;
+import static timely.Constants.SERVICE_DISCOVERY_PATH;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -24,10 +25,10 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 
+import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -37,7 +38,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -58,35 +58,31 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.OpenSslServerSessionContext;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
-import timely.auth.AuthCache;
 import timely.auth.JWTTokenHandler;
-import timely.auth.util.SslHelper;
-import timely.balancer.configuration.BalancerConfiguration;
-import timely.balancer.configuration.SpringBootstrap;
+import timely.balancer.configuration.BalancerHttpProperties;
+import timely.balancer.configuration.BalancerProperties;
+import timely.balancer.configuration.BalancerServerProperties;
+import timely.balancer.configuration.BalancerWebsocketProperties;
 import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.connection.tcp.TcpClientPool;
 import timely.balancer.connection.udp.UdpClientPool;
 import timely.balancer.connection.ws.WsClientPool;
-import timely.balancer.healthcheck.HealthChecker;
 import timely.balancer.netty.http.HttpRelayHandler;
 import timely.balancer.netty.tcp.TcpRelayHandler;
 import timely.balancer.netty.udp.UdpRelayHandler;
 import timely.balancer.netty.ws.WsRelayHandler;
-import timely.balancer.resolver.BalancedMetricResolver;
-import timely.balancer.resolver.MetricResolver;
-import timely.client.http.HttpClient;
-import timely.configuration.ClientSsl;
-import timely.configuration.ServerSsl;
+import timely.common.component.AuthenticationService;
+import timely.common.configuration.SecurityProperties;
+import timely.common.configuration.SslClientProperties;
+import timely.common.configuration.SslServerProperties;
+import timely.common.configuration.ZookeeperProperties;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.NonSslRedirectHandler;
 import timely.netty.http.TimelyExceptionHandler;
@@ -106,17 +102,25 @@ public class Balancer {
     final public static String ASSIGNMENTS_LOCK_PATH = "/timely/balancer/assignments/lock";
     final public static String ASSIGNMENTS_LAST_UPDATED_PATH = "/timely/balancer/assignments/lastUpdated";
 
-    private static final Logger LOG = LoggerFactory.getLogger(Balancer.class);
-    private static final int EPOLL_MIN_MAJOR_VERSION = 2;
-    private static final int EPOLL_MIN_MINOR_VERSION = 6;
-    private static final int EPOLL_MIN_PATCH_VERSION = 32;
+    private static final Logger log = LoggerFactory.getLogger(Balancer.class);
+    private static final String EPOLL_MIN_VERSION = "2.7";
     private static final String OS_NAME = "os.name";
     private static final String OS_VERSION = "os.version";
     private static final String WS_PATH = "/websocket";
-    protected static final CountDownLatch LATCH = new CountDownLatch(1);
-    static ConfigurableApplicationContext applicationContext;
-
-    private final BalancerConfiguration balancerConfig;
+    private BalancerProperties balancerProperties;
+    private SecurityProperties securityProperties;
+    private SslServerProperties sslServerProperties;
+    private SslClientProperties sslClientProperties;
+    private ZookeeperProperties zookeeperProperties;
+    private BalancerServerProperties balancerServerProperties;
+    private BalancerHttpProperties balancerHttpProperties;
+    private BalancerWebsocketProperties balancerWebsocketProperties;
+    private ApplicationContext applicationContext;
+    private AuthenticationService authenticationService;
+    private CuratorFramework curatorFramework;
+    private int quietPeriod;
+    private SslContext serverSslContext;
+    private SSLContext clientSSLContext;
     private EventLoopGroup tcpWorkerGroup = null;
     private EventLoopGroup tcpBossGroup = null;
     private EventLoopGroup httpWorkerGroup = null;
@@ -130,60 +134,200 @@ public class Balancer {
     protected Channel httpChannelHandle = null;
     protected Channel wsChannelHandle = null;
     protected List<Channel> udpChannelHandleList = new ArrayList<>();
-    private CuratorFramework curatorFramework;
-    protected volatile boolean shutdown = false;
-    private static final int DEFAULT_EVENT_LOOP_THREADS;
+    protected int DEFAULT_EVENT_LOOP_THREADS;
 
     private String[] zkPaths = new String[] {LEADER_LATCH_PATH, ASSIGNMENTS_LAST_UPDATED_PATH, ASSIGNMENTS_LOCK_PATH, SERVICE_DISCOVERY_PATH,
             NON_CACHED_METRICS, NON_CACHED_METRICS_LOCK_PATH};
 
-    static {
+    private static boolean useEpoll() {
+        final String osName = SystemPropertyUtil.get(OS_NAME).toLowerCase().trim();
+        final String osVersion = SystemPropertyUtil.get(OS_VERSION).toLowerCase();
+        // split at periods, keep the first two, join with a period
+        final String majMinVers = StringUtils.join(Arrays.stream(osVersion.split("\\.")).limit(2).collect(Collectors.toList()), ".");
+        if (osName.startsWith("linux")) {
+            try {
+                Runtime.Version currentVersion = Runtime.Version.parse(majMinVers);
+                Runtime.Version epollMinVersion = Runtime.Version.parse(EPOLL_MIN_VERSION);
+                return currentVersion.compareTo(epollMinVersion) > 0;
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+            }
+        }
+        return false;
+    }
+
+    public Balancer(ApplicationContext applicationContext, SslContext serverSslContext, SSLContext clientSSLContext,
+                    AuthenticationService authenticationService, MetricResolver metricResolver, BalancerProperties balancerProperties,
+                    ZookeeperProperties zookeeperProperties, SecurityProperties securityProperties, SslServerProperties sslServerProperties,
+                    SslClientProperties sslClientProperties, BalancerServerProperties balancerServerProperties, BalancerHttpProperties balancerHttpProperties,
+                    BalancerWebsocketProperties balancerWebsocketProperties) {
+        this.serverSslContext = serverSslContext;
+        this.clientSSLContext = clientSSLContext;
+        this.quietPeriod = balancerServerProperties.getShutdownQuietPeriod();
+        this.applicationContext = applicationContext;
+        this.authenticationService = authenticationService;
+        this.metricResolver = metricResolver;
+        this.balancerProperties = balancerProperties;
+        this.zookeeperProperties = zookeeperProperties;
+        this.securityProperties = securityProperties;
+        this.sslServerProperties = sslServerProperties;
+        this.sslClientProperties = sslClientProperties;
+        this.balancerServerProperties = balancerServerProperties;
+        this.balancerHttpProperties = balancerHttpProperties;
+        this.balancerWebsocketProperties = balancerWebsocketProperties;
         DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
     }
 
-    public Balancer(BalancerConfiguration balancerConf) throws Exception {
-        this.balancerConfig = balancerConf;
-    }
+    public void start() {
+        log.info("Starting {}", this.getClass().getSimpleName());
+        try {
+            // start curator framework
+            RetryPolicy retryPolicy = new RetryForever(1000);
+            int timeout = Long.valueOf(getTimeInMillis(zookeeperProperties.getTimeout())).intValue();
+            curatorFramework = CuratorFrameworkFactory.newClient(zookeeperProperties.getServers(), timeout, 10000, retryPolicy);
+            curatorFramework.start();
+            ensureZkPaths(curatorFramework, zkPaths);
 
-    protected static ConfigurableApplicationContext initializeContext(String[] args) {
-        SpringApplicationBuilder builder = new SpringApplicationBuilder(SpringBootstrap.class);
-        builder.web(WebApplicationType.NONE);
-        builder.registerShutdownHook(false);
-        return builder.run(args);
-    }
-
-    private void shutdownHook() {
-
-        final Runnable shutdownRunner = () -> {
-            if (!shutdown) {
-                shutdown();
+            JWTTokenHandler.init(securityProperties, null);
+            final boolean useEpoll = useEpoll();
+            Class<? extends ServerSocketChannel> channelClass;
+            Class<? extends Channel> datagramChannelClass;
+            if (useEpoll) {
+                tcpWorkerGroup = new EpollEventLoopGroup();
+                tcpBossGroup = new EpollEventLoopGroup();
+                httpWorkerGroup = new EpollEventLoopGroup();
+                httpBossGroup = new EpollEventLoopGroup();
+                wsWorkerGroup = new EpollEventLoopGroup();
+                wsBossGroup = new EpollEventLoopGroup();
+                udpWorkerGroup = new EpollEventLoopGroup();
+                udpBossGroup = new EpollEventLoopGroup();
+                channelClass = EpollServerSocketChannel.class;
+                datagramChannelClass = EpollDatagramChannel.class;
+            } else {
+                tcpWorkerGroup = new NioEventLoopGroup();
+                tcpBossGroup = new NioEventLoopGroup();
+                httpWorkerGroup = new NioEventLoopGroup();
+                httpBossGroup = new NioEventLoopGroup();
+                wsWorkerGroup = new NioEventLoopGroup();
+                wsBossGroup = new NioEventLoopGroup();
+                udpWorkerGroup = new NioEventLoopGroup();
+                udpBossGroup = new NioEventLoopGroup();
+                channelClass = NioServerSocketChannel.class;
+                datagramChannelClass = NioDatagramChannel.class;
             }
-        };
-        final Thread hook = new Thread(shutdownRunner, "shutdown-hook-thread");
-        Runtime.getRuntime().addShutdownHook(hook);
+            log.info("Using channel class {}", channelClass.getSimpleName());
+
+            List<TcpClientPool> tcpClientPools = new ArrayList<>();
+            for (int x = 0; x < balancerServerProperties.getNumTcpPools(); x++) {
+                tcpClientPools.add(new TcpClientPool(balancerServerProperties));
+            }
+
+            final ServerBootstrap tcpServer = new ServerBootstrap();
+            tcpServer.group(tcpBossGroup, tcpWorkerGroup);
+            tcpServer.channel(channelClass);
+            tcpServer.handler(new LoggingHandler());
+            tcpServer.childHandler(setupTcpChannel(metricResolver, tcpClientPools));
+            tcpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+            tcpServer.option(ChannelOption.SO_BACKLOG, 128);
+            tcpServer.childOption(ChannelOption.SO_KEEPALIVE, true);
+            final int tcpPort = balancerServerProperties.getTcpPort();
+            final String tcpIp = balancerServerProperties.getIp();
+            tcpChannelHandle = bind(tcpServer, tcpIp, tcpPort);
+            final String tcpAddress = ((InetSocketAddress) tcpChannelHandle.localAddress()).getAddress().getHostAddress();
+
+            final int httpPort = balancerHttpProperties.getPort();
+            final String httpIp = balancerHttpProperties.getIp();
+
+            if (serverSslContext instanceof OpenSslServerContext) {
+                OpenSslServerContext openssl = (OpenSslServerContext) serverSslContext;
+                String application = "Timely_" + httpPort;
+                OpenSslServerSessionContext opensslCtx = openssl.sessionContext();
+                opensslCtx.setSessionCacheEnabled(true);
+                opensslCtx.setSessionCacheSize(128);
+                opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
+                opensslCtx.setSessionTimeout(securityProperties.getSessionMaxAge());
+            }
+            final ServerBootstrap httpServer = new ServerBootstrap();
+            httpServer.group(httpBossGroup, httpWorkerGroup);
+            httpServer.channel(channelClass);
+            httpServer.handler(new LoggingHandler());
+            HttpClientPool httpClientPool = new HttpClientPool(balancerHttpProperties, clientSSLContext, sslClientProperties);
+            httpServer.childHandler(setupHttpChannel(balancerHttpProperties, sslServerProperties, serverSslContext, metricResolver, httpClientPool));
+            httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+            httpServer.option(ChannelOption.SO_BACKLOG, 128);
+            httpServer.childOption(ChannelOption.SO_KEEPALIVE, true);
+            httpChannelHandle = bind(httpServer, httpIp, httpPort);
+            final String httpAddress = ((InetSocketAddress) httpChannelHandle.localAddress()).getAddress().getHostAddress();
+
+            final int wsPort = balancerWebsocketProperties.getPort();
+            final String wsIp = balancerWebsocketProperties.getIp();
+            final ServerBootstrap wsServer = new ServerBootstrap();
+            wsServer.group(wsBossGroup, wsWorkerGroup);
+            wsServer.channel(channelClass);
+            wsServer.handler(new LoggingHandler());
+            WsClientPool wsClientPool = new WsClientPool(balancerProperties, balancerWebsocketProperties, sslClientProperties, clientSSLContext);
+            wsServer.childHandler(setupWSChannel(balancerWebsocketProperties, securityProperties, serverSslContext, metricResolver, wsClientPool));
+            wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+            wsServer.option(ChannelOption.SO_BACKLOG, 128);
+            wsServer.childOption(ChannelOption.SO_KEEPALIVE, true);
+            wsChannelHandle = bind(wsServer, wsIp, wsPort);
+            final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
+
+            final int udpPort = balancerServerProperties.getUdpPort();
+            final String udpIp = balancerServerProperties.getIp();
+            UdpClientPool udpClientPool = new UdpClientPool(balancerServerProperties);
+            for (int n = 0; n < DEFAULT_EVENT_LOOP_THREADS; n++) {
+                final Bootstrap udpServer = new Bootstrap();
+                udpServer.group(udpBossGroup);
+                udpServer.channel(datagramChannelClass);
+                udpServer.handler(setupUdpChannel(metricResolver, udpClientPool));
+                udpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+                udpServer.option(EpollChannelOption.SO_REUSEADDR, true);
+                udpServer.option(EpollChannelOption.SO_REUSEPORT, true);
+                udpChannelHandleList.add(bind(udpServer, udpIp, udpPort));
+            }
+            log.info("Balancer started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
+                            tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            SpringApplication.exit(applicationContext, () -> 0);
+        }
+    }
+
+    protected Channel bind(AbstractBootstrap server, String ip, int port) {
+        Channel channel = null;
+        try {
+            channel = server.bind(ip, port).sync().channel();
+        } catch (InterruptedException e) {
+            log.error("Failed to bind to {}:{} -- {}", ip, port, e.getMessage());
+        }
+        if (channel == null) {
+            throw new IllegalStateException("Failed to bind to port:" + ip + ":" + port);
+        }
+        return channel;
     }
 
     public void shutdown() {
         List<ChannelFuture> channelFutures = new ArrayList<>();
 
         if (tcpChannelHandle != null) {
-            LOG.info("Closing tcpChannelHandle");
+            log.info("Closing tcpChannelHandle");
             channelFutures.add(tcpChannelHandle.close());
         }
 
         if (httpChannelHandle != null) {
-            LOG.info("Closing httpChannelHandle");
+            log.info("Closing httpChannelHandle");
             channelFutures.add(httpChannelHandle.close());
         }
 
         if (wsChannelHandle != null) {
-            LOG.info("Closing wsChannelHandle");
+            log.info("Closing wsChannelHandle");
             channelFutures.add(wsChannelHandle.close());
         }
 
         int udpChannel = 1;
         for (Channel c : udpChannelHandleList) {
-            LOG.info("Closing udpChannelHandle #" + udpChannel++);
+            log.info("Closing udpChannelHandle #" + udpChannel++);
             channelFutures.add(c.close());
         }
 
@@ -192,50 +336,49 @@ public class Balancer {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Channel:" + f.channel().config() + " -> " + e.getMessage(), e);
+                log.error("Channel:" + f.channel().config() + " -> " + e.getMessage(), e);
             }
         });
 
-        int quietPeriod = balancerConfig.getServer().getShutdownQuietPeriod();
         List<Future<?>> groupFutures = new ArrayList<>();
 
         if (tcpBossGroup != null) {
-            LOG.info("Shutting down tcpBossGroup");
+            log.info("Shutting down tcpBossGroup");
             groupFutures.add(tcpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
         if (tcpWorkerGroup != null) {
-            LOG.info("Shutting down tcpWorkerGroup");
+            log.info("Shutting down tcpWorkerGroup");
             groupFutures.add(tcpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
         if (httpBossGroup != null) {
-            LOG.info("Shutting down httpBossGroup");
+            log.info("Shutting down httpBossGroup");
             groupFutures.add(httpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
         if (httpWorkerGroup != null) {
-            LOG.info("Shutting down httpWorkerGroup");
+            log.info("Shutting down httpWorkerGroup");
             groupFutures.add(httpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
         if (wsBossGroup != null) {
-            LOG.info("Shutting down wsBossGroup");
+            log.info("Shutting down wsBossGroup");
             groupFutures.add(wsBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
         if (wsWorkerGroup != null) {
-            LOG.info("Shutting down wsWorkerGroup");
+            log.info("Shutting down wsWorkerGroup");
             groupFutures.add(wsWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
         if (udpBossGroup != null) {
-            LOG.info("Shutting down udpBossGroup");
+            log.info("Shutting down udpBossGroup");
             groupFutures.add(udpBossGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
         if (udpWorkerGroup != null) {
-            LOG.info("Shutting down udpWorkerGroup");
+            log.info("Shutting down udpWorkerGroup");
             groupFutures.add(udpWorkerGroup.shutdownGracefully(quietPeriod, 10, TimeUnit.SECONDS));
         }
 
@@ -243,100 +386,17 @@ public class Balancer {
             try {
                 f.get();
             } catch (final Exception e) {
-                LOG.error("Group:" + f.toString() + " -> " + e.getMessage(), e);
+                log.error("Group:" + f.toString() + " -> " + e.getMessage(), e);
             }
         });
 
         try {
-            LOG.info("Closing WebSocketRequestDecoder");
+            log.info("Closing WebSocketRequestDecoder");
             WebSocketRequestDecoder.close();
         } catch (Exception e) {
-            LOG.error("Error closing WebSocketRequestDecoder during shutdown", e);
+            log.error("Error closing WebSocketRequestDecoder during shutdown", e);
         }
-
-        if (this.metricResolver != null) {
-            try {
-                LOG.info("Closing metricResolver");
-                this.metricResolver.close();
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
-            }
-        }
-
-        if (curatorFramework != null) {
-            try {
-                LOG.info("Closing curatorFramework");
-                curatorFramework.close();
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
-            }
-        }
-
-        if (applicationContext != null) {
-            LOG.info("Closing applicationContext");
-            applicationContext.close();
-        }
-
-        this.shutdown = true;
-        LOG.info("Server shut down.");
-    }
-
-    private static boolean useEpoll() {
-
-        // Should we just return true if this is Linux and if we get an error
-        // during Epoll
-        // setup handle it there?
-        final String os = SystemPropertyUtil.get(OS_NAME).toLowerCase().trim();
-        final String[] version = SystemPropertyUtil.get(OS_VERSION).toLowerCase().trim().split("\\.");
-        if (os.startsWith("linux") && version.length >= 3) {
-            final int major = Integer.parseInt(version[0]);
-            if (major > EPOLL_MIN_MAJOR_VERSION) {
-                return true;
-            } else if (major == EPOLL_MIN_MAJOR_VERSION) {
-                final int minor = Integer.parseInt(version[1]);
-                if (minor > EPOLL_MIN_MINOR_VERSION) {
-                    return true;
-                } else if (minor == EPOLL_MIN_MINOR_VERSION) {
-                    final int patch = Integer.parseInt(version[2].substring(0, 2));
-                    return patch >= EPOLL_MIN_PATCH_VERSION;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-
-    protected SslContext createSSLContext(BalancerConfiguration config) throws Exception {
-
-        ServerSsl sslCfg = config.getSecurity().getServerSsl();
-        Boolean generate = sslCfg.isUseGeneratedKeypair();
-        SslContextBuilder ssl;
-        if (generate) {
-            LOG.warn("Using generated self signed server certificate");
-            Date begin = new Date();
-            Date end = new Date(begin.getTime() + 86400000);
-            SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", begin, end);
-            ssl = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-        } else {
-            if (null == sslCfg.getKeyStoreFile()) {
-                throw new IllegalArgumentException("Check your SSL properties, something is wrong.");
-            }
-            ssl = SslHelper.getSslContextBuilder(sslCfg);
-        }
-        // Can't set to REQUIRE because the CORS pre-flight requests will fail.
-        ssl.clientAuth(ClientAuth.OPTIONAL);
-        return ssl.build();
-    }
-
-    protected SSLContext createSSLClientContext(BalancerConfiguration config) throws Exception {
-
-        ClientSsl ssl = config.getSecurity().getClientSsl();
-        return HttpClient.getSSLContext(ssl.getTrustStoreFile(), ssl.getTrustStoreType(), ssl.getTrustStorePassword(), ssl.getKeyStoreFile(),
-                        ssl.getKeyStoreType(), ssl.getKeyStorePassword());
+        log.info("{} shut down.", this.getClass().getSimpleName());
     }
 
     private void ensureZkPaths(CuratorFramework curatorFramework, String[] paths) {
@@ -347,175 +407,34 @@ public class Balancer {
                     curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT).forPath(s);
                 }
             } catch (Exception e) {
-                LOG.info(e.getMessage());
+                log.info(e.getMessage());
             }
 
         }
     }
 
-    public void run() throws Exception {
-
-        // start curator framework
-        RetryPolicy retryPolicy = new RetryForever(1000);
-        int timeout = Long.valueOf(getTimeInMillis(balancerConfig.getZooKeeper().getTimeout())).intValue();
-        curatorFramework = CuratorFrameworkFactory.newClient(balancerConfig.getZooKeeper().getServers(), timeout, 10000, retryPolicy);
-        curatorFramework.start();
-        ensureZkPaths(curatorFramework, zkPaths);
-
-        AuthCache.configure(balancerConfig.getSecurity());
-        JWTTokenHandler.init(balancerConfig.getSecurity().getJwtSsl(), null);
-        final boolean useEpoll = useEpoll();
-        Class<? extends ServerSocketChannel> channelClass;
-        Class<? extends Channel> datagramChannelClass;
-        if (useEpoll) {
-            tcpWorkerGroup = new EpollEventLoopGroup();
-            tcpBossGroup = new EpollEventLoopGroup();
-            httpWorkerGroup = new EpollEventLoopGroup();
-            httpBossGroup = new EpollEventLoopGroup();
-            wsWorkerGroup = new EpollEventLoopGroup();
-            wsBossGroup = new EpollEventLoopGroup();
-            udpWorkerGroup = new EpollEventLoopGroup();
-            udpBossGroup = new EpollEventLoopGroup();
-            channelClass = EpollServerSocketChannel.class;
-            datagramChannelClass = EpollDatagramChannel.class;
-        } else {
-            tcpWorkerGroup = new NioEventLoopGroup();
-            tcpBossGroup = new NioEventLoopGroup();
-            httpWorkerGroup = new NioEventLoopGroup();
-            httpBossGroup = new NioEventLoopGroup();
-            wsWorkerGroup = new NioEventLoopGroup();
-            wsBossGroup = new NioEventLoopGroup();
-            udpWorkerGroup = new NioEventLoopGroup();
-            udpBossGroup = new NioEventLoopGroup();
-            channelClass = NioServerSocketChannel.class;
-            datagramChannelClass = NioDatagramChannel.class;
-        }
-        LOG.info("Using channel class {}", channelClass.getSimpleName());
-
-        List<TcpClientPool> tcpClientPools = new ArrayList<>();
-        for (int x = 0; x < balancerConfig.getServer().getNumTcpPools(); x++) {
-            tcpClientPools.add(new TcpClientPool(this.balancerConfig));
-        }
-        HealthChecker healthChecker = new HealthChecker(this.balancerConfig, tcpClientPools.get(0));
-        this.metricResolver = new BalancedMetricResolver(curatorFramework, this.balancerConfig, healthChecker);
-
-        final ServerBootstrap tcpServer = new ServerBootstrap();
-        tcpServer.group(tcpBossGroup, tcpWorkerGroup);
-        tcpServer.channel(channelClass);
-        tcpServer.handler(new LoggingHandler());
-        tcpServer.childHandler(setupTcpChannel(metricResolver, tcpClientPools));
-        tcpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        tcpServer.option(ChannelOption.SO_BACKLOG, 128);
-        tcpServer.option(ChannelOption.SO_KEEPALIVE, true);
-        final int tcpPort = balancerConfig.getServer().getTcpPort();
-        final String tcpIp = balancerConfig.getServer().getIp();
-        tcpChannelHandle = tcpServer.bind(tcpIp, tcpPort).sync().channel();
-        final String tcpAddress = ((InetSocketAddress) tcpChannelHandle.localAddress()).getAddress().getHostAddress();
-
-        final int httpPort = balancerConfig.getHttp().getPort();
-        final String httpIp = balancerConfig.getHttp().getIp();
-        SslContext sslCtx = createSSLContext(balancerConfig);
-        if (sslCtx instanceof OpenSslServerContext) {
-            OpenSslServerContext openssl = (OpenSslServerContext) sslCtx;
-            String application = "Timely_" + httpPort;
-            OpenSslServerSessionContext opensslCtx = openssl.sessionContext();
-            opensslCtx.setSessionCacheEnabled(true);
-            opensslCtx.setSessionCacheSize(128);
-            opensslCtx.setSessionIdContext(application.getBytes(StandardCharsets.UTF_8));
-            opensslCtx.setSessionTimeout(balancerConfig.getSecurity().getSessionMaxAge());
-        }
-        SSLContext clientSSLContext = createSSLClientContext(balancerConfig);
-        final ServerBootstrap httpServer = new ServerBootstrap();
-        httpServer.group(httpBossGroup, httpWorkerGroup);
-        httpServer.channel(channelClass);
-        httpServer.handler(new LoggingHandler());
-        HttpClientPool httpClientPool = new HttpClientPool(balancerConfig.getSecurity(), balancerConfig.getHttp(), clientSSLContext);
-        httpServer.childHandler(setupHttpChannel(balancerConfig, sslCtx, metricResolver, httpClientPool));
-        httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        httpServer.option(ChannelOption.SO_BACKLOG, 128);
-        httpServer.option(ChannelOption.SO_KEEPALIVE, true);
-        httpChannelHandle = httpServer.bind(httpIp, httpPort).sync().channel();
-        final String httpAddress = ((InetSocketAddress) httpChannelHandle.localAddress()).getAddress().getHostAddress();
-
-        final int wsPort = balancerConfig.getWebsocket().getPort();
-        final String wsIp = balancerConfig.getWebsocket().getIp();
-        final ServerBootstrap wsServer = new ServerBootstrap();
-        wsServer.group(wsBossGroup, wsWorkerGroup);
-        wsServer.channel(channelClass);
-        wsServer.handler(new LoggingHandler());
-        WsClientPool wsClientPool = new WsClientPool(balancerConfig, clientSSLContext);
-        wsServer.childHandler(setupWSChannel(balancerConfig, sslCtx, metricResolver, wsClientPool));
-        wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        wsServer.option(ChannelOption.SO_BACKLOG, 128);
-        wsServer.option(ChannelOption.SO_KEEPALIVE, true);
-        /* Not sure if next two lines are necessary */
-        wsServer.option(ChannelOption.SO_SNDBUF, 1048576);
-        wsServer.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(620145, 838860));
-        wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
-        final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
-
-        final int udpPort = balancerConfig.getServer().getUdpPort();
-        final String udpIp = balancerConfig.getServer().getIp();
-        UdpClientPool udpClientPool = new UdpClientPool(balancerConfig);
-        for (int n = 1; n < DEFAULT_EVENT_LOOP_THREADS; n++) {
-            final Bootstrap udpServer = new Bootstrap();
-            udpServer.group(udpBossGroup);
-            udpServer.channel(datagramChannelClass);
-            udpServer.handler(setupUdpChannel(metricResolver, udpClientPool));
-            udpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-            udpServer.option(EpollChannelOption.SO_REUSEADDR, true);
-            udpServer.option(EpollChannelOption.SO_REUSEPORT, true);
-            udpChannelHandleList.add(udpServer.bind(udpIp, udpPort).sync().channel());
-        }
-        shutdownHook();
-        LOG.info("Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
-                        tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
-    }
-
-    public static void main(String[] args) throws Exception {
-
-        Balancer.applicationContext = Balancer.initializeContext(args);
-        BalancerConfiguration balancerConf = Balancer.applicationContext.getBean(BalancerConfiguration.class);
-
-        Balancer balancer = new Balancer(balancerConf);
-        try {
-            balancer.run();
-            LATCH.await();
-        } catch (final InterruptedException e) {
-            LOG.info("Server shutting down.");
-        } catch (Exception e) {
-            LOG.error("Error running server.", e);
-        } finally {
-            try {
-                balancer.shutdown();
-            } catch (Exception e) {
-                System.exit(1);
-            }
-        }
-    }
-
-    protected ChannelHandler setupHttpChannel(BalancerConfiguration balancerConfig, SslContext sslCtx, MetricResolver metricResolver,
-                    HttpClientPool httpClientPool) {
+    protected ChannelHandler setupHttpChannel(BalancerHttpProperties balancerHttpProperties, SslServerProperties sslServerProperties, SslContext sslCtx,
+                    MetricResolver metricResolver, HttpClientPool httpClientPool) {
 
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
+            protected void initChannel(SocketChannel ch) {
 
-                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(balancerConfig.getHttp(), sslCtx));
+                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(balancerHttpProperties, sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder(4096, 32768, 8192, true, 128));
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
-                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(balancerConfig.getSecurity(), balancerConfig.getHttp()));
-                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler()
-                                .setIgnoreSslHandshakeErrors(balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
-                ch.pipeline().addLast("login", new X509LoginRequestHandler(balancerConfig.getSecurity(), balancerConfig.getHttp()));
+                ch.pipeline().addLast("queryDecoder",
+                                new timely.netty.http.HttpRequestDecoder(authenticationService, securityProperties, balancerHttpProperties));
+                ch.pipeline().addLast("fileServer",
+                                new HttpStaticFileServerHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
+                ch.pipeline().addLast("login", new X509LoginRequestHandler(authenticationService, securityProperties, balancerHttpProperties));
                 ch.pipeline().addLast("httpRelay", new HttpRelayHandler(metricResolver, httpClientPool));
-                ch.pipeline().addLast("error", new TimelyExceptionHandler()
-                                .setIgnoreSslHandshakeErrors(balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
+                ch.pipeline().addLast("error", new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
             }
         };
     }
@@ -549,7 +468,8 @@ public class Balancer {
         };
     }
 
-    protected ChannelHandler setupWSChannel(BalancerConfiguration balancerConfig, SslContext sslCtx, MetricResolver metricResolver, WsClientPool wsClientPool) {
+    protected ChannelHandler setupWSChannel(BalancerWebsocketProperties balancerWebsocketProperties, SecurityProperties securityProperties, SslContext sslCtx,
+                    MetricResolver metricResolver, WsClientPool wsClientPool) {
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
@@ -557,12 +477,12 @@ public class Balancer {
                 ch.pipeline().addLast("ssl", sslCtx.newHandler(ch.alloc()));
                 ch.pipeline().addLast("httpServer", new HttpServerCodec());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
-                ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler());
+                ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler(authenticationService));
 
-                ch.pipeline().addLast("idle-handler", new IdleStateHandler(balancerConfig.getWebsocket().getTimeout(), 0, 0));
+                ch.pipeline().addLast("idle-handler", new IdleStateHandler(balancerWebsocketProperties.getTimeout(), 0, 0));
                 ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, false, true));
-                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(balancerConfig.getSecurity()));
-                ch.pipeline().addLast("httpRelay", new WsRelayHandler(balancerConfig, metricResolver, wsClientPool));
+                ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(authenticationService, securityProperties));
+                ch.pipeline().addLast("httpRelay", new WsRelayHandler(balancerWebsocketProperties, metricResolver, wsClientPool));
                 ch.pipeline().addLast("error", new WSTimelyExceptionHandler());
             }
         };

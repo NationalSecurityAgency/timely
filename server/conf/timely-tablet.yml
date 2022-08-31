@@ -1,0 +1,9 @@
+timely:
+  tablet:
+    disableTabletRowCheckFilter: false
+    timeUnit: DAYS
+
+logging:
+  level:
+    ROOT: info
+    timey.application: debug

@@ -10,13 +10,13 @@ THIS_DIR="${THIS_SCRIPT%/*}"
 BASE_DIR=$(cd $THIS_DIR/.. && pwd)
 BIN_DIR=${BASE_DIR}/bin
 
-. ${BIN_DIR}/timely-env.sh
+. ${BIN_DIR}/timely-server-env.sh
 
-if [ "$NUM_PROFILES" -eq "1" ]; then
+if [ "$NUM_INSTANCES" -eq "1" ]; then
     echo ${BIN_DIR}/timely-server.sh
     ${BIN_DIR}/timely-server.sh
 else
-    for i in $(seq 1 $NUM_PROFILES); do
+    for i in $(seq 1 $NUM_INSTANCES); do
         echo ${BIN_DIR}/timely-server.sh $i
         ${BIN_DIR}/timely-server.sh $i
     done

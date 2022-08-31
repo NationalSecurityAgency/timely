@@ -12,12 +12,7 @@ BIN_DIR=${BASE_DIR}/bin
 
 . ${BIN_DIR}/timely-balancer-env.sh
 
-if [ "$NUM_PROFILES" -eq "1" ]; then
-    echo ${BIN_DIR}/timely-balancer.sh
-    ${BIN_DIR}/timely-balancer.sh
-else
-    for i in $(seq 1 $NUM_PROFILES); do
-        echo ${BIN_DIR}/timely-balancer.sh $i
-        ${BIN_DIR}/timely-balancer.sh $i
-    done
-fi
+for i in $(seq 1 $NUM_INSTANCES); do
+    echo ${BIN_DIR}/timely-balancer.sh $i
+    ${BIN_DIR}/timely-balancer.sh $i
+done

@@ -1,14 +1,21 @@
 timely:
+  instance: ${INSTANCE}
   metrics-table: timely.metrics
   meta-table: timely.meta
   metric-age-off-days:
-    default: 7
+    default: ${AGE_OFF_DAYS}
+  cache:
+    enabled: true
+    metric-age-off-hours:
+      default: 26
   metrics-report-ignored-tags:
+  default-visibility:
+  zookeeper:
+    servers: ${ACCUMULO_ZOOKEEPERS}
   accumulo:
-    instance-name: TimelyStandalone
-    zookeepers: 127.0.0.1:9804
-    username: root
-    password: secret
+    instance-name: ${ACCUMULO_INSTANCE}
+    username: ${ACCUMULO_USER}
+    password: ${ACCUMULO_PASSWORD}
     write:
       latency: 5s
       threads: 3
@@ -20,42 +27,63 @@ timely:
     session-max-age: 86400
     cache-expiration-minutes: 60
     cache-refresh-minutes: 5
-    allow-anonymous-http-access: true
-    allow-anonymous-ws-access: true
+    authorization-url: ${AUTHORIZATION_URL}
+    required-roles: ${REQUIRED_ROLES}
+    required-auths: ${REQUIRED_AUTHS}
+    allow-anonymous-http-access: ${ANONYMOUS_HTTP:true}
+    allow-anonymous-ws-access: ${ANONYMOUS_WEBSOCKET:true}
     server-ssl:
-      certificate-file: /timely-server-src/server/pki/timely.csr
-      key-file: /timely-server-src/server/pki/timely-pkcs8.key
-      key-password: password
-      use-generated-keypair: false
-      trust-store-file: /timely-server-src/server/pki/timely.crt
-      use-openssl: false
+      key-store-type: ${KEY_STORE_TYPE}
+      key-store-file: ${KEY_STORE_FILE}
+      key-store-password: ${KEY_STORE_PASSWORD}
+      use-generated-keypair: ${GENERATE_KEYS}
+      ignore-ssl-handshake-errors: true
+      trust-store-type: ${TRUST_STORE_TYPE}
+      trust-store-file: ${TRUST_STORE_FILE}
+      trust-store-password: ${TRUST_STORE_PASSWORD}
+    client-ssl:
+      key-store-type: ${KEY_STORE_TYPE}
+      key-store-file: ${KEY_STORE_FILE}
+      key-store-password: ${KEY_STORE_PASSWORD}
+      trust-store-type: ${TRUST_STORE_TYPE}
+      trust-store-file: ${TRUST_STORE_FILE}
+      trust-store-password: ${TRUST_STORE_PASSWORD}
+    jwt-ssl:
+      key-store-type: ${AUTHORIZATION_CERTIFICATE_TYPE}
+      key-store-file: ${AUTHORIZATION_CERTIFICATE_FILE}
+      key-store-password: ${AUTHORIZATION_CERTIFICATE_PASSWORD}
   server:
-    ip: 0.0.0.0
-    tcp-port: 54321
-    udp-port: 54325
+    ip: ${HOST_IP}
+    tcp-base-port: ${TCP_BASE_PORT}
+    udp-base-port: ${UDP_BASE_PORT}
   http:
-    ip: 0.0.0.0
-    port: 54322
-    host: localhost
+    host: ${HOST}
+    ip: ${HOST_IP}
+    base-port: ${HTTP_BASE_PORT}
     redirect-path: /secure-me
-    strict-transport-max-age: 608400
+    strict-transport-max-age: 604800
     cors:
-      allow-any-origin: true
+      allow-any-origin: false
       allow-null-origin: false
       allow-credentials: true
       allowed-origins:
       allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
-      allowed-header: content-type
+      allowed-headers: content-type
   websocket:
-    ip: 0.0.0.0
-    port: 54323
+    ip: ${HOST_IP}
+    base-port: ${WEBSOCKET_BASE_PORT}
     timeout: 60
     subscription-lag: 120
+    scanner-batch-size: 10000
+    flush-interval-seconds: 30
+    scanner-read-ahead: 1
+    subscription-batch-size: 5000
   meta-cache:
     expiration-minutes: 1440
     cache-refresh-minutes: 60
     max-tag-values: 100
-  visibility-cache:
-    expiration-minutes: 60
-    initial-capacity: 2000
-    max-capacity: 10000
+
+logging:
+  level:
+    ROOT: info
+    timely: debug

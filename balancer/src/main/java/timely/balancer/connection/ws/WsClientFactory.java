@@ -6,27 +6,34 @@ import org.apache.commons.pool2.KeyedPooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 
-import timely.balancer.configuration.BalancerConfiguration;
+import timely.balancer.configuration.BalancerProperties;
+import timely.balancer.configuration.BalancerWebsocketProperties;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.client.websocket.subscription.WebSocketSubscriptionClient;
+import timely.common.configuration.SslClientProperties;
 
 public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost,WebSocketSubscriptionClient> {
 
     private final SSLContext sslContext;
-    private BalancerConfiguration balancerConfig;
+    private BalancerProperties balancerProperties;
+    private BalancerWebsocketProperties balancerWebsocketProperties;
+    private SslClientProperties sslClientProperties;
 
-    public WsClientFactory(BalancerConfiguration balancerConfig, SSLContext sslContext) {
-        this.balancerConfig = balancerConfig;
+    public WsClientFactory(BalancerProperties balancerProperties, BalancerWebsocketProperties balancerWebsocketProperties,
+                    SslClientProperties sslClientProperties, SSLContext sslContext) {
+        this.balancerProperties = balancerProperties;
+        this.balancerWebsocketProperties = balancerWebsocketProperties;
+        this.sslClientProperties = sslClientProperties;
         this.sslContext = sslContext;
     }
 
     @Override
     public PooledObject<WebSocketSubscriptionClient> makeObject(TimelyBalancedHost k) throws Exception {
 
-        int bufferSize = balancerConfig.getWebsocket().getIncomingBufferSize();
+        int bufferSize = balancerWebsocketProperties.getIncomingBufferSize();
         WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslContext, k.getHost(), k.getHttpPort(), k.getWsPort(),
-                        balancerConfig.getSecurity().getClientSsl().isUseClientCert(), balancerConfig.isLoginRequired(), "", "",
-                        balancerConfig.getSecurity().getClientSsl().isHostVerificationEnabled(), bufferSize);
+                        sslClientProperties.isUseClientCert(), balancerProperties.isLoginRequired(), sslClientProperties.isHostVerificationEnabled(),
+                        bufferSize);
         return new DefaultPooledObject<>(client);
     }
 

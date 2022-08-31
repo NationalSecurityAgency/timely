@@ -36,21 +36,21 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
 import timely.api.request.AuthenticatedRequest;
+import timely.api.request.HttpRequest;
 import timely.api.request.MetricRequest;
-import timely.api.request.timeseries.HttpRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
+import timely.auth.TimelyAuthenticationToken;
 import timely.auth.util.HttpHeaderUtils;
 import timely.auth.util.ProxiedEntityUtils;
+import timely.balancer.MetricResolver;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.balancer.connection.http.HttpClientPool;
-import timely.balancer.resolver.MetricResolver;
 import timely.netty.http.TimelyHttpHandler;
-import timely.netty.http.auth.TimelyAuthenticationToken;
 
 public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> implements TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpRelayHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpRelayHandler.class);
     private final HttpClientPool httpClientPool;
     private MetricResolver metricResolver;
 
@@ -132,12 +132,12 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
             } catch (Exception e) {
                 String message = e.getMessage();
                 if (message == null) {
-                    LOG.error("", e);
+                    log.error("", e);
                 } else {
                     if (message.contains("No matching tags")) {
-                        LOG.trace(message);
+                        log.trace(message);
                     } else {
-                        LOG.error(message, e);
+                        log.error(message, e);
                     }
                 }
                 this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), e.getMessage(), e.getLocalizedMessage(), e));
@@ -169,7 +169,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
             if (client != null && k != null) {
                 httpClientPool.returnObject(k, client);
             } else {
-                LOG.error("NOT RETURNING CONNECTION! " + msg.getHttpRequest().uri());
+                log.error("NOT RETURNING CONNECTION! " + msg.getHttpRequest().uri());
             }
         }
     }

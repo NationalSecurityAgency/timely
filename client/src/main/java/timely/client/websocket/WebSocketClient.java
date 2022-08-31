@@ -10,16 +10,13 @@ import javax.net.ssl.SSLContext;
 import javax.websocket.DeploymentException;
 import javax.websocket.Session;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.cookie.Cookie;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.glassfish.tyrus.client.ClientManager;
@@ -30,21 +27,17 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
-import timely.api.BasicAuthLogin;
 import timely.client.http.HttpClient;
-import timely.serialize.JsonSerializer;
 
 public class WebSocketClient implements AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WebSocketClient.class);
+    private static final Logger log = LoggerFactory.getLogger(WebSocketClient.class);
 
     private final String timelyHostname;
     private final int timelyHttpsPort;
     private final int timelyWssPort;
     private final boolean doLogin;
     private final boolean clientAuth;
-    private final String timelyUsername;
-    private final String timelyPassword;
     private final boolean hostVerificationEnabled;
     private final int bufferSize;
     private final SSLContext ssl;
@@ -54,35 +47,26 @@ public class WebSocketClient implements AutoCloseable {
     protected volatile boolean closed = true;
 
     protected WebSocketClient(SSLContext ssl, String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean clientAuth, boolean doLogin,
-                    String timelyUsername, String timelyPassword, boolean hostVerificationEnabled, int bufferSize) {
+                    boolean hostVerificationEnabled, int bufferSize) {
         this.ssl = ssl;
         this.timelyHostname = timelyHostname;
         this.timelyHttpsPort = timelyHttpsPort;
         this.timelyWssPort = timelyWssPort;
         this.doLogin = doLogin;
         this.clientAuth = clientAuth;
-        this.timelyUsername = timelyUsername;
-        this.timelyPassword = timelyPassword;
         this.hostVerificationEnabled = hostVerificationEnabled;
         this.bufferSize = bufferSize;
 
         Preconditions.checkNotNull(timelyHostname, "%s must be supplied", "Timely host name");
         Preconditions.checkNotNull(timelyHttpsPort, "%s must be supplied", "Timely HTTPS port");
         Preconditions.checkNotNull(timelyWssPort, "%s must be supplied", "Timely WSS port");
-
-        if (doLogin && !clientAuth) {
-            if ((StringUtils.isEmpty(timelyUsername) && !StringUtils.isEmpty(timelyPassword)
-                            || (!StringUtils.isEmpty(timelyUsername) && StringUtils.isEmpty(timelyPassword)))) {
-                throw new IllegalArgumentException("Both Timely username and password must be empty or non-empty");
-            }
-        }
     }
 
-    protected WebSocketClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean clientAuth, boolean doLogin, String timelyUsername,
-                    String timelyPassword, String keyStoreFile, String keyStoreType, String keyStorePass, String trustStoreFile, String trustStoreType,
-                    String trustStorePass, boolean hostVerificationEnabled, int bufferSize) {
+    protected WebSocketClient(String timelyHostname, int timelyHttpsPort, int timelyWssPort, boolean clientAuth, boolean doLogin, String keyStoreFile,
+                    String keyStoreType, String keyStorePass, String trustStoreFile, String trustStoreType, String trustStorePass,
+                    boolean hostVerificationEnabled, int bufferSize) {
         this(HttpClient.getSSLContext(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType, keyStorePass), timelyHostname,
-                        timelyHttpsPort, timelyWssPort, clientAuth, doLogin, timelyUsername, timelyPassword, hostVerificationEnabled, bufferSize);
+                        timelyHttpsPort, timelyWssPort, clientAuth, doLogin, hostVerificationEnabled, bufferSize);
     }
 
     public void open(ClientHandler clientEndpoint) throws IOException, DeploymentException, URISyntaxException {
@@ -92,23 +76,10 @@ public class WebSocketClient implements AutoCloseable {
             try (CloseableHttpClient client = HttpClient.get(ssl, cookieJar, hostVerificationEnabled, clientAuth)) {
 
                 String target = "https://" + timelyHostname + ":" + timelyHttpsPort + "/login";
-
                 HttpRequestBase request = null;
-                if (StringUtils.isEmpty(timelyUsername)) {
-                    // HTTP GET to /login to use certificate based login
-                    request = new HttpGet(target);
-                    LOG.trace("Performing client certificate login");
-                } else {
-                    // HTTP POST to /login to use username/password
-                    BasicAuthLogin login = new BasicAuthLogin();
-                    login.setUsername(timelyUsername);
-                    login.setPassword(timelyPassword);
-                    String payload = JsonSerializer.getObjectMapper().writeValueAsString(login);
-                    HttpPost post = new HttpPost(target);
-                    post.setEntity(new StringEntity(payload));
-                    request = post;
-                    LOG.trace("Performing BasicAuth login");
-                }
+                // HTTP GET to /login to use certificate based login
+                request = new HttpGet(target);
+                log.trace("Performing client certificate login");
 
                 HttpResponse response = null;
                 try {
@@ -146,7 +117,7 @@ public class WebSocketClient implements AutoCloseable {
             try {
                 session.getBasicRemote().sendPing(pingData);
             } catch (Exception e) {
-                LOG.error("Error sending ping", e);
+                log.error("Error sending ping", e);
             }
         }, 30, 60, TimeUnit.SECONDS);
         closed = false;

@@ -1,0 +1,159 @@
+logging:
+  level:
+    ROOT: info
+    timely: debug
+    org.apache.zookeeper: error
+
+timely:
+  test: true
+  instance: 1
+  accumulo:
+    instance-name: default
+    username: root
+    password: secret
+  mini-accumulo:
+    enabled: true
+    rootAuths: A,B,C,D,E,F,G,H,I
+  zookeeper:
+    servers: localhost:0
+    timeout: 30s
+  security:
+    session-max-age: 86400
+    cache-expiration-minutes: 60
+    cache-refresh-minutes: 5
+    allow-anonymous-http-access: true
+    allow-anonymous-ws-access: true
+    authorized-users:
+      - subject-dn: cn=example.com
+        roles: G,H,I
+        auths: D,E,F
+        user-type: USER
+      - subject-dn: cn=test a. user, ou=example developers, o=example corp, c=us
+        issuer-dn: cn=example corp ca, o=example corp, c=us
+        roles: G,H,I
+        auths: A,B,C
+        user-type: USER
+    server-ssl:
+      key-store-type: PKCS12
+      key-store-file: classpath:ssl/testServer.p12
+      key-store-password: ChangeIt
+      trust-store-type: JKS
+      trust-store-file: classpath:ssl/ca.jks
+      trust-store-password: ChangeIt
+      use-generated-keypair: false
+      ignore-ssl-handshake-errors: true
+      use-openssl: true
+    client-ssl:
+      key-store-type: PKCS12
+      key-store-file: classpath:ssl/testUser.p12
+      key-store-password: ChangeIt
+      trust-store-type: JKS
+      trust-store-file: classpath:ssl/ca.jks
+      trust-store-password: ChangeIt
+  cache:
+    enabled: false
+    metric-age-off-hours:
+      default: 26
+    non-cached-metrics:
+  balancer:
+    check-server-health-interval: 10000
+    server-failures-before-down: 6
+    server-successes-before-up: 1
+    assignment-file: file://${java.io.tmpdir}/timely/balancer/assignments.csv
+    server:
+      ip: 127.0.0.1
+      tcp-base-port: 4242
+      num-tcp-pools: 1
+      tcp-buffer-size: 100
+      tcp-client-pool:
+        min-idle-per-key: 0
+        max-idle-per-key: 40
+        max-total-per-key: 40
+        max-total: -1
+        lifo: true
+        fairness: false
+        max-wait-millis: -1
+        min-evictable-idle-time-millis: 1800000
+        evictor-shutdown-timeout-millis: 10000
+        soft-min-evictable-idle-time-millis: -1
+        num-tests-per-eviction-run: 3
+        time-between-eviction-runs-millis: -1
+        block-when-exhausted: true
+        jmx-enabled: true
+        test-on-borrow: false
+        test-on-return: false
+      udp-base-port: 4245
+      udp-client-pool:
+        min-idle-per-key: 0
+        max-idle-per-key: 40
+        max-total-per-key: 40
+        max-total: -1
+        lifo: true
+        fairness: false
+        max-wait-millis: -1
+        min-evictable-idle-time-millis: 1800000
+        evictor-shutdown-timeout-millis: 10000
+        soft-min-evictable-idle-time-millis: -1
+        num-tests-per-eviction-run: 3
+        time-between-eviction-runs-millis: -1
+        block-when-exhausted: true
+        jmx-enabled: true
+        test-on-borrow: false
+        test-on-return: false
+    http:
+      host: localhost
+      ip: 127.0.0.1
+      base-port: 4243
+      redirect-path: /secure-me
+      strict-transport-max-age: 604800
+      cors:
+        allow-any-origin: false
+        allow-null-origin: false
+        allow-credentials: true
+        allowed-origins:
+        allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+        allowed-headers: content-type
+      http-client-pool:
+        min-idle-per-key: 0
+        max-idle-per-key: 40
+        max-total-per-key: 40
+        max-total: -1
+        lifo: true
+        fairness: false
+        max-wait-millis: -1
+        min-evictable-idle-time-millis: 1800000
+        evictor-shutdown-timeout-millis: 10000
+        soft-min-evictable-idle-time-millis: -1
+        num-tests-per-eviction-run: 3
+        time-between-eviction-runs-millis: -1
+        block-when-exhausted: true
+        jmx-enabled: true
+        test-on-borrow: false
+        test-on-return: false
+    websocket:
+      ip: 127.0.0.1
+      base-port: 5244
+      timeout: 60
+      subscription-lag: 120
+      scanner-batch-size: 10000
+      flush-interval-seconds: 30
+      scanner-read-ahead: 1
+      subscription-batch-size: 5000
+      incoming-buffer-size: 50000000
+      ws-client-pool:
+        min-idle-per-key: 0
+        max-idle-per-key: 40
+        max-total-per-key: 40
+        max-total: -1
+        lifo: true
+        fairness: false
+        max-wait-millis: -1
+        min-evictable-idle-time-millis: 1800000
+        evictor-shutdown-timeout-millis: 10000
+        soft-min-evictable-idle-time-millis: -1
+        num-tests-per-eviction-run: 3
+        time-between-eviction-runs-millis: -1
+        block-when-exhausted: true
+        jmx-enabled: true
+        test-on-borrow: false
+        test-on-return: false

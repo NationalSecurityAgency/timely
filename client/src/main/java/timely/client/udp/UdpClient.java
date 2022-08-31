@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 public class UdpClient implements AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UdpClient.class);
+    private static final Logger log = LoggerFactory.getLogger(UdpClient.class);
 
     private final String host;
     private final int port;
@@ -38,7 +38,7 @@ public class UdpClient implements AutoCloseable {
             throw new IllegalStateException("Must call open first");
         }
         this.packet.setData(metric.getBytes(UTF_8));
-        LOG.info("writing '" + metric + "' to " + this.host + ":" + this.port);
+        log.info("writing '" + metric + "' to " + this.host + ":" + this.port);
         this.sock.send(packet);
     }
 

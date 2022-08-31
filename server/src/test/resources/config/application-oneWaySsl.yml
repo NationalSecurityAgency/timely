@@ -1,0 +1,21 @@
+timely:
+  accumulo:
+    instance-name: oneWaySsl
+  security:
+    server-ssl:
+      key-store-type: PKCS12
+      key-store-file: classpath:ssl/testServer.p12
+      key-store-password: ChangeIt
+      trust-store-type: JKS
+      trust-store-file: classpath:ssl/ca.jks
+      trust-store-password: ChangeIt
+      use-openssl: false
+      use-generated-keypair: false
+      ignore-ssl-handshake-errors: true
+  server:
+    tcp-base-port: 56322
+    udp-base-port: 56325
+  http:
+    base-port: 56323
+  websocket:
+    base-port: 56324

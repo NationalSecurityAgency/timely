@@ -44,8 +44,8 @@ public class PooledCloseableHttpClientFactory implements PooledObjectFactory<Clo
 
     @Override
     public PooledObject<CloseableHttpClient> makeObject() throws Exception {
-        RequestConfig requestConfig = RequestConfig.custom().setConnectionRequestTimeout(connectionRequestTimeout)
-                .setConnectTimeout(connectTimeout).setSocketTimeout(socketTimeout).build();
+        RequestConfig requestConfig = RequestConfig.custom().setConnectionRequestTimeout(connectionRequestTimeout).setConnectTimeout(connectTimeout)
+                        .setSocketTimeout(socketTimeout).build();
         HttpClientBuilder builder = HttpClientBuilder.create();
         builder.setDefaultRequestConfig(requestConfig);
         builder.setConnectionTimeToLive(connectionTimeToLive, TimeUnit.MILLISECONDS);

@@ -1,0 +1,89 @@
+logging:
+  level:
+    ROOT: info
+    timely: info
+    org.apache.zookeeper: error
+
+timely:
+  test: true
+  instance: 1
+  metrics-table: timely.metrics
+  meta-table: timely.meta
+  metric-age-off-days:
+    default: 10
+  cache:
+    enabled: true
+    metric-age-off-hours:
+      default: 26
+  metrics-report-ignored-tags:
+  default-visibility:
+  in-memory-accumulo:
+    enabled: true
+    rootAuths: A,B,C,D,E,F,G,H,I
+  zookeeper:
+    servers: localhost:0
+    timeout: 30s
+  accumulo:
+    instance-name: default
+    username: root
+    password: secret
+    write:
+      latency: 5ms
+      threads: 3
+      buffer-size: 100
+    scan:
+      threads: 4
+      max-downsample-memory: 10000000
+  security:
+    session-max-age: 86400
+    cache-expiration-minutes: 60
+    cache-refresh-minutes: 5
+    allow-anonymous-http-access: true
+    allow-anonymous-ws-access: true
+    authorized-users:
+      - subject-dn: cn=example.com
+        roles: G,H,I
+        auths: D,E,F,X,Y,Z
+        user-type: USER
+      - subject-dn: cn=test a. user, ou=example developers, o=example corp, c=us
+        issuer-dn: cn=example corp ca, o=example corp, c=us
+        roles: G,H,I
+        auths: A,B,C,X,Y,Z
+        user-type: USER
+    server-ssl:
+      use-generated-keypair: true
+      ignore-ssl-handshake-errors: true
+      use-openssl: true
+    required-roles: G, H
+    required-auths: X, Y, Z
+  server:
+    ip: 127.0.0.1
+    tcp-base-port: 54322
+    udp-base-port: 54325
+    shutdown-quiet-period: 0
+  http:
+    host: localhost
+    ip: 127.0.0.1
+    base-port: 54323
+    redirect-path: /secure-me
+    strict-transport-max-age: 604800
+    cors:
+      allow-any-origin: false
+      allow-null-origin: false
+      allow-credentials: true
+      allowed-origins:
+      allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+      allowed-headers: content-type
+  websocket:
+    ip: 127.0.0.1
+    base-port: 54324
+    timeout: 20
+    subscription-lag: 120
+    scanner-batch-size: 10000
+    flush-interval-seconds: 30
+    scanner-read-ahead: 1
+    subscription-batch-size: 5000
+  meta-cache:
+    expiration-minutes: 1440
+    cache-refresh-minutes: 60
+    max-tag-values: 100

@@ -63,11 +63,10 @@ public class PooledSocketFactory implements PooledObjectFactory<Socket> {
                 if (socketTimeout > -1) {
                     socket.setSoTimeout(socketTimeout);
                 }
-                Collectd.logInfo(
-                        "Connected to Timely at " + host + ":" + port + " from local port:" + socket.getLocalPort());
+                Collectd.logInfo("Connected to Timely at " + host + ":" + port + " from local port:" + socket.getLocalPort());
             } catch (Exception e) {
-                Collectd.logError("Error connecting to Timely at " + host + ":" + port + ". Error: " + e.getMessage()
-                        + ".  Will retry connection in " + currentBackoff + " ms.");
+                Collectd.logError("Error connecting to Timely at " + host + ":" + port + ". Error: " + e.getMessage() + ".  Will retry connection in "
+                                + currentBackoff + " ms.");
                 try {
                     Thread.sleep(currentBackoff);
                 } catch (InterruptedException e1) {
@@ -94,8 +93,7 @@ public class PooledSocketFactory implements PooledObjectFactory<Socket> {
                 socket.close();
             }
         } catch (Exception e) {
-            Collectd.logError(
-                    "Error closing connection to Timely at " + host + ":" + port + ". Error: " + e.getMessage());
+            Collectd.logError("Error closing connection to Timely at " + host + ":" + port + ". Error: " + e.getMessage());
         } finally {
             pooledObject.invalidate();
             ;

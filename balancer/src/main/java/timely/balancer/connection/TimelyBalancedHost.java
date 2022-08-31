@@ -7,11 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import timely.balancer.ArrivalRate;
-import timely.balancer.configuration.BalancerConfiguration;
+import timely.balancer.configuration.BalancerProperties;
 
 public class TimelyBalancedHost {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimelyBalancedHost.class);
+    private static final Logger log = LoggerFactory.getLogger(TimelyBalancedHost.class);
 
     private String host;
     private int tcpPort;
@@ -19,7 +19,7 @@ public class TimelyBalancedHost {
     private int wsPort;
     private int udpPort;
     private boolean isUp = true;
-    private BalancerConfiguration balancerConfig;
+    private BalancerProperties balancerProperties;
     private int failures = 0;
     private int successes = 0;
     private ArrivalRate arrivalRate = null;
@@ -41,8 +41,8 @@ public class TimelyBalancedHost {
         return new TimelyBalancedHost(host, tcpPort, httpPort, wsPort, udpPort, arrivalRate);
     }
 
-    public void setBalancerConfig(BalancerConfiguration balancerConfig) {
-        this.balancerConfig = balancerConfig;
+    public void setBalancerProperties(BalancerProperties balancerProperties) {
+        this.balancerProperties = balancerProperties;
     }
 
     synchronized public boolean isUp() {
@@ -50,38 +50,38 @@ public class TimelyBalancedHost {
     }
 
     public void reportSuccess() {
-        int serverSuccessesBeforeUp = balancerConfig.getServerSuccessesBeforeUp();
+        int serverSuccessesBeforeUp = balancerProperties.getServerSuccessesBeforeUp();
         String h = host;
         int p = tcpPort;
         synchronized (this) {
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("success reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}", h, p, isUp, (successes + 1),
+            if (log.isTraceEnabled()) {
+                log.trace("success reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}", h, p, isUp, (successes + 1),
                                 serverSuccessesBeforeUp);
             }
             if (!isUp) {
                 if (++successes >= serverSuccessesBeforeUp) {
                     isUp = true;
                     successes = 0;
-                    LOG.info("host up host:{} port:{}", h, p);
+                    log.info("host up host:{} port:{}", h, p);
                 }
             }
         }
     }
 
     public void reportFailure() {
-        int serverFailuresBeforeDown = balancerConfig.getServerFailuresBeforeDown();
+        int serverFailuresBeforeDown = balancerProperties.getServerFailuresBeforeDown();
         String h = host;
         int p = tcpPort;
         synchronized (this) {
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("failure reported host:{} port:{} isUp:{} failures:{} serverFailuresBeforeUp:{}", h, p, isUp, (failures + 1),
+            if (log.isTraceEnabled()) {
+                log.trace("failure reported host:{} port:{} isUp:{} failures:{} serverFailuresBeforeUp:{}", h, p, isUp, (failures + 1),
                                 serverFailuresBeforeDown);
             }
             if (isUp) {
                 if (++failures >= serverFailuresBeforeDown) {
                     isUp = false;
                     failures = 0;
-                    LOG.info("host down host:{} port:{}", h, p);
+                    log.info("host down host:{} port:{}", h, p);
                 }
             }
         }

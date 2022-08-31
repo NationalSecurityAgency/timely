@@ -13,24 +13,24 @@ import org.slf4j.LoggerFactory;
 
 public abstract class ClientHandler extends Endpoint {
 
-    private final static Logger LOG = LoggerFactory.getLogger(ClientHandler.class);
+    private final static Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
     @Override
     public void onOpen(Session session, EndpointConfig config) {
-        LOG.info("Websocket session {} opened.", session.getId());
+        log.info("Websocket session {} opened.", session.getId());
         session.addMessageHandler(String.class, message -> {
-            LOG.info("Message received on Websocket session {}: {}", session.getId(), message);
+            log.info("Message received on Websocket session {}: {}", session.getId(), message);
         });
     }
 
     @Override
     public void onClose(Session session, CloseReason reason) {
-        LOG.info("Websocket session {} closed.", session.getId());
+        log.info("Websocket session {} closed.", session.getId());
     }
 
     @Override
     public void onError(Session session, Throwable error) {
-        LOG.error("Error occurred on Websocket session" + session.getId(), error);
+        log.error("Error occurred on Websocket session" + session.getId(), error);
     }
 
     public void beforeRequest(Map<String,List<String>> headers) {}

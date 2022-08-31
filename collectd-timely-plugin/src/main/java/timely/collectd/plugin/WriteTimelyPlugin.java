@@ -21,8 +21,7 @@ import org.collectd.api.ValueList;
  * CollectD plugin that writes metrics collected by the StatsD plugin to Timely.
  *
  */
-public class WriteTimelyPlugin extends CollectDPluginParent
-        implements CollectdConfigInterface, CollectdShutdownInterface, CollectdWriteInterface {
+public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdConfigInterface, CollectdShutdownInterface, CollectdWriteInterface {
 
     private GenericObjectPool<Socket> socketPool = null;
 
