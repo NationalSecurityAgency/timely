@@ -24,7 +24,7 @@ import timely.model.Tag;
 
 public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimeSeriesGroupingIteratorTest.class);
+    private static final Logger log = LoggerFactory.getLogger(TimeSeriesGroupingIteratorTest.class);
 
     private TreeMap<Key,Value> table = new TreeMap<>();
     private static final List<Tag> tags = new ArrayList<>();
@@ -279,8 +279,8 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
 
     private void checkNextResult(TimeSeriesGroupingIterator iter, double[] expectedValues) throws IOException {
         assertTrue(iter.hasTop());
-        LOG.trace("Expected: {}", expectedValues);
-        LOG.trace("Getting value for Key {}", iter.getTopKey());
+        log.trace("Expected: {}", expectedValues);
+        log.trace("Getting value for Key {}", iter.getTopKey());
         double expected = expectedMovingAverage(expectedValues);
         assertEquals(expected, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
         iter.next();
@@ -288,8 +288,8 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
 
     private void checkNextResult(TimeSeriesGroupingIterator iter, LinkedList<Double> expectedValues) throws IOException {
         assertTrue(iter.hasTop());
-        LOG.trace("Expected: {}", expectedValues);
-        LOG.trace("Getting value for Key {}", iter.getTopKey());
+        log.trace("Expected: {}", expectedValues);
+        log.trace("Getting value for Key {}", iter.getTopKey());
         double expected = expectedMovingAverage(expectedValues.toArray(new Double[5]));
         assertEquals(expected, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
         iter.next();

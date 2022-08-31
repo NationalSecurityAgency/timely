@@ -5,13 +5,14 @@ import javax.net.ssl.SSLContext;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.apache.http.impl.client.CloseableHttpClient;
 
-import timely.balancer.configuration.BalancerHttp;
-import timely.balancer.configuration.BalancerSecurity;
+import timely.balancer.configuration.BalancerHttpProperties;
 import timely.balancer.connection.TimelyBalancedHost;
+import timely.common.configuration.SecurityProperties;
+import timely.common.configuration.SslClientProperties;
 
 public class HttpClientPool extends GenericKeyedObjectPool<TimelyBalancedHost,CloseableHttpClient> {
 
-    public HttpClientPool(BalancerSecurity balancerSecurity, BalancerHttp http, SSLContext sslContext) {
-        super(new HttpClientFactory(balancerSecurity, sslContext), http.getHttpClientPool());
+    public HttpClientPool(SecurityProperties securityProperties, SslClientProperties sslClientProperties, BalancerHttpProperties http, SSLContext sslContext) {
+        super(new HttpClientFactory(securityProperties, sslClientProperties, sslContext), http.getHttpClientPool());
     }
 }

@@ -15,12 +15,12 @@ import timely.api.request.timeseries.SuggestRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
 import timely.netty.http.TimelyHttpHandler;
-import timely.store.DataStore;
+import timely.server.component.DataStore;
 import timely.util.JsonUtil;
 
 public class HttpSuggestRequestHandler extends SimpleChannelInboundHandler<SuggestRequest> implements TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpSuggestRequestHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpSuggestRequestHandler.class);
     private final DataStore dataStore;
 
     public HttpSuggestRequestHandler(DataStore dataStore) {
@@ -33,7 +33,7 @@ public class HttpSuggestRequestHandler extends SimpleChannelInboundHandler<Sugge
         try {
             buf = JsonUtil.getObjectMapper().writeValueAsBytes(dataStore.suggest(msg));
         } catch (TimelyException e) {
-            LOG.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             this.sendHttpError(ctx, e);
             return;
         }

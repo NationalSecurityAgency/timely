@@ -38,6 +38,5 @@ public class TabletMetadataFormatterTest {
         // @formatter:on
         TabletMetadataFormatter f = new TabletMetadataFormatter();
         f.initialize(metadata, new FormatterConfig());
-        System.out.println(f.next());
     }
 }

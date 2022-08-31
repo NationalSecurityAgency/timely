@@ -29,8 +29,14 @@ import org.jsoup.select.Elements;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -43,11 +49,13 @@ import timely.api.request.VersionRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
+import timely.common.configuration.HttpProperties;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.Value;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
+import timely.test.TimelyServerTestRule;
 import timely.test.integration.OneWaySSLBase;
 import timely.util.JsonUtil;
 
@@ -55,28 +63,46 @@ import timely.util.JsonUtil;
  * Integration tests for the operations available over the HTTP transport
  */
 @Category(IntegrationTest.class)
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles({"oneWaySsl"})
 public class HttpApiIT extends OneWaySSLBase {
 
     private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
 
+    @Autowired
+    @Rule
+    public TimelyServerTestRule testRule;
+
+    @Autowired
+    private HttpProperties httpProperties;
+
+    private String baseUrl;
+
     @Before
-    public void startup() {
-        startServer();
+    public void setup() {
+        super.setup();
+        baseUrl = "https://" + httpProperties.getHost() + ":" + httpProperties.getPort();
     }
 
     @After
-    public void shutdown() {
-        stopServer();
+    public void cleanup() {
+        super.cleanup();
     }
 
     @Test
     public void testSuggest() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                   "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                   "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
-        String suggest = "https://localhost:54322/api/suggest?";
+        String suggest = baseUrl + "/api/suggest?";
         // Test prefix matching
         String result = query(suggest + "type=metrics&m=sys&max=10");
         assertEquals("[\"sys.cpu.idle\",\"sys.cpu.user\"]", result);
@@ -97,11 +123,13 @@ public class HttpApiIT extends OneWaySSLBase {
             "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
             "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)",
             "zzzz 1234567892 1.0 host=localhost");
-
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
-        String metrics = "https://localhost:54322/api/metrics";
+        String metrics = baseUrl + "/api/metrics";
         // Test prefix matching
         String result = query(metrics);
         Document doc = Jsoup.parse(result);
@@ -113,69 +141,72 @@ public class HttpApiIT extends OneWaySSLBase {
         assertEquals(1, tableData.select(":contains(tag3=value3 tag4=value4)").size());
         assertEquals(1, tableData.select(":contains(zzzz)").size());
         assertEquals(1, tableData.select(":contains(host=localhost)").size());
-        // @formatter:on
     }
 
     @Test
     public void testMetricsJson() throws Exception {
         // @formatter:off
-        try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                    "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)",
-                    "zzzz 1234567892 1.0 host=localhost");
-            // Latency in TestConfiguration is 2s, wait for it
-            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-
-            String metrics = "https://localhost:54322/api/metrics";
-            // Test prefix matching
-            String result = query(metrics, "application/json");
-
-            Gson gson = new Gson();
-            JsonObject response = gson.fromJson(result, JsonObject.class);
-            JsonArray metricsArray = response.getAsJsonArray("metrics");
-            assertEquals(3, metricsArray.size());
-
-            for (JsonElement e : metricsArray) {
-                JsonObject metricObject = e.getAsJsonObject();
-                String metricName = metricObject.get("metric").getAsString();
-                Iterator<JsonElement> tagItr = metricObject.get("tags").getAsJsonArray().iterator();
-                Multimap<String, String> tagMap = HashMultimap.create();
-                while (tagItr.hasNext()) {
-                    JsonObject tagObject = tagItr.next().getAsJsonObject();
-                    tagMap.put(tagObject.get("key").getAsString(), tagObject.get("value").getAsString());
-                }
-                switch (metricName) {
-                    case "sys.cpu.user":
-                        assertEquals(2, tagMap.size());
-                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value1"), tagMap.get("tag1")));
-                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value2"), tagMap.get("tag2")));
-                        break;
-                    case "sys.cpu.idle":
-                        assertEquals(2, tagMap.size());
-                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value3"), tagMap.get("tag3")));
-                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value4"), tagMap.get("tag4")));
-                        break;
-                    case "zzzz":
-                        assertEquals(1, tagMap.size());
-                        assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("localhost"), tagMap.get("host")));
-                        break;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(a|b|c)",
+                "zzzz 1234567892 1.0 host=localhost");
         // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
+        // Latency in TestConfiguration is 2s, wait for it
+        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+
+        String metrics = baseUrl + "/api/metrics";
+        // Test prefix matching
+        String result = query(metrics, "application/json");
+
+        Gson gson = new Gson();
+        JsonObject response = gson.fromJson(result, JsonObject.class);
+        JsonArray metricsArray = response.getAsJsonArray("metrics");
+        assertEquals(3, metricsArray.size());
+
+        for (JsonElement e : metricsArray) {
+            JsonObject metricObject = e.getAsJsonObject();
+            String metricName = metricObject.get("metric").getAsString();
+            Iterator<JsonElement> tagItr = metricObject.get("tags").getAsJsonArray().iterator();
+            Multimap<String,String> tagMap = HashMultimap.create();
+            while (tagItr.hasNext()) {
+                JsonObject tagObject = tagItr.next().getAsJsonObject();
+                tagMap.put(tagObject.get("key").getAsString(), tagObject.get("value").getAsString());
+            }
+            switch (metricName) {
+                case "sys.cpu.user":
+                    assertEquals(2, tagMap.size());
+                    assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value1"), tagMap.get("tag1")));
+                    assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value2"), tagMap.get("tag2")));
+                    break;
+                case "sys.cpu.idle":
+                    assertEquals(2, tagMap.size());
+                    assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value3"), tagMap.get("tag3")));
+                    assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("value4"), tagMap.get("tag4")));
+                    break;
+                case "zzzz":
+                    assertEquals(1, tagMap.size());
+                    assertTrue(CollectionUtils.isEqualCollection(Arrays.asList("localhost"), tagMap.get("host")));
+                    break;
+            }
+        }
     }
 
     @Test
     public void testLookup() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                        "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+           "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+           "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
-        String suggest = "https://localhost:54322/api/search/lookup?";
+        String suggest = baseUrl + "/api/search/lookup?";
 
         // Test a known query
         String result = query(suggest + "m=sys.cpu.idle%7Btag3%3D.*%7D");
@@ -197,9 +228,14 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithMsResolution() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+           "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+           "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -211,7 +247,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setTags(Collections.singletonMap("tag3", "value3"));
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(1, response.size());
         Map<String,String> tags = response.get(0).getTags();
         assertEquals(1, tags.size());
@@ -238,9 +274,14 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithoutMsResolution() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+           "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+           "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -251,7 +292,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setTags(Collections.singletonMap("tag3", "value3"));
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(1, response.size());
         Map<String,String> tags = response.get(0).getTags();
         assertEquals(1, tags.size());
@@ -270,9 +311,14 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithNoTags() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+           "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+           "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -282,7 +328,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setMetric("sys.cpu.idle");
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(1, response.size());
         Map<String,String> tags = response.get(0).getTags();
         assertEquals(0, tags.size());
@@ -299,11 +345,16 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithNoTagsMultipleSeries() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + TEST_TIME + " 2.0 tag1=value1 tag2=value2 host=h2",
-                        "sys.cpu.user " + (TEST_TIME + 1000) + " 4.0 tag1=value1 tag2=value2 host=h1",
-                        "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2 host=h2",
-                        "sys.cpu.user " + (TEST_TIME + 2000) + " 5.0 tag1=value1 tag2=value2 host=h1",
-                        "sys.cpu.user " + (TEST_TIME + 2000) + " 6.0 tag1=value1 tag2=value2 host=h1");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1",
+           "sys.cpu.user " + TEST_TIME + " 2.0 tag1=value1 tag2=value2 host=h2",
+           "sys.cpu.user " + (TEST_TIME + 1000) + " 4.0 tag1=value1 tag2=value2 host=h1",
+           "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2 host=h2",
+           "sys.cpu.user " + (TEST_TIME + 2000) + " 5.0 tag1=value1 tag2=value2 host=h1",
+           "sys.cpu.user " + (TEST_TIME + 2000) + " 6.0 tag1=value1 tag2=value2 host=h2");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -313,7 +364,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setMetric("sys.cpu.user");
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(1, response.size());
         Map<String,String> tags = response.get(0).getTags();
         assertEquals(0, tags.size());
@@ -333,9 +384,14 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test(expected = NotSuccessfulException.class)
     public void testQueryWithNoMatchingTags() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+           "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+           "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -345,16 +401,19 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setMetric("sys.cpu.idle");
         subQuery.setTags(Collections.singletonMap("rack", "r3"));
         request.addQuery(subQuery);
-        query("https://127.0.0.1:54322/api/query", request, 400);
+        query(baseUrl + "/api/query", request, 400);
     }
 
     @Test
     public void testQueryWithTagWildcard() throws Exception {
         // @formatter:off
         put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+            "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -366,26 +425,26 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
 
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(2, response.size());
 
         AtomicInteger rack1Count = new AtomicInteger(0);
         AtomicInteger rack2Count = new AtomicInteger(0);
         response.forEach(r -> {
-            Map<String, String> tags = r.getTags();
-            Map<String, Object> dps = r.getDps();
+            Map<String,String> tags = r.getTags();
+            Map<String,Object> dps = r.getDps();
             assertEquals(1, tags.size());
             assertEquals(1, dps.size());
             assertTrue(tags.containsKey("rack"));
             Value value = parseDps(dps);
             switch (tags.get("rack")) {
                 case "r2":
-                    assertEquals((Long)((TEST_TIME / 1000L) + 1L), value.getTimestamp());
+                    assertEquals((Long) ((TEST_TIME / 1000L) + 1L), value.getTimestamp());
                     assertEquals(3.0D, value.getMeasure(), 0.0);
                     rack2Count.incrementAndGet();
                     break;
                 case "r1":
-                    assertEquals((Long)(TEST_TIME / 1000L ), value.getTimestamp());
+                    assertEquals((Long) (TEST_TIME / 1000L), value.getTimestamp());
                     assertEquals(1.0D, value.getMeasure(), 0.0);
                     rack1Count.incrementAndGet();
                     break;
@@ -397,7 +456,6 @@ public class HttpApiIT extends OneWaySSLBase {
         });
         assertEquals("Did not find rack=r1", 1, rack1Count.get());
         assertEquals("Did not find rack=r2", 1, rack2Count.get());
-        // @formatter:on
     }
 
     private Value parseDps(Map<String,Object> dps) {
@@ -410,9 +468,12 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testQueryWithTagWildcard2() throws Exception {
         // @formatter:off
         put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+            "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+            "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -424,26 +485,26 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
 
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(2, response.size());
 
         AtomicInteger rack1Count = new AtomicInteger(0);
         AtomicInteger rack2Count = new AtomicInteger(0);
         response.forEach(r -> {
-            Map<String, String> tags = r.getTags();
-            Map<String, Object> dps = r.getDps();
+            Map<String,String> tags = r.getTags();
+            Map<String,Object> dps = r.getDps();
             assertEquals(1, tags.size());
             assertEquals(1, dps.size());
             assertTrue(tags.containsKey("rack"));
             Value value = parseDps(dps);
             switch (tags.get("rack")) {
                 case "r2":
-                    assertEquals((Long)((TEST_TIME / 1000L) + 1L), value.getTimestamp());
+                    assertEquals((Long) ((TEST_TIME / 1000L) + 1L), value.getTimestamp());
                     assertEquals(3.0D, value.getMeasure(), 0.0);
                     rack2Count.incrementAndGet();
                     break;
                 case "r1":
-                    assertEquals((Long)(TEST_TIME / 1000L ), value.getTimestamp());
+                    assertEquals((Long) (TEST_TIME / 1000L), value.getTimestamp());
                     assertEquals(1.0D, value.getMeasure(), 0.0);
                     rack1Count.incrementAndGet();
                     break;
@@ -455,18 +516,19 @@ public class HttpApiIT extends OneWaySSLBase {
         });
         assertEquals("Did not find rack=r1", 1, rack1Count.get());
         assertEquals("Did not find rack=r2", 1, rack2Count.get());
-        // @formatter:on
-
     }
 
     @Test
     public void testQueryWithTagOr() throws Exception {
         // @formatter:off
         put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 1L) + " 1.0 tag3=value3 rack=r2",
-                "sys.cpu.idle " + (TEST_TIME + 2L) + " 2.0 tag3=value3 tag4=value4 rack=r1",
-                "sys.cpu.idle " + (TEST_TIME + 1000L) + " 3.0 tag3=value3 tag4=value4 rack=r2",
-                "sys.cpu.idle " + (TEST_TIME + 2000L) + " 4.0 tag3=value3 tag4=value4 rack=r3");
+            "sys.cpu.user " + (TEST_TIME + 1L) + " 1.0 tag3=value3 rack=r2",
+            "sys.cpu.idle " + (TEST_TIME + 2L) + " 2.0 tag3=value3 tag4=value4 rack=r1",
+            "sys.cpu.idle " + (TEST_TIME + 1000L) + " 3.0 tag3=value3 tag4=value4 rack=r2",
+            "sys.cpu.idle " + (TEST_TIME + 2000L) + " 4.0 tag3=value3 tag4=value4 rack=r3");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -479,69 +541,70 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setTags(Collections.singletonMap("rack", "r1|r2"));
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
-        List<QueryResponse> responses = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> responses = query(baseUrl + "/api/query", request);
 
         assertEquals("Expected 2 responses for sys.cpu.idle rack=r1|r2", 2, responses.size());
 
         AtomicInteger rack1Count = new AtomicInteger(0);
         AtomicInteger rack2Count = new AtomicInteger(0);
-        for(QueryResponse response: responses){
+        for (QueryResponse response : responses) {
             assertEquals("Found incorrect metric", "sys.cpu.idle", response.getMetric());
             response.getTags().forEach((tagk, tagv) -> {
-               switch (tagk){
-                   case "rack":
-                       assertTrue(tagv.equals("r1") || tagv.equals("r2"));
-                       Map<String, Object> dps = response.getDps();
-                       assertEquals(1,dps.size());
-                       Entry<String, Object> dpsEntry = dps.entrySet().iterator().next();
-                       Long ts = Long.parseLong(dpsEntry.getKey());
-                       double measure = (Double)dpsEntry.getValue();
-                       switch(tagv){
-                           case "r1":
-                               assertEquals(2.0D, measure, 0.0);
-                               assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 2),
-                                       getBaselineStart(TEST_TIME + 2), ts.toString());
-                               rack1Count.getAndIncrement();
-                               break;
-                           case "r2":
-                               assertEquals(3.0D, measure, 0.0);
-                               assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 1000),
-                                       getBaselineStart(TEST_TIME + 1000), ts.toString());
-                               rack2Count.getAndIncrement();
-                               break;
-                           default:
-                               throw new IllegalArgumentException("Found incorrect rack tag value: " + tagv);
-                       }
-                       break;
-                   case "tag1":
-                       assertTrue("Found incorrect tag in results", false);
-                       break;
-                   case "tag2":
-                       assertTrue("Found incorrect tag in results", false);
-                       break;
-                   case "tag3":
-                       assertTrue("Found incorrect tag in results", tagv.equals("tag3"));
-                       break;
-                   case "tag4":
-                       assertTrue("Found incorrect tag in results", tagv.equals("tag4"));
-                       break;
-                   default:
-                       throw new IllegalArgumentException("Found incorrect tag key: " + tagk);
-               }
+                switch (tagk) {
+                    case "rack":
+                        assertTrue(tagv.equals("r1") || tagv.equals("r2"));
+                        Map<String,Object> dps = response.getDps();
+                        assertEquals(1, dps.size());
+                        Entry<String,Object> dpsEntry = dps.entrySet().iterator().next();
+                        Long ts = Long.parseLong(dpsEntry.getKey());
+                        double measure = (Double) dpsEntry.getValue();
+                        switch (tagv) {
+                            case "r1":
+                                assertEquals(2.0D, measure, 0.0);
+                                assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 2), getBaselineStart(TEST_TIME + 2), ts.toString());
+                                rack1Count.getAndIncrement();
+                                break;
+                            case "r2":
+                                assertEquals(3.0D, measure, 0.0);
+                                assertEquals("TEST_TIME: " + getBaselineStart(TEST_TIME + 1000), getBaselineStart(TEST_TIME + 1000), ts.toString());
+                                rack2Count.getAndIncrement();
+                                break;
+                            default:
+                                throw new IllegalArgumentException("Found incorrect rack tag value: " + tagv);
+                        }
+                        break;
+                    case "tag1":
+                        assertTrue("Found incorrect tag in results", false);
+                        break;
+                    case "tag2":
+                        assertTrue("Found incorrect tag in results", false);
+                        break;
+                    case "tag3":
+                        assertTrue("Found incorrect tag in results", tagv.equals("tag3"));
+                        break;
+                    case "tag4":
+                        assertTrue("Found incorrect tag in results", tagv.equals("tag4"));
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Found incorrect tag key: " + tagk);
+                }
 
             });
         }
         assertEquals("Did not find rack=r1", 1, rack1Count.get());
         assertEquals("Did not find rack=r2", 1, rack2Count.get());
-
-        // @formatter:on
     }
 
     @Test
     public void testQueryWithTagRegex() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+           "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+           "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -555,8 +618,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setTags(t);
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
-
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(2, response.size());
         QueryResponse response1 = response.get(0);
         Map<String,String> tags = response1.getTags();
@@ -589,9 +651,14 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithTagRegex2() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
+           "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+           "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -605,7 +672,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setTags(t);
         subQuery.setDownsample(Optional.of("1s-max"));
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(2, response.size());
         QueryResponse response1 = response.get(0);
         Map<String,String> tags = response1.getTags();
@@ -640,21 +707,23 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testRateQuery() throws Exception {
         // @formatter:off
         put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+10) + " 11.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+11) + " 12.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+12) + " 13.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+13) + " 14.0 tag1=value1 tag2=value2 rack=r1",
-            "sys.cpu.user " + (TEST_TIME+14) + " 15.0 tag1=value1 tag2=value2 rack=r1");
+                "sys.cpu.user " + (TEST_TIME + 1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 10) + " 11.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 11) + " 12.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 12) + " 13.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 13) + " 14.0 tag1=value1 tag2=value2 rack=r1",
+                "sys.cpu.user " + (TEST_TIME + 14) + " 15.0 tag1=value1 tag2=value2 rack=r1");
         // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -668,7 +737,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setDownsample(Optional.of("1ms-max"));
         subQuery.setRate(true);
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(1, response.size());
         QueryResponse response1 = response.get(0);
         Map<String,Object> dps = response1.getDps();
@@ -683,7 +752,7 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testRateCounterQuery() throws Exception {
-        // @formatter:off
+      // @formatter:off
         put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
                 "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
                 "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
@@ -700,6 +769,8 @@ public class HttpApiIT extends OneWaySSLBase {
                 "sys.cpu.user " + (TEST_TIME+13) + " 4.0 tag1=value1 tag2=value2 rack=r1",
                 "sys.cpu.user " + (TEST_TIME+14) + " 5.0 tag1=value1 tag2=value2 rack=r1");
         // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -715,7 +786,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setRateOptions(new QueryRequest.RateOption());
         subQuery.getRateOptions().setCounter(true);
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(1, response.size());
         QueryResponse response1 = response.get(0);
         Map<String,Object> dps = response1.getDps();
@@ -730,7 +801,7 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testRateCounterWithOptions() throws Exception {
-        // @formatter:off
+      // @formatter:off
         put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
                 "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
                 "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
@@ -747,6 +818,8 @@ public class HttpApiIT extends OneWaySSLBase {
                 "sys.cpu.user " + (TEST_TIME+13) + " 3.0 tag1=value1 tag2=value2 rack=r1",
                 "sys.cpu.user " + (TEST_TIME+14) + " 4.0 tag1=value1 tag2=value2 rack=r1");
         // @formatter:on
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -764,7 +837,7 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.getRateOptions().setCounterMax(Long.MAX_VALUE);
         subQuery.getRateOptions().setResetValue(2);
         request.addQuery(subQuery);
-        List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(1, response.size());
         QueryResponse response1 = response.get(0);
         Map<String,Object> dps = response1.getDps();
@@ -779,7 +852,7 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testGetVersion() throws Exception {
-        String response = query("https://127.0.0.1:54322/version", "application/json");
+        String response = query(baseUrl + "/version", "application/json");
         assertNotNull(response);
         assertEquals(VersionRequest.VERSION, response);
     }
@@ -788,7 +861,7 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testPutMetric() throws Exception {
         Metric m = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1")).build();
         new Metric();
-        URL url = new URL("https://127.0.0.1:54322/api/put");
+        URL url = new URL(baseUrl + "/api/put");
         HttpsURLConnection con = getUrlConnection(url);
         con.setRequestMethod("POST");
         con.setDoOutput(true);

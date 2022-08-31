@@ -99,7 +99,7 @@ public class TieredCompactionStrategy extends CompactionStrategy {
 
     static class TieredConfiguredSupplier implements TieredCompactorSupplier {
 
-        private static final Logger LOG = LoggerFactory.getLogger(TieredConfiguredSupplier.class);
+        private static final Logger log = LoggerFactory.getLogger(TieredConfiguredSupplier.class);
 
         private final String clazzName;
         private final int tier;
@@ -145,7 +145,7 @@ public class TieredCompactionStrategy extends CompactionStrategy {
                     strategy = clazz.newInstance();
                     strategy.init(options());
                 } catch (Exception e) {
-                    LOG.debug("Failed to load class for tiered compaction: " + e.toString());
+                    log.debug("Failed to load class for tiered compaction: " + e.toString());
                     throw new RuntimeException(e);
                 }
             }

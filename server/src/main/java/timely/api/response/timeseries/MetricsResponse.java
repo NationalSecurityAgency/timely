@@ -28,16 +28,15 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import timely.adapter.accumulo.MetricAdapter;
-import timely.api.model.Meta;
-import timely.configuration.Configuration;
+import timely.common.configuration.TimelyProperties;
+import timely.model.Meta;
 import timely.netty.Constants;
 import timely.store.MetaCache;
-import timely.store.MetaCacheFactory;
 import timely.util.JsonUtil;
 
 public class MetricsResponse {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MetricsResponse.class);
+    private static final Logger log = LoggerFactory.getLogger(MetricsResponse.class);
 
     // TODO get rid of this HTML monstronsity
     private static final String DOCTYPE = "<!DOCTYPE html>\n";
@@ -62,15 +61,15 @@ public class MetricsResponse {
     private static final String TD_END = "</td>\n";
 
     private Set<String> ignoredTags = Collections.emptySet();
-    private final Configuration conf;
+    private MetaCache metaCache;
 
     public MetricsResponse() {
-        conf = null;
+
     }
 
-    public MetricsResponse(Configuration conf) {
-        this.conf = conf;
-        ignoredTags = new HashSet<>(conf.getMetricsReportIgnoredTags());
+    public MetricsResponse(MetaCache metaCache, TimelyProperties timelyProperties) {
+        this.metaCache = metaCache;
+        ignoredTags = new HashSet<>(timelyProperties.getMetricsReportIgnoredTags());
         ignoredTags.add(MetricAdapter.VISIBILITY_TAG);
     }
 
@@ -79,21 +78,21 @@ public class MetricsResponse {
         if (null != acceptHeader) {
             List<MediaType> requestedTypes = MediaType.parseMediaTypes(acceptHeader);
             MediaType.sortBySpecificityAndQuality(requestedTypes);
-            LOG.trace("Acceptable response types: {}", MediaType.toString(requestedTypes));
+            log.trace("Acceptable response types: {}", MediaType.toString(requestedTypes));
             for (MediaType t : requestedTypes) {
                 if (t.includes(MediaType.TEXT_HTML)) {
                     negotiatedType = MediaType.TEXT_HTML;
-                    LOG.trace("{} allows HTML", t.toString());
+                    log.trace("{} allows HTML", t.toString());
                     break;
                 }
                 if (t.includes(MediaType.APPLICATION_JSON)) {
                     negotiatedType = MediaType.APPLICATION_JSON;
-                    LOG.trace("{} allows JSON", t.toString());
+                    log.trace("{} allows JSON", t.toString());
                     break;
                 }
             }
         }
-        String result = null;
+        String result;
         if (negotiatedType.equals(MediaType.APPLICATION_JSON)) {
             result = this.generateJson(JsonUtil.getObjectMapper());
         } else {
@@ -107,21 +106,21 @@ public class MetricsResponse {
         if (null != acceptHeader) {
             List<MediaType> requestedTypes = MediaType.parseMediaTypes(acceptHeader);
             MediaType.sortBySpecificityAndQuality(requestedTypes);
-            LOG.trace("Acceptable response types: {}", MediaType.toString(requestedTypes));
+            log.trace("Acceptable response types: {}", MediaType.toString(requestedTypes));
             for (MediaType t : requestedTypes) {
                 if (t.includes(MediaType.TEXT_HTML)) {
                     negotiatedType = MediaType.TEXT_HTML;
-                    LOG.trace("{} allows HTML", t.toString());
+                    log.trace("{} allows HTML", t.toString());
                     break;
                 }
                 if (t.includes(MediaType.APPLICATION_JSON)) {
                     negotiatedType = MediaType.APPLICATION_JSON;
-                    LOG.trace("{} allows JSON", t.toString());
+                    log.trace("{} allows JSON", t.toString());
                     break;
                 }
             }
         }
-        byte[] buf = null;
+        byte[] buf;
         Object responseType = Constants.HTML_TYPE;
         if (negotiatedType.equals(MediaType.APPLICATION_JSON)) {
             buf = this.generateJson(JsonUtil.getObjectMapper()).getBytes(StandardCharsets.UTF_8);
@@ -136,9 +135,8 @@ public class MetricsResponse {
     }
 
     protected StringBuilder generateHtml() {
-        final MetaCache cache = MetaCacheFactory.getCache(conf);
         TreeSet<Meta> tree = new TreeSet<>();
-        cache.forEach(m -> tree.add(m));
+        metaCache.forEach(m -> tree.add(m));
         final StringBuilder b = new StringBuilder();
         b.append(DOCTYPE);
         b.append(HTML_START);
@@ -173,7 +171,7 @@ public class MetricsResponse {
             }
             long numValues = tagMap.getOrDefault(m.getTagKey(), 0l);
             if (!(this.ignoredTags.contains(m.getTagKey()))) {
-                if (numValues <= conf.getMetaCache().getMaxTagValues()) {
+                if (numValues <= metaCache.getMetaCacheProperties().getMaxTagValues()) {
                     tags.append(m.getTagKey()).append("=").append(m.getTagValue()).append(" ");
                     tagMap.put(m.getTagKey(), ++numValues);
                 }
@@ -193,9 +191,8 @@ public class MetricsResponse {
 
     protected String generateJson(final ObjectMapper mapper) throws JsonProcessingException {
         // map non-ignored metrics to their list of tags
-        final MetaCache cache = MetaCacheFactory.getCache(conf);
         Map<String,List<JsonNode>> metricTagMap = new HashMap<>();
-        cache.forEach(m -> {
+        metaCache.forEach(m -> {
             if (!metricTagMap.containsKey(m.getMetric())) {
                 metricTagMap.put(m.getMetric(), new ArrayList<>());
             }

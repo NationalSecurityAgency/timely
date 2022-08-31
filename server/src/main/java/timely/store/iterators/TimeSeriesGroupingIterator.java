@@ -71,7 +71,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
                 // remove first key as it is no longer needed for any
                 // computations
                 Pair<Key,Double> e = this.pollFirst();
-                LOG.trace("Removing first entry {}", e.getFirst());
+                log.trace("Removing first entry {}", e.getFirst());
             }
         }
 
@@ -85,7 +85,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
         private void recompute() {
             this.answer = iter.compute(this);
-            LOG.trace("recomputed, new answer: {}", this.answer);
+            log.trace("recomputed, new answer: {}", this.answer);
         }
 
     }
@@ -127,10 +127,8 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         }
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimeSeriesGroupingIterator.class);
-
+    private static final Logger log = LoggerFactory.getLogger(TimeSeriesGroupingIterator.class);
     public static final String FILTER = "sliding.window.filter";
-
     private TimeSeriesGroup series = new TimeSeriesGroup();
     protected Double[] filters = null;
     private Key topKey = null;
@@ -141,11 +139,11 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         double result = 0D;
         int i = 0;
         for (Pair<Key,Double> e : values) {
-            LOG.trace("compute - key:{}, value: {}", e.getFirst(), e.getSecond());
+            log.trace("compute - key:{}, value: {}", e.getFirst(), e.getSecond());
             result += (filters[i] * e.getSecond());
             i++;
         }
-        LOG.trace("compute - result: {}", result);
+        log.trace("compute - result: {}", result);
         return result;
     }
 
@@ -161,7 +159,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
     @Override
     public boolean hasTop() {
-        LOG.trace("hasTop()");
+        log.trace("hasTop()");
         return (null != topKey && null != topValue);
     }
 
@@ -187,7 +185,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
     @Override
     public void next() throws IOException {
-        LOG.trace("next()");
+        log.trace("next()");
         setTopKeyValue();
     }
 
@@ -203,7 +201,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
         for (int i = 0; i < split.length; i++) {
             filters[i] = Double.parseDouble(split[i]);
         }
-        LOG.trace("init - filter: {}", Arrays.toString(filters));
+        log.trace("init - filter: {}", Arrays.toString(filters));
     }
 
     @Override
@@ -218,7 +216,7 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
      * This will parse the next set of keys with the same timestamp (encoded in the row) from the underlying source.
      */
     private void refillBuffer() throws IOException {
-        LOG.trace("refill()");
+        log.trace("refill()");
         Long time = null;
         while (super.hasTop()) {
             Key k = super.getTopKey();
@@ -236,11 +234,11 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
 
                     TimeSeries values = series.get(m);
                     if (null == values) {
-                        LOG.trace("Creating new time series {}", m);
+                        log.trace("Creating new time series {}", m);
                         values = new TimeSeries(this, filters.length);
                     }
 
-                    LOG.trace("Adding value {} to series {}", v.getMeasure(), m);
+                    log.trace("Adding value {} to series {}", v.getMeasure(), m);
                     values.add(k, v.getMeasure());
 
                     // always re-put the metric back into the TimeSeriesGroup as
@@ -248,14 +246,14 @@ public class TimeSeriesGroupingIterator extends WrappingIterator {
                     // maintains a list of prepared answers
                     series.put(m, values);
                 } catch (Exception e) {
-                    LOG.error("Error: {} parsing metric at key: {}", e.getMessage(), k.toString());
+                    log.error("Error: {} parsing metric at key: {}", e.getMessage(), k.toString());
                 }
                 super.next();
             } else {
                 break;
             }
         }
-        LOG.trace("Buffer contents: {}", series);
+        log.trace("Buffer contents: {}", series);
     }
 
 }

@@ -1,19 +1,21 @@
 timely:
+  instance:
   metrics-table: timely.metrics
   meta-table: timely.meta
   metric-age-off-days:
-    default: 7
+    default: ${AGE_OFF_DAYS}
   cache:
     enabled: true
     age-off-hours:
       default: 26
   metrics-report-ignored-tags:
   defaultVisibility:
+  zookeeper:
+    servers: ${ACCUMULO_ZOOKEEPERS}
   accumulo:
-    instance-name: accumulo
-    zookeepers: localhost:2181
-    username: root
-    password:
+    instance-name: ${ACCUMULO_INSTANCE}
+    username: ${ACCUMULO_USER}
+    password: ${ACCUMULO_PASSWORD}
     write:
       latency: 5s
       threads: 3
@@ -25,6 +27,7 @@ timely:
     session-max-age: 86400
     cache-expiration-minutes: 60
     cache-refresh-minutes: 5
+    authorizationUri: https://localhost:8643/authorization/v1/authorize
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
     serverSsl:
@@ -49,7 +52,7 @@ timely:
     ip: 0.0.0.0
     port: 4243
     redirect-path: /secure-me
-    strict-transport-max-age: 608400
+    strict-transport-max-age: 604800
     cors:
       allow-any-origin: false
       allow-null-origin: false
@@ -70,6 +73,8 @@ timely:
     expiration-minutes: 1440
     cache-refresh-minutes: 60
     max-tag-values: 100
-  visibility-cache:
-    expiration-minutes: 60
 
+logging:
+  level:
+    ROOT: info
+    timey: debug

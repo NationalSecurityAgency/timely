@@ -15,12 +15,12 @@ set -a
 set +a
 
 if [ -n "$1" ]; then
-  export PROFILE_NUM=$1
-  PROFILE_ARG="--spring.profiles.active=${PROFILE_NUM}"
-  PID=`jps -m | grep timely.Server | grep "spring.profiles.active=${PROFILE_NUM}" | awk '{print $1}'`
+  export INSTANCE="$1"
+  PROFILE_ARG="--spring.profiles.active=${INSTANCE}"
+  PID=`jps -m | grep -E 'timely-server-.*-exec' | grep "spring.profiles.active=${INSTANCE}" | awk '{print $1}'`
 else
-  export PROFILE_NUM=""
-  PID=`jps -m | grep timely.Server | awk '{print $1}'`
+  export INSTANCE="1"
+  PID=`jps -m | grep -E 'timely-server-.*-exec'  | awk '{print $1}'`
 fi
 
 if [ "$PID" == "" ]; then
@@ -28,8 +28,8 @@ if [ "$PID" == "" ]; then
     NATIVE_DIR="${THIS_DIR}/META-INF/native"
     BASE_DIR=$(cd $THIS_DIR/.. && pwd)
     TMP_DIR="${BASE_DIR}/tmp"
-    CONF_DIR="${BASE_DIR}/conf"
     LIB_DIR="${BASE_DIR}/lib"
+    export CONF_DIR="${BASE_DIR}/conf"
     export LOG_DIR="${BASE_DIR}/logs"
     NUM_SERVER_THREADS=4
 
@@ -53,7 +53,7 @@ if [ "$PID" == "" ]; then
     popd
 
     export CLASSPATH="${CONF_DIR}:${LIB_DIR}/*:${HADOOP_CONF_DIR}"
-    JVM_ARGS="-Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS} -Dlog4j.configurationFile=${CONF_DIR}/log4j2-spring.xml"
+    JVM_ARGS="-Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS} -Dlog4j.configurationFile=${CONF_DIR}/log4j2.yml"
     JVM_ARGS="${JVM_ARGS} -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
     JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
 
@@ -61,12 +61,8 @@ if [ "$PID" == "" ]; then
     JVM_ARGS="${JVM_ARGS} -XX:+UseCompressedOops -XX:+UseNUMA -Djava.net.preferIPv4Stack=true"
     JVM_ARGS="${JVM_ARGS} -XX:+UseG1GC -XX:MaxGCPauseMillis=4000 -XX:ParallelGCThreads=20 -XX:+UseStringDeduplication"
 
-    echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.Server --spring.config.name=timely ${PROFILE_ARG}"
-    nohup $JAVA_HOME/bin/java ${JVM_ARGS} timely.Server --spring.config.name=timely ${PROFILE_ARG} >> ${LOG_DIR}/timely-server${PROFILE_NUM}-startup.log 2>&1 &
+    echo "$JAVA_HOME/bin/java ${JVM_ARGS} -jar ${THIS_DIR}/timely-server*-exec.jar ${PROFILE_ARG}"
+    nohup $JAVA_HOME/bin/java ${JVM_ARGS} -jar ${THIS_DIR}/timely-server-*-exec.jar ${PROFILE_ARG} >> ${LOG_DIR}/timely-server${INSTANCE}.out 2>&1 &
 else
-    if [ "$PROFILE_NUM" == ""]; then
-        echo "timely-server already running with pid ${PID}"
-    else
-        echo "timely-server ${PROFILE_NUM} already running with pid ${PID}"
-    fi
+    echo "timely-server ${INSTANCE} already running with pid ${PID}"
 fi

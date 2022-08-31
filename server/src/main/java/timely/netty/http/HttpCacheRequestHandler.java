@@ -11,7 +11,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import timely.api.request.CacheRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
-import timely.store.cache.DataStoreCache;
+import timely.server.component.DataStoreCache;
 import timely.util.JsonUtil;
 
 public class HttpCacheRequestHandler extends SimpleChannelInboundHandler<CacheRequest> implements TimelyHttpHandler {
@@ -28,7 +28,7 @@ public class HttpCacheRequestHandler extends SimpleChannelInboundHandler<CacheRe
         try {
             buf = JsonUtil.getObjectMapper().writeValueAsBytes(cache.getCacheStatus());
         } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error getting cache status",
                             "Error getting cache status", e));
             return;

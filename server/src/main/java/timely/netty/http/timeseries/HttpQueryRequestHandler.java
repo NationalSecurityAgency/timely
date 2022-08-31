@@ -15,12 +15,12 @@ import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
 import timely.netty.http.TimelyHttpHandler;
-import timely.store.DataStore;
+import timely.server.component.DataStore;
 import timely.util.JsonUtil;
 
 public class HttpQueryRequestHandler extends SimpleChannelInboundHandler<QueryRequest> implements TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpQueryRequestHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpQueryRequestHandler.class);
     private final DataStore dataStore;
 
     public HttpQueryRequestHandler(DataStore dataStore) {
@@ -34,9 +34,9 @@ public class HttpQueryRequestHandler extends SimpleChannelInboundHandler<QueryRe
             buf = JsonUtil.getObjectMapper().writeValueAsBytes(dataStore.query(msg));
         } catch (TimelyException e) {
             if (e.getMessage().contains("No matching tags")) {
-                LOG.trace(e.getMessage());
+                log.trace(e.getMessage());
             } else {
-                LOG.error(e.getMessage(), e);
+                log.error(e.getMessage(), e);
             }
             this.sendHttpError(ctx, e);
             return;

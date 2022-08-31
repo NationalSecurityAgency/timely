@@ -1,11 +1,7 @@
-timely-balancer:
-  zooKeeper:
-    servers: localhost:2181
+timely:
+  zookeeper:
+    servers: ${ACCUMULO_ZOOKEEPERS}
     timeout: 30s
-  checkServerHealthInterval: 10000
-  serverFailuresBeforeDown: 6
-  serverSuccessesBeforeUp: 1
-  assignmentFile: /timely/balancer/assignments.csv
   security:
     session-max-age: 86400
     cache-expiration-minutes: 60
@@ -37,100 +33,110 @@ timely-balancer:
     metric-age-off-hours:
       default: 26
     nonCachedMetrics:
-  server:
-    ip: 0.0.0.0
-    tcpPort: 4242
-    numTcpPools: 1
-    tcpBufferSize: 100
-    tcpClientPool:
-      minIdlePerKey: 0
-      maxIdlePerKey: 40
-      maxTotalPerKey: 40
-      maxTotal: -1
-      lifo: true
-      fairness: false
-      maxWaitMillis: -1
-      minEvictableIdleTimeMillis: 1800000
-      evictorShutdownTimeoutMillis: 10000
-      softMinEvictableIdleTimeMillis: -1
-      numTestsPerEvictionRun: 3
-      timeBetweenEvictionRunsMillis: -1
-      blockWhenExhausted: true
-      jmxEnabled: true
-      testOnBorrow: false
-      testOnReturn: false
-    udpPort: 4245
-    udpClientPool:
-      minIdlePerKey: 0
-      maxIdlePerKey: 40
-      maxTotalPerKey: 40
-      maxTotal: -1
-      lifo: true
-      fairness: false
-      maxWaitMillis: -1
-      minEvictableIdleTimeMillis: 1800000
-      evictorShutdownTimeoutMillis: 10000
-      softMinEvictableIdleTimeMillis: -1
-      numTestsPerEvictionRun: 3
-      timeBetweenEvictionRunsMillis: -1
-      blockWhenExhausted: true
-      jmxEnabled: true
-      testOnBorrow: false
-      testOnReturn: false
-  http:
-    host: localhost
-    ip: 0.0.0.0
-    port: 4243
-    redirect-path: /secure-me
-    strict-transport-max-age: 608400
-    cors:
-      allow-any-origin: false
-      allow-null-origin: false
-      allow-credentials: true
-      allowed-origins:
-      allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
-      allowed-headers: content-type
-    httpClientPool:
-      minIdlePerKey: 0
-      maxIdlePerKey: 40
-      maxTotalPerKey: 40
-      maxTotal: -1
-      lifo: true
-      fairness: false
-      maxWaitMillis: -1
-      minEvictableIdleTimeMillis: 1800000
-      evictorShutdownTimeoutMillis: 10000
-      softMinEvictableIdleTimeMillis: -1
-      numTestsPerEvictionRun: 3
-      timeBetweenEvictionRunsMillis: -1
-      blockWhenExhausted: true
-      jmxEnabled: true
-      testOnBorrow: false
-      testOnReturn: false
-  websocket:
-    ip: 0.0.0.0
-    port: 5244
-    timeout: 60
-    subscription-lag: 120
-    scanner-batch-size: 10000
-    flush-interval-seconds: 30
-    scanner-read-ahead: 1
-    subscription-batch-size: 5000
-    incomingBufferSize: 50000000
-    wsClientPool:
-      minIdlePerKey: 0
-      maxIdlePerKey: 40
-      maxTotalPerKey: 40
-      maxTotal: -1
-      lifo: true
-      fairness: false
-      maxWaitMillis: -1
-      minEvictableIdleTimeMillis: 1800000
-      evictorShutdownTimeoutMillis: 10000
-      softMinEvictableIdleTimeMillis: -1
-      numTestsPerEvictionRun: 3
-      timeBetweenEvictionRunsMillis: -1
-      blockWhenExhausted: true
-      jmxEnabled: true
-      testOnBorrow: false
-      testOnReturn: false
+  balancer:
+    checkServerHealthInterval: 10000
+    serverFailuresBeforeDown: 6
+    serverSuccessesBeforeUp: 1
+    assignmentFile: /timely/balancer/assignments.csv
+    server:
+      ip: 0.0.0.0
+      tcpPort: 4242
+      numTcpPools: 1
+      tcpBufferSize: 100
+      tcpClientPool:
+        minIdlePerKey: 0
+        maxIdlePerKey: 40
+        maxTotalPerKey: 40
+        maxTotal: -1
+        lifo: true
+        fairness: false
+        maxWaitMillis: -1
+        minEvictableIdleTimeMillis: 1800000
+        evictorShutdownTimeoutMillis: 10000
+        softMinEvictableIdleTimeMillis: -1
+        numTestsPerEvictionRun: 3
+        timeBetweenEvictionRunsMillis: -1
+        blockWhenExhausted: true
+        jmxEnabled: true
+        testOnBorrow: false
+        testOnReturn: false
+      udpPort: 4245
+      udpClientPool:
+        minIdlePerKey: 0
+        maxIdlePerKey: 40
+        maxTotalPerKey: 40
+        maxTotal: -1
+        lifo: true
+        fairness: false
+        maxWaitMillis: -1
+        minEvictableIdleTimeMillis: 1800000
+        evictorShutdownTimeoutMillis: 10000
+        softMinEvictableIdleTimeMillis: -1
+        numTestsPerEvictionRun: 3
+        timeBetweenEvictionRunsMillis: -1
+        blockWhenExhausted: true
+        jmxEnabled: true
+        testOnBorrow: false
+        testOnReturn: false
+    http:
+      host: localhost
+      ip: 0.0.0.0
+      port: 4243
+      redirect-path: /secure-me
+      strict-transport-max-age: 604800
+      cors:
+        allow-any-origin: false
+        allow-null-origin: false
+        allow-credentials: true
+        allowed-origins:
+        allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
+        allowed-headers: content-type
+      httpClientPool:
+        minIdlePerKey: 0
+        maxIdlePerKey: 40
+        maxTotalPerKey: 40
+        maxTotal: -1
+        lifo: true
+        fairness: false
+        maxWaitMillis: -1
+        minEvictableIdleTimeMillis: 1800000
+        evictorShutdownTimeoutMillis: 10000
+        softMinEvictableIdleTimeMillis: -1
+        numTestsPerEvictionRun: 3
+        timeBetweenEvictionRunsMillis: -1
+        blockWhenExhausted: true
+        jmxEnabled: true
+        testOnBorrow: false
+        testOnReturn: false
+    websocket:
+      ip: 0.0.0.0
+      port: 5244
+      timeout: 60
+      subscription-lag: 120
+      scanner-batch-size: 10000
+      flush-interval-seconds: 30
+      scanner-read-ahead: 1
+      subscription-batch-size: 5000
+      incomingBufferSize: 50000000
+      wsClientPool:
+        minIdlePerKey: 0
+        maxIdlePerKey: 40
+        maxTotalPerKey: 40
+        maxTotal: -1
+        lifo: true
+        fairness: false
+        maxWaitMillis: -1
+        minEvictableIdleTimeMillis: 1800000
+        evictorShutdownTimeoutMillis: 10000
+        softMinEvictableIdleTimeMillis: -1
+        numTestsPerEvictionRun: 3
+        timeBetweenEvictionRunsMillis: -1
+        blockWhenExhausted: true
+        jmxEnabled: true
+        testOnBorrow: false
+        testOnReturn: false
+
+logging:
+  level:
+    ROOT: info
+    timey: debug

@@ -35,5 +35,5 @@ done
 
 JVM_ARGS="-Xmx128m -Xms128m -Dio.netty.eventLoopThreads=${NUM_SERVER_THREADS} -Dlog4j.configurationFile=${CONF_DIR}/log4j2-spring.xml"
 
-echo "$JAVA_HOME/bin/java -classpath ${CP} ${JVM_ARGS} timely.util.InsertTestData ${TIMELY_HOST} ${TIMELY_PORT}"
-exec $JAVA_HOME/bin/java -classpath ${CP} ${JVM_ARGS} timely.util.InsertTestData ${TIMELY_HOST} ${TIMELY_PORT}
+echo "$JAVA_HOME/bin/java -classpath ${CP} ${JVM_ARGS} timely.util.ingest.InsertTestData ${TIMELY_HOST} ${TIMELY_PORT}"
+exec $JAVA_HOME/bin/java -classpath ${CP} ${JVM_ARGS} timely.util.ingest.InsertTestData ${TIMELY_HOST} ${TIMELY_PORT}

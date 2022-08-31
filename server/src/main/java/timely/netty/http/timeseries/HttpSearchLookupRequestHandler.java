@@ -15,12 +15,12 @@ import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
 import timely.netty.http.TimelyHttpHandler;
-import timely.store.DataStore;
+import timely.server.component.DataStore;
 import timely.util.JsonUtil;
 
 public class HttpSearchLookupRequestHandler extends SimpleChannelInboundHandler<SearchLookupRequest> implements TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpSearchLookupRequestHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpSearchLookupRequestHandler.class);
     private DataStore dataStore;
 
     public HttpSearchLookupRequestHandler(DataStore dataStore) {
@@ -33,7 +33,7 @@ public class HttpSearchLookupRequestHandler extends SimpleChannelInboundHandler<
         try {
             buf = JsonUtil.getObjectMapper().writeValueAsBytes(dataStore.lookup(msg));
         } catch (TimelyException e) {
-            LOG.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             this.sendHttpError(ctx, e);
             return;
         }

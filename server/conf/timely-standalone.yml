@@ -1,4 +1,5 @@
 timely:
+  instance:
   metrics-table: timely.metrics
   meta-table: timely.meta
   metric-age-off-days:
@@ -6,9 +7,11 @@ timely:
   cache:
     enabled: false
   metrics-report-ignored-tags:
+  defaultVisibility:
+  zookeeper:
+    servers: 127.0.0.1:9804
   accumulo:
     instance-name: TimelyStandalone
-    zookeepers: 127.0.0.1:9804
     username: root
     password: secret
     write:
@@ -42,18 +45,18 @@ timely:
     tcp-port: 54321
     udp-port: 54325
   http:
+    host: localhost
     ip: 0.0.0.0
     port: 54322
-    host: localhost
     redirect-path: /secure-me
-    strict-transport-max-age: 608400
+    strict-transport-max-age: 604800
     cors:
       allow-any-origin: true
       allow-null-origin: false
       allow-credentials: true
       allowed-origins:
       allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
-      allowed-header: content-type
+      allowed-headers: content-type
   websocket:
     ip: 0.0.0.0
     port: 54323
@@ -67,7 +70,8 @@ timely:
     expiration-minutes: 1440
     cache-refresh-minutes: 60
     max-tag-values: 100
-  visibility-cache:
-    expiration-minutes: 60
-    initial-capacity: 2000
-    max-capacity: 10000
+
+logging:
+  level:
+    ROOT: info
+    timey: debug

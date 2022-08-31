@@ -51,5 +51,4 @@ public class SearchLookupResponseTest {
         Assert.assertEquals("testmetric", req.getQuery());
         Assert.assertEquals(Collections.singletonList(new Tag("host", ".*")), req.getTags());
     }
-
 }

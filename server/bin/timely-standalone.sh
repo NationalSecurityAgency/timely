@@ -38,6 +38,6 @@ JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
 # for debugging
 #JVM_ARGS="${JVM_ARGS} -agentlib:jdwp=transport=dt_socket,address=54323,server=y,suspend=y"
 
-echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${TMP_DIR}" --spring.config.name=timely --spring.profiles.active=standalone"
-$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${TMP_DIR}" --spring.config.name=timely --spring.profiles.active=standalone
+echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${TMP_DIR}" --spring.profiles.active=standalone"
+$JAVA_HOME/bin/java ${JVM_ARGS} timely.StandaloneServer "${TMP_DIR}" --spring.profiles.active=standalone
 

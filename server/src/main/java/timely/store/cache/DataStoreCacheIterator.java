@@ -23,10 +23,11 @@ import org.slf4j.LoggerFactory;
 
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.timeseries.QueryRequest;
+import timely.server.component.DataStoreCache;
 
 public class DataStoreCacheIterator implements SortedKeyValueIterator<Key,Value> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DataStoreCacheIterator.class);
+    private static final Logger log = LoggerFactory.getLogger(DataStoreCacheIterator.class);
     private DataStoreCache store;
     private Collection<VisibilityFilter> visibilityFilters;
     private QueryRequest.SubQuery query;
@@ -55,8 +56,8 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key,Value>
         for (Map.Entry<Key,Value> entry : entries.entrySet()) {
             kvQueue.add(new KeyValue(entry.getKey(), entry.getValue()));
         }
-        LOG.info("Time to initialize cache iterator for {} with {} TaggedMetric/GorillaStore pairs and {} K/V entries - {}ms", query.toString(),
-                        storeMap.size(), entries.size(), System.currentTimeMillis() - start);
+        log.info("Time to initialize cache iterator for {} with {} TaggedMetric/GorillaStore pairs and {} K/V entries - {}ms", query, storeMap.size(),
+                        entries.size(), System.currentTimeMillis() - start);
     }
 
     private WrappedGorillaDecompressorIterator getNextDecompressorIterable() {
@@ -107,7 +108,7 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key,Value>
             TaggedMetric tm = decompressors.getTaggedMetric();
             WrappedGorillaDecompressor decompressor = decompressors.getDecompressorWrapper();
 
-            fi.iki.yak.ts.compression.gorilla.Pair gPair = null;
+            fi.iki.yak.ts.compression.gorilla.Pair gPair;
             while (decompressor != null && decompressors != null) {
                 gPair = decompressor.readPair();
                 if (gPair == null) {
@@ -121,9 +122,10 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key,Value>
                     }
                 } else {
                     long ts = gPair.getTimestamp();
+                    Key key = MetricAdapter.toKey(this.query.getMetric(), tm.getTags(), ts);
+                    Value value = new Value(MetricAdapter.encodeValue(gPair.getDoubleValue()));
                     if (ts >= startTs && ts <= endTs) {
-                        entries.put(MetricAdapter.toKey(this.query.getMetric(), tm.getTags(), ts),
-                                        new Value(MetricAdapter.encodeValue(gPair.getDoubleValue())));
+                        entries.put(key, value);
                     }
                 }
             }

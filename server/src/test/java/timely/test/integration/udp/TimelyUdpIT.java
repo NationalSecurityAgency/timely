@@ -10,11 +10,14 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
@@ -23,63 +26,76 @@ import org.apache.accumulo.core.security.Authorizations;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 
-import timely.TestServer;
 import timely.api.request.MetricRequest;
-import timely.auth.AuthCache;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.test.IntegrationTest;
+import timely.test.TestCaptureRequestHandler;
 import timely.test.TestConfiguration;
-import timely.test.integration.InMemoryITBase;
+import timely.test.TimelyServerTestRule;
+import timely.test.integration.ITBase;
 
 /**
  * Integration tests for the operations available over the UDP transport
  */
 @Category(IntegrationTest.class)
-public class TimelyUdpIT extends InMemoryITBase {
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+public class TimelyUdpIT extends ITBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimelyUdpIT.class);
+    private static final Logger log = LoggerFactory.getLogger(TimelyUdpIT.class);
     private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
 
+    @Autowired
+    @Rule
+    public TimelyServerTestRule testRule;
+
+    @Autowired
+    @Qualifier("udp")
+    public TestCaptureRequestHandler udpRequests;
+
     @Before
-    public void setup() throws Exception {
-        accumuloClient.tableOperations().list().forEach(t -> {
-            if (t.startsWith("timely")) {
-                try {
-                    accumuloClient.tableOperations().delete(t);
-                } catch (Exception e) {}
-            }
-        });
+    public void setup() {
+        super.setup();
     }
 
     @After
-    public void tearDown() throws Exception {
-        AuthCache.resetConfiguration();
+    public void cleanup() {
+        super.cleanup();
+        udpRequests.clear();
     }
 
     @Test
     public void testPut() throws Exception {
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
-        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        InetSocketAddress address = new InetSocketAddress(serverProperties.getIp(), serverProperties.getUdpPort());
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), serverProperties.getUdpPort());
         try (DatagramSocket sock = new DatagramSocket()) {
             // @formatter:off
             packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
             sock.send(packet);
-            while (1 != m.getUdpRequests().getCount()) {
+            long start = System.currentTimeMillis();
+            while (1 != udpRequests.getCount()) {
                 Thread.sleep(5);
+                if ((System.currentTimeMillis() - start) > (TestConfiguration.WAIT_SECONDS * 1000)) {
+                    Assert.fail("Failed to receive UDP updates in " + TestConfiguration.WAIT_SECONDS + " seconds");
+                }
             }
-            Assert.assertEquals(1, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
-            final MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            Assert.assertEquals(1, udpRequests.getResponses().size());
+            Assert.assertEquals(MetricRequest.class, udpRequests.getResponses().get(0).getClass());
+            final MetricRequest actual = (MetricRequest) udpRequests.getResponses().get(0);
             final MetricRequest expected = new MetricRequest(
                     Metric.newBuilder()
                             .name("sys.cpu.user")
@@ -90,28 +106,29 @@ public class TimelyUdpIT extends InMemoryITBase {
             );
             Assert.assertEquals(expected, actual);
             // @formatter:on
-        } finally {
-            m.shutdown();
         }
     }
 
     @Test
     public void testPutMultiple() throws Exception {
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
-        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+
+        InetSocketAddress address = new InetSocketAddress(serverProperties.getIp(), serverProperties.getUdpPort());
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), serverProperties.getUdpPort());
         // @formatter:off
         try (DatagramSocket sock = new DatagramSocket()) {
             packet.setData(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n"
                           + "put sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n").getBytes(UTF_8));
             sock.send(packet);
-            while (2 != m.getUdpRequests().getCount()) {
+            long start = System.currentTimeMillis();
+            while (2 != udpRequests.getCount()) {
                 Thread.sleep(5);
+                if ((System.currentTimeMillis() - start) > (TestConfiguration.WAIT_SECONDS * 1000)) {
+                    Assert.fail("Failed to receive UDP updates in " + TestConfiguration.WAIT_SECONDS + " seconds");
+                }
             }
-            Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
-            MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            Assert.assertEquals(2, udpRequests.getResponses().size());
+            Assert.assertEquals(MetricRequest.class, udpRequests.getResponses().get(0).getClass());
+            MetricRequest actual = (MetricRequest) udpRequests.getResponses().get(0);
             MetricRequest expected = new MetricRequest (
                     Metric.newBuilder()
                             .name("sys.cpu.user")
@@ -122,8 +139,8 @@ public class TimelyUdpIT extends InMemoryITBase {
             );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(1).getClass());
-            actual = (MetricRequest) m.getUdpRequests().getResponses().get(1);
+            Assert.assertEquals(MetricRequest.class, udpRequests.getResponses().get(1).getClass());
+            actual = (MetricRequest) udpRequests.getResponses().get(1);
             expected = new MetricRequest(
                     Metric.newBuilder()
                             .name("sys.cpu.idle")
@@ -134,8 +151,6 @@ public class TimelyUdpIT extends InMemoryITBase {
             );
             Assert.assertEquals(expected, actual);
             // @formatter:on
-        } finally {
-            m.shutdown();
         }
     }
 
@@ -175,22 +190,24 @@ public class TimelyUdpIT extends InMemoryITBase {
         ByteBuffer binary = builder.dataBuffer();
         byte[] data = new byte[binary.remaining()];
         binary.get(data, 0, binary.remaining());
-        LOG.debug("Sending {} bytes", data.length);
+        log.debug("Sending {} bytes", data.length);
 
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
-        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        InetSocketAddress address = new InetSocketAddress(serverProperties.getIp(), serverProperties.getUdpPort());
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), serverProperties.getUdpPort());
         try (DatagramSocket sock = new DatagramSocket()) {
             packet.setData(data);
             sock.send(packet);
-            while (2 != m.getUdpRequests().getCount()) {
+            long start = System.currentTimeMillis();
+            while (2 != udpRequests.getCount()) {
                 Thread.sleep(5);
+                if ((System.currentTimeMillis() - start) > (TestConfiguration.WAIT_SECONDS * 1000)) {
+                    Assert.fail("Failed to receive UDP updates in " + TestConfiguration.WAIT_SECONDS + " seconds");
+                }
             }
-            Assert.assertEquals(2, m.getUdpRequests().getResponses().size());
-            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(0).getClass());
+            Assert.assertEquals(2, udpRequests.getResponses().size());
+            Assert.assertEquals(MetricRequest.class, udpRequests.getResponses().get(0).getClass());
             // @formatter:off
-            MetricRequest actual = (MetricRequest) m.getUdpRequests().getResponses().get(0);
+            MetricRequest actual = (MetricRequest) udpRequests.getResponses().get(0);
             MetricRequest expected = new MetricRequest(
                     Metric.newBuilder()
                             .name("sys.cpu.user")
@@ -201,8 +218,8 @@ public class TimelyUdpIT extends InMemoryITBase {
             );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(MetricRequest.class, m.getUdpRequests().getResponses().get(1).getClass());
-            actual = (MetricRequest) m.getUdpRequests().getResponses().get(1);
+            Assert.assertEquals(MetricRequest.class, udpRequests.getResponses().get(1).getClass());
+            actual = (MetricRequest) udpRequests.getResponses().get(1);
             expected = new MetricRequest(
                     Metric.newBuilder()
                             .name("sys.cpu.idle")
@@ -214,105 +231,94 @@ public class TimelyUdpIT extends InMemoryITBase {
             Assert.assertEquals(expected, actual);
             // @formatter:on
 
-        } finally {
-            m.shutdown();
         }
     }
 
     @Test
     public void testPutInvalidTimestamp() throws Exception {
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
-        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+
+        InetSocketAddress address = new InetSocketAddress(serverProperties.getIp(), serverProperties.getUdpPort());
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), serverProperties.getUdpPort());
         try (DatagramSocket sock = new DatagramSocket();) {
             packet.setData(("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n").getBytes(UTF_8));
             sock.send(packet);
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-            Assert.assertEquals(0, m.getUdpRequests().getCount());
-        } finally {
-            m.shutdown();
+            Assert.assertEquals(0, udpRequests.getCount());
         }
     }
 
     @Test
     public void testPersistence() throws Exception {
-        startServer();
-        try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
-            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-            assertTrue(accumuloClient.namespaceOperations().exists("timely"));
-            assertTrue(accumuloClient.tableOperations().exists("timely.metrics"));
-            assertTrue(accumuloClient.tableOperations().exists("timely.meta"));
-            int count = 0;
-            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(6, count);
-            count = 0;
-            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
-                LOG.info("Meta entry: " + entry);
-                count++;
-            }
-            assertEquals(10, count);
-            // count w/out versioning iterator to make sure that the optimization
-            // for writing is working
-            accumuloClient.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
-            // wait for zookeeper propagation
-            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-            count = 0;
-            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
-                LOG.info("Meta no vers iter: " + entry);
-                count++;
-            }
-            assertEquals(15, count);
-        } finally {
-            stopServer();
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                   "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                   "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        // @formatter:on
+        dataStore.flush();
+        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+        assertTrue(accumuloClient.namespaceOperations().exists("timely"));
+        assertTrue(accumuloClient.tableOperations().exists(timelyProperties.getMetricsTable()));
+        assertTrue(accumuloClient.tableOperations().exists(timelyProperties.getMetaTable()));
+        dataStore.flush();
+        final AtomicInteger entryCount = new AtomicInteger(0);
+        accumuloClient.createScanner(timelyProperties.getMetricsTable(), Authorizations.EMPTY).forEach(e -> {
+            final double value = ByteBuffer.wrap(e.getValue().get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            entryCount.getAndIncrement();
+        });
+        assertEquals(6, entryCount.get());
+        entryCount.set(0);
+        final List<Key> keys = new ArrayList<>();
+
+        accumuloClient.createScanner(timelyProperties.getMetaTable(), Authorizations.EMPTY).forEach(e -> {
+            entryCount.getAndIncrement();
+            keys.add(e.getKey());
+        });
+        if (entryCount.get() != 10) {
+            printAllAccumuloEntries();
         }
+        assertEquals(10, entryCount.get());
+        // count w/out versioning iterator to make sure that the optimization
+        // for writing is working
+        accumuloClient.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
+        // wait for zookeeper propagation
+        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+        assertEquals(15, accumuloClient.createScanner("timely.meta", Authorizations.EMPTY).stream().count());
     }
 
     @Test
     public void testPersistenceWithVisibility() throws Exception {
-        startServer();
-        try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",
-                            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
-            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-            accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
+        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+        accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
 
-            int count = 0;
-            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(2, count);
-            count = 0;
-            Authorizations auth1 = new Authorizations("a");
-            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth1)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(4, count);
-            count = 0;
-            Authorizations auth2 = new Authorizations("b", "c");
-            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth2)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(6, count);
-        } finally {
-            stopServer();
+        int count = 0;
+        for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
+            log.debug("Entry: " + entry);
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            count++;
         }
+        assertEquals(2, count);
+        count = 0;
+        Authorizations auth1 = new Authorizations("a");
+        for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth1)) {
+            log.debug("Entry: " + entry);
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(4, count);
+        count = 0;
+        Authorizations auth2 = new Authorizations("b", "c");
+        for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth2)) {
+            log.debug("Entry: " + entry);
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(6, count);
     }
 
     private void put(String... lines) throws Exception {
@@ -322,8 +328,8 @@ public class TimelyUdpIT extends InMemoryITBase {
             format.append(line);
             format.append("\n");
         }
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
-        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
+        InetSocketAddress address = new InetSocketAddress(serverProperties.getIp(), serverProperties.getUdpPort());
+        DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), serverProperties.getUdpPort());
         try (DatagramSocket sock = new DatagramSocket();) {
             packet.setData(format.toString().getBytes(UTF_8));
             sock.send(packet);

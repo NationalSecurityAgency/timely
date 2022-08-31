@@ -3,50 +3,46 @@ package timely.netty.websocket.subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import timely.api.request.subscription.CreateSubscription;
-import timely.configuration.Configuration;
-import timely.store.DataStore;
-import timely.store.cache.DataStoreCache;
+import timely.api.request.websocket.CreateSubscription;
+import timely.common.configuration.WebsocketProperties;
+import timely.server.component.DataStore;
+import timely.server.component.DataStoreCache;
 import timely.subscription.Subscription;
+import timely.subscription.SubscriptionImpl;
 import timely.subscription.SubscriptionRegistry;
 
 public class WSCreateSubscriptionRequestHandler extends SimpleChannelInboundHandler<CreateSubscription> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WSCreateSubscriptionRequestHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WSCreateSubscriptionRequestHandler.class);
     private final DataStore store;
     private final DataStoreCache cache;
-    private final Configuration conf;
+    private final WebsocketProperties websocketProperties;
 
-    public WSCreateSubscriptionRequestHandler(DataStore store, DataStoreCache cache, Configuration conf) {
+    public WSCreateSubscriptionRequestHandler(DataStore store, DataStoreCache cache, WebsocketProperties websocketProperties) {
         this.store = store;
         this.cache = cache;
-        this.conf = conf;
+        this.websocketProperties = websocketProperties;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, CreateSubscription create) throws Exception {
         final String subscriptionId = create.getSubscriptionId();
-        SubscriptionRegistry.get().put(subscriptionId, new Subscription(subscriptionId, create.getSessionId(), store, cache, ctx, this.conf));
+        SubscriptionRegistry.get().put(subscriptionId,
+                        new SubscriptionImpl(subscriptionId, create.getSessionId(), store, cache, ctx, this.websocketProperties));
 
         // Store the session id as an attribute on the context.
-        ctx.channel().attr(SubscriptionRegistry.SUBSCRIPTION_ID_ATTR).set(subscriptionId);
-        LOG.info("[{}] Created subscription on channel {}", subscriptionId, ctx);
+        ctx.channel().attr(SubscriptionConstants.SUBSCRIPTION_ID_ATTR).set(subscriptionId);
+        log.info("[{}] Created subscription on channel {}", subscriptionId, ctx);
 
-        ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                Subscription s = SubscriptionRegistry.get().remove(subscriptionId);
-                if (null != s) {
-                    LOG.info("[{}] Channel closed, closing subscriptions", subscriptionId);
-                    s.close();
-                }
+        ctx.channel().closeFuture().addListener((ChannelFutureListener) future -> {
+            Subscription s = SubscriptionRegistry.get().remove(subscriptionId);
+            if (null != s) {
+                log.info("[{}] Channel closed, closing subscriptions", subscriptionId);
+                s.close();
             }
         });
     }
-
 }

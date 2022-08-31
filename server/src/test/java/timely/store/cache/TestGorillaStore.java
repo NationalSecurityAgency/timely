@@ -6,21 +6,11 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import fi.iki.yak.ts.compression.gorilla.Pair;
-import timely.configuration.Configuration;
 
 public class TestGorillaStore {
-
-    static private Configuration configuration = null;
-
-    @BeforeClass
-    public static void setup() {
-        configuration = new Configuration();
-        configuration.getSecurity().setAllowAnonymousHttpAccess(true);
-    }
 
     @Test
     public void testGorillaStore() {

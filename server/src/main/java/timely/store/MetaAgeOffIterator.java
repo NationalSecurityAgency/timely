@@ -17,11 +17,11 @@ import org.apache.commons.collections4.trie.PatriciaTrie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import timely.api.model.Meta;
+import timely.model.Meta;
 
 public class MetaAgeOffIterator extends WrappingIterator implements OptionDescriber {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MetaAgeOffIterator.class);
+    private static final Logger log = LoggerFactory.getLogger(MetaAgeOffIterator.class);
     public static final String AGE_OFF_PREFIX = "ageoff.";
     public static final String DEFAULT_AGEOFF_KEY = "default";
 
@@ -51,7 +51,7 @@ public class MetaAgeOffIterator extends WrappingIterator implements OptionDescri
         options.forEach((k, v) -> {
             if (k.startsWith(AGE_OFF_PREFIX)) {
                 String name = k.substring(AGE_OFF_PREFIX.length());
-                LOG.trace("Adding {} to Trie with value {}", name, Long.parseLong(v));
+                log.trace("Adding {} to Trie with value {}", name, Long.parseLong(v));
                 long ageoff = Long.parseLong(v);
                 this.minAgeOff = Math.min(this.minAgeOff, ageoff);
                 this.maxAgeOff = Math.max(this.maxAgeOff, ageoff);

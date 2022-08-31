@@ -15,10 +15,10 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
 
     public static final ColumnVisibility EMPTY_VISIBILITY = new ColumnVisibility();
     public static final String VISIBILITY_TAG = "viz";
-    private ColumnVisibility columnVisibility = null;
-    private OrderedTags orderedTags = null;
+    private ColumnVisibility columnVisibility;
+    private OrderedTags orderedTags;
 
-    public TaggedMetric(String metric, List<Tag> tags) {
+    public TaggedMetric(List<Tag> tags) {
         Map<String,String> tagMap = new LinkedHashMap<>();
         for (Tag t : tags) {
             tagMap.put(t.getKey(), t.getValue());

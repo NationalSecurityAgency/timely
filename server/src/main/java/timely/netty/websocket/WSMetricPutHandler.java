@@ -3,7 +3,7 @@ package timely.netty.websocket;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import timely.api.request.MetricRequest;
-import timely.store.DataStore;
+import timely.server.component.DataStore;
 
 public class WSMetricPutHandler extends SimpleChannelInboundHandler<MetricRequest> {
 

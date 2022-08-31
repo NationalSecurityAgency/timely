@@ -22,7 +22,11 @@ for i in $(seq 1 $NUM_PROFILES); do
 
     echo "creating configuration file ${CONF_DIR}/${FILENAME}"
     cp ${CONF_DIR}/timely-balancer-template.yml ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${ZOOKEEPERS}/${ZOOKEEPERS}/g" ${CONF_DIR}/${FILENAME}
+#    if [ "$NUM_PROFILES" -eq "1" ]; then
+#        sed -i "s/\${INSTANCE}//g" ${CONF_DIR}/${FILENAME}
+#    else
+#        sed -i "s/\${INSTANCE}/${i}/g" ${CONF_DIR}/${FILENAME}
+#    fi
     MULTIPLE=$(($i - 1))
     TCP_PORT=$(($TCP_PORT_START + $MULTIPLE * $PORT_INCREMENT))
     sed -i "s/\${TCP_PORT}/${TCP_PORT}/g" ${CONF_DIR}/${FILENAME}
@@ -32,16 +36,5 @@ for i in $(seq 1 $NUM_PROFILES); do
     sed -i "s/\${WEBSOCKET_PORT}/${WEBSOCKET_PORT}/g" ${CONF_DIR}/${FILENAME}
     UDP_PORT=$(($UDP_PORT_START + $MULTIPLE * $PORT_INCREMENT))
     sed -i "s/\${UDP_PORT}/${UDP_PORT}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${INSTANCE}/${i}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s#\${SERVER_CERTIFICATE_FILE}#${SERVER_CERTIFICATE_FILE}#g" ${CONF_DIR}/${FILENAME}
-    sed -i "s#\${SERVER_KEY_FILE}#${SERVER_KEY_FILE}#g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${SERVER_KEY_PASSWORD}/${SERVER_KEY_PASSWORD}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${SERVER_USE_GENERATED_KEYPAIR}/${SERVER_USE_GENERATED_KEYPAIR}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s#\${CLIENT_KEY_FILE}#${CLIENT_KEY_FILE}#g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${CLIENT_KEY_TYPE}/${CLIENT_KEY_TYPE}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${CLIENT_KEY_PASSWORD}/${CLIENT_KEY_PASSWORD}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s#\${TRUST_STORE_PEM}#${TRUST_STORE_PEM}#g" ${CONF_DIR}/${FILENAME}
-    sed -i "s#\${TRUST_STORE_JKS}#${TRUST_STORE_JKS}#g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${TRUST_STORE_PASSWORD}/${TRUST_STORE_PASSWORD}/g" ${CONF_DIR}/${FILENAME}
 done
 

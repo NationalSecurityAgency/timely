@@ -11,7 +11,7 @@ import timely.adapter.accumulo.MetricAdapter;
 
 public class MetricAgeOffFilterTest {
 
-    private static final Long TEST_TIME = System.currentTimeMillis();
+    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
     private static final Integer ONE_DAY = 86400000;
 
     @Test(expected = IllegalArgumentException.class)

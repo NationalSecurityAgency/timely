@@ -5,18 +5,19 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.AtomicDouble;
 
-import timely.configuration.Configuration;
+import timely.common.configuration.TimelyProperties;
 import timely.model.Metric;
 import timely.model.Tag;
 
 public class InternalMetrics {
 
-    private static final Logger LOG = LoggerFactory.getLogger(InternalMetrics.class);
+    private static final Logger log = LoggerFactory.getLogger(InternalMetrics.class);
 
     private static final String METRICS_RECEIVED_METRIC = "timely.metrics.received";
     private static final String META_KEYS_METRIC = "timely.keys.meta.inserted";
@@ -42,17 +43,16 @@ public class InternalMetrics {
     private AtomicDouble numCachedMetricsTotal = new AtomicDouble(0);
     private AtomicDouble ageOfOldestCachedMetric = new AtomicDouble(0);
 
-    private List<Tag> tags = new ArrayList<Tag>();
+    private List<Tag> tags = new ArrayList<>();
 
-    public InternalMetrics(Configuration conf) {
-        super();
+    public InternalMetrics(TimelyProperties timelyProperties) {
         try {
             hostName = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
-            LOG.error("Error getting hostname", e);
+            log.error("Error getting hostname", e);
         }
-        String instance = conf.getInstance();
-        if (instance == null) {
+        String instance = timelyProperties.getInstance();
+        if (StringUtils.isBlank(instance)) {
             tags.add(new Tag(HOSTNAME_TAG, hostName));
         } else {
             tags.add(new Tag(HOSTNAME_TAG, hostName + "_" + instance));

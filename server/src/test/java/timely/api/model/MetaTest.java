@@ -6,6 +6,8 @@ import org.apache.accumulo.core.data.Key;
 import org.junit.Assert;
 import org.junit.Test;
 
+import timely.model.Meta;
+
 public class MetaTest {
 
     @Test

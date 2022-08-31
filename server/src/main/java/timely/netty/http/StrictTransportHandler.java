@@ -5,22 +5,22 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import timely.api.response.StrictTransportResponse;
 import timely.api.response.TimelyException;
-import timely.configuration.Configuration;
+import timely.common.configuration.HttpProperties;
 
 public class StrictTransportHandler extends SimpleChannelInboundHandler<StrictTransportResponse> {
 
     public static final String HSTS_HEADER_NAME = "Strict-Transport-Security";
-    private String hstsMaxAge = "max-age=";
+    private HttpProperties httpProperties;
 
-    public StrictTransportHandler(Configuration conf) {
-        long maxAge = conf.getHttp().getStrictTransportMaxAge();
-        hstsMaxAge = "max-age=" + maxAge;
+    public StrictTransportHandler(HttpProperties httpProperties) {
+        this.httpProperties = httpProperties;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, StrictTransportResponse msg) throws Exception {
         TimelyException e = new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Returning HTTP Strict Transport Security response", null, null);
-        e.addResponseHeader(HSTS_HEADER_NAME, hstsMaxAge);
+        String headerValue = "max-age=" + httpProperties.getStrictTransportMaxAge();
+        e.addResponseHeader(HSTS_HEADER_NAME, headerValue);
         // Don't call sendHttpError from here, throw an error instead and let
         // the exception handler catch it.
         throw e;

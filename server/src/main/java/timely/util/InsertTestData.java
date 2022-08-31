@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 public class InsertTestData {
 
-    private static final Logger LOG = LoggerFactory.getLogger(InsertTestData.class);
+    private static final Logger log = LoggerFactory.getLogger(InsertTestData.class);
 
     private static final List<String> METRICS = new ArrayList<>();
     static {
@@ -103,7 +103,7 @@ public class InsertTestData {
                                 if (viz != null)
                                     put += " viz=" + viz;
                                 writer.println(put);
-                                LOG.info(put);
+                                log.info(put);
                             });
                         });
                     });

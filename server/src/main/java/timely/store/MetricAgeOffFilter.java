@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 public class MetricAgeOffFilter extends Filter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MetricAgeOffFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(MetricAgeOffFilter.class);
     public static final String AGE_OFF_PREFIX = "ageoff.";
     public static final String DEFAULT_AGEOFF_KEY = "default";
     private PatriciaTrie<Long> ageoffs = null;
@@ -95,7 +95,7 @@ public class MetricAgeOffFilter extends Filter {
         options.forEach((k, v) -> {
             if (k.startsWith(AGE_OFF_PREFIX)) {
                 String name = k.substring(AGE_OFF_PREFIX.length());
-                LOG.trace("Adding {} to Trie with value", name, Long.parseLong(v));
+                log.trace("Adding {} to Trie with value", name, Long.parseLong(v));
                 long ageoff = Long.parseLong(v);
                 this.minAgeOff = Math.min(this.minAgeOff, ageoff);
                 this.maxAgeOff = Math.max(this.maxAgeOff, ageoff);

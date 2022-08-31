@@ -4,6 +4,7 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
@@ -35,13 +37,13 @@ import timely.api.response.MetricResponses;
 import timely.api.response.TimelyException;
 import timely.model.Metric;
 import timely.model.Tag;
-import timely.store.DataStore;
-import timely.store.cache.DataStoreCache;
+import timely.server.component.DataStore;
+import timely.server.component.DataStoreCache;
 import timely.util.JsonUtil;
 
 public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MetricScanner.class);
+    private static final Logger log = LoggerFactory.getLogger(MetricScanner.class);
     private static final ObjectMapper om = JsonUtil.getObjectMapper();
 
     private final Scanner scanner;
@@ -60,11 +62,11 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private final int subscriptionBatchSize;
     private MetricResponses responses = new MetricResponses();
     private ScheduledFuture<?> flusher = null;
-    private List<Range> ranges = null;
+    private List<Range> ranges;
     private Iterator<Range> rangeItr = null;
-    private DataStore store = null;
-    private DataStoreCache cache = null;
-    private Set<Tag> colFamValues = null;
+    private DataStore store;
+    private DataStoreCache cache;
+    private Set<Tag> colFamValues;
     private boolean completedResponseSent = false;
     private boolean done = false;
 
@@ -97,11 +99,12 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
             buf.append("tags", tags.toString());
         }
         scannerInfo = buf.toString();
-        LOG.info("[{}] Setting up MetricScanner: {}", subscriptionId, scannerInfo);
+        Collection<Authorizations> authorizations = store.getSessionAuthorizations(this.request);
+        log.info("[{}] Setting up MetricScanner: {} with authorizations {}", subscriptionId, scannerInfo, authorizations);
 
         if (0 == beginTime) {
             this.beginTime = (System.currentTimeMillis() - this.store.getAgeOffForMetric(metric) - 1000);
-            LOG.debug("[{}] Overriding zero start time to {} due to age off configuration", subscriptionId, beginTime);
+            log.debug("[{}] Overriding zero start time to {} due to age off configuration", subscriptionId, beginTime);
         }
         long endTimeStamp = (endTime == 0) ? (System.currentTimeMillis() - (lag * 1000)) : endTime;
 
@@ -109,12 +112,13 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
             this.colFamValues = this.store.getColumnFamilies(metric, tags);
             this.ranges = new ArrayList<>();
             if (this.cache == null) {
-                LOG.debug("[{}] Cache not enabled, adding complete range", subscriptionId);
+                log.debug("[{}] Cache not enabled, adding complete range", subscriptionId);
                 ranges.addAll(this.store.getQueryRanges(metric, this.beginTime, endTimeStamp, colFamValues));
             } else {
                 long oldestTsForMetric = this.cache.getOldestTimestamp(metric);
                 // metric is cached on this server and requested range ends somewhere in the
                 // cache
+                log.info("[{}] endTs {} requested, oldest ts cached for metric {} is {}", subscriptionId, endTimeStamp, metric, oldestTsForMetric);
                 if (oldestTsForMetric < Long.MAX_VALUE && endTimeStamp > oldestTsForMetric) {
                     List<MetricResponse> metricsFromCache;
                     if (this.beginTime < oldestTsForMetric) {
@@ -122,25 +126,26 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         // cached
                         ranges.addAll(this.store.getQueryRanges(metric, this.beginTime, oldestTsForMetric - 1, colFamValues));
                         metricsFromCache = cache.getMetricsFromCache(this.request, metric, tags, oldestTsForMetric, endTimeStamp);
-                        LOG.debug("[{}] MetricScanner request partially fulfilled from cache: {} metrics", subscriptionId, metricsFromCache.size());
+                        log.debug("[{}] MetricScanner request partially fulfilled from cache: {} metrics", subscriptionId, metricsFromCache.size());
                     } else {
                         metricsFromCache = cache.getMetricsFromCache(this.request, metric, tags, this.beginTime, endTimeStamp);
-                        LOG.debug("[{}] Websocket request completely fulfilled from cache: {} metrics [{}]", subscriptionId, metricsFromCache.size());
+                        log.debug("[{}] Websocket request completely fulfilled from cache: {} metrics [{}]", subscriptionId, metricsFromCache.size());
                     }
 
                     if (metricsFromCache.isEmpty()) {
                         // no metrics from cache, clear ranges and add whole range
                         ranges.clear();
                         ranges.addAll(this.store.getQueryRanges(metric, this.beginTime, endTimeStamp, colFamValues));
-                        LOG.debug("[{}] MetricScanner request got no metrics from cache, re-adding complete range", subscriptionId);
+                        log.debug("[{}] MetricScanner request got no metrics from cache, re-adding complete range", subscriptionId);
                     } else {
                         for (MetricResponse r : metricsFromCache) {
+                            r.setSubscriptionId(subscriptionId);
                             responses.addResponse(r);
                         }
                         flush();
                     }
                 } else {
-                    LOG.debug("[{}] MetricScanner request range not cached, adding complete range", subscriptionId);
+                    log.debug("[{}] MetricScanner request range not cached, adding complete range", subscriptionId);
                     ranges.addAll(this.store.getQueryRanges(metric, this.beginTime, endTimeStamp, colFamValues));
                 }
             }
@@ -178,7 +183,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     }
 
     public synchronized void flush() {
-        LOG.debug("[{}] Flush called", subscriptionId);
+        log.debug("[{}] Flush called", subscriptionId);
         synchronized (responses) {
             if (responses.size() > 0) {
                 try {
@@ -186,7 +191,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     this.ctx.writeAndFlush(new TextWebSocketFrame(json));
                     responses.clear();
                 } catch (JsonProcessingException e) {
-                    LOG.error("[" + subscriptionId + "] Error serializing metrics: " + responses, e);
+                    log.error("[" + subscriptionId + "] Error serializing metrics: " + responses, e);
                 }
             }
         }
@@ -207,7 +212,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         }
                         this.responses.addResponse(MetricResponse.fromMetric(m, this.subscriptionId));
                     } catch (Exception e1) {
-                        LOG.error("[{}] Error {} parsing metric at key: {}", subscriptionId, e1.getMessage(), e.getKey().toString());
+                        log.error("[{}] Error {} parsing metric at key: {}", subscriptionId, e1.getMessage(), e.getKey().toString());
                     }
                 } else if (rangeItr.hasNext()) {
                     // set next range on the scanner
@@ -218,7 +223,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     flush();
                     long endTimeStamp = (System.currentTimeMillis() - (lag * 1000));
                     if (null == m) {
-                        LOG.debug("[{}] No results found, waiting {}ms to retry with new end time {}. [{}]", subscriptionId, delay, endTimeStamp);
+                        log.debug("[{}] No results found, waiting {}ms to retry with new end time {}. [{}]", subscriptionId, delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         ranges = this.store.getQueryRanges(metric, beginTime, endTimeStamp, colFamValues);
                         rangeItr = ranges.iterator();
@@ -229,8 +234,8 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         }
                     } else {
                         // Reset the starting range to the last key returned
-                        LOG.debug("[{}] Exhausted scanner, last metric returned was {} [{}]", subscriptionId, m);
-                        LOG.debug("[{}] Waiting {}ms to retry with new end time {}. [{}]", subscriptionId, delay, endTimeStamp);
+                        log.debug("[{}] Exhausted scanner, last metric returned was {} [{}]", subscriptionId, m);
+                        log.debug("[{}] Waiting {}ms to retry with new end time {}. [{}]", subscriptionId, delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         ranges = this.store.getQueryRanges(metric, m.getValue().getTimestamp() + 1, endTimeStamp, colFamValues);
                         rangeItr = ranges.iterator();
@@ -246,12 +251,12 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     done = true;
                 }
                 if (done) {
-                    LOG.debug("[{}] Exhausted scanner", subscriptionId);
+                    log.debug("[{}] Exhausted scanner", subscriptionId);
                     sendCompletedResponse();
                 }
             }
         } catch (Throwable e) {
-            LOG.error("[" + subscriptionId + "] Error in metric scanner, closing.", e);
+            log.error("[" + subscriptionId + "] Error in metric scanner, closing.", e);
         } finally {
             close();
             if (this.scanner != null) {
@@ -263,8 +268,9 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
     synchronized private void sendCompletedResponse() {
         if (!completedResponseSent) {
-            LOG.info("[{}] Sending completed response", subscriptionId);
+            log.info("[{}] Sending completed response", subscriptionId);
             final MetricResponse completedResponse = new MetricResponse();
+            completedResponse.setMetric(this.metric);
             completedResponse.setSubscriptionId(this.subscriptionId);
             completedResponse.setComplete(true);
             this.responses.addResponse(completedResponse);
@@ -275,7 +281,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
     public void close() {
         if (!closed) {
-            LOG.debug("[{}] Marking metric scanner closed", subscriptionId);
+            log.debug("[{}] Marking metric scanner closed", subscriptionId);
             sendCompletedResponse();
             if (this.flusher != null) {
                 this.flusher.cancel(false);
@@ -286,7 +292,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
     @Override
     public void uncaughtException(Thread t, Throwable e) {
-        LOG.error("[" + subscriptionId + "] Error during metric scanner", e);
+        log.error("[" + subscriptionId + "] Error during metric scanner", e);
         this.close();
     }
 }

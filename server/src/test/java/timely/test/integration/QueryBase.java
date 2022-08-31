@@ -9,22 +9,25 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URL;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.commons.io.IOUtils;
+import org.junit.After;
 import org.junit.Assert;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.Before;
 
 import com.fasterxml.jackson.databind.JavaType;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
+import timely.server.component.TestDataStore;
 import timely.util.JsonUtil;
 
-public abstract class QueryBase extends InMemoryITBase {
+public abstract class QueryBase extends ITBase {
 
     public static class NotSuccessfulException extends Exception {
 
@@ -38,18 +41,35 @@ public abstract class QueryBase extends InMemoryITBase {
         public UnauthorizedUserException() {}
     }
 
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
+    @Before
+    public void setup() {
+        super.setup();
+    }
+
+    @After
+    public void cleanup() {
+        super.cleanup();
+    }
 
     protected void put(String... lines) throws Exception {
-        StringBuffer format = new StringBuffer();
-        for (String line : lines) {
-            format.append("put ");
-            format.append(line);
-            format.append("\n");
-        }
-        try (Socket sock = new Socket("127.0.0.1", 54321); PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
-            writer.write(format.toString());
-            writer.flush();
+        final CountDownLatch PUT_REQUESTS = new CountDownLatch(lines.length);
+        TestDataStore.StoreCallback storeCallback = () -> PUT_REQUESTS.countDown();
+        try {
+            dataStore.addStoreCallback(storeCallback);
+            StringBuffer format = new StringBuffer();
+            for (String line : lines) {
+                format.append("put ");
+                format.append(line);
+                format.append("\n");
+            }
+            try (Socket sock = new Socket(serverProperties.getIp(), serverProperties.getTcpPort());
+                            PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
+                writer.write(format.toString());
+                writer.flush();
+            }
+            PUT_REQUESTS.await(5, TimeUnit.SECONDS);
+        } finally {
+            dataStore.removeStoreCallback(storeCallback);
         }
     }
 
@@ -59,7 +79,7 @@ public abstract class QueryBase extends InMemoryITBase {
         int responseCode = con.getResponseCode();
         assertEquals(200, responseCode);
         String result = IOUtils.toString(con.getInputStream(), UTF_8);
-        LOG.info("Result is {}", result);
+        log.debug("Result is {}", result);
         return result;
     }
 
@@ -75,15 +95,15 @@ public abstract class QueryBase extends InMemoryITBase {
         URL url = new URL(getRequest);
         HttpsURLConnection con = getUrlConnection(url);
         if (null != acceptType) {
-            LOG.trace("Setting Accept header to {}", acceptType);
+            log.trace("Setting Accept header to {}", acceptType);
             con.addRequestProperty(HttpHeaderNames.ACCEPT.toString(), acceptType);
         }
-        LOG.trace("Sending HTTP Headers: {}", con.getRequestProperties());
+        log.trace("Sending HTTP Headers: {}", con.getRequestProperties());
         int responseCode = con.getResponseCode();
         assertEquals(expectedResponseCode, responseCode);
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
-            LOG.debug("Result is {}", result);
+            log.debug("Result is {}", result);
             return result;
         } else {
             throw new NotSuccessfulException();
@@ -108,7 +128,7 @@ public abstract class QueryBase extends InMemoryITBase {
         Assert.assertEquals(expectedResponseCode, responseCode);
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
-            LOG.debug("Result is {}", result);
+            log.debug("Result is {}", result);
             JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class, QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);
         } else {
@@ -121,21 +141,23 @@ public abstract class QueryBase extends InMemoryITBase {
     }
 
     protected List<QueryResponse> query(String location, QueryRequest request, int expectedResponseCode) throws Exception {
-        URL url = new URL(location);
-        HttpsURLConnection con = getUrlConnection(url);
+        return query(getUrlConnection(new URL(location)), request, expectedResponseCode);
+    }
+
+    protected List<QueryResponse> query(HttpsURLConnection con, QueryRequest request, int expectedResponseCode) throws Exception {
         con.setRequestMethod("POST");
         con.setDoOutput(true);
         con.setRequestProperty("Content-Type", "application/json");
         String requestJSON = JsonUtil.getObjectMapper().writeValueAsString(request);
         con.setRequestProperty("Content-Length", String.valueOf(requestJSON.length()));
-        LOG.debug("Request Body JSON: {}", requestJSON);
+        log.debug("Request Body JSON: {}", requestJSON);
         OutputStream wr = con.getOutputStream();
         wr.write(requestJSON.getBytes(UTF_8));
         int responseCode = con.getResponseCode();
         Assert.assertEquals(expectedResponseCode, responseCode);
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
-            LOG.debug("Result is {}", result);
+            log.debug("Result is {}", result);
             JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class, QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);
         } else {

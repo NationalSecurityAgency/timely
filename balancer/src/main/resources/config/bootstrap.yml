@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: timely-balancer
+  config:
+    name: timely-balancer
+    location: ${CONF_DIR}/

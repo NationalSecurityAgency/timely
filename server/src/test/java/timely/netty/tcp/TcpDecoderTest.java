@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBuf;
@@ -12,19 +11,12 @@ import io.netty.buffer.Unpooled;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;
-import timely.auth.VisibilityCache;
-import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 
 public class TcpDecoderTest {
 
-    private static final Long TEST_TIME = System.currentTimeMillis();
-
-    @Before
-    public void setup() {
-        VisibilityCache.init(new Configuration());
-    }
+    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
 
     @Test
     public void testPutNoViz() throws Exception {
@@ -44,10 +36,7 @@ public class TcpDecoderTest {
                 .tag(new Tag("tag2", "value2"))
                 .build();
         // @formatter:on
-        // TODO check parse(Key, Value) implementation for empty visibility
-        // expected.setVisibility(Metric.EMPTY_VISIBILITY);
         Assert.assertTrue(expected.equals(m));
-        // Assert.assertEquals(expected, m);
     }
 
     @Test
@@ -68,10 +57,7 @@ public class TcpDecoderTest {
                 .tag(MetricAdapter.VISIBILITY_TAG, "a&b")
                 .build();
         // @formatter:on
-        // TODO check
-        // ColumnVisibility cv = VisibilityCache.getColumnVisibility("a&b");
         Assert.assertTrue(expected.equals(m));
-        // Assert.assertEquals(expected, m);
     }
 
     @Test

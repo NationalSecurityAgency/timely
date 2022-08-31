@@ -30,7 +30,7 @@ import timely.model.Metric;
 
 public class GorillaStore {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GorillaStore.class);
+    private static final Logger log = LoggerFactory.getLogger(GorillaStore.class);
     private Queue<WrappedGorillaCompressor> archivedCompressors = new LinkedList<WrappedGorillaCompressor>();
     private StampedLock archivedCompressorLock = new StampedLock();
     private StampedLock currentCompressorLock = new StampedLock();
@@ -114,18 +114,18 @@ public class GorillaStore {
                     WrappedGorillaCompressor c = itr.next();
                     long timeSinceNewestTimestamp = now - c.getNewestTimestamp();
                     if (timeSinceNewestTimestamp >= maxAge) {
-                        LOG.trace("removing archive for {} maxAgeMin:{} oldestInMin:{} youngestInMin:{}", metric, maxAge / (1000 * 60),
+                        log.trace("removing archive for {} maxAgeMin:{} oldestInMin:{} youngestInMin:{}", metric, maxAge / (1000 * 60),
                                         (now - c.getOldestTimestamp()) / (1000 * 60), (now - c.getNewestTimestamp()) / (1000 * 60));
                         itr.remove();
                         numRemoved++;
                     } else {
-                        LOG.trace("keeping archive for {} maxAgeMin:{} oldestInMin:{} youngestInMin:{}", metric, maxAge / (1000 * 60),
+                        log.trace("keeping archive for {} maxAgeMin:{} oldestInMin:{} youngestInMin:{}", metric, maxAge / (1000 * 60),
                                         (now - c.getOldestTimestamp()) / (1000 * 60), (now - c.getNewestTimestamp()) / (1000 * 60));
                         if (c.getOldestTimestamp() < oldestRemainingTimestamp) {
                             if (oldestRemainingTimestamp == Long.MAX_VALUE) {
-                                LOG.trace("changing {} oldestInMin from Long.MAX_VALUE to {}", metric, (now - c.getOldestTimestamp()) / (1000 * 60));
+                                log.trace("changing {} oldestInMin from Long.MAX_VALUE to {}", metric, (now - c.getOldestTimestamp()) / (1000 * 60));
                             } else {
-                                LOG.trace("changing {} oldestInMin from {} to {}", metric, (now - oldestRemainingTimestamp) / (1000 * 60),
+                                log.trace("changing {} oldestInMin from {} to {}", metric, (now - oldestRemainingTimestamp) / (1000 * 60),
                                                 (now - c.getOldestTimestamp()) / (1000 * 60));
                             }
                             oldestRemainingTimestamp = c.getOldestTimestamp();
@@ -141,7 +141,7 @@ public class GorillaStore {
             stamp = currentCompressorLock.readLock();
             try {
                 if (current != null) {
-                    LOG.trace("changing {} oldestInMin from Long.MAX_VALUE to {} (no archives, using current)", metric,
+                    log.trace("changing {} oldestInMin from Long.MAX_VALUE to {} (no archives, using current)", metric,
                                     (now - current.getOldestTimestamp()) / (1000 * 60));
                     oldestRemainingTimestamp = current.getOldestTimestamp();
                 }
@@ -152,12 +152,12 @@ public class GorillaStore {
 
         if (oldestRemainingTimestamp < Long.MAX_VALUE) {
             oldestTimestamp = oldestRemainingTimestamp;
-            LOG.trace("Setting oldestTimestamp for {} to {} ageInMin:{}", metric, oldestTimestamp, (now - oldestTimestamp) / (1000 * 60));
+            log.trace("Setting oldestTimestamp for {} to {} ageInMin:{}", metric, oldestTimestamp, (now - oldestTimestamp) / (1000 * 60));
         } else {
             // reset oldestTimestamp to Long.MAX_VALUE since we don't have any of that
             // metric left
             oldestTimestamp = Long.MAX_VALUE;
-            LOG.trace("No archives and no current for {}", metric);
+            log.trace("No archives and no current for {}", metric);
         }
         return numRemoved;
     }
@@ -292,8 +292,8 @@ public class GorillaStore {
 
     public void addValue(Metric metric) {
         long now = System.currentTimeMillis();
-        long ts = metric.getValue().getTimestamp();
-        if ((now - ts) < maxAge) {
+        long timestamp = metric.getValue().getTimestamp();
+        if (timestamp >= newestTimestamp && (now - timestamp) < maxAge) {
             synchronized (metricCache) {
                 metricCache.add(metric);
             }

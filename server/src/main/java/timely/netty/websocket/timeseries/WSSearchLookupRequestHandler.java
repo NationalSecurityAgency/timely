@@ -9,12 +9,12 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.response.TimelyException;
-import timely.store.DataStore;
+import timely.server.component.DataStore;
 import timely.util.JsonUtil;
 
 public class WSSearchLookupRequestHandler extends SimpleChannelInboundHandler<SearchLookupRequest> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WSSearchLookupRequestHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WSSearchLookupRequestHandler.class);
     private DataStore dataStore;
 
     public WSSearchLookupRequestHandler(DataStore dataStore) {
@@ -27,7 +27,7 @@ public class WSSearchLookupRequestHandler extends SimpleChannelInboundHandler<Se
             String response = JsonUtil.getObjectMapper().writeValueAsString(dataStore.lookup(msg));
             ctx.writeAndFlush(new TextWebSocketFrame(response));
         } catch (TimelyException e) {
-            LOG.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             ctx.writeAndFlush(new CloseWebSocketFrame(1008, e.getMessage()));
         }
     }

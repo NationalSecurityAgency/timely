@@ -11,9 +11,9 @@ import timely.client.websocket.subscription.WebSocketSubscriptionClient;
 
 public class WsClientHolder {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WsClientHolder.class);
-    private WebSocketSubscriptionClient client = null;
-    private TimelyBalancedHost host = null;
+    private static final Logger log = LoggerFactory.getLogger(WsClientHolder.class);
+    private WebSocketSubscriptionClient client;
+    private TimelyBalancedHost host;
 
     public WsClientHolder(TimelyBalancedHost host, WebSocketSubscriptionClient client) {
         this.host = host;
@@ -33,7 +33,7 @@ public class WsClientHolder {
             try {
                 client.close();
             } catch (IOException e) {
-                LOG.error("Error closing web socket client", e);
+                log.error("Error closing web socket client", e);
             }
             wsClientPool.returnObject(host, client);
             client = null;

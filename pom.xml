@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>timely</groupId>
   <artifactId>timely</artifactId>
-  <version>2.0.1-SNAPSHOT</version>
+  <version>2.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Timely</name>
   <description>A secure and scalable time series database based on Apache Accumulo</description>
@@ -33,6 +33,7 @@
   <properties>
     <assembly.tarLongFileMode>posix</assembly.tarLongFileMode>
     <collectd-api-jar>/usr/share/collectd/java/collectd-api.jar</collectd-api-jar>
+    <docker.image.prefix>timely/</docker.image.prefix>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
     <!-- Configure the os-maven-plugin extension to expand the classifier on -->
@@ -40,12 +41,14 @@
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <spotbugs.excludes.file>${project.basedir}/src/main/spotbugs/excludes.xml</spotbugs.excludes.file>
     <surefire.forkCount>1C</surefire.forkCount>
     <version.accumulo>2.1.2</version.accumulo>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
     <version.caffeine>3.1.6</version.caffeine>
     <version.collectd>5.7.1</version.collectd>
     <version.commons-collections4>4.3</version.commons-collections4>
+    <version.commons-lang>2.6</version.commons-lang>
     <version.commons-lang3>3.13.0</version.commons-lang3>
     <version.commons-logging>1.1.1</version.commons-logging>
     <version.commons-pool2>2.6.1</version.commons-pool2>
@@ -54,6 +57,7 @@
     <version.curator>5.5.0</version.curator>
     <version.datawave-in-memory-accumulo>2.1.1</version.datawave-in-memory-accumulo>
     <version.disruptor>3.4.2</version.disruptor>
+    <version.docker.plugin>1.2.1</version.docker.plugin>
     <version.easymock>4.0.2</version.easymock>
     <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
     <version.fast-classpath-scanner>3.1.13</version.fast-classpath-scanner>
@@ -89,10 +93,11 @@
     <version.netty-tcnative>2.0.29.Final</version.netty-tcnative>
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.4</version.powermock>
-    <version.reactor-netty>0.8.5.RELEASE</version.reactor-netty>
+    <version.reactor-netty>0.8.16.RELEASE</version.reactor-netty>
     <version.slf4j>1.7.26</version.slf4j>
     <version.spotbugs-maven>4.7.3.5</version.spotbugs-maven>
-    <version.spring-boot>2.1.3.RELEASE</version.spring-boot>
+    <version.spring-boot>2.2.2.RELEASE</version.spring-boot>
+    <version.spring-cloud>2.2.0.RELEASE</version.spring-cloud>
     <version.spring-webflux>5.1.4.RELEASE</version.spring-webflux>
     <version.tyrus>1.15</version.tyrus>
   </properties>
@@ -174,6 +179,16 @@
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
         <version>1.9.4</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>${version.commons-lang}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>${version.commons-logging}</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
@@ -380,6 +395,10 @@
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-reload4j</artifactId>
           </exclusion>
@@ -405,6 +424,10 @@
           <exclusion>
             <groupId>jdk.tools</groupId>
             <artifactId>jdk.tools</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -452,6 +475,10 @@
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -503,11 +530,6 @@
         <version>${version.slf4j}</version>
       </dependency>
       <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-log4j12</artifactId>
-        <version>${version.slf4j}</version>
-      </dependency>
-      <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-webflux</artifactId>
         <version>${version.spring-webflux}</version>
@@ -522,6 +544,31 @@
             <artifactId>spring-boot-starter-logging</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <version>${version.spring-boot}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-webflux</artifactId>
+        <version>${version.spring-boot}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-context</artifactId>
+        <version>${version.spring-cloud}</version>
       </dependency>
       <dependency>
         <groupId>timely</groupId>
@@ -618,6 +665,43 @@
               <goals>
                 <goal>format</goal>
               </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>com.spotify</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <version>${version.docker.plugin}</version>
+          <configuration>
+            <imageName>${docker.image.prefix}${project.artifactId}</imageName>
+            <forceTags>true</forceTags>
+            <imageTags>
+              <imageTag>latest</imageTag>
+              <imageTag>${project.version}</imageTag>
+            </imageTags>
+            <dockerDirectory>${project.build.directory}/docker-filtered</dockerDirectory>
+            <resources>
+              <resource>
+                <targetPath>/</targetPath>
+                <directory>${project.build.directory}</directory>
+                <include>${project.build.finalName}-exec.jar</include>
+              </resource>
+            </resources>
+          </configuration>
+          <executions>
+            <execution>
+              <id>tag-image</id>
+              <goals>
+                <goal>build</goal>
+              </goals>
+              <phase>package</phase>
+            </execution>
+            <execution>
+              <id>push-image</id>
+              <goals>
+                <goal>push</goal>
+              </goals>
+              <phase>deploy</phase>
             </execution>
           </executions>
         </plugin>
@@ -821,6 +905,27 @@
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.1.0</version>
         </plugin>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${version.spring-boot}</version>
+          <configuration>
+            <!-- Mark the repackaged executable jar with the "exec" classifier -->
+            <classifier>exec</classifier>
+            <!-- Make the jar fully executable so it can be used as an init.d script -->
+            <executable>true</executable>
+            <!--suppress UnresolvedMavenProperty, MavenModelInspection -->
+            <mainClass>${start-class}</mainClass>
+          </configuration>
+          <executions>
+            <execution>
+              <id>repackage-executable-jar</id>
+              <goals>
+                <goal>repackage</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -944,6 +1049,20 @@
             <phase>prepare-package</phase>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.1.2</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <!--suppress UnresolvedMavenProperty, MavenModelInspection -->
+              <mainClass>${start-class}</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+          </archive>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -1136,6 +1255,43 @@
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
       </properties>
+    </profile>
+    <profile>
+      <id>docker</id>
+      <properties>
+        <os.detected.classifier>linux-x86_64-fedora</os.detected.classifier>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>prepare-dockerfile</id>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <phase>generate-sources</phase>
+                <configuration>
+                  <outputDirectory>${project.build.directory}/docker-filtered</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${project.basedir}/src/main/docker</directory>
+                      <filtering>true</filtering>
+                    </resource>
+                  </resources>
+                  <overwrite>true</overwrite>
+                  <delimiters>
+                    <delimiter>${*}</delimiter>
+                  </delimiters>
+                  <useDefaultDelimiters>false</useDefaultDelimiters>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>

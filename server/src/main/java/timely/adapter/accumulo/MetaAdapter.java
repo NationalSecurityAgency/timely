@@ -2,7 +2,7 @@ package timely.adapter.accumulo;
 
 import org.apache.accumulo.core.data.Key;
 
-import timely.api.model.Meta;
+import timely.model.Meta;
 import timely.model.Metric;
 
 /**
@@ -31,7 +31,7 @@ public class MetaAdapter {
         } else if (row.startsWith(Meta.VALUE_PREFIX)) {
             return Meta.parse(key, null, Meta.VALUE_PREFIX);
         }
-        throw new IllegalStateException("Invalid key in meta " + key.toString());
+        throw new IllegalStateException("Invalid key in meta " + key);
     }
 
     public static String decodeRowKey(Key key) {

@@ -14,11 +14,11 @@ import io.netty.handler.codec.http.HttpVersion;
 import timely.api.request.MetricRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
-import timely.store.DataStore;
+import timely.server.component.DataStore;
 
 public class HttpMetricPutHandler extends SimpleChannelInboundHandler<MetricRequest> implements TimelyHttpHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpMetricPutHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpMetricPutHandler.class);
     private final DataStore dataStore;
 
     public HttpMetricPutHandler(DataStore dataStore) {
@@ -29,9 +29,9 @@ public class HttpMetricPutHandler extends SimpleChannelInboundHandler<MetricRequ
     protected void channelRead0(ChannelHandlerContext ctx, MetricRequest m) throws Exception {
         try {
             this.dataStore.store(m.getMetric());
-        } catch (TimelyException e) {
-            LOG.error(e.getMessage(), e);
-            this.sendHttpError(ctx, e);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), e.getMessage(), "", e));
             return;
         }
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);

@@ -21,7 +21,7 @@ import timely.store.MetricAgeOffIterator;
 
 public class MetricCompactionStrategy extends CompactionStrategy {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MetricCompactionStrategy.class);
+    private static final Logger log = LoggerFactory.getLogger(MetricCompactionStrategy.class);
 
     private boolean hasMinAgeOff;
     private MetricAgeOffConfiguration minAgeOffConfig;
@@ -93,11 +93,11 @@ public class MetricCompactionStrategy extends CompactionStrategy {
         boolean shouldCompact = (ageOffComputed > endOffset.getAsLong() && endName.equals(prevEndName))
                         && (null == filterPrefix || endName.get().startsWith(filterPrefix));
 
-        if (LOG.isDebugEnabled() && logOnly && shouldCompact) {
-            LOG.debug("Tablet will be metric age-off compacted {threshold: {}, endKey: {}, offset: {}, prevKey: {}}", ageOffComputed, endName,
+        if (log.isDebugEnabled() && logOnly && shouldCompact) {
+            log.debug("Tablet will be metric age-off compacted {threshold: {}, endKey: {}, offset: {}, prevKey: {}}", ageOffComputed, endName,
                             endOffset.getAsLong(), prevEndName);
-        } else if (LOG.isTraceEnabled()) {
-            LOG.trace("Tablet check metric compaction {threshold: {}, endKey: {}, offset: {}, prevKey: {}, result: {}}", ageOffComputed, endName,
+        } else if (log.isTraceEnabled()) {
+            log.trace("Tablet check metric compaction {threshold: {}, endKey: {}, offset: {}, prevKey: {}, result: {}}", ageOffComputed, endName,
                             endOffset.getAsLong(), prevEndName, shouldCompact);
         }
 
@@ -113,8 +113,8 @@ public class MetricCompactionStrategy extends CompactionStrategy {
                 plan.inputFiles.add(f);
             }
 
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Tablet selected for age-off: " + TabletRowAdapter.toDebugOutput(request.getTabletId()));
+            if (log.isDebugEnabled()) {
+                log.debug("Tablet selected for age-off: " + TabletRowAdapter.toDebugOutput(request.getTabletId()));
             }
         }
 
@@ -148,8 +148,8 @@ public class MetricCompactionStrategy extends CompactionStrategy {
             Configuration config = new MapConfiguration(request.getTableProperties());
             String majcIteratorKey = Property.TABLE_ITERATOR_MAJC_PREFIX.getKey() + majcIteratorName;
 
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("Using key lookup for iterator: {}", majcIteratorKey);
+            if (log.isTraceEnabled()) {
+                log.trace("Using key lookup for iterator: {}", majcIteratorKey);
             }
 
             Configuration configAgeOff = config.subset((majcIteratorKey + ".opt"));
@@ -167,8 +167,8 @@ public class MetricCompactionStrategy extends CompactionStrategy {
                 String v = configAgeOff.getString(k);
                 if (k.startsWith((AGE_OFF_PREFIX))) {
                     String name = k.substring(AGE_OFF_PREFIX.length());
-                    if (LOG.isTraceEnabled()) {
-                        LOG.trace("Adding {} to Trie with value {}", name, Long.parseLong(v));
+                    if (log.isTraceEnabled()) {
+                        log.trace("Adding {} to Trie with value {}", name, Long.parseLong(v));
                     }
                     long ageoff = Long.parseLong(v);
                     configureMinAgeOff = Math.min(configureMinAgeOff, ageoff);

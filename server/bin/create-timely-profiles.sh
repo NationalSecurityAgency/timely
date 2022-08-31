@@ -22,8 +22,11 @@ for i in $(seq 1 $NUM_PROFILES); do
 
     echo "creating configuration file ${CONF_DIR}/${FILENAME}"
     cp ${CONF_DIR}/timely-template.yml ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${ZOOKEEPERS}/${ZOOKEEPERS}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${AGE_OFF_DAYS}/${AGE_OFF_DAYS}/g" ${CONF_DIR}/${FILENAME}
+#    if [ "$NUM_PROFILES" -eq "1" ]; then
+#        sed -i "s/\${INSTANCE}//g" ${CONF_DIR}/${FILENAME}
+#    else
+#        sed -i "s/\${INSTANCE}/${i}/g" ${CONF_DIR}/${FILENAME}
+#    fi
     MULTIPLE=$(($i - 1))
     TCP_PORT=$(($TCP_PORT_START + $MULTIPLE * $PORT_INCREMENT))
     sed -i "s/\${TCP_PORT}/${TCP_PORT}/g" ${CONF_DIR}/${FILENAME}
@@ -33,8 +36,5 @@ for i in $(seq 1 $NUM_PROFILES); do
     sed -i "s/\${WEBSOCKET_PORT}/${WEBSOCKET_PORT}/g" ${CONF_DIR}/${FILENAME}
     UDP_PORT=$(($UDP_PORT_START + $MULTIPLE * $PORT_INCREMENT))
     sed -i "s/\${UDP_PORT}/${UDP_PORT}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${ACCUMULO_USER}/${ACCUMULO_USER}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${ACCUMULO_PASSWORD}/${ACCUMULO_PASSWORD}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${INSTANCE}/${i}/g" ${CONF_DIR}/${FILENAME}
 done
 

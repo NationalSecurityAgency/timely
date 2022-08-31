@@ -23,7 +23,7 @@ import timely.adapter.accumulo.MetricAdapter;
 
 public class MetricAgeOffIterator extends WrappingIterator implements OptionDescriber {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MetricAgeOffIterator.class);
+    private static final Logger log = LoggerFactory.getLogger(MetricAgeOffIterator.class);
     public static final String AGE_OFF_PREFIX = "ageoff.";
     public static final String DEFAULT_AGEOFF_KEY = "default";
 
@@ -59,7 +59,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
         options.forEach((k, v) -> {
             if (k.startsWith(AGE_OFF_PREFIX)) {
                 String name = k.substring(AGE_OFF_PREFIX.length());
-                LOG.trace("Adding {} to Trie with value {}", name, Long.parseLong(v));
+                log.trace("Adding {} to Trie with value {}", name, Long.parseLong(v));
                 long ageoff = Long.parseLong(v);
                 this.minAgeOff = Math.min(this.minAgeOff, ageoff);
                 this.maxAgeOff = Math.max(this.maxAgeOff, ageoff);
@@ -80,7 +80,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
             }
             // If greater than any configured ageoff, then drop it
             if ((this.currentTime - top.getTimestamp()) > this.maxAgeOff) {
-                LOG.trace("Current key is older than max age off, seeking to start of valid data");
+                log.trace("Current key is older than max age off, seeking to start of valid data");
                 String metricName = MetricAdapter.decodeRowKey(top).getFirst();
                 handleNewMetricName(metricName);
                 seekPastAgedOffMetricData(metricName, this.maxAgeOff);
@@ -92,7 +92,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                     // We are in the same metric, seek to data we want to
                     // process
                     String metricName = new String(prevMetricBytes.copyBytes(), UTF_8);
-                    LOG.trace("Current metric is older than age off for metric {}, seeking to start of valid data", metricName);
+                    log.trace("Current metric is older than age off for metric {}, seeking to start of valid data", metricName);
                     seekPastAgedOffMetricData(metricName, prevAgeOff);
                     return;
                 }
@@ -101,7 +101,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                 String metricName = MetricAdapter.decodeRowKey(top).getFirst();
                 handleNewMetricName(metricName);
                 if (currentTime - top.getTimestamp() > prevAgeOff) {
-                    LOG.trace("New metric found, but older than age off for metric {}, seeking to start of valid data", metricName);
+                    log.trace("New metric found, but older than age off for metric {}, seeking to start of valid data", metricName);
                     seekPastAgedOffMetricData(metricName, prevAgeOff);
                 }
             }
@@ -152,10 +152,10 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
             }
         }
         try {
-            LOG.trace("Seeking to: {}", newRange);
+            log.trace("Seeking to: {}", newRange);
             this.seek(newRange, columnFamilies, inclusive);
         } catch (IOException e) {
-            LOG.error("Error seeking to new range: " + newRange, e);
+            log.error("Error seeking to new range: " + newRange, e);
         }
 
     }

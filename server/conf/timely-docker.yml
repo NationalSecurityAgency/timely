@@ -4,9 +4,10 @@ timely:
   metric-age-off-days:
     default: 7
   metrics-report-ignored-tags:
+  zookeeper:
+    servers: 127.0.0.1:9804
   accumulo:
     instance-name: TimelyStandalone
-    zookeepers: 127.0.0.1:9804
     username: root
     password: secret
     write:
@@ -22,13 +23,13 @@ timely:
     cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
-    server-ssl:
-      certificate-file: /timely-server-src/server/pki/timely.csr
-      key-file: /timely-server-src/server/pki/timely-pkcs8.key
-      key-password: password
-      use-generated-keypair: false
-      trust-store-file: /timely-server-src/server/pki/timely.crt
-      use-openssl: false
+    serverSsl:
+      certificateFile: /timely-server-src/server/pki/timely.csr
+      keyStoreFile: /timely-server-src/server/pki/timely-pkcs8.key
+      keyStorePassword: password
+      useGeneratedKeypair: false
+      trustStoreFile: /timely-server-src/server/pki/timely.crt
+      useOpenssl: false
   server:
     ip: 0.0.0.0
     tcp-port: 54321
@@ -38,7 +39,7 @@ timely:
     port: 54322
     host: localhost
     redirect-path: /secure-me
-    strict-transport-max-age: 608400
+    strict-transport-max-age: 604800
     cors:
       allow-any-origin: true
       allow-null-origin: false
@@ -55,7 +56,8 @@ timely:
     expiration-minutes: 1440
     cache-refresh-minutes: 60
     max-tag-values: 100
-  visibility-cache:
-    expiration-minutes: 60
-    initial-capacity: 2000
-    max-capacity: 10000
+
+logging:
+  level:
+    ROOT: info
+    timey: debug

@@ -19,7 +19,7 @@ import timely.model.Tag;
 
 public class MetricsBufferDecoderTest {
 
-    private static final Long TEST_TIME = System.currentTimeMillis();
+    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
 
     private int createMetric(FlatBufferBuilder builder, String name, long timestamp, double value, Map<String,String> tags) {
         int n = builder.createString(name);

@@ -1,0 +1,15 @@
+timely:
+  accumulo:
+    instance-name: oneWaySsl
+  mini-accumulo:
+    enabled: true
+    rootAuths: A,B,C,D,E,F,G,H,I
+  in-memory-accumulo:
+    enabled: false
+  server:
+    tcp-port: 55322
+    udp-port: 55325
+  http:
+    port: 55323
+  websocket:
+    port: 55324

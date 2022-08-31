@@ -33,7 +33,7 @@ import timely.sample.aggregators.Avg;
 
 public class DownsampleIterator extends WrappingIterator {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DownsampleIterator.class);
+    private static final Logger log = LoggerFactory.getLogger(DownsampleIterator.class);
     private static final String START = "downsample.start";
     private static final String END = "downsample.end";
     private static final String PERIOD = "downsample.period";
@@ -88,7 +88,7 @@ public class DownsampleIterator extends WrappingIterator {
                     Metric metric = MetricAdapter.parse(topKey, topValue);
                     long timestamp = metric.getValue().getTimestamp();
                     if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
-                        LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory + " for metric=" + metric);
+                        log.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory + " for metric=" + metric);
                         break;
                     }
                     last = topKey;
@@ -104,7 +104,7 @@ public class DownsampleIterator extends WrappingIterator {
                     }
                     sample.add(metric.getValue().getTimestamp(), metric.getValue().getMeasure());
                 } catch (Exception e) {
-                    LOG.error("Error: {} parsing metric at key: {}", e.getMessage(), topKey.toString());
+                    log.error("Error: {} parsing metric at key: {}", e.getMessage(), topKey.toString());
                 }
                 try {
                     super.next();

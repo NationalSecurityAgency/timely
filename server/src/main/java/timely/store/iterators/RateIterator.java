@@ -19,7 +19,7 @@ import timely.api.request.timeseries.QueryRequest;
 
 public class RateIterator extends TimeSeriesGroupingIterator {
 
-    public static final Logger LOG = LoggerFactory.getLogger(RateIterator.class);
+    public static final Logger log = LoggerFactory.getLogger(RateIterator.class);
     private static final String COUNTER_MAX = "rate.counter.max";
     private static final String RATE_RESET_VALUE = "rate.reset.value";
 
@@ -29,7 +29,7 @@ public class RateIterator extends TimeSeriesGroupingIterator {
 
     public static void setRateOptions(IteratorSetting is, QueryRequest.RateOption options) {
         if (options != null && options.isCounter()) {
-            LOG.trace("Setting rate counter options cm:{}, rv:{}", options.getCounterMax(), options.getResetValue());
+            log.trace("Setting rate counter options cm:{}, rv:{}", options.getCounterMax(), options.getResetValue());
             is.addOption(COUNTER_MAX, Long.toString(options.getCounterMax()));
             is.addOption(RATE_RESET_VALUE, Long.toString(options.getResetValue()));
         }
@@ -41,7 +41,7 @@ public class RateIterator extends TimeSeriesGroupingIterator {
             this.isCounter = true;
             this.maxCounter = Long.parseLong(options.get(COUNTER_MAX));
             this.resetValue = Long.parseLong(options.get(RATE_RESET_VALUE));
-            LOG.trace("Setting rate counter options cm:{}, rv:{}", this.maxCounter, this.resetValue);
+            log.trace("Setting rate counter options cm:{}, rv:{}", this.maxCounter, this.resetValue);
         }
         Map<String,String> opts = new HashMap<>(options);
         opts.put(TimeSeriesGroupingIterator.FILTER, "-1,1");
@@ -55,20 +55,20 @@ public class RateIterator extends TimeSeriesGroupingIterator {
         Pair<Key,Double> first = iter.next();
         Long firstTs = first.getFirst().getTimestamp();
         Double firstVal = first.getSecond();
-        LOG.trace("first ts:{}, value:{}", firstTs, firstVal);
+        log.trace("first ts:{}, value:{}", firstTs, firstVal);
 
         Pair<Key,Double> second = iter.next();
         Long secondTs = second.getFirst().getTimestamp();
         Double secondVal = second.getSecond();
-        LOG.trace("second ts:{}, value:{}", secondTs, secondVal);
+        log.trace("second ts:{}, value:{}", secondTs, secondVal);
 
         if (isCounter && (secondVal < firstVal)) {
             if (maxCounter > 0) {
                 secondVal += maxCounter;
-                LOG.trace("second counter reset based on max:{} to ts:{}, value:{}", maxCounter, secondTs, secondVal);
+                log.trace("second counter reset based on max:{} to ts:{}, value:{}", maxCounter, secondTs, secondVal);
             } else {
                 secondVal += firstVal;
-                LOG.trace("second counter reset based on first:{} to ts:{}, value:{}", firstVal, secondTs, secondVal);
+                log.trace("second counter reset based on first:{} to ts:{}, value:{}", firstVal, secondTs, secondVal);
             }
         }
 
@@ -77,11 +77,11 @@ public class RateIterator extends TimeSeriesGroupingIterator {
             return 0.0D;
         }
         Double result = ((secondVal - firstVal) / timeDiff);
-        LOG.trace("compute - result: {}", result);
+        log.trace("compute - result: {}", result);
 
         if (isCounter && resetValue > 0 && result > resetValue) {
             result = 0.0D;
-            LOG.trace("compute - reset result base on {} to {}", resetValue, result);
+            log.trace("compute - reset result base on {} to {}", resetValue, result);
         }
 
         return result;

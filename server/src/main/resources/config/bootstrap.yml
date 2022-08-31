@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: timely
+  config:
+    name: timely
+    location: ${CONF_DIR}/

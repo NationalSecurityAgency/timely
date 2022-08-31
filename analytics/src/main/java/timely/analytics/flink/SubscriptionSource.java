@@ -42,7 +42,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
         }
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(SubscriptionSource.class);
+    private static final Logger log = LoggerFactory.getLogger(SubscriptionSource.class);
     private static final long serialVersionUID = 1L;
 
     private transient WebSocketSubscriptionClient client = null;
@@ -64,11 +64,11 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
     @Override
     public void open(Configuration parameters) throws Exception {
-        LOG.info("Opening summarization job.");
+        log.info("Opening summarization job.");
         super.open(parameters);
         client = new WebSocketSubscriptionClient(jp.getTimelyHostname(), jp.getTimelyHttpsPort(), jp.getTimelyWssPort(), jp.isClientAuth(), jp.isDoLogin(),
-                        jp.getTimelyUsername(), jp.getTimelyPassword(), jp.getKeyStoreFile(), jp.getKeyStoreType(), jp.getKeyStorePass(),
-                        jp.getTrustStoreFile(), jp.getTrustStoreType(), jp.getTrustStorePass(), jp.isHostVerificationEnabled(), jp.getBufferSize());
+                        jp.getKeyStoreFile(), jp.getKeyStoreType(), jp.getKeyStorePass(), jp.getTrustStoreFile(), jp.getTrustStoreType(),
+                        jp.getTrustStorePass(), jp.isHostVerificationEnabled(), jp.getBufferSize());
     }
 
     @Override
@@ -81,7 +81,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
     @Override
     public void run(SourceContext<MetricResponse> ctx) throws Exception {
-        LOG.info("Running summarization job");
+        log.info("Running summarization job");
         final SortedStringAccumulator dateTimeAccumulator = new SortedStringAccumulator();
         this.getRuntimeContext().addAccumulator("source hourly count", dateTimeAccumulator);
         final LongCounter sourceInputs = new LongCounter();
@@ -103,7 +103,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
                     @Override
                     public void onMessage(final String message) {
-                        LOG.info("Message received on Websocket session {}, length: {}", session.getId(), message.length());
+                        log.info("Message received on Websocket session {}, length: {}", session.getId(), message.length());
                         try {
                             // Deserialize in this thread
                             final MetricResponses responses = JsonSerializer.getObjectMapper().readValue(message, MetricResponses.class);
@@ -111,12 +111,12 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                             final Runnable r = () -> {
                                 responses.getResponses().forEach(response -> {
                                     if (response.isComplete()) {
-                                        LOG.info("Received last message.");
+                                        log.info("Received last message.");
                                         ctx.emitWatermark(new Watermark(Long.MAX_VALUE));
                                         subscriptionsRemaining.getAndDecrement();
                                         return;
                                     }
-                                    LOG.trace("Received metric: {}", response);
+                                    log.trace("Received metric: {}", response);
                                     long time = response.getTimestamp();
                                     ctx.collectWithTimestamp(response, time);
                                     dateTimeAccumulator.add(formatter.format(new Date(response.getTimestamp())));
@@ -139,11 +139,11 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                                 inputProcessedInMainThread.add(1);
                             }
                         } catch (IOException e) {
-                            LOG.error("Error deserializing metric response, closing", e);
+                            log.error("Error deserializing metric response, closing", e);
                             try {
                                 close();
                             } catch (Exception e1) {
-                                LOG.error("Error closing client", e1);
+                                log.error("Error closing client", e1);
                             }
                         }
                     }
@@ -156,7 +156,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                 try {
                     close();
                 } catch (Exception e1) {
-                    LOG.error("Error closing client", e1);
+                    log.error("Error closing client", e1);
                 }
                 // Signal done sending data
                 ctx.emitWatermark(new Watermark(Long.MAX_VALUE));
@@ -168,7 +168,7 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
                 try {
                     close();
                 } catch (Exception e1) {
-                    LOG.error("Error closing client", e1);
+                    log.error("Error closing client", e1);
                 }
             }
 
@@ -176,14 +176,14 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
         try {
             client.open(handler);
             for (String m : metrics) {
-                LOG.info("Adding subscription for {}", m);
+                log.info("Adding subscription for {}", m);
                 client.addSubscription(m, null, start, end, 5000);
             }
             while (!client.isClosed() && subscriptionsRemaining.get() > 0) {
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
-                    LOG.error("Sleep interrupted.");
+                    log.error("Sleep interrupted.");
                 }
             }
         } finally {
@@ -193,21 +193,21 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
     @Override
     public void cancel() {
-        LOG.info("Cancelling subscription source.");
+        log.info("Cancelling subscription source.");
         try {
             close();
         } catch (Exception e) {
-            LOG.error("Error closing web socket client");
+            log.error("Error closing web socket client");
         }
     }
 
     @Override
     public void stop() {
-        LOG.info("Stopping subscription source.");
+        log.info("Stopping subscription source.");
         try {
             close();
         } catch (Exception e) {
-            LOG.error("Error closing web socket client");
+            log.error("Error closing web socket client");
         }
 
     }

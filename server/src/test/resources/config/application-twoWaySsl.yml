@@ -1,0 +1,28 @@
+timely:
+  accumulo:
+    instance-name: twoWaySsl
+  security:
+    serverSsl:
+      keyStoreType: PKCS12
+      keyStoreFile: classpath:ssl/testServer.p12
+      keyStorePassword: ChangeIt
+      trustStoreType: JKS
+      trustStoreFile: classpath:ssl/ca.jks
+      trustStorePassword: ChangeIt
+      useGeneratedKeypair: false
+      ignoreSslHandshakeErrors: true
+      useOpenssl: true
+    clientSsl:
+      keyStoreType: PKCS12
+      keyStoreFile: classpath:ssl/testUser.p12
+      keyStorePassword: ChangeIt
+      trustStoreType: JKS
+      trustStoreFile: classpath:ssl/ca.jks
+      trustStorePassword: ChangeIt
+  server:
+    tcp-port: 57322
+    udp-port: 57325
+  http:
+    port: 57323
+  websocket:
+    port: 57324

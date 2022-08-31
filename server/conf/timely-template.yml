@@ -10,9 +10,10 @@ timely:
       default: 26
   metrics-report-ignored-tags:
   defaultVisibility:
+  zookeeper:
+    servers: ${ACCUMULO_ZOOKEEPERS}
   accumulo:
-    instance-name: accumulo
-    zookeepers: ${ZOOKEEPERS}
+    instance-name: ${ACCUMULO_INSTANCE}
     username: ${ACCUMULO_USER}
     password: ${ACCUMULO_PASSWORD}
     write:
@@ -26,6 +27,7 @@ timely:
     session-max-age: 86400
     cache-expiration-minutes: 60
     cache-refresh-minutes: 5
+    authorizationUri: ${AUTHORIZATION_URI}
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
     serverSsl:
@@ -50,7 +52,7 @@ timely:
     ip: ${HOST_IP}
     port: ${HTTP_PORT}
     redirect-path: /secure-me
-    strict-transport-max-age: 608400
+    strict-transport-max-age: 604800
     cors:
       allow-any-origin: false
       allow-null-origin: false
@@ -71,6 +73,8 @@ timely:
     expiration-minutes: 1440
     cache-refresh-minutes: 60
     max-tag-values: 100
-  visibility-cache:
-    expiration-minutes: 60
 
+logging:
+  level:
+    ROOT: trace
+    timey: debug

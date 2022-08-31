@@ -4,7 +4,7 @@
     <Package name="timely.api.flatbuffer"/>
   </Match>
   <Match>
-    <Class name="timely.Server" />
+    <Class name="timely.server.component.TimelyServer" />
     <Method name="shutdown" />
     <Bug pattern="UC_USELESS_OBJECT" />
   </Match>
@@ -19,17 +19,11 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
   </Match>
   <Match>
-    <Class name="timely.store.DataStoreImpl" />
+    <Class name="timely.server.component.DataStore" />
     <Method name="&lt;init&gt;" />
     <Bug pattern="REC_CATCH_EXCEPTION" />
   </Match>
-  <Match>
-    <!-- this is bad practice, but changing it would change behavior; probably needs more triage -->
-    <Class name="timely.netty.http.HttpRequestDecoder" />
-    <Method name="decode" />
-    <Bug pattern="DCN_NULLPOINTER_EXCEPTION" />
-  </Match>
-  <Match>
+   <Match>
     <!-- these are probably avoidable, but needs further triage to fix -->
     <Bug pattern="MS_EXPOSE_REP" />
   </Match>

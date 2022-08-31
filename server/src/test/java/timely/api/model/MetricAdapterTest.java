@@ -13,23 +13,15 @@ import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.response.MetricResponse;
-import timely.auth.VisibilityCache;
-import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.util.JsonUtil;
 
 public class MetricAdapterTest {
-
-    @Before
-    public void before() {
-        VisibilityCache.init(new Configuration());
-    }
 
     @Test
     public void testToMutation() {

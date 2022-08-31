@@ -5,8 +5,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static timely.test.TestConfiguration.WAIT_SECONDS;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -15,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
@@ -22,68 +21,87 @@ import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
 import org.apache.accumulo.core.security.Authorizations;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 
-import timely.TestServer;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;
-import timely.auth.AuthCache;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.test.IntegrationTest;
-import timely.test.integration.InMemoryITBase;
+import timely.test.TestCaptureRequestHandler;
+import timely.test.TimelyServerTestRule;
+import timely.test.integration.ITBase;
 
 /**
  * Integration tests for the operations available over the TCP transport
  */
 @Category(IntegrationTest.class)
-public class TimelyTcpIT extends InMemoryITBase {
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+public class TimelyTcpIT extends ITBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TimelyTcpIT.class);
+    private static final Logger log = LoggerFactory.getLogger(TimelyTcpIT.class);
     private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
 
+    @Autowired
+    @Rule
+    public TimelyServerTestRule testRule;
+
+    @Autowired
+    @Qualifier("tcp")
+    public TestCaptureRequestHandler tcpRequests;
+
+    @Before
+    public void setup() {
+        super.setup();
+        tcpRequests.clear();
+    }
+
     @After
-    public void tearDown() throws Exception {
-        AuthCache.resetConfiguration();
+    public void cleanup() {
+        super.cleanup();
     }
 
     @Test
     public void testVersion() throws Exception {
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321); PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
+        try (Socket sock = new Socket(serverProperties.getIp(), serverProperties.getTcpPort());
+                        PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
             writer.write("version\n");
             writer.flush();
-            while (1 != m.getTcpRequests().getCount()) {
+            while (1 != tcpRequests.getCount()) {
                 Thread.sleep(5);
             }
-            Assert.assertEquals(1, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(VersionRequest.class, m.getTcpRequests().getResponses().get(0).getClass());
-            VersionRequest v = (VersionRequest) m.getTcpRequests().getResponses().get(0);
+            Assert.assertEquals(1, tcpRequests.getResponses().size());
+            Assert.assertEquals(VersionRequest.class, tcpRequests.getResponses().get(0).getClass());
+            VersionRequest v = (VersionRequest) tcpRequests.getResponses().get(0);
             Assert.assertEquals(VersionRequest.VERSION, v.getVersion());
-        } finally {
-            m.shutdown();
         }
     }
 
     @Test
     public void testPut() throws Exception {
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321); PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
+        try (Socket sock = new Socket(serverProperties.getIp(), serverProperties.getTcpPort());
+                        PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
             writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n");
             writer.flush();
-            while (1 != m.getTcpRequests().getCount()) {
+            while (1 != tcpRequests.getCount()) {
                 Thread.sleep(5);
             }
-            Assert.assertEquals(1, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(MetricRequest.class, m.getTcpRequests().getResponses().get(0).getClass());
-            final MetricRequest actual = (MetricRequest) m.getTcpRequests().getResponses().get(0);
+            Assert.assertEquals(1, tcpRequests.getResponses().size());
+            Assert.assertEquals(MetricRequest.class, tcpRequests.getResponses().get(0).getClass());
+            final MetricRequest actual = (MetricRequest) tcpRequests.getResponses().get(0);
             // @formatter:off
             final MetricRequest expected = new MetricRequest(
                     Metric.newBuilder()
@@ -95,28 +113,24 @@ public class TimelyTcpIT extends InMemoryITBase {
             );
             // @formatter on
             Assert.assertEquals(expected, actual);
-        } finally {
-            m.shutdown();
         }
     }
 
     @Test
     public void testPutMultiple() throws Exception {
 
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);
+        try (Socket sock = new Socket(serverProperties.getIp(), serverProperties.getTcpPort());
                 PrintWriter writer = new PrintWriter(sock.getOutputStream(), true)) {
             // @formatter:off
             writer.write("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n"
                        + "put sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n");
             writer.flush();
-            while (2 != m.getTcpRequests().getCount()) {
+            while (2 != tcpRequests.getCount()) {
                 Thread.sleep(5);
             }
-            Assert.assertEquals(2, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(MetricRequest.class, m.getTcpRequests().getResponses().get(0).getClass());
-            MetricRequest actual = (MetricRequest) m.getTcpRequests().getResponses().get(0);
+            Assert.assertEquals(2, tcpRequests.getResponses().size());
+            Assert.assertEquals(MetricRequest.class, tcpRequests.getResponses().get(0).getClass());
+            MetricRequest actual = (MetricRequest) tcpRequests.getResponses().get(0);
             MetricRequest expected = new MetricRequest(
                     Metric.newBuilder()
                             .name("sys.cpu.user")
@@ -127,8 +141,8 @@ public class TimelyTcpIT extends InMemoryITBase {
             );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(MetricRequest.class, m.getTcpRequests().getResponses().get(1).getClass());
-            actual = (MetricRequest) m.getTcpRequests().getResponses().get(1);
+            Assert.assertEquals(MetricRequest.class, tcpRequests.getResponses().get(1).getClass());
+            actual = (MetricRequest) tcpRequests.getResponses().get(1);
             expected = new MetricRequest(
                     Metric.newBuilder()
                         .name("sys.cpu.idle")
@@ -140,8 +154,6 @@ public class TimelyTcpIT extends InMemoryITBase {
             // @formatter:on
             Assert.assertEquals(expected, actual);
 
-        } finally {
-            m.shutdown();
         }
     }
 
@@ -181,21 +193,19 @@ public class TimelyTcpIT extends InMemoryITBase {
         ByteBuffer binary = builder.dataBuffer();
         byte[] data = new byte[binary.remaining()];
         binary.get(data, 0, binary.remaining());
-        LOG.debug("Sending {} bytes", data.length);
+        log.debug("Sending {} bytes", data.length);
 
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);) {
+        try (Socket sock = new Socket(serverProperties.getIp(), serverProperties.getTcpPort())) {
             sock.getOutputStream().write(data);
             sock.getOutputStream().flush();
-            while (2 != m.getTcpRequests().getCount()) {
-                LOG.debug("Thread sleeping");
+            while (2 != tcpRequests.getCount()) {
+                log.debug("Thread sleeping");
                 Thread.sleep(5);
             }
-            Assert.assertEquals(2, m.getTcpRequests().getResponses().size());
-            Assert.assertEquals(MetricRequest.class, m.getTcpRequests().getResponses().get(0).getClass());
+            Assert.assertEquals(2, tcpRequests.getResponses().size());
+            Assert.assertEquals(MetricRequest.class, tcpRequests.getResponses().get(0).getClass());
             // @formatter:off
-            MetricRequest actual = (MetricRequest) m.getTcpRequests().getResponses().get(0);
+            MetricRequest actual = (MetricRequest) tcpRequests.getResponses().get(0);
             MetricRequest expected = new MetricRequest(
                     Metric.newBuilder()
                             .name("sys.cpu.user")
@@ -206,8 +216,8 @@ public class TimelyTcpIT extends InMemoryITBase {
             );
             Assert.assertEquals(expected, actual);
 
-            Assert.assertEquals(MetricRequest.class, m.getTcpRequests().getResponses().get(1).getClass());
-            actual = (MetricRequest) m.getTcpRequests().getResponses().get(1);
+            Assert.assertEquals(MetricRequest.class, tcpRequests.getResponses().get(1).getClass());
+            actual = (MetricRequest) tcpRequests.getResponses().get(1);
             expected = new MetricRequest(
                     Metric.newBuilder()
                             .name("sys.cpu.idle")
@@ -219,105 +229,78 @@ public class TimelyTcpIT extends InMemoryITBase {
             // @formatter:on
             Assert.assertEquals(expected, actual);
 
-        } finally {
-            m.shutdown();
         }
     }
 
     @Test
     public void testPutInvalidTimestamp() throws Exception {
-        final TestServer m = new TestServer(conf, accumuloClient);
-        m.run();
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                        PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));) {
+        try (Socket sock = new Socket(serverProperties.getIp(), serverProperties.getTcpPort());
+                        PrintWriter writer = new PrintWriter(sock.getOutputStream(), true)) {
             writer.write("put sys.cpu.user " + TEST_TIME + "Z" + " 1.0 tag1=value1 tag2=value2\n");
             writer.flush();
             sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
-            Assert.assertEquals(0, m.getTcpRequests().getCount());
-        } finally {
-            m.shutdown();
+            Assert.assertEquals(0, tcpRequests.getCount());
         }
     }
 
     @Test
     public void testPersistence() throws Exception {
-        startServer();
-        try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
-            sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
-            assertTrue(accumuloClient.namespaceOperations().exists("timely"));
-            assertTrue(accumuloClient.tableOperations().exists("timely.metrics"));
-            assertTrue(accumuloClient.tableOperations().exists("timely.meta"));
-            int count = 0;
-            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(6, count);
-            count = 0;
-            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
-                LOG.info("Meta entry: " + entry);
-                count++;
-            }
-            assertEquals(10, count);
-            // count w/out versioning iterator to make sure that the optimization
-            // for writing is working
-            accumuloClient.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
-            // wait for zookeeper propagation
-            sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
-            count = 0;
-            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
-                LOG.info("Meta no vers iter: " + entry);
-                count++;
-            }
-            assertEquals(15, count);
-        } finally {
-            stopServer();
-        }
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        dataStore.flush();
+        sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertTrue(accumuloClient.namespaceOperations().exists("timely"));
+        assertTrue(accumuloClient.tableOperations().exists("timely.metrics"));
+        assertTrue(accumuloClient.tableOperations().exists("timely.meta"));
+        AtomicLong count = new AtomicLong(0);
+        accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY).forEach((k, v) -> {
+            final double value = ByteBuffer.wrap(v.get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            count.incrementAndGet();
+        });
+        assertEquals(6, count.get());
+        assertEquals(10, accumuloClient.createScanner("timely.meta", Authorizations.EMPTY).stream().count());
+        // count w/out versioning iterator to make sure that the optimization
+        // for writing is working
+        accumuloClient.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
+        // wait for zookeeper propagation
+        sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
+        assertEquals(15, accumuloClient.createScanner("timely.meta", Authorizations.EMPTY).stream().count());
     }
 
     @Test
     public void testPersistenceWithVisibility() throws Exception {
-        startServer();
-        try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",
-                            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
-            sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
-            accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
+        // @formatter:off
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
+                   "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(A|B)",
+                   "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(C&B)");
+        // @formatter:on
+        dataStore.flush();
+        sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
 
-            int count = 0;
-            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(2, count);
-            count = 0;
-            Authorizations auth1 = new Authorizations("a");
-            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth1)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(4, count);
-            count = 0;
-            Authorizations auth2 = new Authorizations("b", "c");
-            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth2)) {
-                LOG.info("Entry: " + entry);
-                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-                assertEquals(1.0, value, 1e-9);
-                count++;
-            }
-            assertEquals(6, count);
-        } finally {
-            stopServer();
+        int count = 0;
+        for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            count++;
         }
+        assertEquals(2, count);
+        count = 0;
+        Authorizations auth1 = new Authorizations("A");
+        for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth1)) {
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(4, count);
+        count = 0;
+        Authorizations auth2 = new Authorizations("B", "C");
+        for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth2)) {
+            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+            assertEquals(1.0, value, 1e-9);
+            count++;
+        }
+        assertEquals(6, count);
     }
 
     private void put(String... lines) throws Exception {
@@ -327,7 +310,8 @@ public class TimelyTcpIT extends InMemoryITBase {
             format.append(line);
             format.append("\n");
         }
-        try (Socket sock = new Socket("127.0.0.1", 54321); PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
+        try (Socket sock = new Socket(serverProperties.getIp(), serverProperties.getTcpPort());
+                        PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
             writer.write(format.toString());
             writer.flush();
         }

@@ -7,7 +7,7 @@ import org.apache.accumulo.core.data.Mutation;
 import org.junit.Assert;
 import org.junit.Test;
 
-import timely.api.model.Meta;
+import timely.model.Meta;
 
 public class MetaKeySetTest {
 

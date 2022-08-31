@@ -22,14 +22,20 @@ import org.apache.accumulo.tserver.compaction.DefaultCompactionStrategy;
 import org.apache.hadoop.io.Text;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.common.collect.Sets;
 
-import timely.auth.AuthCache;
+import io.jsonwebtoken.lang.Assert;
 import timely.store.MetricAgeOffIterator;
 import timely.store.compaction.MetricCompactionStrategy;
 import timely.store.compaction.TabletRowAdapter;
@@ -40,50 +46,59 @@ import timely.store.compaction.util.TabletSummary;
 import timely.test.IntegrationTest;
 import timely.test.TestMetricWriter;
 import timely.test.TestMetrics;
+import timely.test.TimelyServerTestRule;
 
 @Category(IntegrationTest.class)
-public class MetricCompactionIT extends MacITBase {
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles({"miniAccumulo"})
+public class MetricCompactionIT extends ITBase {
 
-    private final static Logger LOG = LoggerFactory.getLogger(MetricCompactionIT.class);
+    private final static Logger log = LoggerFactory.getLogger(MetricCompactionIT.class);
 
     private static final String AGE_OFF_ITERATOR_NAME = "ageoffmetrics";
     private static final EnumSet<IteratorUtil.IteratorScope> AGEOFF_SCOPES = EnumSet.allOf(IteratorUtil.IteratorScope.class);
 
+    @Autowired
+    @Rule
+    public TimelyServerTestRule testRule;
+
     private MetricConfigurationAdapter adapter;
 
     @Before
-    public void setup() throws Exception {
-        accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "3s");
-        String metricsTable = conf.getMetricsTable();
-        if (!metricsTable.contains(".")) {
-            throw new IllegalArgumentException("Expected to find namespace in table name");
+    public void setup() {
+        super.setup();
+        try {
+            accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "3s");
+            adapter = new MetricConfigurationAdapter(accumuloClient, timelyProperties.getMetricsTable());
+            accumuloClient.tableOperations().setProperty(timelyProperties.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(), "50K");
+            adapter.resetState();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         }
-        String[] parts = metricsTable.split("\\.", 2);
-        String namespace = parts[0];
-        if (!accumuloClient.namespaceOperations().exists(namespace)) {
-            accumuloClient.namespaceOperations().create(namespace);
-        }
-        accumuloClient.tableOperations().create(metricsTable);
-        adapter = new MetricConfigurationAdapter(accumuloClient, conf.getMetricsTable());
-        accumuloClient.tableOperations().setProperty(conf.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(), "50K");
-        adapter.resetState();
+    }
+
+    @After
+    public void cleanup() {
+        super.cleanup();
+        deleteTable(timelyProperties.getMetricsTable());
+        deleteTable(timelyProperties.getMetaTable());
     }
 
     @After
     public void teardown() throws Exception {
         accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "30s");
         adapter.resetState();
-        AuthCache.resetConfiguration();
     }
 
     @Test
     public void tableMetadataEnumeratesTablets() throws Exception {
-        String metricsTable = conf.getMetricsTable();
+        String metricsTable = timelyProperties.getMetricsTable();
 
         TestMetricWriter writer = new TestMetricWriter(metricsTable, accumuloClient, new TestMetrics());
         writer.ingestRandomDuration(60, TimeUnit.SECONDS, System.currentTimeMillis(), 250);
 
-        Collection<Text> splits = accumuloClient.tableOperations().listSplits(conf.getMetricsTable());
+        Collection<Text> splits = accumuloClient.tableOperations().listSplits(timelyProperties.getMetricsTable());
         TabletMetadataQuery query = new TabletMetadataQuery(accumuloClient, metricsTable);
         TabletMetadataView view = query.run();
 
@@ -105,11 +120,11 @@ public class MetricCompactionIT extends MacITBase {
         // @formatter:on
         Set<String> i1 = Sets.difference(tabletsPrefixed, splitsPrefixed);
         Set<String> i2 = Sets.difference(splitsPrefixed, tabletsPrefixed);
-        assertTrue("tablets-diff" + i1.toString(), i1.isEmpty());
-        assertTrue("splits-diff" + i2.toString(), i2.isEmpty());
+        assertTrue("tablets-diff" + i1, i1.isEmpty());
+        assertTrue("splits-diff" + i2, i2.isEmpty());
 
         // dump data to screen as summary
-        System.out.println(view.toText());
+        Assert.notNull(view.toText());
     }
 
     @Test
@@ -124,15 +139,15 @@ public class MetricCompactionIT extends MacITBase {
         // the mini-accumulo cluster should not have any age-off
         // iterators on timely.metrics
 
-        String metricsTable = conf.getMetricsTable();
+        String metricsTable = timelyProperties.getMetricsTable();
 
-        // check to make sure the table has only one iterator
+        // check to make sure the table has two iterators
         Map<String,EnumSet<IteratorUtil.IteratorScope>> itrs = accumuloClient.tableOperations().listIterators(metricsTable);
         assertEquals(1, itrs.size());
         assertTrue(itrs.containsKey("vers"));
 
         long timestampMax = System.currentTimeMillis();
-        TestMetricWriter writer = new TestMetricWriter(conf.getMetricsTable(), accumuloClient, new TestMetrics());
+        TestMetricWriter writer = new TestMetricWriter(timelyProperties.getMetricsTable(), accumuloClient, new TestMetrics());
         long timestampMin = writer.ingestRandomDuration(30, TimeUnit.SECONDS, timestampMax, 250);
 
         // invoke compact operation to flush everything through
@@ -183,8 +198,8 @@ public class MetricCompactionIT extends MacITBase {
 
         // @formatter:on
         if (!tabletsFilterAfter.isEmpty()) {
-            LOG.info("tablets-before: {}", tabletsBefore.toString());
-            LOG.info("tablets-after: {}", tabletsFilterAfter.toString());
+            log.debug("tablets-before: {}", tabletsBefore.toString());
+            log.debug("tablets-after: {}", tabletsFilterAfter.toString());
         }
 
         // should not have found tablets past the age-off and should also
@@ -198,13 +213,14 @@ public class MetricCompactionIT extends MacITBase {
         private final AccumuloClient accumuloClient;
         private final String tableName;
 
-        private static String[] CLEAR_PROPERTY_KEYS = {Property.TABLE_COMPACTION_STRATEGY_PREFIX.getKey() + MetricCompactionStrategy.MIN_AGEOFF_KEY};
+        private static String[] CLEAR_PROPERTY_KEYS = {Property.TABLE_COMPACTION_STRATEGY.getKey() + MetricCompactionStrategy.MIN_AGEOFF_KEY};
 
         public MetricConfigurationAdapter(AccumuloClient accumuloClient, String tableName) {
             this.accumuloClient = accumuloClient;
             this.tableName = tableName;
         }
 
+        @SuppressWarnings("removal")
         public void applyCompactionConfiguration(Class<? extends CompactionStrategy> clazz, long ageOff) throws Exception {
             Map<String,String> ageOffs = new HashMap<>();
             ageOffs.put("ageoff.default", Long.toString(ageOff));

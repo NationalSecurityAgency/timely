@@ -8,13 +8,13 @@ import org.slf4j.LoggerFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import timely.api.request.subscription.AddSubscription;
+import timely.api.request.websocket.AddSubscription;
 import timely.subscription.Subscription;
 import timely.subscription.SubscriptionRegistry;
 
 public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler<AddSubscription> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WSAddSubscriptionRequestHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WSAddSubscriptionRequestHandler.class);
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, AddSubscription add) throws Exception {
@@ -22,7 +22,7 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
         if (null != s) {
             String metric = add.getMetric();
             if (null == metric) {
-                LOG.error("Metric name cannot be null in add subscription");
+                log.error("Metric name cannot be null in add subscription");
                 ctx.writeAndFlush(new CloseWebSocketFrame(1008, "Metric name cannot be null in add subscription"));
             }
             Map<String,String> tags = null;
@@ -43,7 +43,7 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
             }
             s.addMetric(add, metric, tags, startTime, endTime, delayTime);
         } else {
-            LOG.error("Unknown subscription id, create subscription first");
+            log.error("Unknown subscription id, create subscription first");
             ctx.writeAndFlush(new CloseWebSocketFrame(1003, "Unknown subscription id, create subscription first"));
         }
     }

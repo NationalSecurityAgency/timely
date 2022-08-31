@@ -21,14 +21,14 @@ import timely.client.tcp.TcpClient;
 
 public class MetricPutLoadTest {
 
-    private ExecutorService executorService = null;
+    private ExecutorService executorService;
     private long samplePeriod;
     private List<MetricPut> metrics = new ArrayList<>();
     private Queue<MetricPut> metricsToPut = new LinkedList<>();
-    private String host = "localhost";
-    private int port = 4242;
+    private String host;
+    private int port;
     private long nextTimestamp;
-    private int numThreads = 8;
+    private int numThreads;
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd HHmmss");
 
     public MetricPutLoadTest(String host, int port, File testDataFile, int numThreads, long beginTs, long samplePeriod) {
@@ -60,7 +60,6 @@ public class MetricPutLoadTest {
                     String tagSplit[] = tagAndValue.split("=");
                     tags.put(tagSplit[0], tagSplit[1]);
                 }
-                System.out.println("Adding " + metric + " tags: " + tags.toString());
                 metrics.add(new MetricPut(metric, tags));
             }
         }
@@ -76,7 +75,7 @@ public class MetricPutLoadTest {
 
     public MetricPut getNextMetric() {
 
-        MetricPut metricPut = null;
+        MetricPut metricPut;
         synchronized (metricsToPut) {
 
             if (metricsToPut.isEmpty()) {
@@ -168,7 +167,6 @@ public class MetricPutLoadTest {
 
         @Override
         protected TcpClient initialValue() {
-            System.out.println("initialized threadlocal");
             TcpClient client = new TcpClient(host, port);
             try {
                 client.open();

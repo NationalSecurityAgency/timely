@@ -18,7 +18,7 @@ import timely.api.response.MetricResponse;
 
 public class SummarizationJob {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SummarizationJob.class);
+    private static final Logger log = LoggerFactory.getLogger(SummarizationJob.class);
 
     public static void main(String[] args) throws Exception {
 
@@ -27,11 +27,11 @@ public class SummarizationJob {
             System.exit(1);
         }
 
-        LOG.info("Loading properties from: {}", args[0]);
+        log.info("Loading properties from: {}", args[0]);
         ParameterTool params = ParameterTool.fromPropertiesFile(args[0]);
 
         final SummarizationJobParameters jp = new SummarizationJobParameters(params);
-        LOG.info("Properties: {}", jp);
+        log.info("Properties: {}", jp);
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // @formatter:off
@@ -43,7 +43,7 @@ public class SummarizationJob {
         .window(TumblingEventTimeWindows.of(jp.getSummarizationInterval()))
         .fold(new MetricHistogram(), new FoldFunction<MetricResponse, MetricHistogram>() {
 
-            private final Logger LOG = LoggerFactory
+            private final Logger log = LoggerFactory
                     .getLogger("timely.analytics.SummarizationJob.FoldFunction@");
             private static final long serialVersionUID = 1L;
 
@@ -59,7 +59,7 @@ public class SummarizationJob {
                         throw new RuntimeException("Tags don't not match - partitioning problem");
                     }
                 }
-                LOG.trace("Updating histogram for {} with value {} at {} for metric {}", histo.getMetric()
+                log.trace("Updating histogram for {} with value {} at {} for metric {}", histo.getMetric()
                         + histo.getTags(), metric.getValue(), metric.getTimestamp(), metric.getMetric()
                         + metric.getTags());
                 histo.update(metric.getValue(), metric.getTimestamp());
@@ -71,7 +71,7 @@ public class SummarizationJob {
             new SocketClientSink<MetricHistogram>(jp.getTimelyHostname(), jp.getTimelyTcpPort(),
                     new MetricHistogram(), 2, true) {
 
-                private final Logger LOG = LoggerFactory
+                private final Logger log = LoggerFactory
                         .getLogger("timely.analytics.SummarizationJob.SocketClientSink");
                 private static final long serialVersionUID = 1L;
                 private final LongCounter sinkCounter = new LongCounter();
@@ -83,7 +83,7 @@ public class SummarizationJob {
                     super.open(parameters);
                     this.getRuntimeContext().addAccumulator("sink counter", this.sinkCounter);
                     this.getRuntimeContext().addAccumulator("sink hourly count", dateTimeAccumulator);
-                    LOG.info("Sink opened");
+                    log.info("Sink opened");
                 }
 
                 @Override
@@ -97,7 +97,7 @@ public class SummarizationJob {
                 @Override
                 public void close() throws Exception {
                     super.close();
-                    LOG.info("Sink closed");
+                    log.info("Sink closed");
                 }
 
             }).name("Timely Metric Sink");

@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
   <Match>
-    <Bug pattern="DM_DEFAULT_ENCODING"/>
-    <Method name="connect" />
-    <Class name="timely.client.tcp.TcpClient"/>
-  </Match>
-  <Match>
-    <!-- Must ignore these everywhere, because of a javac byte code generation bug -->
-    <!-- https://github.com/spotbugs/spotbugs/issues/756 -->
-    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
-  </Match>
-  <Match>
     <!-- these are probably avoidable, but needs further triage to fix -->
     <Bug pattern="MS_EXPOSE_REP" />
   </Match>

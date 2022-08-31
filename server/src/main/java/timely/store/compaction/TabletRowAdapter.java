@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 public class TabletRowAdapter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TabletRowAdapter.class);
+    private static final Logger log = LoggerFactory.getLogger(TabletRowAdapter.class);
     private static final Lexicoder<String> PREFIX_DECODER = new StringLexicoder();
     private static final Lexicoder<Long> OFFSET_DECODER = new LongLexicoder();
 
@@ -47,15 +47,15 @@ public class TabletRowAdapter {
                 long decodedOffset = OFFSET_DECODER.decode(buffer);
                 if (decodedOffset > 0) {
                     offset = OptionalLong.of(decodedOffset);
-                } else if (LOG.isTraceEnabled()) {
+                } else if (log.isTraceEnabled()) {
                     Optional<String> prefix = decodeRowPrefix(row);
-                    LOG.trace("Delimiter identified but offset could not parse { prefix: {}, byte-len: {}, "
+                    log.trace("Delimiter identified but offset could not parse { prefix: {}, byte-len: {}, "
                                     + "offset-len: {}, offset-bytes: {}, row-bytes: {} }", prefix, bytes.length, buffer.length, Hex.encodeHex(buffer),
                                     Hex.encodeHex(bytes));
                 }
             } catch (IllegalArgumentException e) {
-                if (LOG.isTraceEnabled()) {
-                    LOG.trace("Unable to parse offset: " + e.getMessage(), e);
+                if (log.isTraceEnabled()) {
+                    log.trace("Unable to parse offset: " + e.getMessage(), e);
                 }
             }
         }
@@ -71,8 +71,8 @@ public class TabletRowAdapter {
         try {
             tabletName = Optional.of(PREFIX_DECODER.decode(ByteUtils.unescape(prefixBytes)));
         } catch (IllegalArgumentException e) {
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("Unable to parse offset: " + e.getMessage(), e);
+            if (log.isTraceEnabled()) {
+                log.trace("Unable to parse offset: " + e.getMessage(), e);
             }
         }
 

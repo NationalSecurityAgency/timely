@@ -103,6 +103,6 @@ public class TabletMetadataViewTest {
         TabletMetadataView view = new TabletMetadataView();
         view.addEntry(metadata);
         String output = view.toText(TimeUnit.DAYS);
-        System.out.println(output);
+        assertNotNull(output);
     }
 }

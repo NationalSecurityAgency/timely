@@ -2,7 +2,7 @@ package timely.netty.websocket.subscription;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import timely.api.request.subscription.RemoveSubscription;
+import timely.api.RemoveSubscription;
 import timely.subscription.Subscription;
 import timely.subscription.SubscriptionRegistry;
 

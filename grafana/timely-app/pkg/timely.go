@@ -21,7 +21,7 @@ import (
 
 	"encoding/json"
 	"io/ioutil"
-	"net/http"
+	"net/httpProperties"
 	"net/url"
 )
 
@@ -112,7 +112,7 @@ func (td *TimelyDatasource) CallResource(ctx context.Context, request *backend.C
 	}
 	var response backend.CallResourceResponse
 	pluginContext := request.PluginContext
-	var httpResponse *http.Response
+	var httpResponse *httpProperties.Response
 	var timelyDataSourceOptions TimelyDataSourceOptions
 	err := json.Unmarshal(pluginContext.DataSourceInstanceSettings.JSONData, &timelyDataSourceOptions)
 	if err != nil {
@@ -256,7 +256,7 @@ func (td *TimelyDatasource) Query(queryDataRequest *backend.QueryDataRequest, da
 		return nil, err
 	}
 
-	var httpRequest *http.Request
+	var httpRequest *httpProperties.Request
 	httpRequest, err = td.createRequest(timelyDatasourceOptions, timelyRequest)
 	if err != nil {
 		logger.Error("Error creating httpRequest", "error", err)
@@ -283,7 +283,7 @@ func (td *TimelyDatasource) Query(queryDataRequest *backend.QueryDataRequest, da
 	return td.parseResponse(res)
 }
 
-func (td *TimelyDatasource) createRequest(tdo TimelyDataSourceOptions, timelyRequest TimelyRequest) (*http.Request, error) {
+func (td *TimelyDatasource) createRequest(tdo TimelyDataSourceOptions, timelyRequest TimelyRequest) (*httpProperties.Request, error) {
 	u, err := url.Parse("https://" + tdo.TimelyHost + ":" + tdo.HttpsPort + "/api/query")
 	if err != nil {
 		logger.Error("Failed creating query url", "error", err)
@@ -294,7 +294,7 @@ func (td *TimelyDatasource) createRequest(tdo TimelyDataSourceOptions, timelyReq
 		logger.Error("Failed marshaling timelyRequest", "error", err)
 		return nil, fmt.Errorf("Failed to create request. error: %v", err)
 	}
-	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(postData))
+	req, err := httpProperties.NewRequest(httpProperties.MethodPost, u.String(), bytes.NewReader(postData))
 	if err != nil {
 		logger.Error("Failed to create request", "error", err)
 		return nil, fmt.Errorf("Failed to create request. error: %v", err)
@@ -310,7 +310,7 @@ func (td *TimelyDatasource) createRequest(tdo TimelyDataSourceOptions, timelyReq
 	return req, err
 }
 
-func (td *TimelyDatasource) parseResponse(res *http.Response) (*backend.DataResponse, error) {
+func (td *TimelyDatasource) parseResponse(res *httpProperties.Response) (*backend.DataResponse, error) {
 
 	body, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
@@ -434,17 +434,17 @@ func (td *TimelyDatasource) clientSslSettingsChanged(settings TimelyDataSourceOp
 		certificateAuthorityPath != td.CertificateAuthorityPath
 }
 
-func (td *TimelyDatasource) GetHttpClient(settings TimelyDataSourceOptions, useClientCertIfAvailable bool) (*http.Client, error) {
+func (td *TimelyDatasource) GetHttpClient(settings TimelyDataSourceOptions, useClientCertIfAvailable bool) (*httpProperties.Client, error) {
 
 	// handle call back
 	logger.Debug("Getting client", "allowInsecureSsl", strconv.FormatBool(settings.AllowInsecureSsl))
-	tr := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
+	tr := &httpProperties.Transport{
+		Proxy: httpProperties.ProxyFromEnvironment,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: settings.AllowInsecureSsl,
 		},
 	}
-	httpClient := &http.Client{
+	httpClient := &httpProperties.Client{
 		Transport: tr,
 	}
 

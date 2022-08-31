@@ -1,3 +1,3 @@
 #!/bin/bash
 
-pkill -9 -f timely.balancer.Balancer
+pkill -9 -f 'timely-balancer-.*-exec.jar'
