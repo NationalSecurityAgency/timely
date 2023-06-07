@@ -14,7 +14,7 @@ public interface Aggregator {
     /**
      * Given the current value, and the current count, incorporate the new value
      * into current and return the result.
-     * 
+     *
      * @param current
      *            last returned value from aggregate, or zero
      * @param count
@@ -28,7 +28,7 @@ public interface Aggregator {
     /**
      * Compute the final value given the aggregated amount and the number of items
      * in the aggregate.
-     * 
+     *
      * @param current
      *            the last value returned from aggregate
      * @param count

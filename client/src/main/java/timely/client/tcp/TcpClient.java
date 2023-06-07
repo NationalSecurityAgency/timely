@@ -33,7 +33,7 @@ public class TcpClient implements AutoCloseable {
 
     /**
      * Opens a TCP connection to the specified host and port
-     * 
+     *
      * @throws IOException
      *             if an error occurs
      */
@@ -45,7 +45,7 @@ public class TcpClient implements AutoCloseable {
 
     /**
      * Write a metric to Timely
-     * 
+     *
      * @param metric
      *            newline terminated string representation of Timely metric
      */
@@ -69,7 +69,7 @@ public class TcpClient implements AutoCloseable {
 
     /**
      * Closes the tcp connection to Timely
-     * 
+     *
      * @throws IOException
      *             if an error occurs
      */

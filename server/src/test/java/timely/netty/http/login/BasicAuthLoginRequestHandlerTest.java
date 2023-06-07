@@ -66,7 +66,7 @@ public class BasicAuthLoginRequestHandlerTest {
         Configuration config = TestConfiguration.createMinimalConfigurationForTest();
 
         // @formatter:off
-        String form = 
+        String form =
         "{\n" +
         "    \"username\": \"test\",\n" +
         "    \"password\": \"test1\"\n" +
@@ -105,7 +105,7 @@ public class BasicAuthLoginRequestHandlerTest {
         Configuration config = TestConfiguration.createMinimalConfigurationForTest();
 
         // @formatter:off
-        String form = 
+        String form =
         "{\n" +
         "    \"username\": \"test\",\n" +
         "    \"password\": \"test2\"\n" +
