@@ -7,5 +7,5 @@ require (
 	github.com/hashicorp/go-hclog v0.16.1
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/prometheus/common v0.29.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 )
