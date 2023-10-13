@@ -36,6 +36,7 @@ public class WriteNSQPlugin extends CollectDPluginParent
     private String topic = "metrics#ephemeral";
     private String endpoint = null;
     private GenericObjectPool<CloseableHttpClient> clientPool = null;
+    private Random random = new Random();
 
     // pool should be limited by the number of WriteThreads configured in
     // collectd
@@ -88,10 +89,10 @@ public class WriteNSQPlugin extends CollectDPluginParent
             if (client != null) {
                 clientPool.returnObject(client);
             }
-                try {
-                    out.close();
-                } catch (IOException e) {
-                }
+            try {
+                out.close();
+            } catch (IOException e) {
+            }
         }
         return 0;
     }
@@ -139,7 +140,7 @@ public class WriteNSQPlugin extends CollectDPluginParent
                     if (hosts.length == 1) {
                         host = hosts[0];
                     } else {
-                        host = hosts[new Random().nextInt(hosts.length)];
+                        host = hosts[random.nextInt(hosts.length)];
                     }
                     break;
                 case "Port":

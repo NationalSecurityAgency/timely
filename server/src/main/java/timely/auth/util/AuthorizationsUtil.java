@@ -1,7 +1,6 @@
 package timely.auth.util;
 
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -11,7 +10,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.accumulo.core.security.Authorizations;
@@ -38,8 +36,8 @@ public class AuthorizationsUtil {
     }
 
     public static List<String> splitAuths(String requestedAuths) {
-        return Arrays.asList(Iterables.toArray(Splitter.on(',').omitEmptyStrings().trimResults().split(requestedAuths),
-                String.class));
+        return Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(requestedAuths)
+                .collect(Collectors.toList());
     }
 
     public static Set<Authorizations> buildAuthorizations(Collection<? extends Collection<String>> userAuths) {

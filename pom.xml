@@ -41,7 +41,7 @@
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <version.accumulo>1.10.1</version.accumulo>
+    <version.accumulo>1.10.3</version.accumulo>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
     <version.caffeine>2.6.2</version.caffeine>
     <version.collectd>5.7.1</version.collectd>
@@ -56,19 +56,20 @@
     <version.flink>1.1.4</version.flink>
     <version.google-flatbuffers>1.10.0</version.google-flatbuffers>
     <version.guava>32.0.0-jre</version.guava>
-    <version.hadoop>2.10.1</version.hadoop>
+    <version.hadoop>3.3.3</version.hadoop>
     <version.httpcomponents>4.5.13</version.httpcomponents>
     <version.impsort>1.9.0</version.impsort>
-    <version.jackson>2.10.0</version.jackson>
-    <version.jackson.databind>2.10.0</version.jackson.databind>
+    <version.jackson>2.12.7</version.jackson>
+    <version.jackson.databind>2.12.7.1</version.jackson.databind>
     <version.jacoco>0.8.4</version.jacoco>
+    <version.jakarta.websocket-api>1.1.1</version.jakarta.websocket-api>
     <version.javacsv>2.0</version.javacsv>
     <version.javassist>3.24.1-GA</version.javassist>
     <version.jcip-annotations>1.0</version.jcip-annotations>
     <version.jjwt>0.11.2</version.jjwt>
-    <version.jsoup>1.14.2</version.jsoup>
+    <version.jsoup>1.15.3</version.jsoup>
     <version.junit>4.13.1</version.junit>
-    <version.log4j>2.17.1</version.log4j>
+    <version.log4j>2.20.0</version.log4j>
     <version.maven-assembly>3.1.1</version.maven-assembly>
     <version.maven-build-helper>3.0.0</version.maven-build-helper>
     <version.maven-compiler>3.8.1</version.maven-compiler>
@@ -180,6 +181,11 @@
         <version>${version.netty-tcnative}</version>
       </dependency>
       <dependency>
+        <groupId>jakarta.websocket</groupId>
+        <artifactId>jakarta.websocket-api</artifactId>
+        <version>${version.jakarta.websocket-api}</version>
+      </dependency>
+      <dependency>
         <groupId>net.sourceforge.javacsv</groupId>
         <artifactId>javacsv</artifactId>
         <version>${version.javacsv}</version>
@@ -266,6 +272,14 @@
             <artifactId>netty</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-client-api</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
@@ -302,6 +316,14 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-client-api</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>

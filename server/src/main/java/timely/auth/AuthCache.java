@@ -125,7 +125,7 @@ public class AuthCache {
     }
 
     public static Collection<Authorizations> getAuthorizations(AuthenticatedRequest request, Security security) {
-        Collection<Authorizations> auths;
+        Collection<Authorizations> auths = Collections.singletonList(Authorizations.EMPTY);
         boolean anonAccessAllowed;
         if (request instanceof AuthenticatedWebSocketRequest) {
             anonAccessAllowed = security.isAllowAnonymousWsAccess();
@@ -137,7 +137,7 @@ public class AuthCache {
         String oauthToken = request.getRequestHeader(AuthenticationService.AUTH_HEADER);
         if (oauthToken != null) {
             auths = getAuthorizations(token.getTimelyPrincipal().getName());
-        } else if (StringUtils.isBlank(sessionId) && token.getClientCert() == null) {
+        } else if (StringUtils.isBlank(sessionId) && token != null && token.getClientCert() == null) {
             if (anonAccessAllowed) {
                 auths = Collections.singletonList(Authorizations.EMPTY);
             } else {
@@ -146,7 +146,7 @@ public class AuthCache {
             }
         } else if (StringUtils.isNotBlank(sessionId)) {
             auths = getAuthorizations(sessionId);
-        } else {
+        } else if (token != null && token.getTimelyPrincipal() != null) {
             auths = getAuthorizations(token.getTimelyPrincipal().getName());
         }
         return auths;

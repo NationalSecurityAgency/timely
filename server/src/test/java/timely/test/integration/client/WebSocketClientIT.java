@@ -10,7 +10,6 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLContext;
 import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -93,13 +92,9 @@ public class WebSocketClientIT extends OneWaySSLBase {
 
             @Override
             public void onOpen(Session session, EndpointConfig config) {
-                session.addMessageHandler(String.class, new MessageHandler.Whole<String>() {
-
-                    @Override
-                    public void onMessage(String message) {
-                        messages.add(message);
-                        LOG.debug("Message received on Websocket session {}: {}", session.getId(), message);
-                    }
+                session.addMessageHandler(String.class, message -> {
+                    messages.add(message);
+                    LOG.debug("Message received on Websocket session {}: {}", session.getId(), message);
                 });
             }
 

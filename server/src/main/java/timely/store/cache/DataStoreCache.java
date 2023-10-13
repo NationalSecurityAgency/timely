@@ -231,30 +231,32 @@ public class DataStoreCache {
     }
 
     private void readNonCachedMetricsIP() {
-        try {
-            nonCachedMetricsIPRWLock.readLock().acquire();
-            byte[] nonCachedMetricsUpdateBytes = nonCachedMetricsIP.get().postValue();
-            Set<String> nonCachedMetricsUpdate;
-            if (nonCachedMetricsUpdateBytes == null) {
-                nonCachedMetricsUpdate = new TreeSet<>();
-            } else {
-                nonCachedMetricsUpdate = SerializationUtils.deserialize(nonCachedMetricsIP.get().postValue());
-            }
-
-            if (nonCachedMetrics.containsAll(nonCachedMetricsUpdate)) {
-                LOG.info("local nonCachedMetrics already contains {}", nonCachedMetricsUpdate);
-            } else {
-                nonCachedMetricsUpdate.removeAll(nonCachedMetrics);
-                LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
-                nonCachedMetrics.addAll(nonCachedMetricsUpdate);
-            }
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        } finally {
+        if (nonCachedMetricsIPRWLock != null) {
             try {
-                nonCachedMetricsIPRWLock.readLock().release();
+                nonCachedMetricsIPRWLock.readLock().acquire();
+                byte[] nonCachedMetricsUpdateBytes = nonCachedMetricsIP.get().postValue();
+                Set<String> nonCachedMetricsUpdate;
+                if (nonCachedMetricsUpdateBytes == null) {
+                    nonCachedMetricsUpdate = new TreeSet<>();
+                } else {
+                    nonCachedMetricsUpdate = SerializationUtils.deserialize(nonCachedMetricsIP.get().postValue());
+                }
+
+                if (nonCachedMetrics.containsAll(nonCachedMetricsUpdate)) {
+                    LOG.info("local nonCachedMetrics already contains {}", nonCachedMetricsUpdate);
+                } else {
+                    nonCachedMetricsUpdate.removeAll(nonCachedMetrics);
+                    LOG.info("Adding {} to local nonCachedMetrics", nonCachedMetricsUpdate);
+                    nonCachedMetrics.addAll(nonCachedMetricsUpdate);
+                }
             } catch (Exception e) {
-                LOG.error(e.getMessage());
+                LOG.error(e.getMessage(), e);
+            } finally {
+                try {
+                    nonCachedMetricsIPRWLock.readLock().release();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage());
+                }
             }
         }
     }

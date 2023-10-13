@@ -6,7 +6,6 @@ import java.util.Map;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
 import org.slf4j.Logger;
@@ -19,12 +18,8 @@ public abstract class ClientHandler extends Endpoint {
     @Override
     public void onOpen(Session session, EndpointConfig config) {
         LOG.info("Websocket session {} opened.", session.getId());
-        session.addMessageHandler(new MessageHandler.Whole<String>() {
-
-            @Override
-            public void onMessage(String message) {
-                LOG.info("Message received on Websocket session {}: {}", session.getId(), message);
-            }
+        session.addMessageHandler(String.class, message -> {
+            LOG.info("Message received on Websocket session {}: {}", session.getId(), message);
         });
     }
 
