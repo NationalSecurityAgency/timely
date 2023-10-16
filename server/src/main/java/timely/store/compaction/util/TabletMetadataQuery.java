@@ -2,9 +2,9 @@ package timely.store.compaction.util;
 
 import java.util.Map;
 
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
-import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
@@ -14,25 +14,24 @@ import org.apache.accumulo.core.metadata.MetadataTable;
 
 public class TabletMetadataQuery {
 
-    private final Connector connector;
+    private final AccumuloClient accumuloClient;
     private final String tableName;
 
-    public TabletMetadataQuery(Connector connector, String tableName) {
-        this.connector = connector;
+    public TabletMetadataQuery(AccumuloClient accumuloClient, String tableName) {
+        this.accumuloClient = accumuloClient;
         this.tableName = tableName;
     }
 
     public TabletMetadataView run() throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
         TabletMetadataView view = new TabletMetadataView();
-        Map<String, String> tableMap = connector.tableOperations().tableIdMap();
+        Map<String, String> tableMap = accumuloClient.tableOperations().tableIdMap();
         String tableId = tableMap.get(tableName);
         if (null == tableId) {
             throw new IllegalStateException("Unable to find " + MetadataTable.NAME);
         }
 
-        try (Scanner s = connector.createScanner(MetadataTable.NAME,
-                connector.securityOperations().getUserAuthorizations(connector.whoami()))) {
-            // s.setRange(new Range(tableId, true, tableId, true));
+        try (Scanner s = accumuloClient.createScanner(MetadataTable.NAME,
+                accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()))) {
             s.setRange(Range.prefix(tableId));
             for (Map.Entry<Key, Value> e : s) {
                 view.addEntry(e);

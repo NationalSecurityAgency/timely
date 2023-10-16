@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
@@ -12,15 +13,9 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.apache.accumulo.core.client.AccumuloException;
-import org.apache.accumulo.core.client.AccumuloSecurityException;
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.Scanner;
-import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
+import org.apache.accumulo.core.conf.ClientProperty;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
@@ -53,20 +48,22 @@ public class MetaCacheImpl implements MetaCache {
 
     private void refreshCache(long expirationMinutes) {
         long oldestTimestamp = System.currentTimeMillis() - (expirationMinutes * 60 * 1000);
-        Map<String, String> properties = new HashMap<>();
-        Accumulo accumuloConf = configuration.getAccumulo();
-        properties.put("instance.name", accumuloConf.getInstanceName());
-        properties.put("instance.zookeeper.host", accumuloConf.getZookeepers());
-        final ClientConfiguration aConf = ClientConfiguration.fromMap(properties);
         String metaTable = configuration.getMetaTable();
         Map<String, Map<String, Long>> metricMap = new HashMap<>();
         Scanner scanner = null;
         try {
             Map<Meta, Object> newCache = new HashMap<>();
-            final Instance instance = new ZooKeeperInstance(aConf);
-            Connector connector = instance.getConnector(accumuloConf.getUsername(),
-                    new PasswordToken(accumuloConf.getPassword()));
-            scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
+            final Properties properties = new Properties();
+            Accumulo accumuloConf = configuration.getAccumulo();
+            properties.put(ClientProperty.INSTANCE_NAME.getKey(), accumuloConf.getInstanceName());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS.getKey(), accumuloConf.getZookeepers());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS_TIMEOUT.getKey(), accumuloConf.getZookeeperTimeout());
+            properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConf.getUsername());
+            properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConf.getPassword());
+            properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
+            AccumuloClient accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient().from(properties)
+                    .build();
+            scanner = accumuloClient.createScanner(metaTable, Authorizations.EMPTY);
             LOG.debug("Begin scanning " + metaTable);
             Key metricPrefixBeginKey = new Key(Meta.METRIC_PREFIX);
             int firstChar = Meta.METRIC_PREFIX.charAt(0);
@@ -112,7 +109,7 @@ public class MetaCacheImpl implements MetaCache {
                 cache.putAll(newCache);
             }
             LOG.debug("Finished scanning " + metaTable);
-        } catch (AccumuloException | AccumuloSecurityException | TableNotFoundException e) {
+        } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         } finally {
             if (scanner != null) {

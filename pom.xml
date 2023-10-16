@@ -33,20 +33,23 @@
   <properties>
     <assembly.tarLongFileMode>posix</assembly.tarLongFileMode>
     <collectd-api-jar>/usr/share/collectd/java/collectd-api.jar</collectd-api-jar>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
     <!-- Configure the os-maven-plugin extension to expand the classifier on -->
     <!-- Fedora-"like" systems. -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <version.accumulo>1.10.3</version.accumulo>
+    <version.accumulo>2.1.2</version.accumulo>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
-    <version.caffeine>2.6.2</version.caffeine>
+    <version.caffeine>3.1.6</version.caffeine>
     <version.collectd>5.7.1</version.collectd>
     <version.commons-collections4>4.3</version.commons-collections4>
     <version.commons-lang3>3.8.1</version.commons-lang3>
+    <version.commons-logging>1.1.1</version.commons-logging>
     <version.commons-pool2>2.6.1</version.commons-pool2>
+    <version.commons-text>1.10.0</version.commons-text>
+    <version.compression.gorilla>2.1.1</version.compression.gorilla>
     <version.curator>4.1.0</version.curator>
     <version.disruptor>3.4.2</version.disruptor>
     <version.easymock>4.0.2</version.easymock>
@@ -58,7 +61,7 @@
     <version.hadoop>3.3.3</version.hadoop>
     <version.httpcomponents>4.5.13</version.httpcomponents>
     <version.impsort>1.9.0</version.impsort>
-    <version.jackson>2.12.7</version.jackson>
+    <version.jackson>2.13.3</version.jackson>
     <version.jackson.databind>2.12.7.1</version.jackson.databind>
     <version.jacoco>0.8.4</version.jacoco>
     <version.jakarta.websocket-api>1.1.1</version.jakarta.websocket-api>
@@ -68,7 +71,7 @@
     <version.jjwt>0.11.2</version.jjwt>
     <version.jsoup>1.15.3</version.jsoup>
     <version.junit>4.13.1</version.junit>
-    <version.log4j>2.20.0</version.log4j>
+    <version.log4j2>2.20.0</version.log4j2>
     <version.maven-assembly>3.1.1</version.maven-assembly>
     <version.maven-build-helper>3.0.0</version.maven-build-helper>
     <version.maven-compiler>3.8.1</version.maven-compiler>
@@ -78,21 +81,29 @@
     <version.maven-rpm>2.2.0</version.maven-rpm>
     <version.maven-shade>3.2.1</version.maven-shade>
     <version.maven-surefire>3.0.0-M3</version.maven-surefire>
-    <version.netty>4.1.42.Final</version.netty>
-    <version.netty-tcnative>2.0.25.Final</version.netty-tcnative>
+    <version.micrometer>1.11.1</version.micrometer>
+    <version.netty>4.1.45.Final</version.netty>
+    <version.netty-tcnative>2.0.29.Final</version.netty-tcnative>
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.4</version.powermock>
     <version.slf4j>1.7.26</version.slf4j>
-    <version.spotbugs-maven>4.5.0.0</version.spotbugs-maven>
+    <version.spotbugs-maven>4.7.3.5</version.spotbugs-maven>
     <version.spring-boot>2.1.3.RELEASE</version.spring-boot>
     <version.tyrus>1.15</version.tyrus>
   </properties>
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${version.netty}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-bom</artifactId>
-        <version>${version.log4j}</version>
+        <version>${version.log4j2}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -117,7 +128,17 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>${version.jackson.databind}</version>
+        <version>${version.jackson}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-xml</artifactId>
+        <version>${version.jackson}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-yaml</artifactId>
+        <version>${version.jackson}</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -150,9 +171,14 @@
         <version>1.9.4</version>
       </dependency>
       <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>${version.commons-logging}</version>
+      </dependency>
+      <dependency>
         <groupId>fi.iki.yak</groupId>
         <artifactId>compression-gorilla</artifactId>
-        <version>2.1.1</version>
+        <version>${version.compression.gorilla}</version>
       </dependency>
       <dependency>
         <groupId>io.github.lukehutch</groupId>
@@ -163,11 +189,22 @@
         <groupId>io.jsonwebtoken</groupId>
         <artifactId>jjwt-impl</artifactId>
         <version>${version.jjwt}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>io.jsonwebtoken</groupId>
         <artifactId>jjwt-jackson</artifactId>
         <version>${version.jjwt}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-core</artifactId>
+        <version>${version.micrometer}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -178,6 +215,11 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative-boringssl-static</artifactId>
         <version>${version.netty-tcnative}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.projectreactor.netty</groupId>
+        <artifactId>reactor-netty</artifactId>
+        <version>${version.reactor-netty}</version>
       </dependency>
       <dependency>
         <groupId>jakarta.websocket</groupId>
@@ -198,6 +240,10 @@
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -208,6 +254,10 @@
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -225,6 +275,11 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-pool2</artifactId>
         <version>${version.commons-pool2}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>${version.commons-text}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.curator</groupId>
@@ -283,6 +338,10 @@
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-util</artifactId>
           </exclusion>
@@ -296,6 +355,10 @@
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.mortbay.jetty</groupId>
@@ -329,6 +392,10 @@
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty</artifactId>
           </exclusion>
@@ -342,6 +409,12 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>${version.httpcomponents}</version>
+      </dependency>
+      <dependency>
+        <!-- This bridge allows log4j2 to work with code that is still using the log4j 1.2 classes/api -->
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-1.2-api</artifactId>
+        <version>${version.log4j2}</version>
       </dependency>
       <dependency>
         <groupId>org.glassfish.tyrus</groupId>
@@ -361,6 +434,11 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
+        <version>${version.slf4j}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
         <version>${version.slf4j}</version>
       </dependency>
       <dependency>
@@ -523,6 +601,11 @@
               </manifestEntries>
             </archive>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.1.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

@@ -4,10 +4,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.BatchDeleter;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.BatchWriterConfig;
-import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.ScannerBase;
@@ -23,29 +23,29 @@ public class ScannerHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(ScannerHelper.class);
 
-    public static Scanner createScanner(Connector connector, String tableName,
+    public static Scanner createScanner(AccumuloClient accumuloClient, String tableName,
             Collection<Authorizations> authorizations) throws TableNotFoundException {
         if (authorizations == null || authorizations.isEmpty())
             throw new IllegalArgumentException("Authorizations must not be empty.");
 
         Iterator<Authorizations> iter = AuthorizationsMinimizer.minimize(authorizations).iterator();
-        Scanner scanner = connector.createScanner(tableName, iter.next());
+        Scanner scanner = accumuloClient.createScanner(tableName, iter.next());
         addVisibilityFilters(iter, scanner);
         return scanner;
     }
 
-    public static BatchScanner createBatchScanner(Connector connector, String tableName,
+    public static BatchScanner createBatchScanner(AccumuloClient accumuloClient, String tableName,
             Collection<Authorizations> authorizations, int numQueryThreads) throws TableNotFoundException {
         if (authorizations == null || authorizations.isEmpty())
             throw new IllegalArgumentException("Authorizations must not be empty.");
 
         Iterator<Authorizations> iter = AuthorizationsMinimizer.minimize(authorizations).iterator();
-        BatchScanner batchScanner = connector.createBatchScanner(tableName, iter.next(), numQueryThreads);
+        BatchScanner batchScanner = accumuloClient.createBatchScanner(tableName, iter.next(), numQueryThreads);
         addVisibilityFilters(iter, batchScanner);
         return batchScanner;
     }
 
-    public static BatchDeleter createBatchDeleter(Connector connector, String tableName,
+    public static BatchDeleter createBatchDeleter(AccumuloClient accumuloClient, String tableName,
             Collection<Authorizations> authorizations, int numQueryThreads, long maxMemory, long maxLatency,
             int maxWriteThreads) throws TableNotFoundException {
         if (authorizations == null || authorizations.isEmpty())
@@ -54,7 +54,7 @@ public class ScannerHelper {
         Iterator<Authorizations> iter = AuthorizationsMinimizer.minimize(authorizations).iterator();
         BatchWriterConfig bwCfg = new BatchWriterConfig().setMaxLatency(maxLatency, TimeUnit.MILLISECONDS)
                 .setMaxMemory(maxMemory).setMaxWriteThreads(maxWriteThreads);
-        BatchDeleter batchDeleter = connector.createBatchDeleter(tableName, iter.next(), numQueryThreads, bwCfg);
+        BatchDeleter batchDeleter = accumuloClient.createBatchDeleter(tableName, iter.next(), numQueryThreads, bwCfg);
         addVisibilityFilters(iter, batchDeleter);
         return batchDeleter;
     }

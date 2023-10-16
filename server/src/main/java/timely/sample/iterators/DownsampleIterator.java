@@ -1,6 +1,6 @@
 package timely.sample.iterators;
 
-import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
+import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getTimeInMillis;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

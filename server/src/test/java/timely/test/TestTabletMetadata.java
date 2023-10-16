@@ -7,8 +7,8 @@ import java.util.Map;
 
 import com.google.common.collect.Maps;
 import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.TableId;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.data.impl.KeyExtent;
 import org.apache.accumulo.core.metadata.schema.MetadataSchema;
 import org.apache.accumulo.core.util.ColumnFQ;
 import org.apache.hadoop.io.Text;
@@ -31,7 +31,8 @@ public class TestTabletMetadata {
 
     public TestTabletMetadata prev(Text row, Text prevRow) {
         ColumnFQ cfq = MetadataSchema.TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN;
-        addEntry(row, cfq.getColumnFamily(), cfq.getColumnQualifier(), KeyExtent.encodePrevEndRow(prevRow));
+        addEntry(row, cfq.getColumnFamily(), cfq.getColumnQualifier(),
+                MetadataSchema.TabletsSection.TabletColumnFamily.encodePrevEndRow(prevRow));
         return this;
     }
 
@@ -50,7 +51,7 @@ public class TestTabletMetadata {
     }
 
     private void addEntry(Text row, Text cf, Text cq, Value value) {
-        Text rowEntry = KeyExtent.getMetadataEntry(tableId, row);
+        Text rowEntry = MetadataSchema.TabletsSection.encodeRow(TableId.of(tableId), row);
         Value val = new Value(value);
         Key k = new Key(rowEntry, cf, cq);
         entries.add(Maps.immutableEntry(k, val));

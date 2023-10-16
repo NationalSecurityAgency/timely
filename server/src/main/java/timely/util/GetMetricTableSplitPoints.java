@@ -1,15 +1,11 @@
 package timely.util;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.Scanner;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
+import org.apache.accumulo.core.conf.ClientProperty;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
@@ -30,16 +26,18 @@ public class GetMetricTableSplitPoints {
                 .bannerMode(Mode.OFF).web(WebApplicationType.NONE).run(args)) {
             Configuration conf = ctx.getBean(Configuration.class);
 
-            final Map<String, String> properties = new HashMap<>();
+            final Properties properties = new Properties();
             Accumulo accumuloConf = conf.getAccumulo();
-            properties.put("instance.name", accumuloConf.getInstanceName());
-            properties.put("instance.zookeeper.host", accumuloConf.getZookeepers());
-            final ClientConfiguration aconf = ClientConfiguration.fromMap(properties);
-            final Instance instance = new ZooKeeperInstance(aconf);
-            Connector con = instance.getConnector(accumuloConf.getUsername(),
-                    new PasswordToken(accumuloConf.getPassword()));
-            Scanner s = con.createScanner(conf.getMetaTable(),
-                    con.securityOperations().getUserAuthorizations(con.whoami()));
+            properties.put(ClientProperty.INSTANCE_NAME.getKey(), accumuloConf.getInstanceName());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS.getKey(), accumuloConf.getZookeepers());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS_TIMEOUT.getKey(), accumuloConf.getZookeeperTimeout());
+            properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConf.getUsername());
+            properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConf.getPassword());
+            properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
+            AccumuloClient accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient().from(properties)
+                    .build();
+            Scanner s = accumuloClient.createScanner(conf.getMetaTable(),
+                    accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()));
             try {
                 s.setRange(new Range(Meta.METRIC_PREFIX, true, Meta.TAG_PREFIX, false));
                 for (Entry<Key, Value> e : s) {

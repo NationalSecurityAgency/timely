@@ -40,7 +40,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.security.Authorizations;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -191,8 +192,11 @@ public class WebSocketIT extends OneWaySSLBase {
         s = new Server(conf);
         s.run();
 
-        Connector con = mac.getConnector("root", "secret");
-        con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.securityOperations().changeUserAuthorizations("root",
+                    new Authorizations("A", "B", "C", "D", "E", "F"));
+        }
 
         this.sessionId = UUID.randomUUID().toString();
         AuthCache.put(sessionId, TimelyPrincipal.anonymousPrincipal());

@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.data.impl.KeyExtent;
 import org.apache.accumulo.core.metadata.schema.MetadataSchema;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
@@ -29,14 +28,14 @@ public class TabletMetadataView {
     }
 
     public void addEntry(Map.Entry<Key, Value> entry) {
-        KeyExtent ke = new KeyExtent(entry.getKey().getRow(), (Text) null);
-        if (ke.getEndRow() == null) {
+        Text endRow = MetadataSchema.TabletsSection.decodeRow(entry.getKey().getRow()).getSecond();
+        if (endRow == null) {
             return;
         }
 
         Text cf = entry.getKey().getColumnFamily();
         Text cq = entry.getKey().getColumnQualifier();
-        MetadataAccumulator.Entry candidate = accumulator.checkEntryState(ke.getEndRow());
+        MetadataAccumulator.Entry candidate = accumulator.checkEntryState(endRow);
 
         if (cf.equals(MetadataSchema.TabletsSection.DataFileColumnFamily.NAME)) {
             String val = entry.getValue().toString();
@@ -55,8 +54,8 @@ public class TabletMetadataView {
             }
         } else if (cf.equals(MetadataSchema.TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.getColumnFamily())
                 && cq.equals(MetadataSchema.TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.getColumnQualifier())) {
-            ke = new KeyExtent(entry.getKey().getRow(), entry.getValue());
-            candidate.setTablePrev(ke.getPrevEndRow());
+            Text prevEndRow = MetadataSchema.TabletsSection.TabletColumnFamily.decodePrevEndRow(entry.getValue());
+            candidate.setTablePrev(prevEndRow);
         }
     }
 

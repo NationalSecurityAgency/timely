@@ -14,12 +14,10 @@ import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
-import org.apache.accumulo.core.iterators.SortedMapIterator;
+import org.apache.accumulo.core.iteratorsImpl.system.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
 import timely.adapter.accumulo.MetricAdapter;
-import timely.auth.VisibilityCache;
-import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.ObjectSizeOf;
 import timely.model.Tag;
@@ -31,11 +29,6 @@ public class DownsampleIteratorTest {
 
     final private SortedMap<Key, Value> testData1 = new TreeMap<>();
     final private SortedMap<Key, Value> testData2 = new TreeMap<>();
-
-    @Before
-    public void before() {
-        VisibilityCache.init(new Configuration());
-    }
 
     @Before
     public void createTestData() {
@@ -52,7 +45,6 @@ public class DownsampleIteratorTest {
             for (ColumnUpdate cu : mutation.getUpdates()) {
                 Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(),
                         cu.getColumnVisibility(), cu.getTimestamp());
-                System.out.println(key.toString());
                 testData1.put(key, new Value(cu.getValue()));
             }
         }
@@ -277,7 +269,6 @@ public class DownsampleIteratorTest {
                 }
             }
             key = iter.getTopKey();
-            System.out.println(key.toString());
         } while (iter.hasTop());
 
         assertEquals(testData.lastKey(), key);

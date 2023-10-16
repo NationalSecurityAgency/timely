@@ -13,13 +13,10 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import io.jsonwebtoken.*;
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.conf.ClientProperty;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
@@ -37,7 +34,7 @@ public class JWTTokenHandler {
     private static ObjectMapper objectMapper;
     private static Collection<String> accumuloAuths = new TreeSet<>();
 
-    public static void init(Security security, Accumulo accumulo) {
+    public static void init(Security security, Accumulo accumuloConfiguration) {
         if (StringUtils.isNotBlank(security.getJwtCheckKeyStore())) {
             try {
                 String type = security.getJwtCheckKeyType();
@@ -61,20 +58,23 @@ public class JWTTokenHandler {
         }
         JWTTokenHandler.objectMapper = new ObjectMapper();
         JWTTokenHandler.objectMapper.registerModule(new GuavaModule());
-        if (accumulo != null) {
+        if (accumuloConfiguration != null) {
             try {
-                final Map<String, String> properties = new HashMap<>();
-                properties.put("instance.name", accumulo.getInstanceName());
-                properties.put("instance.zookeeper.host", accumulo.getZookeepers());
-                properties.put("instance.zookeeper.timeout", accumulo.getZookeeperTimeout());
-                final ClientConfiguration aconf = ClientConfiguration.fromMap(properties);
-                final Instance instance = new ZooKeeperInstance(aconf);
-                Connector connector = instance.getConnector(accumulo.getUsername(),
-                        new PasswordToken(accumulo.getPassword()));
-                Authorizations currentAccumuloAuths = connector.securityOperations()
-                        .getUserAuthorizations(connector.whoami());
-                currentAccumuloAuths.iterator()
-                        .forEachRemaining(a -> accumuloAuths.add(new String(a, Charset.forName("UTF-8"))));
+                final Properties properties = new Properties();
+                properties.put(ClientProperty.INSTANCE_NAME.getKey(), accumuloConfiguration.getInstanceName());
+                properties.put(ClientProperty.INSTANCE_ZOOKEEPERS.getKey(), accumuloConfiguration.getZookeepers());
+                properties.put(ClientProperty.INSTANCE_ZOOKEEPERS_TIMEOUT.getKey(),
+                        accumuloConfiguration.getZookeeperTimeout());
+                properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConfiguration.getUsername());
+                properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConfiguration.getPassword());
+                properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
+                try (AccumuloClient accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient()
+                        .from(properties).build()) {
+                    Authorizations currentAccumuloAuths = accumuloClient.securityOperations()
+                            .getUserAuthorizations(accumuloClient.whoami());
+                    currentAccumuloAuths.iterator()
+                            .forEachRemaining(a -> accumuloAuths.add(new String(a, Charset.forName("UTF-8"))));
+                }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
             }

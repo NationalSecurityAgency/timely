@@ -1,5 +1,6 @@
 package timely.balancer;
 
+import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getTimeInMillis;
 import static timely.Server.SERVICE_DISCOVERY_PATH;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
@@ -57,7 +58,6 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -378,8 +378,7 @@ public class Balancer {
 
         // start curator framework
         RetryPolicy retryPolicy = new RetryForever(1000);
-        int timeout = Long.valueOf(AccumuloConfiguration.getTimeInMillis(balancerConfig.getZooKeeper().getTimeout()))
-                .intValue();
+        int timeout = Long.valueOf(getTimeInMillis(balancerConfig.getZooKeeper().getTimeout())).intValue();
         curatorFramework = CuratorFrameworkFactory.newClient(balancerConfig.getZooKeeper().getServers(), timeout, 10000,
                 retryPolicy);
         curatorFramework.start();

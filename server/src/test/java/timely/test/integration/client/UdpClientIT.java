@@ -1,7 +1,6 @@
 package timely.test.integration.client;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -11,8 +10,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
@@ -44,15 +42,17 @@ public class UdpClientIT extends MacITBase {
 
     @Before
     public void setup() throws Exception {
-        Connector con = mac.getConnector("root", "secret");
-        con.tableOperations().list().forEach(t -> {
-            if (t.startsWith("timely")) {
-                try {
-                    con.tableOperations().delete(t);
-                } catch (Exception e) {
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.tableOperations().list().forEach(t -> {
+                if (t.startsWith("timely")) {
+                    try {
+                        accumuloClient.tableOperations().delete(t);
+                    } catch (Exception e) {
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     @After
@@ -158,36 +158,37 @@ public class UdpClientIT extends MacITBase {
         } finally {
             s.shutdown();
         }
-        final ZooKeeperInstance inst = new ZooKeeperInstance(mac.getClientConfig());
-        final Connector connector = inst.getConnector("root", new PasswordToken("secret".getBytes(UTF_8)));
-        assertTrue(connector.namespaceOperations().exists("timely"));
-        assertTrue(connector.tableOperations().exists("timely.metrics"));
-        assertTrue(connector.tableOperations().exists("timely.meta"));
-        int count = 0;
-        for (final Entry<Key, Value> entry : connector.createScanner("timely.metrics", Authorizations.EMPTY)) {
-            LOG.info("Entry: " + entry);
-            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-            assertEquals(1.0, value, 1e-9);
-            count++;
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            assertTrue(accumuloClient.namespaceOperations().exists("timely"));
+            assertTrue(accumuloClient.tableOperations().exists("timely.metrics"));
+            assertTrue(accumuloClient.tableOperations().exists("timely.meta"));
+            int count = 0;
+            for (final Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
+                LOG.info("Entry: " + entry);
+                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+                assertEquals(1.0, value, 1e-9);
+                count++;
+            }
+            assertEquals(6, count);
+            count = 0;
+            for (final Entry<Key, Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
+                LOG.info("Meta entry: " + entry);
+                count++;
+            }
+            assertEquals(10, count);
+            // count w/out versioning iterator to make sure that the optimization
+            // for writing is working
+            accumuloClient.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
+            // wait for zookeeper propagation
+            sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+            count = 0;
+            for (final Entry<Key, Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
+                LOG.info("Meta no vers iter: " + entry);
+                count++;
+            }
+            assertEquals(15, count);
         }
-        assertEquals(6, count);
-        count = 0;
-        for (final Entry<Key, Value> entry : connector.createScanner("timely.meta", Authorizations.EMPTY)) {
-            LOG.info("Meta entry: " + entry);
-            count++;
-        }
-        assertEquals(10, count);
-        // count w/out versioning iterator to make sure that the optimization
-        // for writing is working
-        connector.tableOperations().removeIterator("timely.meta", "vers", EnumSet.of(IteratorScope.scan));
-        // wait for zookeeper propagation
-        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-        count = 0;
-        for (final Entry<Key, Value> entry : connector.createScanner("timely.meta", Authorizations.EMPTY)) {
-            LOG.info("Meta no vers iter: " + entry);
-            count++;
-        }
-        assertEquals(15, count);
     }
 
     @Test
@@ -202,36 +203,38 @@ public class UdpClientIT extends MacITBase {
         } finally {
             s.shutdown();
         }
-        final ZooKeeperInstance inst = new ZooKeeperInstance(mac.getClientConfig());
-        final Connector connector = inst.getConnector("root", new PasswordToken("secret".getBytes(UTF_8)));
-        connector.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
 
-        int count = 0;
-        for (final Map.Entry<Key, Value> entry : connector.createScanner("timely.metrics", Authorizations.EMPTY)) {
-            LOG.info("Entry: " + entry);
-            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-            assertEquals(1.0, value, 1e-9);
-            count++;
+            int count = 0;
+            for (final Map.Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics",
+                    Authorizations.EMPTY)) {
+                LOG.info("Entry: " + entry);
+                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+                assertEquals(1.0, value, 1e-9);
+                count++;
+            }
+            assertEquals(2, count);
+            count = 0;
+            Authorizations auth1 = new Authorizations("a");
+            for (final Map.Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics", auth1)) {
+                LOG.info("Entry: " + entry);
+                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+                assertEquals(1.0, value, 1e-9);
+                count++;
+            }
+            assertEquals(4, count);
+            count = 0;
+            Authorizations auth2 = new Authorizations("b", "c");
+            for (final Map.Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics", auth2)) {
+                LOG.info("Entry: " + entry);
+                final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
+                assertEquals(1.0, value, 1e-9);
+                count++;
+            }
+            assertEquals(6, count);
         }
-        assertEquals(2, count);
-        count = 0;
-        Authorizations auth1 = new Authorizations("a");
-        for (final Map.Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth1)) {
-            LOG.info("Entry: " + entry);
-            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-            assertEquals(1.0, value, 1e-9);
-            count++;
-        }
-        assertEquals(4, count);
-        count = 0;
-        Authorizations auth2 = new Authorizations("b", "c");
-        for (final Map.Entry<Key, Value> entry : connector.createScanner("timely.metrics", auth2)) {
-            LOG.info("Entry: " + entry);
-            final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
-            assertEquals(1.0, value, 1e-9);
-            count++;
-        }
-        assertEquals(6, count);
     }
 
     private void put(String... lines) throws Exception {

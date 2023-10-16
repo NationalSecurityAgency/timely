@@ -9,11 +9,11 @@ import com.google.common.collect.Lists;
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.client.IteratorSetting.Column;
 import org.apache.accumulo.core.client.ScannerBase;
-import org.apache.accumulo.core.client.impl.ScannerOptions;
 import org.apache.accumulo.core.client.sample.SamplerConfiguration;
+import org.apache.accumulo.core.clientImpl.ScannerOptions;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.data.thrift.IterInfo;
+import org.apache.accumulo.core.dataImpl.thrift.IterInfo;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
 
@@ -28,6 +28,7 @@ public class ScannerBaseDelegate implements ScannerBase {
     private static final String SYSTEM_ITERATOR_NAME_PREFIX = "sys_";
 
     protected final ScannerBase delegate;
+    protected ConsistencyLevel consistencyLevel = ConsistencyLevel.IMMEDIATE;
 
     public ScannerBaseDelegate(ScannerBase delegate) {
         this.delegate = delegate;
@@ -219,6 +220,16 @@ public class ScannerBaseDelegate implements ScannerBase {
     @Override
     public String getClassLoaderContext() {
         return delegate.getClassLoaderContext();
+    }
+
+    @Override
+    public ConsistencyLevel getConsistencyLevel() {
+        return consistencyLevel;
+    }
+
+    @Override
+    public void setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
     }
 
     public void setContext(String context) {

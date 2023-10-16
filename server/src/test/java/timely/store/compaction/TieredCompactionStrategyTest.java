@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.Lists;
-import org.apache.accumulo.server.fs.FileRef;
+import org.apache.accumulo.core.metadata.StoredTabletFile;
 import org.apache.accumulo.tserver.compaction.CompactionPlan;
 import org.apache.accumulo.tserver.compaction.CompactionStrategy;
 import org.apache.accumulo.tserver.compaction.DefaultCompactionStrategy;
@@ -124,7 +124,7 @@ public class TieredCompactionStrategyTest {
     @Test
     public void getCompactionPlanSkipsAndStopsAtTier() throws IOException {
         CompactionPlan p1 = new CompactionPlan();
-        p1.inputFiles.add(new FileRef("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao8.rf"));
+        p1.inputFiles.add(new StoredTabletFile("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao8.rf"));
 
         CompactionStrategy c1 = EasyMock.createMock("c1", CompactionStrategy.class);
         CompactionStrategy c2 = EasyMock.createMock("c2", CompactionStrategy.class);
@@ -149,7 +149,7 @@ public class TieredCompactionStrategyTest {
     @Test
     public void getCompactionPlanSkipsWhenEmptyInputAndStopsAtTier() throws IOException {
         CompactionPlan p1 = new CompactionPlan();
-        p1.inputFiles.add(new FileRef("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao8.rf"));
+        p1.inputFiles.add(new StoredTabletFile("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao8.rf"));
 
         CompactionStrategy c1 = EasyMock.createMock("c1", CompactionStrategy.class);
         CompactionStrategy c2 = EasyMock.createMock("c2", CompactionStrategy.class);
