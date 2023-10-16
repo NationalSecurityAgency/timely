@@ -1,11 +1,11 @@
 package timely.store;
 
-import static org.apache.accumulo.core.conf.AccumuloConfiguration.getMemoryInBytes;
-import static org.apache.accumulo.core.conf.AccumuloConfiguration.getTimeInMillis;
+import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getMemoryAsBytes;
+import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getTimeInMillis;
 import static timely.adapter.accumulo.MetricAdapter.VISIBILITY_TAG;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -33,12 +34,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.client.MutationsRejectedException;
 import org.apache.accumulo.core.client.NamespaceExistsException;
@@ -46,8 +45,7 @@ import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.ScannerBase;
 import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
+import org.apache.accumulo.core.conf.ClientProperty;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.PartialKey;
@@ -120,14 +118,14 @@ public class DataStoreImpl implements DataStore {
 
     }
 
-    private final Connector connector;
-    private MetaCache metaCache = null;
+    private final AccumuloClient accumuloClient;
+    private final MetaCache metaCache;
     private final AtomicLong lastCountTime = new AtomicLong(System.currentTimeMillis());
     private final AtomicReference<SortedMap<MetricTagK, Integer>> metaCounts = new AtomicReference<>(new TreeMap<>());
     private final String metricsTable;
     private final String metaTable;
     private final InternalMetrics internalMetrics;
-    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private final int scannerThreads;
     private final long maxDownsampleMemory;
     private final BatchWriterConfig bwConfig;
@@ -143,18 +141,18 @@ public class DataStoreImpl implements DataStore {
     public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
 
         try {
-            final Map<String, String> properties = new HashMap<>();
+            final Properties properties = new Properties();
             Accumulo accumuloConf = conf.getAccumulo();
-            properties.put("instance.name", accumuloConf.getInstanceName());
-            properties.put("instance.zookeeper.host", accumuloConf.getZookeepers());
-            properties.put("instance.zookeeper.timeout", accumuloConf.getZookeeperTimeout());
-            final ClientConfiguration aconf = ClientConfiguration.fromMap(properties);
-            final Instance instance = new ZooKeeperInstance(aconf);
-            connector = instance.getConnector(accumuloConf.getUsername(),
-                    new PasswordToken(accumuloConf.getPassword()));
+            properties.put(ClientProperty.INSTANCE_NAME.getKey(), accumuloConf.getInstanceName());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS.getKey(), accumuloConf.getZookeepers());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS_TIMEOUT.getKey(), accumuloConf.getZookeeperTimeout());
+            properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConf.getUsername());
+            properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConf.getPassword());
+            properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
+            accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient().from(properties).build();
             bwConfig = new BatchWriterConfig();
             bwConfig.setMaxLatency(getTimeInMillis(accumuloConf.getWrite().getLatency()), TimeUnit.MILLISECONDS);
-            bwConfig.setMaxMemory(getMemoryInBytes(accumuloConf.getWrite().getBufferSize()) / numWriteThreads);
+            bwConfig.setMaxMemory(getMemoryAsBytes(accumuloConf.getWrite().getBufferSize()) / numWriteThreads);
             bwConfig.setMaxWriteThreads(accumuloConf.getWrite().getThreads());
             scannerThreads = accumuloConf.getScan().getThreads();
             maxDownsampleMemory = accumuloConf.getScan().getMaxDownsampleMemory();
@@ -165,19 +163,19 @@ public class DataStoreImpl implements DataStore {
                 try {
                     // validate visibility
                     vis = new ColumnVisibility(defaultVisibility);
-                    LOG.info("Using defaultVisibility: {}", vis.toString());
+                    LOG.info("Using defaultVisibility: {}", vis);
                 } catch (RuntimeException e) {
                     LOG.error("Error validating defaultVisibility " + defaultVisibility + " " + e.getMessage(), e);
                     throw e;
                 }
 
                 try {
-                    String whoami = connector.whoami();
-                    Authorizations auths = connector.securityOperations().getUserAuthorizations(whoami);
+                    String whoami = accumuloClient.whoami();
+                    Authorizations auths = accumuloClient.securityOperations().getUserAuthorizations(whoami);
                     VisibilityEvaluator eval = new VisibilityEvaluator(auths);
                     if (!eval.evaluate(vis)) {
-                        throw new IllegalArgumentException("Accumulo user " + whoami + " with authorization "
-                                + auths.toString() + " can not see data with defaultVisibility " + vis.toString());
+                        throw new IllegalArgumentException("Accumulo user " + whoami + " with authorization " + auths
+                                + " can not see data with defaultVisibility " + vis);
                     }
                 } catch (RuntimeException e) {
                     LOG.error(e.getMessage(), e);
@@ -189,10 +187,10 @@ public class DataStoreImpl implements DataStore {
             if (metricsTable.contains(".")) {
                 final String[] parts = metricsTable.split("\\.", 2);
                 final String namespace = parts[0];
-                if (!connector.namespaceOperations().exists(namespace)) {
+                if (!accumuloClient.namespaceOperations().exists(namespace)) {
                     try {
                         LOG.info("Creating namespace " + namespace);
-                        connector.namespaceOperations().create(namespace);
+                        accumuloClient.namespaceOperations().create(namespace);
                     } catch (final NamespaceExistsException ex) {
                         // don't care
                     }
@@ -201,11 +199,11 @@ public class DataStoreImpl implements DataStore {
             ageOffSettings = getAgeOff(conf);
             defaultAgeOffMilliSec = this.getAgeOffForMetric(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY);
 
-            final Map<String, String> tableIdMap = connector.tableOperations().tableIdMap();
+            final Map<String, String> tableIdMap = accumuloClient.tableOperations().tableIdMap();
             if (!tableIdMap.containsKey(metricsTable)) {
                 try {
                     LOG.info("Creating table " + metricsTable);
-                    connector.tableOperations().create(metricsTable);
+                    accumuloClient.tableOperations().create(metricsTable);
                 } catch (final TableExistsException ex) {
                     // don't care
                 }
@@ -215,7 +213,7 @@ public class DataStoreImpl implements DataStore {
             if (!tableIdMap.containsKey(metaTable)) {
                 try {
                     LOG.info("Creating table " + metaTable);
-                    connector.tableOperations().create(metaTable);
+                    accumuloClient.tableOperations().create(metaTable);
                 } catch (final TableExistsException ex) {
                     // don't care
                 }
@@ -237,36 +235,28 @@ public class DataStoreImpl implements DataStore {
     public void applyAgeOffSettings() {
 
         // remove iterator and related settings (ageoffs) to ensure current values used
-        if (iteratorOperation((c, t) -> {
-            this.removeAgeOffIterators(c, t);
-        }, connector, metricsTable, 5)) {
+        if (iteratorOperation(this::removeAgeOffIterators, accumuloClient, metricsTable, 5)) {
             LOG.info("Remove ageoff for " + metricsTable + " completed");
         } else {
             LOG.error("Remove ageoff for " + metricsTable + " failed");
         }
 
         // add iterator and related settings (ageoffs) to ensure current values used
-        if (iteratorOperation((c, t) -> {
-            this.applyMetricAgeOffIterator(c, t);
-        }, connector, metricsTable, 5)) {
+        if (iteratorOperation(this::applyMetricAgeOffIterator, accumuloClient, metricsTable, 5)) {
             LOG.info("Apply ageoff for " + metricsTable + " completed");
         } else {
             LOG.error("Apply ageoff for " + metricsTable + " failed");
         }
 
         // remove iterator and related settings (ageoffs) to ensure current values used
-        if (iteratorOperation((c, t) -> {
-            this.removeAgeOffIterators(c, t);
-        }, connector, metaTable, 5)) {
+        if (iteratorOperation(this::removeAgeOffIterators, accumuloClient, metaTable, 5)) {
             LOG.info("Remove ageoff for " + metaTable + " completed");
         } else {
             LOG.error("Remove ageoff for " + metaTable + " failed");
         }
 
         // add iterator and related settings (ageoffs) to ensure current values used
-        if (iteratorOperation((c, t) -> {
-            this.applyMetaAgeOffIterator(c, t);
-        }, connector, metaTable, 5)) {
+        if (iteratorOperation(this::applyMetaAgeOffIterator, accumuloClient, metaTable, 5)) {
             LOG.info("Apply ageoff for " + metaTable + " completed");
         } else {
             LOG.error("Apply ageoff for " + metaTable + " failed");
@@ -292,15 +282,16 @@ public class DataStoreImpl implements DataStore {
 
     public interface RetryableIteratorOperation {
 
-        void execute(Connector con, String tableName) throws Exception;
+        void execute(AccumuloClient accumuloClient, String tableName) throws Exception;
     }
 
-    private boolean iteratorOperation(RetryableIteratorOperation op, Connector connector, String table, int retries) {
+    private boolean iteratorOperation(RetryableIteratorOperation op, AccumuloClient accumuloClient, String table,
+            int retries) {
         boolean success = false;
         int attempt = 1;
         while (!success && attempt++ <= retries) {
             try {
-                op.execute(connector, table);
+                op.execute(accumuloClient, table);
                 success = true;
             } catch (Exception e) {
                 Throwable cause = e.getCause();
@@ -319,25 +310,25 @@ public class DataStoreImpl implements DataStore {
         return success;
     }
 
-    private void removeAgeOffIterators(Connector connector, String tableName) throws Exception {
-        Map<String, EnumSet<IteratorScope>> iters = connector.tableOperations().listIterators(tableName);
+    private void removeAgeOffIterators(AccumuloClient accumuloClient, String tableName) throws Exception {
+        Map<String, EnumSet<IteratorScope>> iters = accumuloClient.tableOperations().listIterators(tableName);
         for (String name : iters.keySet()) {
             if (name.startsWith("ageoff")) {
-                connector.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
+                accumuloClient.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
             }
         }
     }
 
-    private void applyMetricAgeOffIterator(Connector connector, String tableName) throws Exception {
+    private void applyMetricAgeOffIterator(AccumuloClient accumuloClient, String tableName) throws Exception {
         IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoffmetrics", MetricAgeOffIterator.class,
                 this.ageOffSettings);
-        connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+        accumuloClient.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
 
-    private void applyMetaAgeOffIterator(Connector connector, String tableName) throws Exception {
+    private void applyMetaAgeOffIterator(AccumuloClient accumuloClient, String tableName) throws Exception {
         IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, "ageoffmeta", MetaAgeOffIterator.class,
                 this.ageOffSettings);
-        connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+        accumuloClient.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
     }
 
     private Map<String, String> getAgeOff(Configuration conf) {
@@ -375,7 +366,7 @@ public class DataStoreImpl implements DataStore {
 
         if (null == metaWriter.get()) {
             try {
-                BatchWriter w = connector.createBatchWriter(metaTable, bwConfig);
+                BatchWriter w = accumuloClient.createBatchWriter(metaTable, bwConfig);
                 metaWriter.set(w);
                 writers.add(w);
             } catch (TableNotFoundException e) {
@@ -385,7 +376,7 @@ public class DataStoreImpl implements DataStore {
         }
         if (null == batchWriter.get()) {
             try {
-                BatchWriter w = connector.createBatchWriter(metricsTable, bwConfig);
+                BatchWriter w = accumuloClient.createBatchWriter(metricsTable, bwConfig);
                 batchWriter.set(w);
                 writers.add(w);
             } catch (TableNotFoundException e) {
@@ -400,18 +391,14 @@ public class DataStoreImpl implements DataStore {
             toCache.add(new Meta(metric.getName(), tag.getKey(), tag.getValue()));
         }
         if (!toCache.isEmpty()) {
-            final Set<Mutation> muts = new TreeSet<>(new Comparator<Mutation>() {
-
-                @Override
-                public int compare(Mutation o1, Mutation o2) {
-                    if (o1.equals(o2)) {
-                        return 0;
+            final Set<Mutation> muts = new TreeSet<>((o1, o2) -> {
+                if (o1.equals(o2)) {
+                    return 0;
+                } else {
+                    if (o1.hashCode() < o2.hashCode()) {
+                        return -1;
                     } else {
-                        if (o1.hashCode() < o2.hashCode()) {
-                            return -1;
-                        } else {
-                            return 1;
-                        }
+                        return 1;
                     }
                 }
             });
@@ -432,7 +419,7 @@ public class DataStoreImpl implements DataStore {
                     } catch (MutationsRejectedException e1) {
                         LOG.error("Error closing meta writer", e1);
                     }
-                    final BatchWriter w = connector.createBatchWriter(metaTable, bwConfig);
+                    final BatchWriter w = accumuloClient.createBatchWriter(metaTable, bwConfig);
                     metaWriter.set(w);
                     writers.add(w);
                 } catch (TableNotFoundException e1) {
@@ -455,7 +442,7 @@ public class DataStoreImpl implements DataStore {
                 } catch (MutationsRejectedException e1) {
                     LOG.error("Error closing metric writer", e1);
                 }
-                final BatchWriter w = connector.createBatchWriter(metricsTable, bwConfig);
+                final BatchWriter w = accumuloClient.createBatchWriter(metricsTable, bwConfig);
                 batchWriter.set(w);
                 writers.add(w);
             } catch (TableNotFoundException e1) {
@@ -485,48 +472,53 @@ public class DataStoreImpl implements DataStore {
         SuggestResponse result = new SuggestResponse();
         try {
             Optional<String> metricOpt = request.getMetric();
-            if (request.getType().equals("metrics")) {
-                Set<String> metrics = new TreeSet<>();
-                String query = metricOpt.isPresent() ? metricOpt.get() : null;
-                for (Meta m : metaCache) {
-                    if (query == null || m.getMetric().contains(query)) {
-                        metrics.add(m.getMetric());
-                        if (request.getMax() >= 0 && metrics.size() >= request.getMax()) {
-                            break;
-                        }
-                    }
-                }
-                result.setSuggestions(new ArrayList<>(metrics));
-            } else if (request.getType().equals("tagk")) {
-                Set<String> tagKeys = new TreeSet<>();
-                if (metricOpt.isPresent()) {
-                    String metric = metricOpt.get();
+            switch (request.getType()) {
+                case "metrics":
+                    Set<String> metrics = new TreeSet<>();
+                    String query = metricOpt.orElse(null);
                     for (Meta m : metaCache) {
-                        if (m.getMetric().equals(metric)) {
-                            tagKeys.add(m.getTagKey());
-                            if (request.getMax() >= 0 && tagKeys.size() >= request.getMax()) {
+                        if (query == null || m.getMetric().contains(query)) {
+                            metrics.add(m.getMetric());
+                            if (request.getMax() >= 0 && metrics.size() >= request.getMax()) {
                                 break;
                             }
                         }
                     }
-                }
-                result.setSuggestions(new ArrayList<>(tagKeys));
-            } else if (request.getType().equals("tagv")) {
-                Set<String> tagValues = new TreeSet<>();
-                Optional<String> tagKeyOpt = request.getTag();
-                if (metricOpt.isPresent() && tagKeyOpt.isPresent()) {
-                    String metric = metricOpt.get();
-                    String tagKey = tagKeyOpt.get();
-                    for (Meta m : metaCache) {
-                        if (m.getMetric().equals(metric) && m.getTagKey().equals(tagKey)) {
-                            tagValues.add(m.getTagValue());
-                            if (request.getMax() >= 0 && tagValues.size() >= request.getMax()) {
-                                break;
+                    result.setSuggestions(new ArrayList<>(metrics));
+                    break;
+                case "tagk":
+                    Set<String> tagKeys = new TreeSet<>();
+                    if (metricOpt.isPresent()) {
+                        String metric = metricOpt.get();
+                        for (Meta m : metaCache) {
+                            if (m.getMetric().equals(metric)) {
+                                tagKeys.add(m.getTagKey());
+                                if (request.getMax() >= 0 && tagKeys.size() >= request.getMax()) {
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                result.setSuggestions(new ArrayList<>(tagValues));
+                    result.setSuggestions(new ArrayList<>(tagKeys));
+                    break;
+                case "tagv":
+                    Set<String> tagValues = new TreeSet<>();
+                    Optional<String> tagKeyOpt = request.getTag();
+                    if (metricOpt.isPresent() && tagKeyOpt.isPresent()) {
+                        String metric = metricOpt.get();
+                        String tagKey = tagKeyOpt.get();
+                        for (Meta m : metaCache) {
+                            if (m.getMetric().equals(metric) && m.getTagKey().equals(tagKey)) {
+                                tagValues.add(m.getTagValue());
+                                if (request.getMax() >= 0 && tagValues.size() >= request.getMax()) {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    result.setSuggestions(new ArrayList<>(tagValues));
+                    break;
+                default:
             }
         } catch (Exception ex) {
             LOG.error("Error during suggest: " + ex.getMessage(), ex);
@@ -549,12 +541,9 @@ public class DataStoreImpl implements DataStore {
         result.setTags(tags);
         result.setLimit(msg.getLimit());
         Map<String, Pattern> tagPatterns = new HashMap<>();
-        tags.forEach((k, v) -> {
-            tagPatterns.put(k, Pattern.compile(v));
-        });
+        tags.forEach((k, v) -> tagPatterns.put(k, Pattern.compile(v)));
         try {
-            final Scanner scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
-            try {
+            try (Scanner scanner = accumuloClient.createScanner(metaTable, Authorizations.EMPTY)) {
                 List<Result> resultField = new ArrayList<>();
                 Key start = new Key(Meta.VALUE_PREFIX + msg.getQuery());
                 Key end = start.followingKey(PartialKey.ROW);
@@ -576,10 +565,6 @@ public class DataStoreImpl implements DataStore {
                 result.setResults(resultField);
                 result.setTotalResults(total);
                 result.setTime((int) (System.currentTimeMillis() - startMillis));
-            } finally {
-                if (scanner != null) {
-                    scanner.close();
-                }
             }
         } catch (Exception ex) {
             LOG.error("Error during lookup: " + ex.getMessage(), ex);
@@ -629,12 +614,9 @@ public class DataStoreImpl implements DataStore {
                             z += c.size();
                         }
                         long totalRequestedTime = requestedEndTs - requestedStartTs;
-                        long percentServedFromCache = 0;
+                        long percentServedFromCache;
                         if (!cachedMetrics.isEmpty() && oldestCacheTimestamp != Long.MAX_VALUE) {
-                            if (requestedStartTs < oldestCacheTimestamp && requestedEndTs < oldestCacheTimestamp) {
-                                percentServedFromCache = 0;
-                            } else if (requestedStartTs >= oldestCacheTimestamp
-                                    && requestedEndTs >= oldestCacheTimestamp) {
+                            if (requestedStartTs >= oldestCacheTimestamp) {
                                 percentServedFromCache = 100;
                             } else {
                                 long timeAnsweredFromCache = requestedEndTs - oldestCacheTimestamp;
@@ -647,7 +629,7 @@ public class DataStoreImpl implements DataStore {
                             LOG.debug(
                                     "Cache query for [{}] time:{} duration (min):{} metrics:{} results:{} percentFromCache:{}",
                                     msg.getUserName(), (System.currentTimeMillis() - now),
-                                    ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList.toString(), z,
+                                    ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList, z,
                                     percentServedFromCache);
                             allSeries.putAll(cachedMetrics);
                         }
@@ -678,7 +660,7 @@ public class DataStoreImpl implements DataStore {
                         BatchScanner scanner = null;
                         try {
                             Collection<Authorizations> authorizations = getSessionAuthorizations(msg);
-                            scanner = ScannerHelper.createBatchScanner(connector, metricsTable, authorizations,
+                            scanner = ScannerHelper.createBatchScanner(accumuloClient, metricsTable, authorizations,
                                     scannerThreads);
                             List<String> tagOrder = prioritizeTags(query.getMetric(), query.getTags());
                             Map<String, String> orderedTags = orderTags(tagOrder, query.getTags());
@@ -686,7 +668,7 @@ public class DataStoreImpl implements DataStore {
                             List<Range> ranges = getQueryRanges(metric, startOfFirstPeriod, endOfLastPeriod,
                                     colFamValues);
                             scanner.setRanges(ranges);
-                            setQueryColumns(scanner, metric, orderedTags, colFamValues);
+                            setQueryColumns(scanner, orderedTags, colFamValues);
 
                             if (query.isRate()) {
                                 LOG.trace("Adding rate iterator");
@@ -730,7 +712,7 @@ public class DataStoreImpl implements DataStore {
                                 for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
                                     Set<Tag> key = new HashSet<>();
                                     for (Tag tag : entry.getKey()) {
-                                        if (query.getTags().keySet().contains(tag.getKey())) {
+                                        if (query.getTags().containsKey(tag.getKey())) {
                                             key.add(tag);
                                         }
                                     }
@@ -756,8 +738,8 @@ public class DataStoreImpl implements DataStore {
                 }
             }
             LOG.debug("Query for [{}] time:{} duration:{} metrics:{} results:{}", msg.getUserName(),
-                    (System.currentTimeMillis() - now), ((requestedEndTs - requestedStartTs) / (1000 * 60)),
-                    metricList.toString(), numResults);
+                    (System.currentTimeMillis() - now), ((requestedEndTs - requestedStartTs) / (1000 * 60)), metricList,
+                    numResults);
             internalMetrics.addQueryResponse(result.size(), (System.currentTimeMillis() - now));
             return result;
         } catch (ClassNotFoundException | IOException | TableNotFoundException ex) {
@@ -771,9 +753,9 @@ public class DataStoreImpl implements DataStore {
         Map<String, String> order = new LinkedHashMap<>(tags.size());
         tagOrder.forEach(t -> order.put(t, tags.get(t)));
         if (tagOrder.size() > tags.size()) {
-            tags.entrySet().forEach(k -> {
-                if (!tagOrder.contains(k.getKey())) {
-                    order.put(k.getKey(), k.getValue());
+            tags.forEach((key, value) -> {
+                if (!tagOrder.contains(key)) {
+                    order.put(key, value);
                 }
             });
         }
@@ -816,14 +798,7 @@ public class DataStoreImpl implements DataStore {
             }
         }
         List<String> result = new ArrayList<>(tags.keySet());
-        Collections.sort(result, new Comparator<String>() {
-
-            @Override
-            public int compare(String o1, String o2) {
-                // greater count lowers priority
-                return priority.get(o1).intValue() - priority.get(o2).intValue();
-            }
-        });
+        result.sort(Comparator.comparingInt(priority::get));
         LOG.trace("Tag priority {}", result);
         return result;
     }
@@ -856,7 +831,7 @@ public class DataStoreImpl implements DataStore {
         try {
             Map<String, String> tags = (requestedTags == null) ? new LinkedHashMap<>() : requestedTags;
             LOG.trace("Looking for requested tags: {}", tags);
-            meta = connector.createScanner(metaTable, Authorizations.EMPTY);
+            meta = accumuloClient.createScanner(metaTable, Authorizations.EMPTY);
             Text start = new Text(Meta.VALUE_PREFIX + metric);
             Text end = new Text(Meta.VALUE_PREFIX + metric + "\\x0000");
             end.append(new byte[] { (byte) 0xff }, 0, 1);
@@ -899,10 +874,7 @@ public class DataStoreImpl implements DataStore {
                         tagValue = metaEntry.getKey().getColumnQualifier();
                         LOG.trace("Found tag entry {}={}", tagName, tagValue);
 
-                        if (ONLY_RETURN_FIRST_TAG && !tagName.equals(firstTag)) {
-                            return false;
-                        }
-                        return true;
+                        return !ONLY_RETURN_FIRST_TAG || tagName.equals(firstTag);
                     }
                     return false;
                 }
@@ -925,7 +897,7 @@ public class DataStoreImpl implements DataStore {
         }
     }
 
-    private void setQueryColumns(ScannerBase scanner, String metric, Map<String, String> tags, Set<Tag> colFamValues)
+    private void setQueryColumns(ScannerBase scanner, Map<String, String> tags, Set<Tag> colFamValues)
             throws TimelyException {
 
         if (colFamValues.size() == 0) {
@@ -945,7 +917,7 @@ public class DataStoreImpl implements DataStore {
         if (tagIter.hasNext()) {
             tagIter.next();
         }
-        Entry<String, String> tag = null;
+        Entry<String, String> tag;
         while (tagIter.hasNext()) {
             tag = tagIter.next();
             LOG.trace("Adding regex filter for tag {}", tag);
@@ -1022,14 +994,13 @@ public class DataStoreImpl implements DataStore {
                             : beginRangeRounded;
                     for (Tag t : colFamValues) {
                         final byte[] start_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
-                        Key startKey = new Key(new Text(start_row),
-                                new Text(t.join().getBytes(Charset.forName("UTF-8"))),
+                        Key startKey = new Key(new Text(start_row), new Text(t.join().getBytes(StandardCharsets.UTF_8)),
                                 new Text(MetricAdapter.encodeColQual(beginRangeTimestamp, "")), new Text(new byte[0]),
                                 beginRangeTimestamp);
                         LOG.trace("Start key for metric {} and time {} is {}", metric, beginRangeTimestamp,
                                 startKey.toStringNoTime());
                         final byte[] end_row = MetricAdapter.encodeRowKey(metric, beginRangeRounded);
-                        Key endKey = new Key(new Text(end_row), new Text(t.join().getBytes(Charset.forName("UTF-8"))),
+                        Key endKey = new Key(new Text(end_row), new Text(t.join().getBytes(StandardCharsets.UTF_8)),
                                 new Text(MetricAdapter.encodeColQual(endRangeTimestamp, "")), new Text(new byte[0]),
                                 endRangeTimestamp);
                         LOG.trace("End key for metric {} and time {} is {}", metric, beginRangeTimestamp,
@@ -1075,14 +1046,14 @@ public class DataStoreImpl implements DataStore {
             }
             Collection<Authorizations> auths = getSessionAuthorizations(request);
             LOG.debug("Creating metric scanner for [{}] with auths: {}", request.getUserName(), auths);
-            Scanner s = ScannerHelper.createScanner(connector, this.metricsTable, auths);
+            Scanner s = ScannerHelper.createScanner(accumuloClient, this.metricsTable, auths);
             if (tags == null) {
                 tags = new LinkedHashMap<>();
             }
             List<String> tagOrder = prioritizeTags(metric, tags);
             Map<String, String> orderedTags = orderTags(tagOrder, tags);
             Set<Tag> colFamValues = getColumnFamilies(metric, orderedTags);
-            setQueryColumns(s, metric, orderedTags, colFamValues);
+            setQueryColumns(s, orderedTags, colFamValues);
             s.setBatchSize(scannerBatchSize);
             s.setReadaheadThreshold(scannerReadAhead);
             return s;
@@ -1112,5 +1083,8 @@ public class DataStoreImpl implements DataStore {
                 LOG.warn("Error shutting down batchwriter: ", ex.getMessage());
             }
         });
+        if (accumuloClient != null) {
+            accumuloClient.close();
+        }
     }
 }

@@ -25,7 +25,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.security.Authorizations;
 import org.junit.After;
 import org.junit.Assert;
@@ -139,8 +140,11 @@ public class TwoWaySSLOpenSSLIT extends QueryBase {
 
     @Before
     public void setup() throws Exception {
-        Connector con = mac.getConnector("root", "secret");
-        con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.securityOperations().changeUserAuthorizations("root",
+                    new Authorizations("A", "B", "C", "D", "E", "F"));
+        }
     }
 
     @After

@@ -16,7 +16,8 @@ import javax.net.ssl.HttpsURLConnection;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
-import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.security.Authorizations;
 import org.junit.After;
 import org.junit.Assert;
@@ -81,8 +82,11 @@ public class OneWaySSLBasicAuthAccessIT extends OneWaySSLBase {
     @Before
     public void setup() throws Exception {
         AuthCache.clear();
-        Connector con = mac.getConnector("root", "secret");
-        con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.securityOperations().changeUserAuthorizations("root",
+                    new Authorizations("A", "B", "C", "D", "E", "F"));
+        }
     }
 
     @After

@@ -14,8 +14,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
-import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.IteratorSetting;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.iterators.IteratorUtil;
 import org.apache.accumulo.tserver.compaction.CompactionStrategy;
@@ -49,53 +50,61 @@ public class MetricCompactionIT extends MacITBase {
     private static final EnumSet<IteratorUtil.IteratorScope> AGEOFF_SCOPES = EnumSet
             .allOf(IteratorUtil.IteratorScope.class);
 
-    private Connector connector;
+    private AccumuloClient accumuloClient;
     private MetricConfigurationAdapter adapter;
 
     @BeforeClass
     public static void setupClass() throws Exception {
-        Connector connector = mac.getConnector(MAC_ROOT_USER, MAC_ROOT_PASSWORD);
-        connector.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "3s");
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "3s");
+        }
     }
 
     @Before
     public void setup() throws Exception {
-        connector = mac.getConnector(MAC_ROOT_USER, MAC_ROOT_PASSWORD);
+        accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER, new PasswordToken(MAC_ROOT_PASSWORD));
         String metricsTable = conf.getMetricsTable();
         if (!metricsTable.contains(".")) {
             throw new IllegalArgumentException("Expected to find namespace in table name");
         }
         String[] parts = metricsTable.split("\\.", 2);
         String namespace = parts[0];
-        if (!connector.namespaceOperations().exists(namespace)) {
-            connector.namespaceOperations().create(namespace);
+        if (!accumuloClient.namespaceOperations().exists(namespace)) {
+            accumuloClient.namespaceOperations().create(namespace);
         }
-        connector.tableOperations().create(metricsTable);
-        adapter = new MetricConfigurationAdapter(connector, conf.getMetricsTable());
-        connector.tableOperations().setProperty(conf.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(), "50K");
+        accumuloClient.tableOperations().create(metricsTable);
+        adapter = new MetricConfigurationAdapter(accumuloClient, conf.getMetricsTable());
+        accumuloClient.tableOperations().setProperty(conf.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(),
+                "50K");
         adapter.resetState();
     }
 
     @After
     public void teardown() throws Exception {
         adapter.resetState();
+        if (accumuloClient != null) {
+            accumuloClient.close();
+        }
     }
 
     @AfterClass
     public static void teardownClass() throws Exception {
-        Connector connector = mac.getConnector(MAC_ROOT_USER, MAC_ROOT_PASSWORD);
-        connector.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "30s");
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "30s");
+        }
     }
 
     @Test
     public void tableMetadataEnumeratesTablets() throws Exception {
         String metricsTable = conf.getMetricsTable();
 
-        TestMetricWriter writer = new TestMetricWriter(metricsTable, connector, new TestMetrics());
+        TestMetricWriter writer = new TestMetricWriter(metricsTable, accumuloClient, new TestMetrics());
         writer.ingestRandomDuration(60, TimeUnit.SECONDS, System.currentTimeMillis(), 250);
 
-        Collection<Text> splits = connector.tableOperations().listSplits(conf.getMetricsTable());
-        TabletMetadataQuery query = new TabletMetadataQuery(connector, metricsTable);
+        Collection<Text> splits = accumuloClient.tableOperations().listSplits(conf.getMetricsTable());
+        TabletMetadataQuery query = new TabletMetadataQuery(accumuloClient, metricsTable);
         TabletMetadataView view = query.run();
 
         // @formatter:off
@@ -138,12 +147,13 @@ public class MetricCompactionIT extends MacITBase {
         String metricsTable = conf.getMetricsTable();
 
         // check to make sure the table has only one iterator
-        Map<String, EnumSet<IteratorUtil.IteratorScope>> itrs = connector.tableOperations().listIterators(metricsTable);
+        Map<String, EnumSet<IteratorUtil.IteratorScope>> itrs = accumuloClient.tableOperations()
+                .listIterators(metricsTable);
         assertEquals(1, itrs.size());
         assertTrue(itrs.containsKey("vers"));
 
         long timestampMax = System.currentTimeMillis();
-        TestMetricWriter writer = new TestMetricWriter(conf.getMetricsTable(), connector, new TestMetrics());
+        TestMetricWriter writer = new TestMetricWriter(conf.getMetricsTable(), accumuloClient, new TestMetrics());
         long timestampMin = writer.ingestRandomDuration(30, TimeUnit.SECONDS, timestampMax, 250);
 
         // invoke compact operation to flush everything through
@@ -157,7 +167,7 @@ public class MetricCompactionIT extends MacITBase {
 
         // run check to verify there are pre-existing splits for a prefix
         // @formatter:off
-        TabletMetadataQuery query = new TabletMetadataQuery(connector, metricsTable);
+        TabletMetadataQuery query = new TabletMetadataQuery(accumuloClient, metricsTable);
         TabletSummary summary1 = query.run()
                 .computeSummary()
                 .build();
@@ -206,14 +216,14 @@ public class MetricCompactionIT extends MacITBase {
 
     private static class MetricConfigurationAdapter {
 
-        private final Connector connector;
+        private final AccumuloClient accumuloClient;
         private final String tableName;
 
         private static String[] CLEAR_PROPERTY_KEYS = {
                 Property.TABLE_COMPACTION_STRATEGY_PREFIX.getKey() + MetricCompactionStrategy.MIN_AGEOFF_KEY };
 
-        public MetricConfigurationAdapter(Connector connector, String tableName) {
-            this.connector = connector;
+        public MetricConfigurationAdapter(AccumuloClient accumuloClient, String tableName) {
+            this.accumuloClient = accumuloClient;
             this.tableName = tableName;
         }
 
@@ -223,31 +233,31 @@ public class MetricCompactionIT extends MacITBase {
             ageOffs.put("ageoff.default", Long.toString(ageOff));
             IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, AGE_OFF_ITERATOR_NAME,
                     MetricAgeOffIterator.class, ageOffs);
-            connector.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
-            connector.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(),
+            accumuloClient.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
+            accumuloClient.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(),
                     clazz.getName());
         }
 
         public void runCompaction() throws Exception {
-            connector.tableOperations().compact(tableName, null, null, true, true);
+            accumuloClient.tableOperations().compact(tableName, null, null, true, true);
         }
 
         public void resetState() throws Exception {
-            Map<String, EnumSet<IteratorUtil.IteratorScope>> iters = connector.tableOperations()
+            Map<String, EnumSet<IteratorUtil.IteratorScope>> iters = accumuloClient.tableOperations()
                     .listIterators(tableName);
             for (String name : iters.keySet()) {
                 if (name.startsWith("ageoff")) {
-                    connector.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
+                    accumuloClient.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
                 }
             }
 
             // reset compaction strategy to default
-            connector.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(),
+            accumuloClient.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(),
                     DefaultCompactionStrategy.class.getName());
 
             // reset any properties
             for (String s : CLEAR_PROPERTY_KEYS) {
-                connector.tableOperations().removeProperty(tableName, s);
+                accumuloClient.tableOperations().removeProperty(tableName, s);
             }
         }
     }

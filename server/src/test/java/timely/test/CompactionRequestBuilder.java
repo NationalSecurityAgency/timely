@@ -10,16 +10,19 @@ import org.apache.accumulo.core.client.lexicoder.Lexicoder;
 import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
 import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
+import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.TableId;
 import org.apache.accumulo.core.data.TabletId;
-import org.apache.accumulo.core.data.impl.KeyExtent;
-import org.apache.accumulo.core.data.impl.TabletIdImpl;
+import org.apache.accumulo.core.dataImpl.KeyExtent;
+import org.apache.accumulo.core.dataImpl.TabletIdImpl;
+import org.apache.accumulo.core.metadata.StoredTabletFile;
 import org.apache.accumulo.core.metadata.schema.DataFileValue;
 import org.apache.accumulo.core.util.ComparablePair;
-import org.apache.accumulo.server.fs.FileRef;
-import org.apache.accumulo.server.fs.VolumeManager;
+import org.apache.accumulo.server.ServerContext;
 import org.apache.accumulo.tserver.compaction.MajorCompactionReason;
 import org.apache.accumulo.tserver.compaction.MajorCompactionRequest;
+import org.apache.hadoop.io.Text;
 import org.easymock.EasyMock;
 import timely.adapter.accumulo.MetricAdapter;
 
@@ -30,7 +33,7 @@ public class CompactionRequestBuilder {
     private static final PairLexicoder<String, String> badPairEncoder = new PairLexicoder<>(stringEncoder,
             stringEncoder);
 
-    private final Map<FileRef, DataFileValue> refs = new LinkedHashMap<>();
+    private final Map<StoredTabletFile, DataFileValue> refs = new LinkedHashMap<>();
     private final Map<String, String> tableProperties;
     private final long timeMillis;
     private Key endKeyMetric;
@@ -74,7 +77,7 @@ public class CompactionRequestBuilder {
     }
 
     public CompactionRequestBuilder file(String path, long size, long entries) {
-        refs.put(new FileRef(path), new DataFileValue(size, entries));
+        refs.put(new StoredTabletFile(path), new DataFileValue(size, entries));
         return this;
     }
 
@@ -84,25 +87,24 @@ public class CompactionRequestBuilder {
     }
 
     public MajorCompactionRequest build() {
-        String tableName = "1";
-        KeyExtent ke = new KeyExtent();
-        ke.setTableId(tableName);
-
+        TableId tableId = TableId.of("1");
+        Text endRow = null;
         if (null != endKeyMetric) {
-            ke.setEndRow(endKeyMetric.getRow());
+            endRow = endKeyMetric.getRow();
         }
 
+        Text prevEndRow = null;
         if (null != prevKeyMetric) {
-            ke.setPrevEndRow(prevKeyMetric.getRow());
+            prevEndRow = prevKeyMetric.getRow();
         }
-
+        KeyExtent ke = new KeyExtent(tableId, endRow, prevEndRow);
         TabletId tid = new TabletIdImpl(ke);
 
         // @formatter:off
         MajorCompactionRequest req = EasyMock.partialMockBuilder(MajorCompactionRequest.class)
-                .withConstructor(KeyExtent.class, MajorCompactionReason.class, VolumeManager.class,
-                        AccumuloConfiguration.class)
-                .withArgs(ke, MajorCompactionReason.NORMAL, null, AccumuloConfiguration.getDefaultConfiguration())
+                .withConstructor(KeyExtent.class, MajorCompactionReason.class,
+                        AccumuloConfiguration.class, ServerContext.class)
+                .withArgs(ke, MajorCompactionReason.NORMAL, DefaultConfiguration.getInstance(), null)
                 .addMockedMethod("getTabletId")
                 .addMockedMethod("getTableProperties")
                 .createMock();

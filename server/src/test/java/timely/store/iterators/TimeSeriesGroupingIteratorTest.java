@@ -12,7 +12,7 @@ import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.iterators.SortedMapIterator;
+import org.apache.accumulo.core.iteratorsImpl.system.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimeSeriesGroupingIteratorTest.class);
 
-    private TreeMap<Key, Value> table = new TreeMap<Key, Value>();
+    private TreeMap<Key, Value> table = new TreeMap<>();
     private static final List<Tag> tags = new ArrayList<>();
     static {
         tags.add(new Tag("rack", "r1"));
@@ -156,11 +156,9 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
         // this section changed when the key structure changed so that identical
         // colFam values sorted consecutively within an given time period
         for (int i = 4; i < 100; i++) {
-            System.out.println(i);
             checkNextResult(iter, new double[] { i - 4, i - 3, i - 2, i - 1, i });
         }
         for (int i = 4; i < 50; i++) {
-            System.out.println(i);
             checkNextResult(iter, new double[] { (i - 4) * 2, (i - 3) * 2, (i - 2) * 2, (i - 1) * 2, i * 2 });
         }
         assertFalse(iter.hasTop());
@@ -278,7 +276,6 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
             shiftAndAdd(first, 1);
         }
         for (int i = 4; i < 100; i++) {
-            System.out.println(i);
             checkNextResult(iter, second);
             shiftAndAdd(second, 2);
         }

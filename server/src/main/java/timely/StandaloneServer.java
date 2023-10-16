@@ -3,10 +3,11 @@ package timely;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
-import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.admin.SecurityOperations;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.minicluster.MemoryUnit;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
@@ -73,9 +74,8 @@ public class StandaloneServer extends Server {
             System.err.println("Error starting MiniAccumuloCluster: " + e.getMessage());
             System.exit(1);
         }
-        try {
-            Connector conn = mac.getConnector("root", "secret");
-            SecurityOperations sops = conn.securityOperations();
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient("root", new PasswordToken("secret"))) {
+            SecurityOperations sops = accumuloClient.securityOperations();
             Authorizations rootAuths = new Authorizations("A", "B", "C", "D", "E", "F", "G", "H", "I");
             sops.changeUserAuthorizations("root", rootAuths);
         } catch (AccumuloException | AccumuloSecurityException e) {

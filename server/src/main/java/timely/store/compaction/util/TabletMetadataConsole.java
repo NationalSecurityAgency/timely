@@ -1,13 +1,10 @@
 package timely.store.compaction.util;
 
-import java.util.HashMap;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.conf.ClientProperty;
 import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -22,19 +19,22 @@ public class TabletMetadataConsole {
         try (ConfigurableApplicationContext ctx = new SpringApplicationBuilder(SpringBootstrap.class)
                 .bannerMode(Banner.Mode.OFF).web(WebApplicationType.NONE).run(args)) {
             Configuration conf = ctx.getBean(Configuration.class);
-            HashMap<String, String> apacheConf = new HashMap<>();
+
+            final Properties properties = new Properties();
             Accumulo accumuloConf = conf.getAccumulo();
-            apacheConf.put("instance.name", accumuloConf.getInstanceName());
-            apacheConf.put("instance.zookeeper.host", accumuloConf.getZookeepers());
-            ClientConfiguration aconf = ClientConfiguration.fromMap(apacheConf);
-            Instance instance = new ZooKeeperInstance(aconf);
-            Connector con = instance.getConnector(accumuloConf.getUsername(),
-                    new PasswordToken(accumuloConf.getPassword()));
+            properties.put(ClientProperty.INSTANCE_NAME.getKey(), accumuloConf.getInstanceName());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS.getKey(), accumuloConf.getZookeepers());
+            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS_TIMEOUT.getKey(), accumuloConf.getZookeeperTimeout());
+            properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConf.getUsername());
+            properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConf.getPassword());
+            properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
+            try (AccumuloClient accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient().from(properties)
+                    .build()) {
+                TabletMetadataQuery query = new TabletMetadataQuery(accumuloClient, conf.getMetricsTable());
+                TabletMetadataView view = query.run();
 
-            TabletMetadataQuery query = new TabletMetadataQuery(con, conf.getMetricsTable());
-            TabletMetadataView view = query.run();
-
-            System.out.println(view.toText(TimeUnit.DAYS));
+                System.out.println(view.toText(TimeUnit.DAYS));
+            }
         }
     }
 }

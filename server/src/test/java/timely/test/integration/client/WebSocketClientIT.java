@@ -17,7 +17,8 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
-import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.http.client.HttpResponseException;
 import org.junit.After;
@@ -61,11 +62,14 @@ public class WebSocketClientIT extends OneWaySSLBase {
 
     @Before
     public void setup() throws Exception {
-        Connector con = mac.getConnector("root", "secret");
-        con.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
-        s = new Server(conf);
-        s.run();
-        setupSslCtx();
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
+                new PasswordToken(MAC_ROOT_PASSWORD))) {
+            accumuloClient.securityOperations().changeUserAuthorizations("root",
+                    new Authorizations("A", "B", "C", "D", "E", "F"));
+            s = new Server(conf);
+            s.run();
+            setupSslCtx();
+        }
     }
 
     @Override

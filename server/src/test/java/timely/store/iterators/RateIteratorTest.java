@@ -14,7 +14,7 @@ import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.iterators.SortedMapIterator;
+import org.apache.accumulo.core.iteratorsImpl.system.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
 import timely.adapter.accumulo.MetricAdapter;
@@ -24,7 +24,7 @@ import timely.model.Tag;
 
 public class RateIteratorTest extends IteratorTestBase {
 
-    private TreeMap<Key, Value> table = new TreeMap<Key, Value>();
+    private TreeMap<Key, Value> table = new TreeMap<>();
     private static final List<Tag> tags = new ArrayList<>();
     static {
         tags.add(new Tag("rack", "r1"));

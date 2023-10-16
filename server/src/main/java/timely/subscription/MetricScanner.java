@@ -220,13 +220,11 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 } else if (rangeItr.hasNext()) {
                     // set next range on the scanner
                     Range r = rangeItr.next();
-                    this.scanner.close();
                     this.scanner.setRange(r);
                     this.iter = scanner.iterator();
                 } else if (this.endTime == 0) {
                     flush();
                     long endTimeStamp = (System.currentTimeMillis() - (lag * 1000));
-                    this.scanner.close();
                     if (null == m) {
                         LOG.debug("[{}] No results found, waiting {}ms to retry with new end time {}. [{}]",
                                 subscriptionId, delay, endTimeStamp);

@@ -106,9 +106,9 @@ public class MetricCompactionStrategyTest {
         assertNotNull(plan);
 
         assertEquals(3, plan.inputFiles.size());
-        assertEquals(f1, plan.inputFiles.get(0).path().toString());
-        assertEquals(f2, plan.inputFiles.get(1).path().toString());
-        assertEquals(f3, plan.inputFiles.get(2).path().toString());
+        assertEquals(f1, plan.inputFiles.get(0).getPathStr());
+        assertEquals(f2, plan.inputFiles.get(1).getPathStr());
+        assertEquals(f3, plan.inputFiles.get(2).getPathStr());
     }
 
     @Test

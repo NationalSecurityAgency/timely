@@ -7,13 +7,13 @@ import java.util.OptionalLong;
 
 import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.data.TabletId;
-import org.apache.accumulo.server.fs.FileRef;
+import org.apache.accumulo.core.metadata.StoredTabletFile;
 import org.apache.accumulo.tserver.compaction.CompactionPlan;
 import org.apache.accumulo.tserver.compaction.CompactionStrategy;
 import org.apache.accumulo.tserver.compaction.MajorCompactionRequest;
 import org.apache.commons.collections4.trie.PatriciaTrie;
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.MapConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.MapConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import timely.store.MetricAgeOffIterator;
@@ -108,8 +108,8 @@ public class MetricCompactionStrategy extends CompactionStrategy {
         CompactionPlan plan = null;
         if (shouldCompact(request)) {
             plan = new CompactionPlan();
-            for (FileRef ref : request.getFiles().keySet()) {
-                plan.inputFiles.add(ref);
+            for (StoredTabletFile f : request.getFiles().keySet()) {
+                plan.inputFiles.add(f);
             }
 
             if (LOG.isDebugEnabled()) {

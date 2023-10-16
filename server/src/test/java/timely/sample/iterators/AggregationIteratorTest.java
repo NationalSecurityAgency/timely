@@ -10,12 +10,10 @@ import java.util.Map.Entry;
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.*;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
-import org.apache.accumulo.core.iterators.SortedMapIterator;
+import org.apache.accumulo.core.iteratorsImpl.system.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
 import timely.adapter.accumulo.MetricAdapter;
-import timely.auth.VisibilityCache;
-import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.sample.Aggregation;
@@ -27,11 +25,6 @@ public class AggregationIteratorTest {
 
     final private SortedMap<Key, Value> testData1 = new TreeMap<>();
     final private SortedMap<Key, Value> testData2 = new TreeMap<>();
-
-    @Before
-    public void before() {
-        VisibilityCache.init(new Configuration());
-    }
 
     @Before
     public void createTestData() throws Exception {
@@ -149,5 +142,4 @@ public class AggregationIteratorTest {
         Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(iter.getTopValue());
         return samples;
     }
-
 }

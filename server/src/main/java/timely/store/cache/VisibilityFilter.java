@@ -15,7 +15,7 @@ public class VisibilityFilter {
     protected LRUMap cache;
 
     private static final Logger log = LoggerFactory
-            .getLogger(org.apache.accumulo.core.iterators.system.VisibilityFilter.class);
+            .getLogger(org.apache.accumulo.core.iteratorsImpl.system.VisibilityFilter.class);
 
     public VisibilityFilter(Authorizations authorizations) {
         this.ve = new VisibilityEvaluator(authorizations);
