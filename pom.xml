@@ -20,7 +20,6 @@
     <module>grafana</module>
     <module>analytics</module>
     <module>balancer</module>
-    <module>grafana-auth</module>
   </modules>
   <scm>
     <connection>scm:git:https://github.com/NationalSecurityAgency/timely.git</connection>
