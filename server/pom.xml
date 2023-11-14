@@ -45,6 +45,10 @@
       <artifactId>compression-gorilla</artifactId>
     </dependency>
     <dependency>
+      <groupId>gov.nsa.datawave.contrib</groupId>
+      <artifactId>datawave-in-memory-accumulo</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.github.lukehutch</groupId>
       <artifactId>fast-classpath-scanner</artifactId>
     </dependency>

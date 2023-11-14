@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.accumulo.core.client.AccumuloClient;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
@@ -23,7 +21,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Server;
 import timely.TestServer;
 import timely.api.request.MetricRequest;
 import timely.auth.AuthCache;
@@ -37,7 +34,7 @@ import timely.test.integration.OneWaySSLBase;
 public class TcpClientIT extends OneWaySSLBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpClientIT.class);
-    private static final Long TEST_TIME = System.currentTimeMillis();
+    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
 
     @After
     public void tearDown() throws Exception {
@@ -46,7 +43,7 @@ public class TcpClientIT extends OneWaySSLBase {
 
     @Test
     public void testPut() throws Exception {
-        final TestServer m = new TestServer(conf);
+        final TestServer m = new TestServer(conf, accumuloClient);
         m.run();
         try (TcpClient client = new TcpClient("127.0.0.1", 54321)) {
             client.open();
@@ -77,7 +74,7 @@ public class TcpClientIT extends OneWaySSLBase {
     @Test
     public void testPutMultiple() throws Exception {
 
-        final TestServer m = new TestServer(conf);
+        final TestServer m = new TestServer(conf, accumuloClient);
         m.run();
         try (TcpClient client = new TcpClient("127.0.0.1", 54321)) {
             client.open();
@@ -121,7 +118,7 @@ public class TcpClientIT extends OneWaySSLBase {
 
     @Test
     public void testPutInvalidTimestamp() throws Exception {
-        final TestServer m = new TestServer(conf);
+        final TestServer m = new TestServer(conf, accumuloClient);
         m.run();
         try (TcpClient client = new TcpClient("127.0.0.1", 54321)) {
             client.open();
@@ -136,18 +133,12 @@ public class TcpClientIT extends OneWaySSLBase {
 
     @Test
     public void testPersistence() throws Exception {
-        final Server s = new Server(conf);
-        s.run();
+        startServer();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
-        } finally {
-            s.shutdown();
-        }
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
-                new PasswordToken(MAC_ROOT_PASSWORD))) {
             assertTrue(accumuloClient.namespaceOperations().exists("timely"));
             assertTrue(accumuloClient.tableOperations().exists("timely.metrics"));
             assertTrue(accumuloClient.tableOperations().exists("timely.meta"));
@@ -176,23 +167,19 @@ public class TcpClientIT extends OneWaySSLBase {
                 count++;
             }
             assertEquals(15, count);
+        } finally {
+            stopServer();
         }
     }
 
     @Test
     public void testPersistenceWithVisibility() throws Exception {
-        final Server s = new Server(conf);
-        s.run();
+        startServer();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
             sleepUninterruptibly(WAIT_SECONDS, TimeUnit.SECONDS);
-        } finally {
-            s.shutdown();
-        }
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
-                new PasswordToken(MAC_ROOT_PASSWORD))) {
             accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
 
             int count = 0;
@@ -222,6 +209,8 @@ public class TcpClientIT extends OneWaySSLBase {
                 count++;
             }
             assertEquals(6, count);
+        } finally {
+            stopServer();
         }
     }
 

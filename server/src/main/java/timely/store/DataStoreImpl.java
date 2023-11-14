@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -45,7 +44,6 @@ import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.ScannerBase;
 import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.conf.ClientProperty;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.PartialKey;
@@ -138,18 +136,12 @@ public class DataStoreImpl implements DataStore {
     private DataStoreCache cache = null;
     private final String defaultVisibility;
 
-    public DataStoreImpl(Configuration conf, int numWriteThreads) throws TimelyException {
+    public DataStoreImpl(Configuration conf, AccumuloClient accumuloClient, int numWriteThreads)
+            throws TimelyException {
 
         try {
-            final Properties properties = new Properties();
+            this.accumuloClient = accumuloClient;
             Accumulo accumuloConf = conf.getAccumulo();
-            properties.put(ClientProperty.INSTANCE_NAME.getKey(), accumuloConf.getInstanceName());
-            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS.getKey(), accumuloConf.getZookeepers());
-            properties.put(ClientProperty.INSTANCE_ZOOKEEPERS_TIMEOUT.getKey(), accumuloConf.getZookeeperTimeout());
-            properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConf.getUsername());
-            properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConf.getPassword());
-            properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
-            accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient().from(properties).build();
             bwConfig = new BatchWriterConfig();
             bwConfig.setMaxLatency(getTimeInMillis(accumuloConf.getWrite().getLatency()), TimeUnit.MILLISECONDS);
             bwConfig.setMaxMemory(getMemoryAsBytes(accumuloConf.getWrite().getBufferSize()) / numWriteThreads);

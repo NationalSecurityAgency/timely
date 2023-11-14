@@ -51,6 +51,7 @@
     <version.commons-text>1.10.0</version.commons-text>
     <version.compression.gorilla>2.1.1</version.compression.gorilla>
     <version.curator>4.1.0</version.curator>
+    <version.datawave-in-memory-accumulo>2.1.1</version.datawave-in-memory-accumulo>
     <version.disruptor>3.4.2</version.disruptor>
     <version.easymock>4.0.2</version.easymock>
     <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
@@ -179,6 +180,17 @@
         <groupId>fi.iki.yak</groupId>
         <artifactId>compression-gorilla</artifactId>
         <version>${version.compression.gorilla}</version>
+      </dependency>
+      <dependency>
+        <groupId>gov.nsa.datawave.contrib</groupId>
+        <artifactId>datawave-in-memory-accumulo</artifactId>
+        <version>${version.datawave-in-memory-accumulo}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.accumulo</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>io.github.lukehutch</groupId>
@@ -574,7 +586,7 @@
               <include>**/*.java</include>
             </includes>
             <groups>timely.test.IntegrationTest</groups>
-            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            <redirectTestOutputToFile>false</redirectTestOutputToFile>
           </configuration>
           <executions>
             <execution>

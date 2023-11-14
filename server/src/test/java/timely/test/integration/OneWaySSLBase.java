@@ -26,6 +26,16 @@ public class OneWaySSLBase extends QueryBase {
 
     protected static File clientTrustStoreFile = null;
 
+    @Before
+    public void setupOneWaySSLBase() throws Exception {
+        setupSSL(conf);
+    }
+
+    @After
+    public void shutdownOneWaySSLBase() {
+        AuthCache.resetConfiguration();
+    }
+
     protected SSLSocketFactory getSSLSocketFactory() throws Exception {
         SslContextBuilder builder = SslContextBuilder.forClient();
         builder.applicationProtocolConfig(ApplicationProtocolConfig.DISABLED);
@@ -49,11 +59,6 @@ public class OneWaySSLBase extends QueryBase {
         config.getSecurity().setAllowAnonymousHttpAccess(true);
     }
 
-    @Before
-    public void configureSSL() throws Exception {
-        setupSSL(conf);
-    }
-
     @Override
     protected HttpsURLConnection getUrlConnection(String username, String password, URL url) throws Exception {
         // No username/password needed for anonymous access
@@ -67,10 +72,4 @@ public class OneWaySSLBase extends QueryBase {
         con.setHostnameVerifier((host, session) -> true);
         return con;
     }
-
-    @After
-    public void tearDown() throws Exception {
-        AuthCache.resetConfiguration();
-    }
-
 }

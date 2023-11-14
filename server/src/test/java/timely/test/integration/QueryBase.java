@@ -21,7 +21,7 @@ import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.util.JsonUtil;
 
-public abstract class QueryBase extends MacITBase {
+public abstract class QueryBase extends InMemoryITBase {
 
     public static class NotSuccessfulException extends Exception {
 
@@ -82,7 +82,7 @@ public abstract class QueryBase extends MacITBase {
         assertEquals(expectedResponseCode, responseCode);
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
-            LOG.info("Result is {}", result);
+            LOG.debug("Result is {}", result);
             return result;
         } else {
             throw new NotSuccessfulException();
@@ -109,7 +109,7 @@ public abstract class QueryBase extends MacITBase {
         Assert.assertEquals(expectedResponseCode, responseCode);
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
-            LOG.info("Result is {}", result);
+            LOG.debug("Result is {}", result);
             JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class,
                     QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);
@@ -138,7 +138,7 @@ public abstract class QueryBase extends MacITBase {
         Assert.assertEquals(expectedResponseCode, responseCode);
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
-            LOG.info("Result is {}", result);
+            LOG.debug("Result is {}", result);
             JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class,
                     QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);

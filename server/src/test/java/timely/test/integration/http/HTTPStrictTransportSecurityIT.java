@@ -8,9 +8,10 @@ import java.net.URL;
 import javax.net.ssl.HttpsURLConnection;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import timely.Server;
 import timely.netty.http.StrictTransportHandler;
 import timely.test.IntegrationTest;
 import timely.test.integration.OneWaySSLBase;
@@ -18,17 +19,14 @@ import timely.test.integration.OneWaySSLBase;
 @Category(IntegrationTest.class)
 public class HTTPStrictTransportSecurityIT extends OneWaySSLBase {
 
-    private static Server s = null;
-
     @Before
-    public void before() throws Exception {
-        s = new Server(conf);
-        s.run();
+    public void startup() {
+        startServer();
     }
 
     @After
-    public void after() throws Exception {
-        s.shutdown();
+    public void shutdown() {
+        stopServer();
     }
 
     @Test

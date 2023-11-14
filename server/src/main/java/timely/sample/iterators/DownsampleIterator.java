@@ -80,7 +80,7 @@ public class DownsampleIterator extends WrappingIterator {
     @Override
     public boolean hasTop() {
 
-        if (super.hasTop()) {
+        if (last == null && super.hasTop()) {
             while (super.hasTop()) {
                 Key topKey = super.getTopKey();
                 Value topValue = super.getTopValue();
@@ -113,10 +113,8 @@ public class DownsampleIterator extends WrappingIterator {
                     throw new RuntimeException("Downstream next() failed", e);
                 }
             }
-            return last != null;
-        } else {
-            return false;
         }
+        return last != null;
     }
 
     @Override

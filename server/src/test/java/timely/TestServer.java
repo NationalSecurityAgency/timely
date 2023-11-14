@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
+import org.apache.accumulo.core.client.AccumuloClient;
 import timely.configuration.Configuration;
 import timely.netty.http.NonSslRedirectHandler;
 import timely.netty.tcp.MetricsBufferDecoder;
@@ -25,8 +26,8 @@ public class TestServer extends Server {
     private final TestCaptureRequestHandler httpRequests = new TestCaptureRequestHandler();
     private final TestCaptureRequestHandler udpRequests = new TestCaptureRequestHandler();
 
-    public TestServer(Configuration conf) throws Exception {
-        super(conf, 1);
+    public TestServer(Configuration conf, AccumuloClient accumuloClient) {
+        super(conf, accumuloClient, 1);
     }
 
     @Override

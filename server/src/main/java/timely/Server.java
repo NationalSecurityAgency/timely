@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -61,6 +62,8 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.conf.ClientProperty;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -81,6 +84,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
 import timely.auth.JWTTokenHandler;
 import timely.auth.VisibilityCache;
+import timely.configuration.Accumulo;
 import timely.configuration.Configuration;
 import timely.configuration.Cors;
 import timely.configuration.ServerSsl;
@@ -141,6 +145,7 @@ public class Server {
     static ConfigurableApplicationContext applicationContext;
 
     private final Configuration config;
+    private AccumuloClient accumuloClient;
     private EventLoopGroup tcpWorkerGroup = null;
     private EventLoopGroup tcpBossGroup = null;
     private EventLoopGroup httpWorkerGroup = null;
@@ -413,17 +418,40 @@ public class Server {
         LOG.info("Server shut down.");
     }
 
-    public Server(Configuration conf, int eventLoopThreads) throws Exception {
+    public Server(Configuration conf, AccumuloClient accumuloClient, int eventLoopThreads) {
 
         DEFAULT_EVENT_LOOP_THREADS = eventLoopThreads;
         this.config = conf;
+        if (accumuloClient == null) {
+            this.accumuloClient = createAccumuloClient((conf));
+        } else {
+            this.accumuloClient = accumuloClient;
+        }
     }
 
-    public Server(Configuration conf) throws Exception {
+    public Server(Configuration conf, AccumuloClient accumuloClient) {
+        this(conf, accumuloClient, Math.max(1,
+                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2)));
+    }
 
-        DEFAULT_EVENT_LOOP_THREADS = Math.max(1,
-                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
-        this.config = conf;
+    public Server(Configuration conf) {
+        this(conf, null);
+    }
+
+    private AccumuloClient createAccumuloClient(Configuration conf) {
+        Properties properties = new Properties();
+        Accumulo accumuloConf = conf.getAccumulo();
+        properties.put(ClientProperty.INSTANCE_NAME.getKey(), accumuloConf.getInstanceName());
+        properties.put(ClientProperty.INSTANCE_ZOOKEEPERS.getKey(), accumuloConf.getZookeepers());
+        properties.put(ClientProperty.INSTANCE_ZOOKEEPERS_TIMEOUT.getKey(), accumuloConf.getZookeeperTimeout());
+        properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConf.getUsername());
+        properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConf.getPassword());
+        properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
+        return org.apache.accumulo.core.client.Accumulo.newClient().from(properties).build();
+    }
+
+    public void setAccumuloClient(AccumuloClient accumuloClient) {
+        this.accumuloClient = accumuloClient;
     }
 
     private void ensureZkPaths(CuratorFramework curatorFramework, String[] paths) {
@@ -473,7 +501,7 @@ public class Server {
 
         int nettyThreads = Math.max(1,
                 SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
-        dataStore = DataStoreFactory.create(config, nettyThreads);
+        dataStore = DataStoreFactory.create(config, accumuloClient, nettyThreads);
         if (config.getCache().isEnabled()) {
             dataStoreCache = new DataStoreCache(curatorFramework, config);
             dataStoreCache.setInternalMetrics(dataStore.getInternalMetrics());
@@ -483,7 +511,7 @@ public class Server {
         MetaCacheFactory.getCache(config);
         AuthCache.configure(config.getSecurity());
         VisibilityCache.init(config);
-        JWTTokenHandler.init(config.getSecurity(), config.getAccumulo());
+        JWTTokenHandler.init(config.getSecurity(), accumuloClient);
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;

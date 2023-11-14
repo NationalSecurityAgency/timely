@@ -3,6 +3,7 @@ package timely.configuration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.validation.Valid;
 
@@ -18,7 +19,7 @@ public class Configuration {
 
     private String metricsTable = "timely.metrics";
     private String metaTable = "timely.meta";
-    private HashMap<String, Integer> metricAgeOffDays = new HashMap<>();
+    private Map<String, Integer> metricAgeOffDays = new HashMap<>();
     private List<String> metricsReportIgnoredTags = new ArrayList<>();
     private String instance = null;
     private String defaultVisibility = null;
@@ -82,11 +83,11 @@ public class Configuration {
         this.defaultVisibility = defaultVisibility;
     }
 
-    public HashMap<String, Integer> getMetricAgeOffDays() {
+    public Map<String, Integer> getMetricAgeOffDays() {
         return metricAgeOffDays;
     }
 
-    public void setMetricAgeOffDays(HashMap<String, Integer> metricAgeOffDays) {
+    public void setMetricAgeOffDays(Map<String, Integer> metricAgeOffDays) {
         this.metricAgeOffDays = metricAgeOffDays;
     }
 

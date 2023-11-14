@@ -16,20 +16,18 @@ import java.util.stream.Collectors;
 import com.google.common.collect.Sets;
 import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.IteratorSetting;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.iterators.IteratorUtil;
 import org.apache.accumulo.tserver.compaction.CompactionStrategy;
 import org.apache.accumulo.tserver.compaction.DefaultCompactionStrategy;
 import org.apache.hadoop.io.Text;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import timely.auth.AuthCache;
 import timely.store.MetricAgeOffIterator;
 import timely.store.compaction.MetricCompactionStrategy;
 import timely.store.compaction.TabletRowAdapter;
@@ -50,20 +48,11 @@ public class MetricCompactionIT extends MacITBase {
     private static final EnumSet<IteratorUtil.IteratorScope> AGEOFF_SCOPES = EnumSet
             .allOf(IteratorUtil.IteratorScope.class);
 
-    private AccumuloClient accumuloClient;
     private MetricConfigurationAdapter adapter;
-
-    @BeforeClass
-    public static void setupClass() throws Exception {
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
-                new PasswordToken(MAC_ROOT_PASSWORD))) {
-            accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "3s");
-        }
-    }
 
     @Before
     public void setup() throws Exception {
-        accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER, new PasswordToken(MAC_ROOT_PASSWORD));
+        accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "3s");
         String metricsTable = conf.getMetricsTable();
         if (!metricsTable.contains(".")) {
             throw new IllegalArgumentException("Expected to find namespace in table name");
@@ -78,22 +67,15 @@ public class MetricCompactionIT extends MacITBase {
         accumuloClient.tableOperations().setProperty(conf.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(),
                 "50K");
         adapter.resetState();
+        startServer();
     }
 
     @After
     public void teardown() throws Exception {
+        accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "30s");
         adapter.resetState();
-        if (accumuloClient != null) {
-            accumuloClient.close();
-        }
-    }
-
-    @AfterClass
-    public static void teardownClass() throws Exception {
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
-                new PasswordToken(MAC_ROOT_PASSWORD))) {
-            accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "30s");
-        }
+        AuthCache.resetConfiguration();
+        stopServer();
     }
 
     @Test
@@ -149,7 +131,7 @@ public class MetricCompactionIT extends MacITBase {
         // check to make sure the table has only one iterator
         Map<String, EnumSet<IteratorUtil.IteratorScope>> itrs = accumuloClient.tableOperations()
                 .listIterators(metricsTable);
-        assertEquals(1, itrs.size());
+        assertEquals(2, itrs.size());
         assertTrue(itrs.containsKey("vers"));
 
         long timestampMax = System.currentTimeMillis();
@@ -233,6 +215,7 @@ public class MetricCompactionIT extends MacITBase {
             ageOffs.put("ageoff.default", Long.toString(ageOff));
             IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, AGE_OFF_ITERATOR_NAME,
                     MetricAgeOffIterator.class, ageOffs);
+            accumuloClient.tableOperations().removeIterator(tableName, AGE_OFF_ITERATOR_NAME, AGEOFF_SCOPES);
             accumuloClient.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
             accumuloClient.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(),
                     clazz.getName());

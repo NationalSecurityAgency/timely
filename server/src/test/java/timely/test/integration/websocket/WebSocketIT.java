@@ -40,10 +40,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import org.apache.accumulo.core.client.AccumuloClient;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.security.Authorizations;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,7 +49,6 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import timely.Server;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
@@ -81,7 +78,7 @@ import timely.util.JsonUtil;
 public class WebSocketIT extends OneWaySSLBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(WebSocketIT.class);
-    private static final Long TEST_TIME = System.currentTimeMillis() - (240 * 1000);
+    private static final Long TEST_TIME = ((System.currentTimeMillis() / 1000) * 1000) - (240 * 1000);
     private static final int WS_PORT = 54323;
     private static final URI LOCATION;
     static {
@@ -175,30 +172,19 @@ public class WebSocketIT extends OneWaySSLBase {
 
     }
 
-    @AfterClass
-    public static void after() {
-        AuthCache.resetConfiguration();
-    }
-
     private EventLoopGroup group = null;
     private Channel ch = null;
     private ClientHandler handler = null;
-    private Server s = null;
     private String sessionId = null;
     private UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("test", "test1");
 
     @Before
     public void setup() throws Exception {
-        s = new Server(conf);
-        s.run();
-
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
-                new PasswordToken(MAC_ROOT_PASSWORD))) {
-            accumuloClient.securityOperations().changeUserAuthorizations("root",
-                    new Authorizations("A", "B", "C", "D", "E", "F"));
-        }
+        accumuloClient.securityOperations().changeUserAuthorizations("root",
+                new Authorizations("A", "B", "C", "D", "E", "F"));
 
         this.sessionId = UUID.randomUUID().toString();
+        startServer();
         AuthCache.put(sessionId, TimelyPrincipal.anonymousPrincipal());
         group = new NioEventLoopGroup();
         SslContext ssl = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -227,6 +213,11 @@ public class WebSocketIT extends OneWaySSLBase {
             sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
             LOG.debug("Waiting for Handshake to complete");
         }
+    }
+
+    @After
+    public void shutdown() {
+        stopServer();
     }
 
     @Test
@@ -275,7 +266,6 @@ public class WebSocketIT extends OneWaySSLBase {
             }
         } finally {
             ch.close().sync();
-            s.shutdown();
             group.shutdownGracefully();
         }
     }

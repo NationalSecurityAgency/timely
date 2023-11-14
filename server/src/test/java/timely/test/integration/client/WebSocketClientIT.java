@@ -17,8 +17,6 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
-import org.apache.accumulo.core.client.AccumuloClient;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.http.client.HttpResponseException;
 import org.junit.After;
@@ -28,7 +26,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Server;
 import timely.api.response.MetricResponses;
 import timely.auth.AuthCache;
 import timely.client.websocket.ClientHandler;
@@ -42,10 +39,9 @@ import timely.test.integration.OneWaySSLBase;
 public class WebSocketClientIT extends OneWaySSLBase {
 
     private final static Logger LOG = LoggerFactory.getLogger(WebSocketClientIT.class);
-    private static final Long TEST_TIME = System.currentTimeMillis() - (240 * 1000);
+    private static final Long TEST_TIME = ((System.currentTimeMillis() / 1000) * 1000) - (240 * 1000);
 
     private static SSLContext sslCtx = null;
-    private Server s = null;
 
     private void setupSslCtx() throws Exception {
         Assert.assertNotNull(clientTrustStoreFile);
@@ -62,21 +58,16 @@ public class WebSocketClientIT extends OneWaySSLBase {
 
     @Before
     public void setup() throws Exception {
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
-                new PasswordToken(MAC_ROOT_PASSWORD))) {
-            accumuloClient.securityOperations().changeUserAuthorizations("root",
-                    new Authorizations("A", "B", "C", "D", "E", "F"));
-            s = new Server(conf);
-            s.run();
-            setupSslCtx();
-        }
+        accumuloClient.securityOperations().changeUserAuthorizations("root",
+                new Authorizations("A", "B", "C", "D", "E", "F"));
+        setupSslCtx();
+        startServer();
     }
 
-    @Override
     @After
     public void tearDown() throws Exception {
-        s.shutdown();
         AuthCache.resetConfiguration();
+        stopServer();
     }
 
     public void testWorkflow(WebSocketSubscriptionClient client) throws Exception {
@@ -147,12 +138,8 @@ public class WebSocketClientIT extends OneWaySSLBase {
     public void testClientAnonymousAccess() throws Exception {
         WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslCtx, "localhost", 54322, 54323, false,
                 false, null, null, false, 65536);
-        try {
-            conf.getSecurity().setAllowAnonymousWsAccess(true);
-            testWorkflow(client);
-        } finally {
-            conf.getSecurity().setAllowAnonymousWsAccess(false);
-        }
+        conf.getSecurity().setAllowAnonymousWsAccess(true);
+        testWorkflow(client);
     }
 
     @Test

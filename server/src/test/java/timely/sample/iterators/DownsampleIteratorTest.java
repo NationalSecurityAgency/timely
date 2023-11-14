@@ -252,7 +252,7 @@ public class DownsampleIteratorTest {
         iter.seek(new Range(), Collections.emptyList(), true);
         boolean hasTop = iter.hasTop();
         assertTrue(hasTop);
-        Key key = null;
+        Key key;
         Map<Set<Tag>, Downsample> samples = new HashMap<>();
         do {
             Map<Set<Tag>, Downsample> currentSamples = DownsampleIterator.decodeValue(iter.getTopValue());
@@ -269,6 +269,7 @@ public class DownsampleIteratorTest {
                 }
             }
             key = iter.getTopKey();
+            iter.next();
         } while (iter.hasTop());
 
         assertEquals(testData.lastKey(), key);

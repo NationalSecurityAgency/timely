@@ -2,23 +2,19 @@ package timely.test.integration;
 
 import org.junit.*;
 import org.junit.experimental.categories.Category;
-import timely.Server;
 import timely.test.IntegrationTest;
 
 @Category(IntegrationTest.class)
 public class StaticFileServerIT extends OneWaySSLBase {
 
-    private static Server s = null;
-
     @Before
-    public void before() throws Exception {
-        s = new Server(conf);
-        s.run();
+    public void startup() {
+        startServer();
     }
 
     @After
-    public void after() throws Exception {
-        s.shutdown();
+    public void shutdown() {
+        stopServer();
     }
 
     @Test(expected = NotSuccessfulException.class)

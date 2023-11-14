@@ -34,17 +34,15 @@ public class GetMetricTableSplitPoints {
             properties.put(ClientProperty.AUTH_PRINCIPAL.getKey(), accumuloConf.getUsername());
             properties.put(ClientProperty.AUTH_TOKEN.getKey(), accumuloConf.getPassword());
             properties.put(ClientProperty.AUTH_TYPE.getKey(), "password");
-            AccumuloClient accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient().from(properties)
+            try (AccumuloClient accumuloClient = org.apache.accumulo.core.client.Accumulo.newClient().from(properties)
                     .build();
-            Scanner s = accumuloClient.createScanner(conf.getMetaTable(),
-                    accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()));
-            try {
+                    Scanner s = accumuloClient.createScanner(conf.getMetaTable(),
+                            accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()))) {
+
                 s.setRange(new Range(Meta.METRIC_PREFIX, true, Meta.TAG_PREFIX, false));
                 for (Entry<Key, Value> e : s) {
                     System.out.println(e.getKey().getRow().toString().substring(Meta.METRIC_PREFIX.length()));
                 }
-            } finally {
-                s.close();
             }
         }
     }

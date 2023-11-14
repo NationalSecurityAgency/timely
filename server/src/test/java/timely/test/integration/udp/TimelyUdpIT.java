@@ -16,8 +16,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import com.google.flatbuffers.FlatBufferBuilder;
-import org.apache.accumulo.core.client.AccumuloClient;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
@@ -29,7 +27,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import timely.Server;
 import timely.TestServer;
 import timely.api.request.MetricRequest;
 import timely.auth.AuthCache;
@@ -37,29 +34,27 @@ import timely.model.Metric;
 import timely.model.Tag;
 import timely.test.IntegrationTest;
 import timely.test.TestConfiguration;
-import timely.test.integration.MacITBase;
+import timely.test.integration.InMemoryITBase;
 
 /**
  * Integration tests for the operations available over the UDP transport
  */
 @Category(IntegrationTest.class)
-public class TimelyUdpIT extends MacITBase {
+public class TimelyUdpIT extends InMemoryITBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TimelyUdpIT.class);
-    private static final Long TEST_TIME = System.currentTimeMillis();
+    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
 
     @Before
     public void setup() throws Exception {
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient("root", new PasswordToken("secret"))) {
-            accumuloClient.tableOperations().list().forEach(t -> {
-                if (t.startsWith("timely")) {
-                    try {
-                        accumuloClient.tableOperations().delete(t);
-                    } catch (Exception e) {
-                    }
+        accumuloClient.tableOperations().list().forEach(t -> {
+            if (t.startsWith("timely")) {
+                try {
+                    accumuloClient.tableOperations().delete(t);
+                } catch (Exception e) {
                 }
-            });
-        }
+            }
+        });
     }
 
     @After
@@ -69,7 +64,7 @@ public class TimelyUdpIT extends MacITBase {
 
     @Test
     public void testPut() throws Exception {
-        final TestServer m = new TestServer(conf);
+        final TestServer m = new TestServer(conf, accumuloClient);
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
@@ -100,8 +95,7 @@ public class TimelyUdpIT extends MacITBase {
 
     @Test
     public void testPutMultiple() throws Exception {
-
-        final TestServer m = new TestServer(conf);
+        final TestServer m = new TestServer(conf, accumuloClient);
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
@@ -184,7 +178,7 @@ public class TimelyUdpIT extends MacITBase {
         binary.get(data, 0, binary.remaining());
         LOG.debug("Sending {} bytes", data.length);
 
-        final TestServer m = new TestServer(conf);
+        final TestServer m = new TestServer(conf, accumuloClient);
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
@@ -228,7 +222,7 @@ public class TimelyUdpIT extends MacITBase {
 
     @Test
     public void testPutInvalidTimestamp() throws Exception {
-        final TestServer m = new TestServer(conf);
+        final TestServer m = new TestServer(conf, accumuloClient);
         m.run();
         InetSocketAddress address = new InetSocketAddress("127.0.0.1", 54325);
         DatagramPacket packet = new DatagramPacket("".getBytes(UTF_8), 0, 0, address.getAddress(), 54325);
@@ -244,17 +238,12 @@ public class TimelyUdpIT extends MacITBase {
 
     @Test
     public void testPersistence() throws Exception {
-        final Server s = new Server(conf);
-        s.run();
+        startServer();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-        } finally {
-            s.shutdown();
-        }
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient("root", new PasswordToken("secret"))) {
             assertTrue(accumuloClient.namespaceOperations().exists("timely"));
             assertTrue(accumuloClient.tableOperations().exists("timely.metrics"));
             assertTrue(accumuloClient.tableOperations().exists("timely.meta"));
@@ -283,22 +272,19 @@ public class TimelyUdpIT extends MacITBase {
                 count++;
             }
             assertEquals(15, count);
+        } finally {
+            stopServer();
         }
     }
 
     @Test
     public void testPersistenceWithVisibility() throws Exception {
-        final Server s = new Server(conf);
-        s.run();
+        startServer();
         try {
             put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
                     "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",
                     "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
-        } finally {
-            s.shutdown();
-        }
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient("root", new PasswordToken("secret"))) {
             accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
 
             int count = 0;
@@ -328,6 +314,8 @@ public class TimelyUdpIT extends MacITBase {
                 count++;
             }
             assertEquals(6, count);
+        } finally {
+            stopServer();
         }
     }
 

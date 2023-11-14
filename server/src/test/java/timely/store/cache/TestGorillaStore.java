@@ -68,7 +68,6 @@ public class TestGorillaStore {
 
         for (int x = 1; x <= 100; x++) {
 
-            System.out.println("adding value x:" + x);
             gStore.addValue(timestamp, 2.0);
             timestamp = timestamp + 1000;
 
@@ -79,7 +78,6 @@ public class TestGorillaStore {
                 continue;
             }
 
-            System.out.println("fetching values x:" + x);
             long totalObservations = 0;
 
             List<WrappedGorillaDecompressor> decompressorList = gStore.getDecompressors(start, timestamp);
