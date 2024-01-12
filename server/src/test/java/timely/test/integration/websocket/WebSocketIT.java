@@ -338,15 +338,6 @@ public class WebSocketIT extends OneWaySSLBase {
             second = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME + 500, 7.0D).tag(new Tag("rack", "r2"))
                     .tag(new Tag("tag3", "value3")).build();
 
-            int x = 1;
-            for (String r : response) {
-                responses = JsonUtil.getObjectMapper().readValue(r, MetricResponses.class);
-                for (MetricResponse r1 : responses.getResponses()) {
-                    System.out.println(x + " -- " + r1.toString());
-                }
-                x++;
-            }
-
             Assert.assertEquals(1, response.size());
             responses = JsonUtil.getObjectMapper().readValue(response.get(0), MetricResponses.class);
             Assert.assertEquals(2, responses.size());
@@ -770,7 +761,6 @@ public class WebSocketIT extends OneWaySSLBase {
                 response = handler.getResponses();
             }
             assertEquals(1, response.size());
-            System.out.println(response.get(0));
             SuggestResponse r = JsonUtil.getObjectMapper().readValue(response.get(0), SuggestResponse.class);
             assertEquals(1, r.getSuggestions().size());
             assertEquals("sys.cpu.user", r.getSuggestions().get(0));

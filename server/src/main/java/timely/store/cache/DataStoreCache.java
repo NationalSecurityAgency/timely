@@ -207,18 +207,14 @@ public class DataStoreCache {
         testIPRWLock(curatorFramework, nonCachedMetricsIPRWLock, NON_CACHED_METRICS_LOCK_PATH);
         nonCachedMetricsIP = new DistributedAtomicValue(curatorFramework, NON_CACHED_METRICS, new RetryForever(1000));
         try {
-            nonCachedMetricsIP.initialize(SerializationUtils.serialize(new TreeSet<>()));
+            nonCachedMetricsIP.forceSet(SerializationUtils.serialize(new TreeSet<>()));
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
-        TreeCacheListener nonCachedMetricsListener = new TreeCacheListener() {
-
-            @Override
-            public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
-                if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
-                    LOG.info("Handling nonCachedMetricsIP event {}", event.getType().toString());
-                    readNonCachedMetricsIP();
-                }
+        TreeCacheListener nonCachedMetricsListener = (cf, event) -> {
+            if (event.getType().equals(TreeCacheEvent.Type.NODE_UPDATED)) {
+                LOG.info("Handling nonCachedMetricsIP event {}", event.getType().toString());
+                readNonCachedMetricsIP();
             }
         };
 

@@ -47,14 +47,12 @@ public class InMemoryITBase {
     public static void setupInMemoryAccumulo() throws Exception {
 
         InMemoryInstance instance = new InMemoryInstance();
-        // try (AccumuloClient accumuloClient = new InMemoryAccumuloClient(ROOT_USER,
-        // instance)) {
         try {
             AccumuloClient accumuloClient = new InMemoryAccumuloClient(ROOT_USER, instance);
             accumuloClient.securityOperations().changeUserAuthorizations(accumuloClient.whoami(),
                     new Authorizations("PUBLIC", "A", "B", "C"));
         } catch (AccumuloSecurityException e) {
-            e.printStackTrace();
+            LOG.error(e.getMessage(), e);
         }
     }
 
@@ -103,11 +101,6 @@ public class InMemoryITBase {
 
     @After
     public void shutdownInMemoryBase() {
-        // if (accumuloClient != null) {
-        // accumuloClient.close();
-        // accumuloClient = null;
-        // }
-
         if (zookeeper != null) {
             zookeeper.close();
         }

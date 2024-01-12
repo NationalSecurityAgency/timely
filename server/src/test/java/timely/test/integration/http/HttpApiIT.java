@@ -563,11 +563,6 @@ public class HttpApiIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
 
-        System.out.println(TEST_TIME + "," + (TEST_TIME + 2) + "," + (TEST_TIME + 1000));
-        for (QueryResponse r : response) {
-            System.out.println(r.getDps() + " " + r.getTags());
-        }
-
         assertEquals(2, response.size());
         QueryResponse response1 = response.get(0);
         Map<String, String> tags = response1.getTags();

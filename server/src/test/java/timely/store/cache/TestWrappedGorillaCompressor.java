@@ -18,8 +18,12 @@ import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestWrappedGorillaCompressor {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TestWrappedGorillaCompressor.class);
 
     @Test
     public void testSerialization() throws IOException, ClassNotFoundException {
@@ -82,13 +86,13 @@ public class TestWrappedGorillaCompressor {
 
                 GorillaDecompressor d = new GorillaDecompressor(new LongArrayInput(c.getCompressorOutput()));
                 LinkedList<Pair> q = new LinkedList<>();
-                Pair p = null;
+                Pair p;
                 while ((p = d.readPair()) != null) {
                     q.add(p);
                 }
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            LOG.error(e.getMessage(), e);
         }
     }
 }

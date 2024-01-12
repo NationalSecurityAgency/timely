@@ -308,9 +308,11 @@ public class Server {
         // wait for the channels to shutdown
         channelFutures.forEach(f -> {
             try {
-                f.get();
+                if (!f.isDone()) {
+                    f.get();
+                }
             } catch (final Exception e) {
-                LOG.error("Channel:" + f.channel().config() + " -> " + e.getMessage(), e);
+                LOG.error("Channel:" + f.channel().config() + " -> " + e.getMessage());
             }
         });
 
@@ -547,7 +549,6 @@ public class Server {
         tcpServer.childHandler(setupTcpChannel());
         tcpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         tcpServer.option(ChannelOption.SO_BACKLOG, 128);
-        tcpServer.option(ChannelOption.SO_KEEPALIVE, true);
         final int tcpPort = config.getServer().getTcpPort();
         final String tcpIp = config.getServer().getIp();
         tcpChannelHandle = tcpServer.bind(tcpIp, tcpPort).sync().channel();
@@ -572,7 +573,6 @@ public class Server {
         httpServer.childHandler(setupHttpChannel(config, sslCtx));
         httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         httpServer.option(ChannelOption.SO_BACKLOG, 128);
-        httpServer.option(ChannelOption.SO_KEEPALIVE, true);
         httpChannelHandle = httpServer.bind(httpIp, httpPort).sync().channel();
         final String httpAddress = ((InetSocketAddress) httpChannelHandle.localAddress()).getAddress().getHostAddress();
 
@@ -585,9 +585,7 @@ public class Server {
         wsServer.childHandler(setupWSChannel(sslCtx, config));
         wsServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         wsServer.option(ChannelOption.SO_BACKLOG, 128);
-        wsServer.option(ChannelOption.SO_KEEPALIVE, true);
-        /* Not sure if next two lines are necessary */
-        wsServer.option(ChannelOption.SO_SNDBUF, 1048576);
+        /* Not sure if next line is necessary */
         wsServer.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(620145, 838860));
         wsChannelHandle = wsServer.bind(wsIp, wsPort).sync().channel();
         final String wsAddress = ((InetSocketAddress) wsChannelHandle.localAddress()).getAddress().getHostAddress();
@@ -618,7 +616,7 @@ public class Server {
         Boolean generate = sslCfg.isUseGeneratedKeypair();
         SslContextBuilder ssl;
         if (generate) {
-            LOG.warn("Using generated self signed server certificate");
+            LOG.info("Using generated self signed server certificate");
             Date begin = new Date();
             Date end = new Date(begin.getTime() + TimeUnit.DAYS.toMillis(7));
             SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", begin, end);

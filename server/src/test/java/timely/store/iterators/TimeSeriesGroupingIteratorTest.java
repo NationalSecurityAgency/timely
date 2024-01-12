@@ -34,7 +34,7 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
     @Before
     public void setup() {
         table.clear();
-        long ts = System.currentTimeMillis();
+        long ts = ((System.currentTimeMillis() / 1000) * 1000);
         for (int i = 0; i < 100; i++) {
             ts += 1000;
             Metric m = new Metric("sys.cpu.user", ts, i * 1.0D, tags);
@@ -80,7 +80,7 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
     @Test
     public void testMultipleTimeSeriesMovingAverage() throws Exception {
         table.clear();
-        long ts = System.currentTimeMillis();
+        long ts = ((System.currentTimeMillis() / 1000) * 1000);
         List<Tag> tags1 = new ArrayList<>();
         tags1.add(new Tag("host", "r01n01"));
         List<Tag> tags2 = new ArrayList<>();
@@ -122,7 +122,7 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
     @Test
     public void testTimeSeriesDropOff() throws Exception {
         table.clear();
-        long ts = System.currentTimeMillis();
+        long ts = ((System.currentTimeMillis() / 1000) * 1000);
         List<Tag> tags1 = new ArrayList<>();
         tags1.add(new Tag("host", "r01n01"));
         List<Tag> tags2 = new ArrayList<>();
@@ -167,7 +167,7 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
     @Test
     public void testAdditionalTimeSeries() throws Exception {
         table.clear();
-        long ts = System.currentTimeMillis();
+        long ts = ((System.currentTimeMillis() / 1000) * 1000);
         List<Tag> tags1 = new ArrayList<>();
         tags1.add(new Tag("host", "r01n01"));
         List<Tag> tags2 = new ArrayList<>();
@@ -213,7 +213,7 @@ public class TimeSeriesGroupingIteratorTest extends IteratorTestBase {
     @Test
     public void testManySparseTimeSeries() throws Exception {
         table.clear();
-        long ts = System.currentTimeMillis();
+        long ts = ((System.currentTimeMillis() / 1000) * 1000);
         List<Tag> tags1 = new ArrayList<>();
         tags1.add(new Tag("host", "r01n01"));
         List<Tag> tags2 = new ArrayList<>();

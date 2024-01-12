@@ -89,12 +89,12 @@ public class DownsampleIterator extends WrappingIterator {
                     long timestamp = metric.getValue().getTimestamp();
                     if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
                         LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory
-                                + " for metric=" + metric.toString());
+                                + " for metric=" + metric);
                         break;
                     }
                     last = topKey;
 
-                    Set<Tag> tags = new HashSet<Tag>(metric.getTags());
+                    Set<Tag> tags = new HashSet<>(metric.getTags());
                     Downsample sample = value.get(tags);
                     if (sample == null) {
                         try {

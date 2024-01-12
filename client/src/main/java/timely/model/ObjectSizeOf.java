@@ -6,7 +6,9 @@ import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple interface that objects can implement to return the object size.
@@ -46,7 +48,7 @@ public interface ObjectSizeOf {
 
     public static class Sizer {
 
-        private static final Logger log = Logger.getLogger(Sizer.class.getCanonicalName());
+        private static final Logger LOG = LoggerFactory.getLogger(Sizer.class);
         public static final short OBJECT_OVERHEAD = 8;
         public static final short ARRAY_OVERHEAD = 12;
         public static final short REFERENCE = 4;
@@ -150,7 +152,7 @@ public interface ObjectSizeOf {
                             }
                         }
                     } catch (Throwable t) {
-                        log.warning("Unable to determine object size for " + o);
+                        LOG.warn("Unable to determine object size for " + o, t);
                     }
                     if (debug) {
                         System.out.println(o.getClass().getCanonicalName() + "=" + size);

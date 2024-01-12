@@ -1,12 +1,14 @@
 package timely.api.response.timeseries;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
+import timely.model.Tag;
 import timely.util.JsonUtil;
 
 public class SearchLookupResponseTest {
@@ -42,14 +44,11 @@ public class SearchLookupResponseTest {
     }
 
     @Test
-    public void testMetricRequest() {
-        try {
-            String r = "{\"operation\":\"lookup\", \"metric\":\"testmetric\", \"tags\":[{\"host\":\".*\"}]}";
-            SearchLookupRequest req = JsonUtil.getObjectMapper().readValue(r, SearchLookupRequest.class);
-            System.out.println(req);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void testMetricRequest() throws Exception {
+        String r = "{\"operation\":\"lookup\", \"metric\":\"testmetric\", \"tags\":[{\"host\":\".*\"}]}";
+        SearchLookupRequest req = JsonUtil.getObjectMapper().readValue(r, SearchLookupRequest.class);
+        Assert.assertEquals("testmetric", req.getQuery());
+        Assert.assertEquals(Collections.singletonList(new Tag("host", ".*")), req.getTags());
     }
 
 }

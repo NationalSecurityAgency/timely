@@ -1,5 +1,7 @@
 package timely.store.cache;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -20,37 +22,24 @@ public class TestGorillaStore {
     }
 
     @Test
-    public void testOne() {
+    public void testGorillaStore() {
 
         GorillaStore gStore = new GorillaStore("", Long.MAX_VALUE);
 
+        Double[] valueArray = new Double[] { 1.123, 2.314, 3.856, 4.7678, 5.8966, 6.0976, 1.2345, 2.3456, 3.4567 };
+        List<Double> values = new ArrayList<>(Arrays.asList(valueArray));
+
         long now = System.currentTimeMillis();
-        gStore.addValue(now += 100, 1.123);
-        gStore.addValue(now += 100, 2.314);
-        gStore.addValue(now += 100, 3.856);
-        gStore.addValue(now += 100, 4.7678);
-        gStore.addValue(now += 100, 5.8966);
-        gStore.addValue(now += 100, 6.0976);
-        gStore.addValue(now += 100, 1.2345);
+        for (Double d : values) {
+            gStore.addValue(now += 100, d);
+        }
 
         List<WrappedGorillaDecompressor> decompressorList = gStore.getDecompressors(0, Long.MAX_VALUE);
         Pair pair;
+        int x = 0;
         for (WrappedGorillaDecompressor w : decompressorList) {
             while ((pair = w.readPair()) != null) {
-                System.out.println(pair.getTimestamp() + " --> " + pair.getDoubleValue());
-            }
-        }
-
-        System.out.println("---------------");
-
-        gStore.addValue(now += 100, 2.3456);
-        gStore.addValue(now += 100, 3.4567);
-
-        decompressorList = gStore.getDecompressors(0, Long.MAX_VALUE);
-        pair = null;
-        for (WrappedGorillaDecompressor w : decompressorList) {
-            while ((pair = w.readPair()) != null) {
-                System.out.println(pair.getTimestamp() + " --> " + pair.getDoubleValue());
+                Assert.assertEquals(values.get(x++).doubleValue(), pair.getDoubleValue(), 0);
             }
         }
     }
@@ -86,9 +75,7 @@ public class TestGorillaStore {
                     totalObservations++;
                 }
             }
-
             Assert.assertEquals("Unexpected number of total observations", x, totalObservations);
-
         }
     }
 

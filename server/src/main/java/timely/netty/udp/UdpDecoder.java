@@ -22,11 +22,11 @@ public class UdpDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         ByteBuf buf = in.readBytes(in.readableBytes());
+        String input = null;
         try {
             if (buf == Unpooled.EMPTY_BUFFER) {
                 return;
             }
-            final String input;
             if (buf.hasArray()) {
                 input = new String(buf.array(), UTF_8);
             } else {
@@ -58,6 +58,8 @@ public class UdpDecoder extends ByteToMessageDecoder {
             tcp.parse(input);
             out.add(tcp);
             LOG.trace("Converted {} to {}", input, tcp);
+        } catch (Exception e) {
+            LOG.error("{} parsing line:[{}]", e.getMessage(), input);
         } finally {
             buf.release();
         }

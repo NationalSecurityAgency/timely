@@ -22,7 +22,7 @@ public class TcpDecoder extends ByteToMessageDecoder {
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         ByteBuf buf = in.readBytes(in.readableBytes());
-        String input = "";
+        String input = null;
         try {
             if (buf == Unpooled.EMPTY_BUFFER) {
                 return;

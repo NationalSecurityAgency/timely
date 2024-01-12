@@ -10,7 +10,6 @@ import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
 import timely.configuration.Configuration;
 import timely.model.Metric;
-import timely.model.ObjectSizeOf;
 import timely.model.Tag;
 import timely.model.Value;
 
@@ -56,7 +55,6 @@ public class TestMemoryDataStore {
         }
         mmStore.flushCaches(-1);
         return mmStore;
-
     }
 
     private DataStoreCache getMetricMemoryStore2(long baseTimestamp) throws TimelyException {
@@ -69,26 +67,20 @@ public class TestMemoryDataStore {
         tags.put("rack", "r01n01");
         tags.put("instance", "sample");
 
-        boolean debug = false;
-        System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
-
         Random r = new Random();
         long timestamp = baseTimestamp;
         for (int x = 0; x <= 60 * 24; x++) {
             mmStore.store(createMetric("metric.number.1", tags, r.nextInt(1000), timestamp + (x * 1000)));
-            if (x == 0) {
-                System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
-            }
         }
-        System.out.println("bytesUsed=" + ObjectSizeOf.Sizer.getObjectSize(mmStore, true, debug));
         mmStore.flushCaches(-1);
         return mmStore;
     }
 
     @Test
-    public void testOne() throws TimelyException {
+    public void testFiveSecondDownsample() throws TimelyException {
 
-        long now = System.currentTimeMillis();
+        // 5 second boundary so that we know how many downsamples to expect
+        long now = (System.currentTimeMillis() / 5000) * 5000;
         DataStoreCache mmStore = getMetricMemoryStore1(now);
 
         QueryRequest query = new QueryRequest();
@@ -101,20 +93,21 @@ public class TestMemoryDataStore {
         subQuery.addTag("host", ".*");
         query.setQueries(Collections.singleton(subQuery));
 
-        try {
-            List<QueryResponse> responseList = mmStore.query(query);
-            for (QueryResponse response : responseList) {
-                System.out.println(response.toString());
-            }
-        } catch (TimelyException e) {
-            e.printStackTrace();
+        List<QueryResponse> responseList = mmStore.query(query);
+        Assert.assertEquals(3, responseList.size());
+        int downsamples = 0;
+        for (QueryResponse r : responseList) {
+            Assert.assertEquals("mymetric", r.getMetric());
+            downsamples += r.getDps().size();
         }
+        Assert.assertEquals(8, downsamples);
     }
 
     @Test
-    public void testStorage() throws TimelyException {
+    public void testFiveMinuteDownsample() throws TimelyException {
 
-        long now = System.currentTimeMillis();
+        // 5 minute boundary so that we know how many downsamples to expect
+        long now = (System.currentTimeMillis() / 300000) * 300000;
         DataStoreCache mmStore = getMetricMemoryStore2(now);
 
         QueryRequest query = new QueryRequest();
@@ -127,15 +120,19 @@ public class TestMemoryDataStore {
         subQuery.addTag("host", ".*");
         query.setQueries(Collections.singleton(subQuery));
 
-        try {
-            List<QueryResponse> responseList = mmStore.query(query);
-            for (QueryResponse response : responseList) {
-                System.out.println(response.toString());
-            }
-        } catch (TimelyException e) {
-            e.printStackTrace();
-        }
+        List<QueryResponse> responseList = mmStore.query(query);
+        Assert.assertEquals(1, responseList.size());
+        QueryResponse r = responseList.get(0);
+        Assert.assertEquals("metric.number.1", r.getMetric());
+        Assert.assertEquals(5, r.getDps().size());
     }
+
+    /*
+     * timely.api.response.timeseries.QueryResponse@4263b080[metric=metric.number.1,
+     * tags={host=r01n01},aggregatedTags=[],dps={1700008200000=484.239837398374,
+     * 1700008500000=469.02666666666664, 1700008800000=499.17,
+     * 1700009100000=504.14666666666665, 1700009400000=469.8576271186441}]
+     */
 
     private Metric createMetric(String metric, Map<String, String> tags, double value, long timestamp) {
         Metric m = new Metric();
