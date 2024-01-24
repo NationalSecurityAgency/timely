@@ -67,7 +67,6 @@ public class MetricCompactionIT extends MacITBase {
         accumuloClient.tableOperations().setProperty(conf.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(),
                 "50K");
         adapter.resetState();
-        startServer();
     }
 
     @After
@@ -75,7 +74,6 @@ public class MetricCompactionIT extends MacITBase {
         accumuloClient.instanceOperations().setProperty(Property.TSERV_MAJC_DELAY.getKey(), "30s");
         adapter.resetState();
         AuthCache.resetConfiguration();
-        stopServer();
     }
 
     @Test
@@ -116,7 +114,7 @@ public class MetricCompactionIT extends MacITBase {
 
     @Test
     public void tabletsCompactedUntilAgeOff() throws Exception {
-        // test will replicated problem in time-series tablets where data is
+        // test will replicate problem in time-series tablets where data is
         // split automatically and the resulting tablets will not be cleaned up
         // by the default compaction strategy
         //
@@ -131,7 +129,7 @@ public class MetricCompactionIT extends MacITBase {
         // check to make sure the table has only one iterator
         Map<String, EnumSet<IteratorUtil.IteratorScope>> itrs = accumuloClient.tableOperations()
                 .listIterators(metricsTable);
-        assertEquals(2, itrs.size());
+        assertEquals(1, itrs.size());
         assertTrue(itrs.containsKey("vers"));
 
         long timestampMax = System.currentTimeMillis();

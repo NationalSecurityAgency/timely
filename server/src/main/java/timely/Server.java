@@ -4,7 +4,6 @@ import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getTimeInMil
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
-import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -56,7 +55,6 @@ import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.OpenSslServerSessionContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -84,6 +82,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
 import timely.auth.JWTTokenHandler;
 import timely.auth.VisibilityCache;
+import timely.auth.util.SslHelper;
 import timely.configuration.Accumulo;
 import timely.configuration.Configuration;
 import timely.configuration.Cors;
@@ -513,7 +512,7 @@ public class Server {
         MetaCacheFactory.getCache(config);
         AuthCache.configure(config.getSecurity());
         VisibilityCache.init(config);
-        JWTTokenHandler.init(config.getSecurity(), accumuloClient);
+        JWTTokenHandler.init(config.getSecurity().getJwtSsl(), accumuloClient);
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;
@@ -622,32 +621,13 @@ public class Server {
             SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", begin, end);
             ssl = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
         } else {
-            String cert = sslCfg.getCertificateFile();
-            String key = sslCfg.getKeyFile();
-            String keyPass = sslCfg.getKeyPassword();
-            if (null == cert || null == key) {
+            if (null == sslCfg.getKeyStoreFile()) {
                 throw new IllegalArgumentException("Check your SSL properties, something is wrong.");
             }
-            ssl = SslContextBuilder.forServer(new File(cert), new File(key), keyPass);
+            ssl = SslHelper.getSslContextBuilder(sslCfg);
         }
-
-        ssl.ciphers(sslCfg.getUseCiphers());
-
         // Can't set to REQUIRE because the CORS pre-flight requests will fail.
         ssl.clientAuth(ClientAuth.OPTIONAL);
-
-        Boolean useOpenSSL = sslCfg.isUseOpenssl();
-        if (useOpenSSL) {
-            ssl.sslProvider(SslProvider.OPENSSL);
-        } else {
-            ssl.sslProvider(SslProvider.JDK);
-        }
-        String trustStore = sslCfg.getTrustStoreFile();
-        if (null != trustStore) {
-            if (!trustStore.isEmpty()) {
-                ssl.trustManager(new File(trustStore));
-            }
-        }
         return ssl.build();
     }
 
@@ -686,7 +666,7 @@ public class Server {
                 ch.pipeline().addLast("queryDecoder",
                         new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler()
-                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isUseGeneratedKeypair()));
+                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
                 ch.pipeline().addLast("strict", new StrictTransportHandler(config));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("doLogin",
@@ -700,7 +680,7 @@ public class Server {
                 ch.pipeline().addLast("cache", new HttpCacheRequestHandler(dataStoreCache));
                 ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler()
-                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isUseGeneratedKeypair()));
+                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
 
             }
         };

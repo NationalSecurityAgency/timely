@@ -13,7 +13,7 @@
 		<beans:property name="subjectDnRegex" value="CN=(.*?)(?:,|$)"/>
 	</beans:bean>
 
-	<beans:bean id="timelyUserDetailsService" class="timely.auth.UserDetailsService">
+	<beans:bean id="timelyUserDetailsService" class="timely.auth.FileUserDetailsService">
 		<beans:property name="users">
 			<util:list>
 				<beans:bean class="timely.auth.TimelyUser">

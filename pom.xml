@@ -40,6 +40,7 @@
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <surefire.forkCount>1C</surefire.forkCount>
     <version.accumulo>2.1.2</version.accumulo>
     <version.buildnumber-maven>1.4</version.buildnumber-maven>
     <version.caffeine>3.1.6</version.caffeine>
@@ -77,19 +78,22 @@
     <version.maven-build-helper>3.0.0</version.maven-build-helper>
     <version.maven-compiler>3.8.1</version.maven-compiler>
     <version.maven-dependency>3.1.1</version.maven-dependency>
+    <version.maven-failsafe-plugin>3.2.5</version.maven-failsafe-plugin>
     <version.maven-jar>3.1.2</version.maven-jar>
     <version.maven-pmd>3.12.0</version.maven-pmd>
     <version.maven-rpm>2.2.0</version.maven-rpm>
     <version.maven-shade>3.2.1</version.maven-shade>
-    <version.maven-surefire>3.0.0-M3</version.maven-surefire>
+    <version.maven-surefire-plugin>3.2.5</version.maven-surefire-plugin>
     <version.micrometer>1.11.1</version.micrometer>
     <version.netty>4.1.45.Final</version.netty>
     <version.netty-tcnative>2.0.29.Final</version.netty-tcnative>
     <version.os-maven>1.5.0.Final</version.os-maven>
     <version.powermock>1.6.4</version.powermock>
+    <version.reactor-netty>0.8.5.RELEASE</version.reactor-netty>
     <version.slf4j>1.7.26</version.slf4j>
     <version.spotbugs-maven>4.7.3.5</version.spotbugs-maven>
     <version.spring-boot>2.1.3.RELEASE</version.spring-boot>
+    <version.spring-webflux>5.1.4.RELEASE</version.spring-webflux>
     <version.tyrus>1.15</version.tyrus>
   </properties>
   <dependencyManagement>
@@ -256,6 +260,10 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -317,22 +325,44 @@
         <groupId>org.apache.flink</groupId>
         <artifactId>flink-clients_2.11</artifactId>
         <version>${version.flink}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.flink</groupId>
         <artifactId>flink-java</artifactId>
         <version>${version.flink}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.flink</groupId>
         <artifactId>flink-streaming-java_2.11</artifactId>
         <version>${version.flink}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client</artifactId>
         <version>${version.hadoop}</version>
         <exclusions>
+          <exclusion>
+            <groupId>ch.qos.reload4j</groupId>
+            <artifactId>reload4j</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
@@ -350,6 +380,10 @@
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
           </exclusion>
@@ -365,8 +399,20 @@
         <version>${version.hadoop}</version>
         <exclusions>
           <exclusion>
+            <groupId>ch.qos.reload4j</groupId>
+            <artifactId>reload4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>jdk.tools</groupId>
+            <artifactId>jdk.tools</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
           </exclusion>
           <exclusion>
             <groupId>log4j</groupId>
@@ -388,6 +434,10 @@
         <version>${version.hadoop}</version>
         <exclusions>
           <exclusion>
+            <groupId>ch.qos.reload4j</groupId>
+            <artifactId>reload4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
           </exclusion>
@@ -402,6 +452,10 @@
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
           </exclusion>
           <exclusion>
             <groupId>log4j</groupId>
@@ -452,6 +506,22 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
         <version>${version.slf4j}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-webflux</artifactId>
+        <version>${version.spring-webflux}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+        <version>${version.spring-boot}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>timely</groupId>
@@ -570,6 +640,10 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${version.maven-compiler}</version>
+          <configuration>
+            <source>${maven.compiler.source}</source>
+            <target>${maven.compiler.target}</target>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -578,15 +652,48 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.0.0</version>
+          <executions>
+            <execution>
+              <id>enforce-banned-dependencies</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <bannedDependencies>
+                    <excludes>
+                      <!-- do not use the following slf4j binders -->
+                      <exclude>ch.qos.reload4j:reload4j</exclude>
+                      <exclude>org.slf4j:slf4j-reload4j</exclude>
+                      <!-- spring boot microservices do not use 1.x versions of log4j -->
+                      <exclude>log4j:log4j</exclude>
+                      <!-- spring boot microservices do not use 1.x versions of junit -->
+                      <exclude>junit:junit</exclude>
+                    </excludes>
+                    <includes>
+                      <!-- some spring boot microservices include test dependencies which use 1.x versions of junit -->
+                      <include>junit:junit:*:*:test</include>
+                    </includes>
+                  </bannedDependencies>
+                </rules>
+                <fail>true</fail>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>${version.maven-surefire}</version>
+          <version>${version.maven-failsafe-plugin}</version>
           <configuration>
-            <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -Dzookeeper.sasl.client=false</argLine>
+            <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -XX:+TieredCompilation -XX:TieredStopAtLevel=1  -Dfile.encoding=UTF8 -Duser.timezone=GMT -Xmx1024m -Dapple.awt.UIElement=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc= -Dzookeeper.sasl.client=false</argLine>
             <includes>
-              <include>**/*.java</include>
+              <include>**/*IT.java</include>
             </includes>
             <groups>timely.test.IntegrationTest</groups>
-            <redirectTestOutputToFile>false</redirectTestOutputToFile>
+            <redirectTestOutputToFile>true</redirectTestOutputToFile>
           </configuration>
           <executions>
             <execution>
@@ -627,9 +734,16 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>${version.maven-surefire}</version>
+          <version>${version.maven-surefire-plugin}</version>
           <configuration>
-            <argLine>${sureFireArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty-tcnative_linux_x86_64.so -Dzookeeper.sasl.client=false</argLine>
+            <reuseForks>false</reuseForks>
+            <forkCount>${surefire.forkCount}</forkCount>
+            <threadCount>1</threadCount>
+            <threadCountClasses>1</threadCountClasses>
+            <threadCountMethods>0</threadCountMethods>
+            <threadCountSuites>0</threadCountSuites>
+            <argLine>${sureFireArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -XX:+TieredCompilation -XX:TieredStopAtLevel=1  -Dfile.encoding=UTF8 -Duser.timezone=GMT -Xmx1024m -Dapple.awt.UIElement=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc= -Dzookeeper.sasl.client=false</argLine>
+            <runOrder>random</runOrder>
             <excludedGroups>timely.test.IntegrationTest</excludedGroups>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
           </configuration>
@@ -799,6 +913,35 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.0.0-M3</version>
+        <executions>
+          <execution>
+            <id>enforce-no-snapshots</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireReleaseDeps>
+                  <message>Snapshot dependencies are prohibited on a release build.</message>
+                  <onlyWhenRelease>true</onlyWhenRelease>
+                </requireReleaseDeps>
+                <requireJavaVersion>
+                  <version>${java.version}</version>
+                </requireJavaVersion>
+              </rules>
+              <fail>true</fail>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
   <reporting>
@@ -870,7 +1013,7 @@
         </property>
       </activation>
       <properties>
-        <maven.compiler.release>8</maven.compiler.release>
+        <maven.compiler.release>${maven.compiler.target}</maven.compiler.release>
       </properties>
       <build>
         <pluginManagement>
@@ -933,10 +1076,7 @@
       </build>
     </profile>
     <profile>
-      <id>jdk-release-flag</id>
-      <activation>
-        <jdk>[9,)</jdk>
-      </activation>
+      <id>jdk8</id>
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
       </properties>

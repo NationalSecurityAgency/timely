@@ -13,30 +13,32 @@ timely-balancer:
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
     serverSsl:
-      certificate-file:
-      key-file:
-      #key-password:
+      key-store-type:
+      key-store-file:
+      key-store-password:
       use-generated-keypair: true
+      ignore-ssl-handshake-errors: true
+      trust-store-type:
       trust-store-file:
-      use-openssl: true
-      #use-ciphers:
+      trust-store-password:
     clientSsl:
-      keyFile:
-      keyType: pkcs12
-      #keyPassword:
-      trustStoreFile:
-      trustStoreType: jks
-      #trustStorePassword:
-    jwtCheckKeyStore:
-    jwtCheckKeyType:
-    jwtCheckKeyPassword:
+      key-store-type:
+      key-store-file:
+      key-store-password:
+      trust-store-type:
+      trust-store-file:
+      trust-store-password:
+    jwtSsl:
+      key-store-type:
+      key-store-file:
+      key-store-password:
   cache:
     enabled: false
     metric-age-off-hours:
       default: 26
     nonCachedMetrics:
   server:
-    ip: 127.0.0.1
+    ip: 0.0.0.0
     tcpPort: 4242
     numTcpPools: 1
     tcpBufferSize: 100
@@ -77,7 +79,7 @@ timely-balancer:
       testOnReturn: false
   http:
     host: localhost
-    ip: 127.0.0.1
+    ip: 0.0.0.0
     port: 4243
     redirect-path: /secure-me
     strict-transport-max-age: 608400
@@ -106,7 +108,7 @@ timely-balancer:
       testOnBorrow: false
       testOnReturn: false
   websocket:
-    ip: 127.0.0.1
+    ip: 0.0.0.0
     port: 5244
     timeout: 60
     subscription-lag: 120

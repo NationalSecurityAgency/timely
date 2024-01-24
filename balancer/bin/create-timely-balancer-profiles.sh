@@ -13,10 +13,6 @@ CONF_DIR=${BASE_DIR}/conf
 
 . ${BIN_DIR}/timely-balancer-env.sh
 
-HOST_IP=$(hostname -I | awk '{print $1}')
-HOST=$(hostname -s)
-HOST_FQDN=$(hostname -f)
-
 for i in $(seq 1 $NUM_PROFILES); do
     if [ "$NUM_PROFILES" -eq "1" ]; then
         FILENAME=timely-balancer.yml
@@ -26,9 +22,6 @@ for i in $(seq 1 $NUM_PROFILES); do
 
     echo "creating configuration file ${CONF_DIR}/${FILENAME}"
     cp ${CONF_DIR}/timely-balancer-template.yml ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${HOST}/${HOST}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${HOST_FQDN}/${HOST_FQDN}/g" ${CONF_DIR}/${FILENAME}
-    sed -i "s/\${HOST_IP}/${HOST_IP}/g" ${CONF_DIR}/${FILENAME}
     sed -i "s/\${ZOOKEEPERS}/${ZOOKEEPERS}/g" ${CONF_DIR}/${FILENAME}
     MULTIPLE=$(($i - 1))
     TCP_PORT=$(($TCP_PORT_START + $MULTIPLE * $PORT_INCREMENT))

@@ -10,6 +10,10 @@ fi
 
 THIS_DIR="${THIS_SCRIPT%/*}"
 
+set -a
+. ${THIS_DIR}/timely-env.sh
+set +a
+
 if [ -n "$1" ]; then
   export PROFILE_NUM=$1
   PROFILE_ARG="--spring.profiles.active=${PROFILE_NUM}"
@@ -53,11 +57,9 @@ if [ "$PID" == "" ]; then
     JVM_ARGS="${JVM_ARGS} -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
     JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
 
-    JVM_ARGS="${JVM_ARGS} -Xmx4G -Xms4G -XX:NewSize=1G -XX:MaxNewSize=1G -XX:+UnlockDiagnosticVMOptions"
-    JVM_ARGS="${JVM_ARGS} -XX:+UseConcMarkSweepGC -XX:+CMSScavengeBeforeRemark -XX:+ScavengeBeforeFullGC -XX:ReservedCodeCacheSize=384M -XX:+UseCodeCacheFlushing -XX:+UseParNewGC"
-    JVM_ARGS="${JVM_ARGS} -XX:SurvivorRatio=8 -XX:ParallelGCThreads=16 -XX:ConcGCThreads=8 -XX:+UseCondCardMark  -XX:ParGCCardsPerStrideChunk=32768"
-    JVM_ARGS="${JVM_ARGS} -XX:+CMSClassUnloadingEnabled -XX:+CMSParallelRemarkEnabled -XX:CMSInitiatingOccupancyFraction=30 -XX:+UseCMSInitiatingOccupancyOnly"
+    JVM_ARGS="${JVM_ARGS} -Xmx4G -Xms4G -XX:NewSize=1G -XX:MaxNewSize=1G"
     JVM_ARGS="${JVM_ARGS} -XX:+UseCompressedOops -XX:+UseNUMA -Djava.net.preferIPv4Stack=true"
+    JVM_ARGS="${JVM_ARGS} -XX:+UseG1GC -XX:MaxGCPauseMillis=4000 -XX:ParallelGCThreads=20 -XX:+UseStringDeduplication"
 
     echo "$JAVA_HOME/bin/java ${JVM_ARGS} timely.Server --spring.config.name=timely ${PROFILE_ARG}"
     nohup $JAVA_HOME/bin/java ${JVM_ARGS} timely.Server --spring.config.name=timely ${PROFILE_ARG} >> ${LOG_DIR}/timely-server${PROFILE_NUM}-startup.log 2>&1 &

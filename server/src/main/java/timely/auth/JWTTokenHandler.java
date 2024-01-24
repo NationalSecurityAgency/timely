@@ -7,19 +7,24 @@ import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.Jwts;
 import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
-import timely.configuration.Security;
+import timely.configuration.JwtSsl;
 
 /**
  * Converts between a String encoded JSON Web Token and a collection of
@@ -32,23 +37,23 @@ public class JWTTokenHandler {
     private static ObjectMapper objectMapper;
     private static Collection<String> accumuloAuths = new TreeSet<>();
 
-    public static void init(Security security, AccumuloClient accumuloClient) {
-        if (StringUtils.isNotBlank(security.getJwtCheckKeyStore())) {
+    public static void init(JwtSsl ssl, AccumuloClient accumuloClient) {
+        if (StringUtils.isNotBlank(ssl.getKeyStoreFile())) {
             try {
-                String type = security.getJwtCheckKeyType();
+                String type = ssl.getKeyStoreType();
                 if (type != null && type.equals("X.509")) {
                     CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                    InputStream is = ResourceUtils.getURL(security.getJwtCheckKeyStore()).openStream();
+                    InputStream is = ResourceUtils.getURL(ssl.getKeyStoreFile()).openStream();
                     X509Certificate certificate = (X509Certificate) factory.generateCertificate(is);
                     JWTTokenHandler.signatureCheckKey = certificate.getPublicKey();
                 } else {
                     KeyStore keyStore = KeyStore.getInstance(type == null ? "JKS" : type);
-                    char[] keyPassword = security.getJwtCheckKeyPassword() == null ? null
-                            : security.getJwtCheckKeyPassword().toCharArray();
-                    keyStore.load(ResourceUtils.getURL(security.getJwtCheckKeyStore()).openStream(), keyPassword);
+                    char[] keyPassword = ssl.getKeyStorePassword() == null ? null
+                            : ssl.getKeyStorePassword().toCharArray();
+                    keyStore.load(ResourceUtils.getURL(ssl.getKeyStoreFile()).openStream(), keyPassword);
                     String alias = keyStore.aliases().nextElement();
-                    Certificate cert = keyStore.getCertificate(alias);
-                    JWTTokenHandler.signatureCheckKey = cert.getPublicKey();
+                    Certificate certificate = keyStore.getCertificate(alias);
+                    JWTTokenHandler.signatureCheckKey = certificate.getPublicKey();
                 }
             } catch (Exception e) {
                 throw new IllegalStateException("Invalid SSL configuration.", e);

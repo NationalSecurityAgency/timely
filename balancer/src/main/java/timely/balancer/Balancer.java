@@ -5,7 +5,6 @@ import static timely.Server.SERVICE_DISCOVERY_PATH;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS;
 import static timely.store.cache.DataStoreCache.NON_CACHED_METRICS_LOCK_PATH;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -52,7 +51,6 @@ import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.OpenSslServerSessionContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -71,8 +69,8 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
 import timely.auth.JWTTokenHandler;
+import timely.auth.util.SslHelper;
 import timely.balancer.configuration.BalancerConfiguration;
-import timely.balancer.configuration.ClientSsl;
 import timely.balancer.configuration.SpringBootstrap;
 import timely.balancer.connection.http.HttpClientPool;
 import timely.balancer.connection.tcp.TcpClientPool;
@@ -86,6 +84,7 @@ import timely.balancer.netty.ws.WsRelayHandler;
 import timely.balancer.resolver.BalancedMetricResolver;
 import timely.balancer.resolver.MetricResolver;
 import timely.client.http.HttpClient;
+import timely.configuration.ClientSsl;
 import timely.configuration.ServerSsl;
 import timely.netty.http.HttpStaticFileServerHandler;
 import timely.netty.http.NonSslRedirectHandler;
@@ -323,32 +322,13 @@ public class Balancer {
             SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", begin, end);
             ssl = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
         } else {
-            String cert = sslCfg.getCertificateFile();
-            String key = sslCfg.getKeyFile();
-            String keyPass = sslCfg.getKeyPassword();
-            if (null == cert || null == key) {
+            if (null == sslCfg.getKeyStoreFile()) {
                 throw new IllegalArgumentException("Check your SSL properties, something is wrong.");
             }
-            ssl = SslContextBuilder.forServer(new File(cert), new File(key), keyPass);
+            ssl = SslHelper.getSslContextBuilder(sslCfg);
         }
-
-        ssl.ciphers(sslCfg.getUseCiphers());
-
         // Can't set to REQUIRE because the CORS pre-flight requests will fail.
         ssl.clientAuth(ClientAuth.OPTIONAL);
-
-        Boolean useOpenSSL = sslCfg.isUseOpenssl();
-        if (useOpenSSL) {
-            ssl.sslProvider(SslProvider.OPENSSL);
-        } else {
-            ssl.sslProvider(SslProvider.JDK);
-        }
-        String trustStore = sslCfg.getTrustStoreFile();
-        if (null != trustStore) {
-            if (!trustStore.isEmpty()) {
-                ssl.trustManager(new File(trustStore));
-            }
-        }
         return ssl.build();
     }
 
@@ -356,7 +336,7 @@ public class Balancer {
 
         ClientSsl ssl = config.getSecurity().getClientSsl();
         return HttpClient.getSSLContext(ssl.getTrustStoreFile(), ssl.getTrustStoreType(), ssl.getTrustStorePassword(),
-                ssl.getKeyFile(), ssl.getKeyType(), ssl.getKeyPassword());
+                ssl.getKeyStoreFile(), ssl.getKeyStoreType(), ssl.getKeyStorePassword());
     }
 
     private void ensureZkPaths(CuratorFramework curatorFramework, String[] paths) {
@@ -385,7 +365,7 @@ public class Balancer {
         ensureZkPaths(curatorFramework, zkPaths);
 
         AuthCache.configure(balancerConfig.getSecurity());
-        JWTTokenHandler.init(balancerConfig.getSecurity(), null);
+        JWTTokenHandler.init(balancerConfig.getSecurity().getJwtSsl(), null);
         final boolean useEpoll = useEpoll();
         Class<? extends ServerSocketChannel> channelClass;
         Class<? extends Channel> datagramChannelClass;
@@ -536,12 +516,12 @@ public class Balancer {
                 ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(
                         balancerConfig.getSecurity(), balancerConfig.getHttp()));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler().setIgnoreSslHandshakeErrors(
-                        balancerConfig.getSecurity().getServerSsl().isUseGeneratedKeypair()));
+                        balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
                 ch.pipeline().addLast("login",
                         new X509LoginRequestHandler(balancerConfig.getSecurity(), balancerConfig.getHttp()));
                 ch.pipeline().addLast("httpRelay", new HttpRelayHandler(metricResolver, httpClientPool));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(
-                        balancerConfig.getSecurity().getServerSsl().isUseGeneratedKeypair()));
+                        balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
             }
         };
     }

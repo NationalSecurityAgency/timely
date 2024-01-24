@@ -1,27 +1,18 @@
 package timely.configuration;
 
-import java.util.List;
+public class ClientSsl implements Ssl {
 
-import timely.validator.NotEmptyIfFieldSet;
-
-@NotEmptyIfFieldSet.List({
-        @NotEmptyIfFieldSet(fieldName = "useGeneratedKeypair", fieldValue = "false", notNullFieldName = "keyStoreFile", message = "must be set if timely.security.ssl.use-generated-keypair is false") })
-
-public class ServerSsl implements Ssl {
-
-    private String[] ciphers = new String[] { "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_128_CBC_SHA",
-            "SSL_RSA_WITH_3DES_EDE_CBC_SHA" };
+    private String[] ciphers;
     private String[] enabledProtocols;
-    private String keyStoreType;
     private String keyStoreFile;
+    private String keyStoreType;
     private String keyStorePassword;
     private String keyAlias;
-    private String trustStoreType;
     private String trustStoreFile;
+    private String trustStoreType;
     private String trustStorePassword;
-    private boolean useGeneratedKeypair = false;
-    private boolean ignoreSslHandshakeErrors = false;
+    private boolean useClientCert = true;
+    private boolean hostVerificationEnabled = true;
     private boolean useOpenssl = true;
 
     public String[] getCiphers() {
@@ -40,20 +31,20 @@ public class ServerSsl implements Ssl {
         this.enabledProtocols = enabledProtocols;
     }
 
-    public String getKeyStoreType() {
-        return keyStoreType;
-    }
-
-    public void setKeyStoreType(String keyStoreType) {
-        this.keyStoreType = keyStoreType;
-    }
-
     public String getKeyStoreFile() {
         return keyStoreFile;
     }
 
     public void setKeyStoreFile(String keyStoreFile) {
         this.keyStoreFile = keyStoreFile;
+    }
+
+    public String getKeyStoreType() {
+        return keyStoreType;
+    }
+
+    public void setKeyStoreType(String keyStoreType) {
+        this.keyStoreType = keyStoreType;
     }
 
     public String getKeyStorePassword() {
@@ -72,20 +63,20 @@ public class ServerSsl implements Ssl {
         this.keyAlias = keyAlias;
     }
 
-    public String getTrustStoreType() {
-        return trustStoreType;
-    }
-
-    public void setTrustStoreType(String trustStoreType) {
-        this.trustStoreType = trustStoreType;
-    }
-
     public String getTrustStoreFile() {
         return trustStoreFile;
     }
 
     public void setTrustStoreFile(String trustStoreFile) {
         this.trustStoreFile = trustStoreFile;
+    }
+
+    public String getTrustStoreType() {
+        return trustStoreType;
+    }
+
+    public void setTrustStoreType(String trustStoreType) {
+        this.trustStoreType = trustStoreType;
     }
 
     public String getTrustStorePassword() {
@@ -96,20 +87,20 @@ public class ServerSsl implements Ssl {
         this.trustStorePassword = trustStorePassword;
     }
 
-    public boolean isUseGeneratedKeypair() {
-        return useGeneratedKeypair;
+    public void setUseClientCert(boolean useClientCert) {
+        this.useClientCert = useClientCert;
     }
 
-    public void setUseGeneratedKeypair(boolean useGeneratedKeypair) {
-        this.useGeneratedKeypair = useGeneratedKeypair;
+    public boolean isUseClientCert() {
+        return useClientCert;
     }
 
-    public boolean isIgnoreSslHandshakeErrors() {
-        return ignoreSslHandshakeErrors;
+    public void setHostVerificationEnabled(boolean hostVerificationEnabled) {
+        this.hostVerificationEnabled = hostVerificationEnabled;
     }
 
-    public void setIgnoreSslHandshakeErrors(boolean ignoreSslHandshakeErrors) {
-        this.ignoreSslHandshakeErrors = ignoreSslHandshakeErrors;
+    public boolean isHostVerificationEnabled() {
+        return hostVerificationEnabled;
     }
 
     public boolean isUseOpenssl() {

@@ -51,9 +51,8 @@ public class OneWaySSLBase extends QueryBase {
 
     protected static void setupSSL(Configuration config) throws Exception {
         SelfSignedCertificate serverCert = new SelfSignedCertificate();
-        config.getSecurity().getServerSsl().setCertificateFile(serverCert.certificate().getAbsolutePath());
         clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
-        config.getSecurity().getServerSsl().setKeyFile(serverCert.privateKey().getAbsolutePath());
+        config.getSecurity().getServerSsl().setKeyStoreFile(serverCert.privateKey().getAbsolutePath());
         config.getSecurity().getServerSsl().setUseOpenssl(false);
         config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
         config.getSecurity().setAllowAnonymousHttpAccess(true);

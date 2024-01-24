@@ -102,8 +102,8 @@ public class ConfigurationTest {
                 "timely.accumulo.username:root",
                 "timely.accumulo.password:secret",
                 "timely.http.host:localhost",
-                "timely.security.serverSsl.certificate-file:/tmp/foo",
-                "timely.security.serverSsl.key-file:/tmp/bar").applyTo(this.context);
+                "timely.security.serverSsl.key-store-file:/tmp/foo",
+                "timely.security.serverSsl.key-store-password:password").applyTo(this.context);
         // @formatter:on
         context.refresh();
     }

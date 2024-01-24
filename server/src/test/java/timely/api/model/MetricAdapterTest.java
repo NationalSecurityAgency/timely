@@ -31,7 +31,7 @@ public class MetricAdapterTest {
     }
 
     @Test
-    public void testToMutation() throws Exception {
+    public void testToMutation() {
         long ts = System.currentTimeMillis();
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("tag1", "value1"));
@@ -72,7 +72,7 @@ public class MetricAdapterTest {
     }
 
     @Test
-    public void testToMutationWithViz() throws Exception {
+    public void testToMutationWithViz() {
         long ts = System.currentTimeMillis();
         List<Tag> tags = new ArrayList<>();
         tags.add(new Tag("tag1", "value1"));

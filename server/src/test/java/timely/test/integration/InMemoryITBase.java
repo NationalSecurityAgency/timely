@@ -36,7 +36,6 @@ public class InMemoryITBase {
     private static final Logger LOG = LoggerFactory.getLogger(InMemoryITBase.class);
 
     protected static final String ROOT_USER = "root";
-    protected static final String ROOT_PASSWORD = "secret";
     protected Configuration conf = null;
     protected AccumuloClient accumuloClient;
     protected Server s;
@@ -100,7 +99,7 @@ public class InMemoryITBase {
     }
 
     @After
-    public void shutdownInMemoryBase() {
+    public void shutdownInMemoryBase() throws Exception {
         if (zookeeper != null) {
             zookeeper.close();
         }

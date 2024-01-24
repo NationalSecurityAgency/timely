@@ -24,13 +24,19 @@ timely:
     cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
-    server-ssl:
-      certificate-file:
-      key-file:
-      key-password: timely
+    serverSsl:
+      key-store-type:
+      key-store-file:
+      key-store-password:
       use-generated-keypair: true
+      ignore-ssl-handshake-errors: true
+      trust-store-type:
       trust-store-file:
-      use-openssl: false
+      trust-store-password:
+    jwtSsl:
+      key-store-type:
+      key-store-file:
+      key-store-password:
   server:
     ip: 0.0.0.0
     tcp-port: 54321

@@ -28,17 +28,19 @@ timely:
     cache-refresh-minutes: 5
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
-    server-ssl:
-      certificate-file:
-      key-file:
-      key-password:
-      use-generated-keypair: true
-      trust-store-file:
-      use-openssl: true
-      #use-ciphers:
-    jwtCheckKeyStore:
-    jwtCheckKeyType:
-    jwtCheckKeyPassword:
+    serverSsl:
+      key-store-type: ${KEY_STORE_TYPE}
+      key-store-file: ${KEY_STORE_FILE}
+      key-store-password: ${KEY_STORE_PASSWORD}
+      use-generated-keypair: ${GENERATE_KEYS}
+      ignore-ssl-handshake-errors: true
+      trust-store-type: ${TRUST_STORE_TYPE}
+      trust-store-file: ${TRUST_STORE_FILE}
+      trust-store-password: ${TRUST_STORE_PASSWORD}
+    jwtSsl:
+      key-store-type: ${AUTHORIZATION_CERTIFICATE_TYPE}
+      key-store-file: ${AUTHORIZATION_CERTIFICATE_FILE}
+      key-store-password: ${AUTHORIZATION_CERTIFICATE_PASSWORD}
   server:
     ip: ${HOST_IP}
     tcp-port: ${TCP_PORT}

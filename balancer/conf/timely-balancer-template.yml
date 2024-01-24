@@ -13,23 +13,25 @@ timely-balancer:
     allow-anonymous-http-access: true
     allow-anonymous-ws-access: true
     serverSsl:
-      certificate-file: ${SERVER_CERTIFICATE_FILE}
-      key-file: ${SERVER_KEY_FILE}
-      key-password: ${SERVER_KEY_PASSWORD}
-      use-generated-keypair: ${SERVER_USE_GENERATED_KEYPAIR}
-      trust-store-file: ${TRUST_STORE_PEM}
-      use-openssl: true
-      #use-ciphers:
+      key-store-type: ${KEY_STORE_TYPE}
+      key-store-file: ${KEY_STORE_FILE}
+      key-store-password: ${KEY_STORE_PASSWORD}
+      use-generated-keypair: ${GENERATE_KEYS}
+      ignore-ssl-handshake-errors: true
+      trust-store-type: ${TRUST_STORE_TYPE}
+      trust-store-file: ${TRUST_STORE_FILE}
+      trust-store-password: ${TRUST_STORE_PASSWORD}
     clientSsl:
-      keyFile: ${CLIENT_KEY_FILE}
-      keyType: ${CLIENT_KEY_TYPE}
-      keyPassword: ${CLIENT_KEY_PASSWORD}
-      trustStoreFile: ${TRUST_STORE_JKS}
-      trustStoreType: jks
-      trustStorePassword: ${TRUST_STORE_PASSWORD}
-    jwtCheckKeyStore:
-    jwtCheckKeyType:
-    jwtCheckKeyPassword:
+      key-store-type: ${KEY_STORE_TYPE}
+      key-store-file: ${KEY_STORE_FILE}
+      key-store-password: ${KEY_STORE_PASSWORD}
+      trust-store-type: ${TRUST_STORE_TYPE}
+      trust-store-file: ${TRUST_STORE_FILE}
+      trust-store-password: ${TRUST_STORE_PASSWORD}
+    jwtSsl:
+      key-store-type: ${AUTHORIZATION_CERTIFICATE_TYPE}
+      key-store-file: ${AUTHORIZATION_CERTIFICATE_FILE}
+      key-store-password: ${AUTHORIZATION_CERTIFICATE_PASSWORD}
   cache:
     enabled: false
     metric-age-off-hours:

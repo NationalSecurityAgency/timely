@@ -10,6 +10,10 @@ fi
 
 THIS_DIR="${THIS_SCRIPT%/*}"
 
+set -a
+. ${THIS_DIR}/timely-balancer-env.sh
+set +a
+
 if [ -n "$1" ]; then
   export PROFILE_NUM=$1
   PROFILE_ARG="--spring.profiles.active=${PROFILE_NUM}"

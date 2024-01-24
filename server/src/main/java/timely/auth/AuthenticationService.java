@@ -27,8 +27,8 @@ import timely.netty.http.auth.TimelyUserDetails;
 public class AuthenticationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthenticationService.class);
-    private static ApplicationContext springContext = null;
-    private static AuthenticationManager authManager = null;
+    private static ApplicationContext springContext;
+    private static AuthenticationManager authManager;
     private static ConcurrentHashMap<String, Object> fetchingEntity = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, Object> fetchingPrincipal = new ConcurrentHashMap<>();
     private static Collection<String> requiredRoles;
@@ -161,9 +161,8 @@ public class AuthenticationService {
                                     }
                                     verifiedPrincipal = new TimelyPrincipal(authenticatedTimelyUsers);
                                     AuthCache.put(verifiedPrincipal.getName(), verifiedPrincipal);
-                                    LOG.debug("Authenticated user {} for request {} with authorizations {}",
-                                            verifiedPrincipal.getName(), request.toString(),
-                                            verifiedPrincipal.getAuthorizationsString());
+                                    LOG.debug("Authenticated user {} with authorizations {}",
+                                            verifiedPrincipal.getName(), verifiedPrincipal.getAuthorizationsString());
                                 } else {
                                     LOG.trace("Verified principal {} in AuthCache on 2nd attempt", entity);
                                 }

@@ -1,14 +1,18 @@
 package timely.test.integration;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 
 import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -51,9 +55,25 @@ public class MacITBase {
         if (null == mac) {
             final MiniAccumuloConfig macConfig = new MiniAccumuloConfig(tempDir, MAC_ROOT_PASSWORD);
             mac = new MiniAccumuloCluster(macConfig);
+            // this is needed if the timely server is run against MiniAccumulo
+            File libExt = new File(macConfig.getDir(), "/lib/ext");
+            copyJarsToMacLibExt(libExt, "target", "timely-server.*.jar");
+            copyJarsToMacLibExt(libExt, "target/lib", ".*.jar");
             mac.start();
         } else {
             LOG.info("Mini Accumulo already running.");
+        }
+    }
+
+    private static void copyJarsToMacLibExt(File macLibExt, String searchDirStr, String jarRegex) {
+        File searchDir = new File(Paths.get(searchDirStr).toUri());
+        File[] jarFiles = searchDir.listFiles((dir, name) -> name.matches(jarRegex));
+        for (File f : jarFiles) {
+            try {
+                FileUtils.copyURLToFile(requireNonNull(f.toURI().toURL()), new File(macLibExt, f.getName()));
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
         }
     }
 
