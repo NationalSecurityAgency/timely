@@ -9,6 +9,7 @@ import org.junit.Test;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
 import timely.configuration.Configuration;
 import timely.configuration.SpringBootstrap;
 

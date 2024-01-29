@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.Maps;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.TableId;
 import org.apache.accumulo.core.data.Value;
@@ -13,10 +12,12 @@ import org.apache.accumulo.core.metadata.schema.MetadataSchema;
 import org.apache.accumulo.core.util.ColumnFQ;
 import org.apache.hadoop.io.Text;
 
+import com.google.common.collect.Maps;
+
 public class TestTabletMetadata {
 
     private final String tableId;
-    private final List<Map.Entry<Key, Value>> entries;
+    private final List<Map.Entry<Key,Value>> entries;
 
     public TestTabletMetadata(String tableId) {
         this.tableId = tableId;
@@ -31,8 +32,7 @@ public class TestTabletMetadata {
 
     public TestTabletMetadata prev(Text row, Text prevRow) {
         ColumnFQ cfq = MetadataSchema.TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN;
-        addEntry(row, cfq.getColumnFamily(), cfq.getColumnQualifier(),
-                MetadataSchema.TabletsSection.TabletColumnFamily.encodePrevEndRow(prevRow));
+        addEntry(row, cfq.getColumnFamily(), cfq.getColumnQualifier(), MetadataSchema.TabletsSection.TabletColumnFamily.encodePrevEndRow(prevRow));
         return this;
     }
 
@@ -42,7 +42,7 @@ public class TestTabletMetadata {
         return this;
     }
 
-    public Collection<Map.Entry<Key, Value>> entries() {
+    public Collection<Map.Entry<Key,Value>> entries() {
         return entries;
     }
 

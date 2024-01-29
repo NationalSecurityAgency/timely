@@ -1,6 +1,7 @@
 package timely.test.integration;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+
 import static org.junit.Assert.assertEquals;
 
 import java.io.OutputStream;
@@ -11,12 +12,14 @@ import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import com.fasterxml.jackson.databind.JavaType;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.JavaType;
+
+import io.netty.handler.codec.http.HttpHeaderNames;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.util.JsonUtil;
@@ -32,8 +35,7 @@ public abstract class QueryBase extends InMemoryITBase {
 
         private static final long serialVersionUID = 1L;
 
-        public UnauthorizedUserException() {
-        }
+        public UnauthorizedUserException() {}
     }
 
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
@@ -45,8 +47,7 @@ public abstract class QueryBase extends InMemoryITBase {
             format.append(line);
             format.append("\n");
         }
-        try (Socket sock = new Socket("127.0.0.1", 54321);
-                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
+        try (Socket sock = new Socket("127.0.0.1", 54321); PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);) {
             writer.write(format.toString());
             writer.flush();
         }
@@ -89,13 +90,11 @@ public abstract class QueryBase extends InMemoryITBase {
         }
     }
 
-    protected List<QueryResponse> query(String username, String password, String location, QueryRequest request)
-            throws Exception {
+    protected List<QueryResponse> query(String username, String password, String location, QueryRequest request) throws Exception {
         return query(username, password, location, request, 200);
     }
 
-    protected List<QueryResponse> query(String username, String password, String location, QueryRequest request,
-            int expectedResponseCode) throws Exception {
+    protected List<QueryResponse> query(String username, String password, String location, QueryRequest request, int expectedResponseCode) throws Exception {
         URL url = new URL(location);
         HttpsURLConnection con = getUrlConnection(username, password, url);
         con.setRequestMethod("POST");
@@ -110,8 +109,7 @@ public abstract class QueryBase extends InMemoryITBase {
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
             LOG.debug("Result is {}", result);
-            JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class,
-                    QueryResponse.class);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class, QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);
         } else {
             throw new NotSuccessfulException();
@@ -122,8 +120,7 @@ public abstract class QueryBase extends InMemoryITBase {
         return query(location, request, 200);
     }
 
-    protected List<QueryResponse> query(String location, QueryRequest request, int expectedResponseCode)
-            throws Exception {
+    protected List<QueryResponse> query(String location, QueryRequest request, int expectedResponseCode) throws Exception {
         URL url = new URL(location);
         HttpsURLConnection con = getUrlConnection(url);
         con.setRequestMethod("POST");
@@ -139,8 +136,7 @@ public abstract class QueryBase extends InMemoryITBase {
         if (200 == responseCode) {
             String result = IOUtils.toString(con.getInputStream(), UTF_8);
             LOG.debug("Result is {}", result);
-            JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class,
-                    QueryResponse.class);
+            JavaType type = JsonUtil.getObjectMapper().getTypeFactory().constructCollectionType(List.class, QueryResponse.class);
             return JsonUtil.getObjectMapper().readValue(result, type);
         } else {
             throw new NotSuccessfulException();

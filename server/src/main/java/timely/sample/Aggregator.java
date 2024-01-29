@@ -12,8 +12,7 @@ public interface Aggregator {
     String NONE = "none";
 
     /**
-     * Given the current value, and the current count, incorporate the new value
-     * into current and return the result.
+     * Given the current value, and the current count, incorporate the new value into current and return the result.
      *
      * @param current
      *            last returned value from aggregate, or zero
@@ -26,8 +25,7 @@ public interface Aggregator {
     double aggregate(double current, int count, double update);
 
     /**
-     * Compute the final value given the aggregated amount and the number of items
-     * in the aggregate.
+     * Compute the final value given the aggregated amount and the number of items in the aggregate.
      *
      * @param current
      *            the last value returned from aggregate

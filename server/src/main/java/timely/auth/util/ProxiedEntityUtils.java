@@ -14,9 +14,11 @@ import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 
-import com.google.common.collect.Multimap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Multimap;
+
 import timely.netty.http.auth.TimelyAuthenticationToken;
 
 public class ProxiedEntityUtils {
@@ -26,7 +28,7 @@ public class ProxiedEntityUtils {
     public static String[] splitProxiedDNs(String proxiedDNs, boolean allowDups) {
         String[] dns;
         if (proxiedDNs.indexOf('<') < 0) {
-            dns = new String[] { proxiedDNs };
+            dns = new String[] {proxiedDNs};
         } else {
             Collection<String> dnCollection = allowDups ? new ArrayList<>() : new LinkedHashSet<>();
             String[] pieces = proxiedDNs.split("(?<!\\\\)<|(?<!\\\\)>");
@@ -43,7 +45,7 @@ public class ProxiedEntityUtils {
     public static String[] splitProxiedSubjectIssuerDNs(String proxiedDNs) {
         String[] dns;
         if (proxiedDNs.indexOf('<') < 0) {
-            dns = new String[] { proxiedDNs };
+            dns = new String[] {proxiedDNs};
         } else {
             HashSet<String> subjects = new HashSet<>();
             List<String> dnList = new ArrayList<>();
@@ -120,10 +122,8 @@ public class ProxiedEntityUtils {
     }
 
     /**
-     * Attempts to normalize a DN by taking it and reversing the components if it
-     * doesn't start with CN. Some systems requires the DN components be in a
-     * specific order, or that order reversed. We cannot arbitrarily reorder the
-     * components however, e.g., sorting them.
+     * Attempts to normalize a DN by taking it and reversing the components if it doesn't start with CN. Some systems requires the DN components be in a
+     * specific order, or that order reversed. We cannot arbitrarily reorder the components however, e.g., sorting them.
      */
     public static String normalizeDN(String userName) {
         String normalizedUserName = userName.trim().toLowerCase();
@@ -148,12 +148,11 @@ public class ProxiedEntityUtils {
         return normalizedUserName;
     }
 
-    public static void addProxyHeaders(Multimap<String, String> headers, X509Certificate clientCert) {
+    public static void addProxyHeaders(Multimap<String,String> headers, X509Certificate clientCert) {
         if (clientCert != null) {
             List<String> proxiedEntitiesList = new ArrayList<>();
             if (headers.containsKey(TimelyAuthenticationToken.PROXIED_ENTITIES_HEADER)) {
-                String proxiedEntities = HttpHeaderUtils.getSingleHeader(headers,
-                        TimelyAuthenticationToken.PROXIED_ENTITIES_HEADER, false);
+                String proxiedEntities = HttpHeaderUtils.getSingleHeader(headers, TimelyAuthenticationToken.PROXIED_ENTITIES_HEADER, false);
                 headers.removeAll(TimelyAuthenticationToken.PROXIED_ENTITIES_HEADER);
                 String[] preExistingProxiedEntities = ProxiedEntityUtils.splitProxiedDNs(proxiedEntities, false);
                 if (preExistingProxiedEntities.length > 0) {
@@ -164,13 +163,11 @@ public class ProxiedEntityUtils {
             proxiedEntitiesList.add(subjectDN);
             String[] newProxiedEntities = new String[proxiedEntitiesList.size()];
             proxiedEntitiesList.toArray(newProxiedEntities);
-            headers.put(TimelyAuthenticationToken.PROXIED_ENTITIES_HEADER,
-                    ProxiedEntityUtils.buildProxiedDN(newProxiedEntities));
+            headers.put(TimelyAuthenticationToken.PROXIED_ENTITIES_HEADER, ProxiedEntityUtils.buildProxiedDN(newProxiedEntities));
 
             List<String> proxiedIssuersList = new ArrayList<>();
             if (headers.containsKey(TimelyAuthenticationToken.PROXIED_ISSUERS_HEADER)) {
-                String proxiedIssuers = HttpHeaderUtils.getSingleHeader(headers,
-                        TimelyAuthenticationToken.PROXIED_ISSUERS_HEADER, false);
+                String proxiedIssuers = HttpHeaderUtils.getSingleHeader(headers, TimelyAuthenticationToken.PROXIED_ISSUERS_HEADER, false);
                 headers.removeAll(TimelyAuthenticationToken.PROXIED_ISSUERS_HEADER);
                 String[] preExistingProxiedIssuers = ProxiedEntityUtils.splitProxiedDNs(proxiedIssuers, false);
                 if (preExistingProxiedIssuers.length > 0) {
@@ -181,8 +178,7 @@ public class ProxiedEntityUtils {
             proxiedIssuersList.add(issuerDN);
             String[] newProxiedIssuers = new String[proxiedIssuersList.size()];
             proxiedIssuersList.toArray(newProxiedIssuers);
-            headers.put(TimelyAuthenticationToken.PROXIED_ISSUERS_HEADER,
-                    ProxiedEntityUtils.buildProxiedDN(newProxiedIssuers));
+            headers.put(TimelyAuthenticationToken.PROXIED_ISSUERS_HEADER, ProxiedEntityUtils.buildProxiedDN(newProxiedIssuers));
         }
     }
 }

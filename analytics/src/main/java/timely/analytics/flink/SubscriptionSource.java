@@ -22,6 +22,7 @@ import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.api.response.MetricResponse;
 import timely.api.response.MetricResponses;
 import timely.client.websocket.ClientHandler;
@@ -65,10 +66,9 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
     public void open(Configuration parameters) throws Exception {
         LOG.info("Opening summarization job.");
         super.open(parameters);
-        client = new WebSocketSubscriptionClient(jp.getTimelyHostname(), jp.getTimelyHttpsPort(), jp.getTimelyWssPort(),
-                jp.isClientAuth(), jp.isDoLogin(), jp.getTimelyUsername(), jp.getTimelyPassword(), jp.getKeyStoreFile(),
-                jp.getKeyStoreType(), jp.getKeyStorePass(), jp.getTrustStoreFile(), jp.getTrustStoreType(),
-                jp.getTrustStorePass(), jp.isHostVerificationEnabled(), jp.getBufferSize());
+        client = new WebSocketSubscriptionClient(jp.getTimelyHostname(), jp.getTimelyHttpsPort(), jp.getTimelyWssPort(), jp.isClientAuth(), jp.isDoLogin(),
+                        jp.getTimelyUsername(), jp.getTimelyPassword(), jp.getKeyStoreFile(), jp.getKeyStoreType(), jp.getKeyStorePass(),
+                        jp.getTrustStoreFile(), jp.getTrustStoreType(), jp.getTrustStorePass(), jp.isHostVerificationEnabled(), jp.getBufferSize());
     }
 
     @Override
@@ -103,12 +103,10 @@ public class SubscriptionSource extends RichSourceFunction<MetricResponse> imple
 
                     @Override
                     public void onMessage(final String message) {
-                        LOG.info("Message received on Websocket session {}, length: {}", session.getId(),
-                                message.length());
+                        LOG.info("Message received on Websocket session {}, length: {}", session.getId(), message.length());
                         try {
                             // Deserialize in this thread
-                            final MetricResponses responses = JsonSerializer.getObjectMapper().readValue(message,
-                                    MetricResponses.class);
+                            final MetricResponses responses = JsonSerializer.getObjectMapper().readValue(message, MetricResponses.class);
                             // Process in the other
                             final Runnable r = () -> {
                                 responses.getResponses().forEach(response -> {

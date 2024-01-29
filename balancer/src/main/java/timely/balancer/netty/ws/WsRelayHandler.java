@@ -5,11 +5,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.collect.Multimap;
+
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,8 +21,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.subscription.AddSubscription;
 import timely.api.request.subscription.CloseSubscription;
 import timely.api.request.subscription.CreateSubscription;
@@ -41,8 +43,8 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
     private final WsClientPool wsClientPool;
     private MetricResolver metricResolver;
     static private ObjectMapper mapper;
-    Map<String, Map<String, WsClientHolder>> wsClients = new ConcurrentHashMap<>();
-    Map<String, ChannelHandlerContext> wsSubscriptions = new ConcurrentHashMap<>();
+    Map<String,Map<String,WsClientHolder>> wsClients = new ConcurrentHashMap<>();
+    Map<String,ChannelHandlerContext> wsSubscriptions = new ConcurrentHashMap<>();
 
     static {
         mapper = new ObjectMapper();
@@ -52,8 +54,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
         mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, true);
     }
 
-    public WsRelayHandler(BalancerConfiguration balancerConfig, MetricResolver metricResolver,
-            WsClientPool wsClientPool) {
+    public WsRelayHandler(BalancerConfiguration balancerConfig, MetricResolver metricResolver, WsClientPool wsClientPool) {
         this.balancerConfig = balancerConfig;
         this.metricResolver = metricResolver;
         this.wsClientPool = wsClientPool;
@@ -67,7 +68,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
         try {
             String metric = null;
 
-            Multimap<String, String> headers = msg.getRequestHeaders();
+            Multimap<String,String> headers = msg.getRequestHeaders();
             ProxiedEntityUtils.addProxyHeaders(headers, msg.getToken().getClientCert());
 
             if (msg instanceof CreateSubscription) {
@@ -83,14 +84,13 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
 
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
-                        Map<String, WsClientHolder> metricToClientMap = wsClients.get(currentSubscriptionId);
+                        Map<String,WsClientHolder> metricToClientMap = wsClients.get(currentSubscriptionId);
 
                         if (metricToClientMap != null) {
                             synchronized (metricToClientMap) {
                                 // close all clients for this subscriptionId
-                                LOG.debug("Channel closed, closing subscriptions for subscriptionId:{}",
-                                        currentSubscriptionId);
-                                for (Map.Entry<String, WsClientHolder> entry : metricToClientMap.entrySet()) {
+                                LOG.debug("Channel closed, closing subscriptions for subscriptionId:{}", currentSubscriptionId);
+                                for (Map.Entry<String,WsClientHolder> entry : metricToClientMap.entrySet()) {
                                     entry.getValue().close(wsClientPool);
                                 }
                                 wsClients.remove(currentSubscriptionId);
@@ -108,12 +108,10 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                 if (origContext == null) {
                     // send error because user never sent a CreateSubscription
                     // and we have nowhere to send the results
-                    LOG.info("ChannelHandlerContext not found for subscriptionId:{} - createSubscription not called?",
-                            subscriptionId);
-                    sendErrorResponse(ctx, HttpResponseStatus.BAD_REQUEST,
-                            new IllegalArgumentException("Must call create first"));
+                    LOG.info("ChannelHandlerContext not found for subscriptionId:{} - createSubscription not called?", subscriptionId);
+                    sendErrorResponse(ctx, HttpResponseStatus.BAD_REQUEST, new IllegalArgumentException("Must call create first"));
                 }
-                Map<String, WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
+                Map<String,WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
                 if (metricToClientMap == null) {
                     metricToClientMap = new HashMap<>();
                     wsClients.put(subscriptionId, metricToClientMap);
@@ -124,14 +122,13 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                     if (hostClientHolder == null) {
                         k = metricResolver.getHostPortKey(metric);
                         client = wsClientPool.borrowObject(k);
-                        client.open(new WsClientHandler(origContext, add.getToken(),
-                                (balancerConfig.getWebsocket().getTimeout() / 2)));
+                        client.open(new WsClientHandler(origContext, add.getToken(), (balancerConfig.getWebsocket().getTimeout() / 2)));
                         metricToClientMap.put(metric, new WsClientHolder(k, client));
                     } else {
                         client = hostClientHolder.getClient();
                     }
                 }
-                Map<String, String> tags = null;
+                Map<String,String> tags = null;
 
                 Long startTime = 0L;
                 Long endTime = 0L;
@@ -155,7 +152,7 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
                 RemoveSubscription remove = (RemoveSubscription) msg;
                 metric = remove.getMetric();
                 subscriptionId = remove.getSubscriptionId();
-                Map<String, WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
+                Map<String,WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
                 if (metricToClientMap != null) {
                     synchronized (metricToClientMap) {
                         WsClientHolder hostClientHolder = metricToClientMap.get(metric);
@@ -169,11 +166,11 @@ public class WsRelayHandler extends SimpleChannelInboundHandler<SubscriptionRequ
             } else if (msg instanceof CloseSubscription) {
                 CloseSubscription close = (CloseSubscription) msg;
                 subscriptionId = close.getSubscriptionId();
-                Map<String, WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
+                Map<String,WsClientHolder> metricToClientMap = wsClients.get(subscriptionId);
                 if (metricToClientMap != null) {
                     synchronized (metricToClientMap) {
                         // close all clients for this subscriptionId
-                        for (Map.Entry<String, WsClientHolder> entry : metricToClientMap.entrySet()) {
+                        for (Map.Entry<String,WsClientHolder> entry : metricToClientMap.entrySet()) {
                             entry.getValue().close(wsClientPool);
                         }
                     }

@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
+
 import timely.api.request.WebSocketRequest;
 import timely.util.JsonUtil;
 
@@ -113,7 +114,7 @@ public class WebSocketRequestDeserializationTest {
         Assert.assertEquals("1234", ((AddSubscription) request).getSessionId());
         Assert.assertEquals("sys.cpu.user", ((AddSubscription) request).getMetric());
         Assert.assertEquals(true, ((AddSubscription) request).getTags().isPresent());
-        Map<String, String> tags = ((AddSubscription) request).getTags().get();
+        Map<String,String> tags = ((AddSubscription) request).getTags().get();
         Assert.assertTrue(tags.containsKey("tag1"));
         Assert.assertEquals("value1", tags.get("tag1"));
         Assert.assertTrue(tags.containsKey("tag2"));
@@ -147,7 +148,7 @@ public class WebSocketRequestDeserializationTest {
         Assert.assertEquals("1234", ((AddSubscription) request).getSessionId());
         Assert.assertEquals("sys.cpu.user", ((AddSubscription) request).getMetric());
         Assert.assertEquals(true, ((AddSubscription) request).getTags().isPresent());
-        Map<String, String> tags = ((AddSubscription) request).getTags().get();
+        Map<String,String> tags = ((AddSubscription) request).getTags().get();
         Assert.assertTrue(tags.containsKey("tag1"));
         Assert.assertEquals("value1", tags.get("tag1"));
         Assert.assertTrue(tags.containsKey("tag2"));

@@ -9,15 +9,17 @@ import javax.websocket.CloseReason;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.response.TimelyException;
 import timely.auth.util.ProxiedEntityUtils;
 import timely.client.websocket.ClientHandler;
@@ -40,16 +42,16 @@ public class WsClientHandler extends ClientHandler {
     }
 
     @Override
-    public void beforeRequest(Map<String, List<String>> headers) {
+    public void beforeRequest(Map<String,List<String>> headers) {
         if (token.getClientCert() != null) {
-            Multimap<String, String> proxyRequestHeaders = HashMultimap.create();
+            Multimap<String,String> proxyRequestHeaders = HashMultimap.create();
             ProxiedEntityUtils.addProxyHeaders(proxyRequestHeaders, token.getClientCert());
             for (String s : proxyRequestHeaders.keySet()) {
                 headers.put(s, new ArrayList<>(proxyRequestHeaders.get(s)));
             }
         }
 
-        Multimap<String, String> originalRequestHeaders = token.getHttpHeaders();
+        Multimap<String,String> originalRequestHeaders = token.getHttpHeaders();
         for (String s : originalRequestHeaders.keySet()) {
             if (!headers.containsKey(s)) {
                 // add pre-existing values if key does not exist in proxyRequest
@@ -71,8 +73,7 @@ public class WsClientHandler extends ClientHandler {
         super.onClose(session, reason);
         if (!reason.getCloseCode().equals(CloseReason.CloseCodes.NORMAL_CLOSURE)) {
             LOG.error("Abnormal close: " + reason.getReasonPhrase());
-            Exception e = new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), reason.getReasonPhrase(),
-                    "");
+            Exception e = new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), reason.getReasonPhrase(), "");
             WsRelayHandler.sendErrorResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, e);
         }
         if (!ping.isCancelled()) {

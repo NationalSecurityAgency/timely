@@ -2,22 +2,23 @@ package timely.auth;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.accumulo.core.security.ColumnVisibility;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.apache.accumulo.core.security.ColumnVisibility;
+
 import timely.configuration.Configuration;
 
 public class VisibilityCache {
 
-    private static volatile Cache<String, ColumnVisibility> CACHE = null;
+    private static volatile Cache<String,ColumnVisibility> CACHE = null;
 
     public static synchronized void init(Configuration config) {
         if (CACHE == null) {
             long expireMinutes = config.getVisibilityCache().getExpirationMinutes();
             int initialCapacity = config.getVisibilityCache().getInitialCapacity();
             long maxCapacity = config.getVisibilityCache().getMaxCapacity();
-            CACHE = Caffeine.newBuilder().expireAfterAccess(expireMinutes, TimeUnit.MINUTES)
-                    .initialCapacity(initialCapacity).maximumSize(maxCapacity).build();
+            CACHE = Caffeine.newBuilder().expireAfterAccess(expireMinutes, TimeUnit.MINUTES).initialCapacity(initialCapacity).maximumSize(maxCapacity).build();
         }
     }
 

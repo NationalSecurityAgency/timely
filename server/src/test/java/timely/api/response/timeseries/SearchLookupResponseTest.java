@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
+
 import timely.api.request.timeseries.SearchLookupRequest;
 import timely.api.response.timeseries.SearchLookupResponse.Result;
 import timely.model.Tag;

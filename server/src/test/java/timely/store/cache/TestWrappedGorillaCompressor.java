@@ -9,9 +9,6 @@ import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
 
-import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
-import fi.iki.yak.ts.compression.gorilla.LongArrayInput;
-import fi.iki.yak.ts.compression.gorilla.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -20,6 +17,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
+import fi.iki.yak.ts.compression.gorilla.LongArrayInput;
+import fi.iki.yak.ts.compression.gorilla.Pair;
 
 public class TestWrappedGorillaCompressor {
 

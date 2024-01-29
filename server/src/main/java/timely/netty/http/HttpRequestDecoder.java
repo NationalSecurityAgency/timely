@@ -7,7 +7,12 @@ import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.Multimap;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -17,9 +22,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.annotation.AnnotationResolver;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpGetRequest;
@@ -53,7 +55,7 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
     }
 
     public static String getSessionId(FullHttpRequest msg) {
-        Multimap<String, String> headers = HttpHeaderUtils.toMultimap(msg.headers());
+        Multimap<String,String> headers = HttpHeaderUtils.toMultimap(msg.headers());
         Collection<String> cookies = headers.get(HttpHeaderNames.COOKIE.toString());
         final StringBuilder buf = new StringBuilder();
         cookies.forEach(h -> {
@@ -101,15 +103,13 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
                 }
                 request = post.parseBody(content);
             } else {
-                TimelyException e = new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
-                        "unhandled method type", "");
-                e.addResponseHeader(HttpHeaderNames.ALLOW.toString(),
-                        HttpMethod.GET.name() + "," + HttpMethod.POST.name());
+                TimelyException e = new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), "unhandled method type", "");
+                e.addResponseHeader(HttpHeaderNames.ALLOW.toString(), HttpMethod.GET.name() + "," + HttpMethod.POST.name());
                 LOG.warn("Unhandled HTTP request type {}", msg.method());
                 throw e;
             }
             if (request instanceof AuthenticatedRequest) {
-                Multimap<String, String> headers = HttpHeaderUtils.toMultimap(msg.headers());
+                Multimap<String,String> headers = HttpHeaderUtils.toMultimap(msg.headers());
                 ((AuthenticatedRequest) request).addHeaders(headers);
                 X509Certificate clientCert = AuthenticationService.getClientCertificate(ctx);
                 TimelyAuthenticationToken token;

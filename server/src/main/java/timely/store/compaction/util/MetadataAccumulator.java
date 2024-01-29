@@ -9,6 +9,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.io.Text;
+
 import timely.store.compaction.TabletRowAdapter;
 
 public class MetadataAccumulator {
@@ -121,10 +122,8 @@ public class MetadataAccumulator {
 
         @Override
         public String toString() {
-            return String.format("metadata.entry {tablet: %s, millis: %d, offset-ms: %d, age-days: %d, files %d}",
-                    tablet, milliseconds, tabletOffset,
-                    (hasTabletOffset ? TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis() - tabletOffset) : -1),
-                    totalFiles);
+            return String.format("metadata.entry {tablet: %s, millis: %d, offset-ms: %d, age-days: %d, files %d}", tablet, milliseconds, tabletOffset,
+                            (hasTabletOffset ? TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis() - tabletOffset) : -1), totalFiles);
         }
     }
 }

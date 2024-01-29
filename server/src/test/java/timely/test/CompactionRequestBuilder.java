@@ -24,17 +24,17 @@ import org.apache.accumulo.tserver.compaction.MajorCompactionReason;
 import org.apache.accumulo.tserver.compaction.MajorCompactionRequest;
 import org.apache.hadoop.io.Text;
 import org.easymock.EasyMock;
+
 import timely.adapter.accumulo.MetricAdapter;
 
 public class CompactionRequestBuilder {
 
     private static final long DEFAULT_TIME_MILLIS = new GregorianCalendar(2019, Calendar.JANUARY, 1).getTimeInMillis();
     private static final Lexicoder<String> stringEncoder = new StringLexicoder();
-    private static final PairLexicoder<String, String> badPairEncoder = new PairLexicoder<>(stringEncoder,
-            stringEncoder);
+    private static final PairLexicoder<String,String> badPairEncoder = new PairLexicoder<>(stringEncoder, stringEncoder);
 
-    private final Map<StoredTabletFile, DataFileValue> refs = new LinkedHashMap<>();
-    private final Map<String, String> tableProperties;
+    private final Map<StoredTabletFile,DataFileValue> refs = new LinkedHashMap<>();
+    private final Map<String,String> tableProperties;
     private final long timeMillis;
     private Key endKeyMetric;
     private Key prevKeyMetric;
@@ -49,8 +49,7 @@ public class CompactionRequestBuilder {
     }
 
     public CompactionRequestBuilder endKeyMetricNonOffset(String name, String offset) {
-        byte[] rowKey = offset != null ? badPairEncoder.encode(new ComparablePair<>(name, offset))
-                : stringEncoder.encode(name);
+        byte[] rowKey = offset != null ? badPairEncoder.encode(new ComparablePair<>(name, offset)) : stringEncoder.encode(name);
         endKeyMetric = new Key(rowKey);
         return this;
     }
@@ -70,8 +69,7 @@ public class CompactionRequestBuilder {
     }
 
     public CompactionRequestBuilder prevEndKeyMetricNonOffset(String name, String offset) {
-        byte[] rowKey = offset != null ? badPairEncoder.encode(new ComparablePair<>(name, offset))
-                : stringEncoder.encode(name);
+        byte[] rowKey = offset != null ? badPairEncoder.encode(new ComparablePair<>(name, offset)) : stringEncoder.encode(name);
         prevKeyMetric = new Key(rowKey);
         return this;
     }

@@ -6,8 +6,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  *
@@ -30,8 +31,7 @@ public class MetricTest {
         Metric m4 = Metric.newBuilder().name("m4").tag("t2", "v2").tag("t1", "v1").value(1, 0.0).build();
         assertFalse(m1.equals(m4));
 
-        Metric m5 = Metric.newBuilder().name("m1").tag("t3", "v3").tag("t2", "v2").tag("t1", "v1").value(1, 0.0)
-                .build();
+        Metric m5 = Metric.newBuilder().name("m1").tag("t3", "v3").tag("t2", "v2").tag("t1", "v1").value(1, 0.0).build();
         assertFalse(m1.equals(m5));
 
         Metric m6 = Metric.newBuilder().name("m1").tag("t2", "v2").tag("t1", "v1").value(2, 0.0).build();

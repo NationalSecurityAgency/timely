@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import timely.api.response.timeseries.SuggestResponse.SuggestDeserializer;
 import timely.api.response.timeseries.SuggestResponse.SuggestSerializer;
 
@@ -24,8 +25,7 @@ public class SuggestResponse {
     public static class SuggestSerializer extends JsonSerializer<SuggestResponse> {
 
         @Override
-        public void serialize(SuggestResponse value, JsonGenerator gen, SerializerProvider serializers)
-                throws IOException, JsonProcessingException {
+        public void serialize(SuggestResponse value, JsonGenerator gen, SerializerProvider serializers) throws IOException, JsonProcessingException {
             gen.writeStartArray();
             for (String s : value.getSuggestions()) {
                 gen.writeString(s);
@@ -37,8 +37,7 @@ public class SuggestResponse {
     public static class SuggestDeserializer extends JsonDeserializer<SuggestResponse> {
 
         @Override
-        public SuggestResponse deserialize(JsonParser p, DeserializationContext ctxt)
-                throws IOException, JsonProcessingException {
+        public SuggestResponse deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
             SuggestResponse response = new SuggestResponse();
             if (p.getCurrentToken() == JsonToken.START_ARRAY) {
                 while (p.nextToken() != JsonToken.END_ARRAY) {

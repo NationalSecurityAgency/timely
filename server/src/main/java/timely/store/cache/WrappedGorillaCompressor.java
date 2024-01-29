@@ -5,9 +5,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import org.apache.commons.lang3.Range;
+
 import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
 import fi.iki.yak.ts.compression.gorilla.LongArrayOutput;
-import org.apache.commons.lang3.Range;
 
 public class WrappedGorillaCompressor implements Serializable {
 

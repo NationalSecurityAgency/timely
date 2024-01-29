@@ -11,9 +11,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
-import io.netty.handler.codec.http.QueryStringDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.handler.codec.http.QueryStringDecoder;
 
 public class DnUtils {
 
@@ -45,8 +46,7 @@ public class DnUtils {
                 }
             }
         }
-        String subjectDnPattern = System.getProperty(SUBJECT_DN_PATTERN_PROPERTY,
-                PROPS.getProperty(SUBJECT_DN_PATTERN_PROPERTY));
+        String subjectDnPattern = System.getProperty(SUBJECT_DN_PATTERN_PROPERTY, PROPS.getProperty(SUBJECT_DN_PATTERN_PROPERTY));
         try {
             if (null == subjectDnPattern || subjectDnPattern.isEmpty()) {
                 throw new IllegalStateException(SUBJECT_DN_PATTERN_PROPERTY + " property value cannot be null");
@@ -70,8 +70,7 @@ public class DnUtils {
         return ProxiedEntityUtils.buildProxiedDN(dns);
     }
 
-    public static Collection<String> buildNormalizedDNList(String subjectDN, String issuerDN, String proxiedSubjectDNs,
-            String proxiedIssuerDNs) {
+    public static Collection<String> buildNormalizedDNList(String subjectDN, String issuerDN, String proxiedSubjectDNs, String proxiedIssuerDNs) {
         subjectDN = normalizeDN(subjectDN);
         issuerDN = normalizeDN(issuerDN);
         List<String> dnList = new ArrayList<>();
@@ -82,14 +81,12 @@ public class DnUtils {
         dnList.add(issuerDN.replaceAll("(?<!\\\\)([<>])", "\\\\$1"));
         if (proxiedSubjectDNs != null) {
             if (proxiedIssuerDNs == null)
-                throw new IllegalArgumentException(
-                        "If proxied subject DNs are supplied, then issuer DNs must be supplied as well.");
+                throw new IllegalArgumentException("If proxied subject DNs are supplied, then issuer DNs must be supplied as well.");
             String[] subjectDNarray = splitProxiedDNs(proxiedSubjectDNs, true);
             String[] issuerDNarray = splitProxiedDNs(proxiedIssuerDNs, true);
             if (subjectDNarray.length != issuerDNarray.length)
-                throw new IllegalArgumentException(
-                        "Subject and issuer DN lists do not have the same number of entries: "
-                                + Arrays.toString(subjectDNarray) + " vs " + Arrays.toString(issuerDNarray));
+                throw new IllegalArgumentException("Subject and issuer DN lists do not have the same number of entries: " + Arrays.toString(subjectDNarray)
+                                + " vs " + Arrays.toString(issuerDNarray));
             for (int i = 0; i < subjectDNarray.length; ++i) {
                 subjectDNarray[i] = normalizeDN(subjectDNarray[i]);
                 if (!subjects.contains(subjectDNarray[i])) {
@@ -98,19 +95,16 @@ public class DnUtils {
                     dnList.add(subjectDNarray[i]);
                     dnList.add(issuerDNarray[i]);
                     if (issuerDNarray[i].equalsIgnoreCase(subjectDNarray[i]))
-                        throw new IllegalArgumentException(
-                                "Subject DN " + issuerDNarray[i] + " was passed as an issuer DN.");
+                        throw new IllegalArgumentException("Subject DN " + issuerDNarray[i] + " was passed as an issuer DN.");
                     if (SUBJECT_DN_PATTERN.matcher(issuerDNarray[i]).find())
-                        throw new IllegalArgumentException(
-                                "It appears that a subject DN (" + issuerDNarray[i] + ") was passed as an issuer DN.");
+                        throw new IllegalArgumentException("It appears that a subject DN (" + issuerDNarray[i] + ") was passed as an issuer DN.");
                 }
             }
         }
         return dnList;
     }
 
-    public static String buildNormalizedProxyDN(String subjectDN, String issuerDN, String proxiedSubjectDNs,
-            String proxiedIssuerDNs) {
+    public static String buildNormalizedProxyDN(String subjectDN, String issuerDN, String proxiedSubjectDNs, String proxiedIssuerDNs) {
         StringBuilder sb = new StringBuilder();
         for (String escapedDN : buildNormalizedDNList(subjectDN, issuerDN, proxiedSubjectDNs, proxiedIssuerDNs)) {
             if (sb.length() == 0)
@@ -162,9 +156,8 @@ public class DnUtils {
     }
 
     /**
-     * Encapsulates the known/valid NPE OU list, and whatever else is needed for NPE
-     * handling. Static inner-class, so that injection of the configured OUs is only
-     * performed on-demand/if needed
+     * Encapsulates the known/valid NPE OU list, and whatever else is needed for NPE handling. Static inner-class, so that injection of the configured OUs is
+     * only performed on-demand/if needed
      */
     public static class NpeUtils {
 
@@ -174,8 +167,7 @@ public class DnUtils {
         /** Parsed NPE OU identifiers */
         static final List<String> NPE_OU_LIST;
 
-        private NpeUtils() {
-        }
+        private NpeUtils() {}
 
         static {
             List<String> npeOUs = new ArrayList<>();

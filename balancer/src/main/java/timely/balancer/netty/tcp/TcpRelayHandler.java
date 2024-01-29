@@ -4,13 +4,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.MetricRequest;
 import timely.api.request.TcpRequest;
 import timely.balancer.connection.TimelyBalancedHost;
@@ -44,7 +45,7 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
         LOG.trace("Received {}", msg);
         try {
             String line;
-            Pair<TimelyBalancedHost, TcpClient> keyClientPair = null;
+            Pair<TimelyBalancedHost,TcpClient> keyClientPair = null;
             try {
                 if (msg instanceof MetricRequest) {
                     String metricName = ((MetricRequest) msg).getMetric().getName();
@@ -64,22 +65,20 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
 
         } catch (IOException e) {
             LOG.error(LOG_ERR_MSG, msg, e);
-            ChannelFuture cf = ctx.writeAndFlush(
-                    Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
+            ChannelFuture cf = ctx.writeAndFlush(Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
             if (!cf.isSuccess()) {
                 LOG.error(Constants.ERR_WRITING_RESPONSE, cf.cause());
             }
         }
     }
 
-    private Pair<TimelyBalancedHost, TcpClient> getClient(String metric, boolean metricRequest) {
+    private Pair<TimelyBalancedHost,TcpClient> getClient(String metric, boolean metricRequest) {
         TcpClient client = null;
         TimelyBalancedHost k = null;
         int failures = 0;
         while (client == null) {
             try {
-                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric)
-                        : metricResolver.getHostPortKey(metric);
+                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver.getHostPortKey(metric);
                 client = tcpClientPool().borrowObject(k);
             } catch (Exception e1) {
                 failures++;

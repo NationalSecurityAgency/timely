@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.Test;
+
 import timely.sample.aggregators.Avg;
 import timely.sample.aggregators.Sum;
 

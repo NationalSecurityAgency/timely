@@ -1,5 +1,7 @@
 package timely;
 
+import org.apache.accumulo.core.client.AccumuloClient;
+
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.DatagramChannel;
@@ -11,7 +13,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
-import org.apache.accumulo.core.client.AccumuloClient;
 import timely.configuration.Configuration;
 import timely.netty.http.NonSslRedirectHandler;
 import timely.netty.tcp.MetricsBufferDecoder;
@@ -40,8 +41,7 @@ public class TestServer extends Server {
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(8192));
-                ch.pipeline().addLast("queryDecoder",
-                        new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
+                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("capture", httpRequests);
             }
         };

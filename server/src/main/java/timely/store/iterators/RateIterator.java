@@ -14,6 +14,7 @@ import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.api.request.timeseries.QueryRequest;
 
 public class RateIterator extends TimeSeriesGroupingIterator {
@@ -35,29 +36,28 @@ public class RateIterator extends TimeSeriesGroupingIterator {
     }
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
-            throws IOException {
+    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
         if (options.containsKey(COUNTER_MAX)) {
             this.isCounter = true;
             this.maxCounter = Long.parseLong(options.get(COUNTER_MAX));
             this.resetValue = Long.parseLong(options.get(RATE_RESET_VALUE));
             LOG.trace("Setting rate counter options cm:{}, rv:{}", this.maxCounter, this.resetValue);
         }
-        Map<String, String> opts = new HashMap<>(options);
+        Map<String,String> opts = new HashMap<>(options);
         opts.put(TimeSeriesGroupingIterator.FILTER, "-1,1");
         super.init(source, opts, env);
     }
 
     @Override
-    protected Double compute(List<Pair<Key, Double>> values) {
+    protected Double compute(List<Pair<Key,Double>> values) {
 
-        Iterator<Pair<Key, Double>> iter = values.iterator();
-        Pair<Key, Double> first = iter.next();
+        Iterator<Pair<Key,Double>> iter = values.iterator();
+        Pair<Key,Double> first = iter.next();
         Long firstTs = first.getFirst().getTimestamp();
         Double firstVal = first.getSecond();
         LOG.trace("first ts:{}, value:{}", firstTs, firstVal);
 
-        Pair<Key, Double> second = iter.next();
+        Pair<Key,Double> second = iter.next();
         Long secondTs = second.getFirst().getTimestamp();
         Double secondVal = second.getSecond();
         LOG.trace("second ts:{}, value:{}", secondTs, secondVal);

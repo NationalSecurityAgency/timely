@@ -5,10 +5,11 @@ import java.io.IOException;
 import org.apache.commons.pool2.KeyedPooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
+
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.client.tcp.TcpClient;
 
-public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, TcpClient> {
+public class TcpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost,TcpClient> {
 
     private int bufferSize;
 

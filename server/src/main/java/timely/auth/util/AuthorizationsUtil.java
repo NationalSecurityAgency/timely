@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.accumulo.core.security.Authorizations;
+
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.accumulo.core.security.Authorizations;
+
 import timely.auth.AuthorizationsMinimizer;
 
 public class AuthorizationsUtil {
@@ -31,13 +33,11 @@ public class AuthorizationsUtil {
     }
 
     public static Authorizations toAuthorizations(Collection<String> auths) {
-        return new Authorizations(auths.stream().map(String::trim).map(s -> s.getBytes(Charset.forName("UTF-8")))
-                .collect(Collectors.toList()));
+        return new Authorizations(auths.stream().map(String::trim).map(s -> s.getBytes(Charset.forName("UTF-8"))).collect(Collectors.toList()));
     }
 
     public static List<String> splitAuths(String requestedAuths) {
-        return Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(requestedAuths)
-                .collect(Collectors.toList());
+        return Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(requestedAuths).collect(Collectors.toList());
     }
 
     public static Set<Authorizations> buildAuthorizations(Collection<? extends Collection<String>> userAuths) {

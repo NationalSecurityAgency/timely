@@ -7,6 +7,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
+
 import timely.client.http.HttpClient;
 
 public class TimelyHttpsUtil {
@@ -14,10 +15,8 @@ public class TimelyHttpsUtil {
     private CloseableHttpClient client = null;
     CookieStore cookieStore = new BasicCookieStore();
 
-    public TimelyHttpsUtil(String trustStoreFile, String trustStoreType, String trustStorePass, String keyStoreFile,
-            String keyStoreType, String keyStorePass) {
-        client = HttpClient.get(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType,
-                keyStorePass, cookieStore, false);
+    public TimelyHttpsUtil(String trustStoreFile, String trustStoreType, String trustStorePass, String keyStoreFile, String keyStoreType, String keyStorePass) {
+        client = HttpClient.get(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType, keyStorePass, cookieStore, false);
     }
 
     public CloseableHttpResponse query(MetricQuery query, String host, int port) {

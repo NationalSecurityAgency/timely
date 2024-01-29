@@ -18,8 +18,7 @@ public class Value implements Comparator<Value>, Serializable {
     private Long timestamp;
     private Double measure;
 
-    public Value() {
-    }
+    public Value() {}
 
     public Value(Value other) {
         this.setTimestamp(other.getTimestamp());
@@ -74,11 +73,9 @@ public class Value implements Comparator<Value>, Serializable {
         if (null == o || getClass() != o.getClass())
             return false;
 
-        if (getTimestamp() != null ? !getTimestamp().equals(((Value) o).getTimestamp())
-                : ((Value) o).getTimestamp() != null)
+        if (getTimestamp() != null ? !getTimestamp().equals(((Value) o).getTimestamp()) : ((Value) o).getTimestamp() != null)
             return false;
-        return !(getMeasure() != null ? !getMeasure().equals(((Value) o).getMeasure())
-                : ((Value) o).getMeasure() != null);
+        return !(getMeasure() != null ? !getMeasure().equals(((Value) o).getMeasure()) : ((Value) o).getMeasure() != null);
     }
 
     @Override

@@ -2,12 +2,13 @@ package timely.netty.tcp;
 
 import java.nio.charset.StandardCharsets;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.MetricRequest;
 import timely.netty.Constants;
 import timely.store.DataStore;
@@ -30,8 +31,7 @@ public class TcpPutHandler extends SimpleChannelInboundHandler<MetricRequest> {
             store.store(msg.getMetric());
         } catch (Exception e) {
             LOG.error(LOG_ERR_MSG, msg, e);
-            ChannelFuture cf = ctx.writeAndFlush(
-                    Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
+            ChannelFuture cf = ctx.writeAndFlush(Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
             if (!cf.isSuccess()) {
                 LOG.error(Constants.ERR_WRITING_RESPONSE, cf.cause());
             }

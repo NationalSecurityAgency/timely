@@ -10,10 +10,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
 import org.apache.hadoop.io.Text;
 import org.junit.Test;
+
+import com.google.common.collect.Lists;
+
 import timely.adapter.accumulo.MetricAdapter;
 
 public class TabletSummaryTest {
@@ -121,7 +123,7 @@ public class TabletSummaryTest {
                 .build();
 
         // @formatter:on
-        Map<TabletStatisticType, StatisticalSummary> map = summary.aggregateSummary();
+        Map<TabletStatisticType,StatisticalSummary> map = summary.aggregateSummary();
         StatisticalSummary size = map.get(TabletStatisticType.SIZE);
         StatisticalSummary time = map.get(TabletStatisticType.TIME);
 

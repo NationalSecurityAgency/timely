@@ -10,8 +10,7 @@ public class WrappedGorillaDecompressorIterator implements Iterator<WrappedGoril
     private Iterator<WrappedGorillaDecompressor> iterator;
     private WrappedGorillaDecompressor current = null;
 
-    public WrappedGorillaDecompressorIterator(TaggedMetric taggedMetric,
-            List<WrappedGorillaDecompressor> decompressors) {
+    public WrappedGorillaDecompressorIterator(TaggedMetric taggedMetric, List<WrappedGorillaDecompressor> decompressors) {
         this.taggedMetric = taggedMetric;
         this.decompressors = decompressors;
         this.iterator = this.decompressors.iterator();

@@ -5,10 +5,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import fi.iki.yak.ts.compression.gorilla.Pair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import fi.iki.yak.ts.compression.gorilla.Pair;
 import timely.configuration.Configuration;
 
 public class TestGorillaStore {
@@ -26,7 +27,7 @@ public class TestGorillaStore {
 
         GorillaStore gStore = new GorillaStore("", Long.MAX_VALUE);
 
-        Double[] valueArray = new Double[] { 1.123, 2.314, 3.856, 4.7678, 5.8966, 6.0976, 1.2345, 2.3456, 3.4567 };
+        Double[] valueArray = new Double[] {1.123, 2.314, 3.856, 4.7678, 5.8966, 6.0976, 1.2345, 2.3456, 3.4567};
         List<Double> values = new ArrayList<>(Arrays.asList(valueArray));
 
         long now = System.currentTimeMillis();
@@ -49,7 +50,7 @@ public class TestGorillaStore {
 
         GorillaStore gStore = new GorillaStore("", Long.MAX_VALUE);
 
-        HashMap<String, String> tags = new HashMap<>();
+        HashMap<String,String> tags = new HashMap<>();
         tags.put("host", "localhost");
 
         long start = System.currentTimeMillis();

@@ -20,10 +20,11 @@ import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.timeseries.QueryRequest;
 
-public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value> {
+public class DataStoreCacheIterator implements SortedKeyValueIterator<Key,Value> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataStoreCacheIterator.class);
     private DataStoreCache store;
@@ -32,39 +33,37 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
     private long startTs;
     private long endTs;
 
-    private Iterator<Map.Entry<TaggedMetric, GorillaStore>> storeItr = null;
+    private Iterator<Map.Entry<TaggedMetric,GorillaStore>> storeItr = null;
     private WrappedGorillaDecompressorIterator decompressors = null;
     private KeyValue currentKeyValue = null;
     private Queue<KeyValue> kvQueue = new LinkedList<>();
     private Set<TaggedMetric> matchingTaggedMetrics = new HashSet<>();
 
-    public DataStoreCacheIterator(DataStoreCache store, Collection<VisibilityFilter> visibilityFilters,
-            QueryRequest.SubQuery query, long startTs, long endTs) {
+    public DataStoreCacheIterator(DataStoreCache store, Collection<VisibilityFilter> visibilityFilters, QueryRequest.SubQuery query, long startTs, long endTs) {
 
         this.store = store;
         this.visibilityFilters = visibilityFilters;
         this.query = query;
         this.startTs = startTs;
         this.endTs = endTs;
-        Map<TaggedMetric, GorillaStore> storeMap = this.store.getGorillaStores(query.getMetric());
+        Map<TaggedMetric,GorillaStore> storeMap = this.store.getGorillaStores(query.getMetric());
         this.storeItr = storeMap.entrySet().iterator();
         this.decompressors = getNextDecompressorIterable();
 
         long start = System.currentTimeMillis();
-        Map<Key, Value> entries = getEntries();
-        for (Map.Entry<Key, Value> entry : entries.entrySet()) {
+        Map<Key,Value> entries = getEntries();
+        for (Map.Entry<Key,Value> entry : entries.entrySet()) {
             kvQueue.add(new KeyValue(entry.getKey(), entry.getValue()));
         }
-        LOG.info(
-                "Time to initialize cache iterator for {} with {} TaggedMetric/GorillaStore pairs and {} K/V entries - {}ms",
-                query.toString(), storeMap.size(), entries.size(), System.currentTimeMillis() - start);
+        LOG.info("Time to initialize cache iterator for {} with {} TaggedMetric/GorillaStore pairs and {} K/V entries - {}ms", query.toString(),
+                        storeMap.size(), entries.size(), System.currentTimeMillis() - start);
     }
 
     private WrappedGorillaDecompressorIterator getNextDecompressorIterable() {
-        Map<String, String> requestedTags = query.getTags();
+        Map<String,String> requestedTags = query.getTags();
         WrappedGorillaDecompressorIterator nextPair = null;
         while (nextPair == null && storeItr.hasNext()) {
-            Map.Entry<TaggedMetric, GorillaStore> entry = storeItr.next();
+            Map.Entry<TaggedMetric,GorillaStore> entry = storeItr.next();
             TaggedMetric currentTaggedMetric = entry.getKey();
 
             // keep a cache of tagged metrics that match
@@ -99,11 +98,11 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
         return nextPair;
     }
 
-    private Map<Key, Value> getEntries() {
+    private Map<Key,Value> getEntries() {
 
         // sort all retrieved entries by key order, consistent with the accumulo
         // version
-        Map<Key, Value> entries = new TreeMap<>();
+        Map<Key,Value> entries = new TreeMap<>();
         if (decompressors != null) {
             TaggedMetric tm = decompressors.getTaggedMetric();
             WrappedGorillaDecompressor decompressor = decompressors.getDecompressorWrapper();
@@ -124,7 +123,7 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
                     long ts = gPair.getTimestamp();
                     if (ts >= startTs && ts <= endTs) {
                         entries.put(MetricAdapter.toKey(this.query.getMetric(), tm.getTags(), ts),
-                                new Value(MetricAdapter.encodeValue(gPair.getDoubleValue())));
+                                        new Value(MetricAdapter.encodeValue(gPair.getDoubleValue())));
                     }
                 }
             }
@@ -133,8 +132,7 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
     }
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
-            throws IOException {
+    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
 
     }
 
@@ -172,7 +170,7 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key, Value
     }
 
     @Override
-    public SortedKeyValueIterator<Key, Value> deepCopy(IteratorEnvironment env) {
+    public SortedKeyValueIterator<Key,Value> deepCopy(IteratorEnvironment env) {
         return null;
     }
 

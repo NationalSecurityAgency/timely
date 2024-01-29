@@ -13,6 +13,7 @@ import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iteratorsImpl.system.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
+
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
 import timely.model.Tag;
@@ -23,8 +24,8 @@ import timely.sample.aggregators.Avg;
 
 public class AggregationIteratorTest {
 
-    final private SortedMap<Key, Value> testData1 = new TreeMap<>();
-    final private SortedMap<Key, Value> testData2 = new TreeMap<>();
+    final private SortedMap<Key,Value> testData1 = new TreeMap<>();
+    final private SortedMap<Key,Value> testData2 = new TreeMap<>();
 
     @Before
     public void createTestData() throws Exception {
@@ -46,15 +47,13 @@ public class AggregationIteratorTest {
     }
 
     /**
-     * This will add key, values to the test data as output from the
-     * DownsampleIterator
+     * This will add key, values to the test data as output from the DownsampleIterator
      */
-    void put(Map<Key, Value> testData, Metric m, Downsample sample) throws Exception {
+    void put(Map<Key,Value> testData, Metric m, Downsample sample) throws Exception {
         Mutation mutation = MetricAdapter.toMutation(m);
         for (ColumnUpdate cu : mutation.getUpdates()) {
-            Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(),
-                    cu.getColumnVisibility(), cu.getTimestamp());
-            Map<Set<Tag>, Downsample> samples = new HashMap<>();
+            Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(), cu.getColumnVisibility(), cu.getTimestamp());
+            Map<Set<Tag>,Downsample> samples = new HashMap<>();
             samples.put(new HashSet<Tag>(m.getTags()), sample);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ObjectOutputStream out = new ObjectOutputStream(bos);
@@ -89,9 +88,9 @@ public class AggregationIteratorTest {
     public void simpleGetOneSample() throws Exception {
         // check that data gets pulled out
         AggregationIterator iter = new AggregationIterator();
-        Map<Set<Tag>, Aggregation> samples = runQuery(iter, testData1, 100);
+        Map<Set<Tag>,Aggregation> samples = runQuery(iter, testData1, 100);
         assertEquals(1, samples.size());
-        for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
+        for (Entry<Set<Tag>,Aggregation> entry : samples.entrySet()) {
             Set<Tag> tags = entry.getKey();
             assertEquals(1, tags.size());
             assertEquals(Collections.singleton(new Tag("host", ".*")), tags);
@@ -111,9 +110,9 @@ public class AggregationIteratorTest {
     @Test
     public void simpleAggregatedSample() throws Exception {
         AggregationIterator iter = new AggregationIterator();
-        Map<Set<Tag>, Aggregation> samples = runQuery(iter, testData2, 100);
+        Map<Set<Tag>,Aggregation> samples = runQuery(iter, testData2, 100);
         assertEquals(1, samples.size());
-        for (Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
+        for (Entry<Set<Tag>,Aggregation> entry : samples.entrySet()) {
             Set<Tag> tags = entry.getKey();
             assertEquals(1, tags.size());
             assertEquals(Collections.singleton(new Tag("host", ".*")), tags);
@@ -129,17 +128,16 @@ public class AggregationIteratorTest {
         }
     }
 
-    private Map<Set<Tag>, Aggregation> runQuery(SortedKeyValueIterator<Key, Value> iter, SortedMap<Key, Value> testData,
-            long period) throws Exception {
+    private Map<Set<Tag>,Aggregation> runQuery(SortedKeyValueIterator<Key,Value> iter, SortedMap<Key,Value> testData, long period) throws Exception {
         IteratorSetting is = new IteratorSetting(100, AggregationIterator.class);
         AggregationIterator.setAggregationOptions(is, Collections.singletonMap("host", ".*"), Avg.class.getName());
-        SortedKeyValueIterator<Key, Value> source = new SortedMapIterator(testData);
+        SortedKeyValueIterator<Key,Value> source = new SortedMapIterator(testData);
         iter.init(source, is.getOptions(), null);
         iter.seek(new Range(), Collections.emptyList(), true);
         assertTrue(iter.hasTop());
         Key key = iter.getTopKey();
         assertEquals(testData.lastKey(), key);
-        Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(iter.getTopValue());
+        Map<Set<Tag>,Aggregation> samples = AggregationIterator.decodeValue(iter.getTopValue());
         return samples;
     }
 }

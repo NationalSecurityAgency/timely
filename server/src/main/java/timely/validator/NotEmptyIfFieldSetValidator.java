@@ -11,7 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * Implementation of {@link NotEmptyIfFieldSet} validator.
  */
-public class NotEmptyIfFieldSetValidator implements ConstraintValidator<NotEmptyIfFieldSet, Object> {
+public class NotEmptyIfFieldSetValidator implements ConstraintValidator<NotEmptyIfFieldSet,Object> {
 
     private String fieldName;
     private String fieldSetValue;
@@ -35,8 +35,8 @@ public class NotEmptyIfFieldSetValidator implements ConstraintValidator<NotEmpty
             final String notNullFieldValue = BeanUtils.getProperty(value, notNullFieldName);
             if (StringUtils.equals(fieldValue, fieldSetValue) && StringUtils.isEmpty(notNullFieldValue)) {
                 context.disableDefaultConstraintViolation();
-                context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-                        .addPropertyNode(notNullFieldName).addConstraintViolation();
+                context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate()).addPropertyNode(notNullFieldName)
+                                .addConstraintViolation();
                 return false;
             }
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {

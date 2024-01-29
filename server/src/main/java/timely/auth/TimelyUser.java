@@ -11,12 +11,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+
 import timely.auth.util.DnUtils;
 import timely.auth.util.ProxiedEntityUtils;
 
 /**
- * A user of a TIMELY service. Typically, one or more of these users (a chain
- * where a user called an intermediate service which in turn called us) is
+ * A user of a TIMELY service. Typically, one or more of these users (a chain where a user called an intermediate service which in turn called us) is
  * represented with a TimelyPrincipal.
  */
 public class TimelyUser implements Serializable {
@@ -27,8 +27,7 @@ public class TimelyUser implements Serializable {
         USER, SERVER
     }
 
-    public static final TimelyUser ANONYMOUS_USER = new TimelyUser(SubjectIssuerDNPair.of("ANONYMOUS"), UserType.USER,
-            null, null, null, -1L);
+    public static final TimelyUser ANONYMOUS_USER = new TimelyUser(SubjectIssuerDNPair.of("ANONYMOUS"), UserType.USER, null, null, null, -1L);
     private final String name;
     private final String commonName;
     private final String email;
@@ -39,7 +38,7 @@ public class TimelyUser implements Serializable {
     private final Collection<String> unmodifiableAuths;
     private final Collection<String> roles;
     private final Collection<String> unmodifiableRoles;
-    private final Multimap<String, String> roleToAuthMapping;
+    private final Multimap<String,String> roleToAuthMapping;
     private final long creationTime;
     private final long expirationTime;
 
@@ -66,27 +65,25 @@ public class TimelyUser implements Serializable {
      * For testing
      */
     public TimelyUser(String subjectDn, Collection<String> auths) {
-        this(SubjectIssuerDNPair.of(subjectDn), UserType.USER, null, auths, null, null, System.currentTimeMillis(),
-                -1L);
+        this(SubjectIssuerDNPair.of(subjectDn), UserType.USER, null, auths, null, null, System.currentTimeMillis(), -1L);
     }
 
-    public TimelyUser(SubjectIssuerDNPair dn, UserType userType, Collection<String> auths, Collection<String> roles,
-            Multimap<String, String> roleToAuthMapping, long creationTime) {
+    public TimelyUser(SubjectIssuerDNPair dn, UserType userType, Collection<String> auths, Collection<String> roles, Multimap<String,String> roleToAuthMapping,
+                    long creationTime) {
         this(dn, userType, null, auths, roles, roleToAuthMapping, creationTime, -1L);
     }
 
-    public TimelyUser(SubjectIssuerDNPair dn, UserType userType, String email, Collection<String> auths,
-            Collection<String> roles, Multimap<String, String> roleToAuthMapping, long creationTime) {
+    public TimelyUser(SubjectIssuerDNPair dn, UserType userType, String email, Collection<String> auths, Collection<String> roles,
+                    Multimap<String,String> roleToAuthMapping, long creationTime) {
         this(dn, userType, email, auths, roles, roleToAuthMapping, creationTime, -1L);
     }
 
     @JsonCreator
-    public TimelyUser(@JsonProperty(value = "dn", required = true) SubjectIssuerDNPair dn,
-            @JsonProperty(value = "userType", required = true) UserType userType, @JsonProperty("email") String email,
-            @JsonProperty("auths") Collection<String> auths, @JsonProperty("roles") Collection<String> roles,
-            @JsonProperty("roleToAuthMapping") Multimap<String, String> roleToAuthMapping,
-            @JsonProperty(value = "creationTime", defaultValue = "-1L") long creationTime,
-            @JsonProperty(value = "expirationTime", defaultValue = "-1L") long expirationTime) {
+    public TimelyUser(@JsonProperty(value = "dn", required = true) SubjectIssuerDNPair dn, @JsonProperty(value = "userType", required = true) UserType userType,
+                    @JsonProperty("email") String email, @JsonProperty("auths") Collection<String> auths, @JsonProperty("roles") Collection<String> roles,
+                    @JsonProperty("roleToAuthMapping") Multimap<String,String> roleToAuthMapping,
+                    @JsonProperty(value = "creationTime", defaultValue = "-1L") long creationTime,
+                    @JsonProperty(value = "expirationTime", defaultValue = "-1L") long expirationTime) {
         this.name = dn.toString();
         this.commonName = DnUtils.getCommonName(dn.subjectDN());
         this.login = ProxiedEntityUtils.getShortName(dn.subjectDN());
@@ -98,7 +95,7 @@ public class TimelyUser implements Serializable {
         this.roles = roles == null ? Collections.emptyList() : new LinkedHashSet<>(roles);
         this.unmodifiableRoles = Collections.unmodifiableCollection(this.roles);
         this.roleToAuthMapping = roleToAuthMapping == null ? LinkedHashMultimap.create()
-                : Multimaps.unmodifiableMultimap(LinkedHashMultimap.create(roleToAuthMapping));
+                        : Multimaps.unmodifiableMultimap(LinkedHashMultimap.create(roleToAuthMapping));
         this.creationTime = creationTime;
         this.expirationTime = expirationTime;
     }
@@ -136,7 +133,7 @@ public class TimelyUser implements Serializable {
         return unmodifiableRoles;
     }
 
-    public Multimap<String, String> getRoleToAuthMapping() {
+    public Multimap<String,String> getRoleToAuthMapping() {
         return roleToAuthMapping;
     }
 
@@ -157,8 +154,7 @@ public class TimelyUser implements Serializable {
 
         TimelyUser that = (TimelyUser) o;
 
-        return creationTime == that.creationTime && dn.equals(that.dn) && userType == that.userType
-                && auths.equals(that.auths) && roles.equals(that.roles);
+        return creationTime == that.creationTime && dn.equals(that.dn) && userType == that.userType && auths.equals(that.auths) && roles.equals(that.roles);
     }
 
     @Override
@@ -173,7 +169,7 @@ public class TimelyUser implements Serializable {
 
     @Override
     public String toString() {
-        return "TimelyUser{" + "name='" + getName() + "'" + ", userType=" + getUserType() + ", auths=" + getAuths()
-                + ", roles=" + getRoles() + ", creationTime=" + getCreationTime() + "}";
+        return "TimelyUser{" + "name='" + getName() + "'" + ", userType=" + getUserType() + ", auths=" + getAuths() + ", roles=" + getRoles()
+                        + ", creationTime=" + getCreationTime() + "}";
     }
 }

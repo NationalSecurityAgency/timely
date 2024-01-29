@@ -5,11 +5,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.response.TimelyException;
 import timely.configuration.Configuration;
@@ -19,7 +20,7 @@ import timely.store.cache.DataStoreCache;
 public class Subscription {
 
     private static final Logger LOG = LoggerFactory.getLogger(Subscription.class);
-    private static final Map<String, MetricScanner> METRICS = new ConcurrentHashMap<>();
+    private static final Map<String,MetricScanner> METRICS = new ConcurrentHashMap<>();
 
     private final String sessionId;
     private final DataStore store;
@@ -34,8 +35,7 @@ public class Subscription {
     private final String subscriptionId;
     private LinkedList<String> deadMetricScannerQueue = new LinkedList<>();
 
-    public Subscription(String subscriptionId, String sessionId, DataStore store, DataStoreCache cache,
-            ChannelHandlerContext ctx, Configuration conf) {
+    public Subscription(String subscriptionId, String sessionId, DataStore store, DataStoreCache cache, ChannelHandlerContext ctx, Configuration conf) {
         this.subscriptionId = subscriptionId;
         this.sessionId = sessionId;
         this.store = store;
@@ -55,12 +55,11 @@ public class Subscription {
         }, rate, rate, TimeUnit.SECONDS);
     }
 
-    public void addMetric(AuthenticatedRequest request, String metric, Map<String, String> tags, long startTime,
-            long endTime, long delay) throws TimelyException {
+    public void addMetric(AuthenticatedRequest request, String metric, Map<String,String> tags, long startTime, long endTime, long delay)
+                    throws TimelyException {
         LOG.debug("[{}] Adding metric scanner", this.subscriptionId);
-        MetricScanner m = new MetricScanner(this, this.subscriptionId, this.sessionId, store, cache, metric, tags,
-                startTime, endTime, delay, lag, request, ctx, scannerBatchSize, flushIntervalSeconds, scannerReadAhead,
-                subscriptionBatchSize);
+        MetricScanner m = new MetricScanner(this, this.subscriptionId, this.sessionId, store, cache, metric, tags, startTime, endTime, delay, lag, request, ctx,
+                        scannerBatchSize, flushIntervalSeconds, scannerReadAhead, subscriptionBatchSize);
         METRICS.put(metric, m);
         m.start();
     }

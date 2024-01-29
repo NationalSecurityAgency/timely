@@ -11,6 +11,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
+
 import timely.configuration.Configuration;
 import timely.test.TestConfiguration;
 
@@ -55,8 +56,7 @@ public class AuthenticationServiceTest {
 
     @Test
     public void testX509AuthenticationLogin() {
-        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("CN=example.com",
-                "doesn't matter what I put here");
+        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("CN=example.com", "doesn't matter what I put here");
         TimelyPrincipal principal = AuthenticationService.authenticate(token, "test");
         Collection<? extends Collection<String>> authorizations = principal.getAuthorizations();
         authorizations.forEach(a -> {
@@ -66,8 +66,7 @@ public class AuthenticationServiceTest {
 
     @Test(expected = UsernameNotFoundException.class)
     public void testX509AuthenticationLoginFailed() {
-        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("CN=bad.example.com",
-                "doesn't matter what I put here");
+        PreAuthenticatedAuthenticationToken token = new PreAuthenticatedAuthenticationToken("CN=bad.example.com", "doesn't matter what I put here");
         TimelyPrincipal principal = AuthenticationService.authenticate(token, "test");
         Collection<? extends Collection<String>> authorizations = principal.getAuthorizations();
         authorizations.forEach(a -> {

@@ -39,8 +39,7 @@ public class Server {
     }
 
     /**
-     * Time to wait (in seconds) for connections to finish and to make sure no new
-     * connections happen before shutting down Netty event loop groups.
+     * Time to wait (in seconds) for connections to finish and to make sure no new connections happen before shutting down Netty event loop groups.
      */
     public int getShutdownQuietPeriod() {
         return this.shutdownQuietPeriod;

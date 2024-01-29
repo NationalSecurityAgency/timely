@@ -30,8 +30,7 @@ public class FileUserDetailsServiceTest {
         TimelyUser u = fileUserDetailsService.getUsers().get("CN=example.com");
         Assert.assertNotNull("TimelyUser not found", u);
         Assert.assertEquals("3 auths expected", 3, u.getAuths().size());
-        Assert.assertTrue("Unexpected auths found " + u.getAuths(),
-                u.getAuths().containsAll(Arrays.asList("D", "E", "F")));
+        Assert.assertTrue("Unexpected auths found " + u.getAuths(), u.getAuths().containsAll(Arrays.asList("D", "E", "F")));
     }
 
     @Test
@@ -39,7 +38,6 @@ public class FileUserDetailsServiceTest {
         TimelyUser u = fileUserDetailsService.getUsers().get("CN=example.com");
         Assert.assertNotNull("TimelyUser not found", u);
         Assert.assertEquals("3 roles expected", 3, u.getRoles().size());
-        Assert.assertTrue("Unexpected roles found " + u.getRoles(),
-                u.getRoles().containsAll(Arrays.asList("G", "H", "I")));
+        Assert.assertTrue("Unexpected roles found " + u.getRoles(), u.getRoles().containsAll(Arrays.asList("G", "H", "I")));
     }
 }

@@ -12,6 +12,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
 import timely.api.response.timeseries.QueryResponse;
@@ -40,9 +41,8 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithVisibility() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=secret");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
+                        "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=secret");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -54,9 +54,9 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
-        Map<String, String> tags = response.get(0).getTags();
+        Map<String,String> tags = response.get(0).getTags();
         assertEquals(0, tags.size());
-        Map<String, Object> dps = response.get(0).getDps();
+        Map<String,Object> dps = response.get(0).getDps();
         assertEquals(2, dps.size());
     }
 

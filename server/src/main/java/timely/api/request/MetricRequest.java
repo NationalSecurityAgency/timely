@@ -5,10 +5,12 @@ import java.nio.charset.StandardCharsets;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import io.netty.handler.codec.http.FullHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+
+import io.netty.handler.codec.http.FullHttpRequest;
 import timely.api.annotation.Http;
 import timely.api.annotation.Tcp;
 import timely.api.annotation.Udp;
@@ -35,8 +37,7 @@ public class MetricRequest implements TcpRequest, HttpPostRequest, WebSocketRequ
 
     private static final MetricParser metricParser = new MetricParser();
 
-    public MetricRequest() {
-    }
+    public MetricRequest() {}
 
     public MetricRequest(Metric metric) {
         this.metric = metric;

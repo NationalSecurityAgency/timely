@@ -8,7 +8,15 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+
 import com.fasterxml.jackson.databind.JsonMappingException;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -16,12 +24,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;
 import timely.api.request.timeseries.AggregatorsRequest;
@@ -92,8 +94,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testUnknownURI() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/unknown");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/unknown");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(request, results.get(0));
@@ -102,8 +103,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testAggregatorsURINoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/aggregators");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/aggregators");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Object o = results.get(0);
@@ -113,8 +113,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testAggregatorsURIWithAnonAccess() throws Exception {
         decoder = new TestHttpQueryDecoder(anonConfig);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/aggregators");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/aggregators");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(AggregatorsRequest.class, results.iterator().next().getClass());
@@ -123,8 +122,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testAggregatorsURI() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/aggregators");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/aggregators");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -134,8 +132,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testAggregatorsPostNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/aggregators");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/aggregators");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Object o = results.get(0);
@@ -145,8 +142,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testAggregatorsPostAnonAccess() throws Exception {
         decoder = new TestHttpQueryDecoder(anonConfig);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/aggregators");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/aggregators");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(AggregatorsRequest.class, results.iterator().next().getClass());
@@ -155,8 +151,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testAggregatorsPost() throws Exception {
         decoder = new TestHttpQueryDecoder(anonConfig);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/aggregators");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/aggregators");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -166,24 +161,21 @@ public class HttpRequestDecoderTest {
     @Test(expected = IllegalArgumentException.class)
     public void testLookupURIWithNoArgs() throws Exception {
         decoder = new TestHttpQueryDecoder(anonConfig);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/search/lookup");
         decoder.decode(null, request, results);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testLookupURIWithNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/search/lookup");
         decoder.decode(null, request, results);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testLookupURIWithWithSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/search/lookup");
         addCookie(request);
         decoder.decode(null, request, results);
     }
@@ -191,8 +183,7 @@ public class HttpRequestDecoderTest {
     @Test(expected = JsonMappingException.class)
     public void testLookupPostWithNoArgs() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/search/lookup");
         addCookie(request);
         decoder.decode(null, request, results);
     }
@@ -200,16 +191,14 @@ public class HttpRequestDecoderTest {
     @Test(expected = JsonMappingException.class)
     public void testLookupPostWithNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/search/lookup");
         decoder.decode(null, request, results);
     }
 
     @Test
     public void testLookupURIWithNoLimit() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/search/lookup?m=sys.cpu.user");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/search/lookup?m=sys.cpu.user");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -229,8 +218,7 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/search/lookup");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -245,8 +233,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testLookupURIWithLimit() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/search/lookup?m=sys.cpu.user&limit=3000");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/search/lookup?m=sys.cpu.user&limit=3000");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -267,8 +254,7 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/search/lookup");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -284,7 +270,7 @@ public class HttpRequestDecoderTest {
     public void testLookupURIWithLimitAndTags() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/search/lookup?m=sys.cpu.user{host=*}&limit=3000");
+                        "/api/search/lookup?m=sys.cpu.user{host=*}&limit=3000");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -313,8 +299,7 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/search/lookup");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/search/lookup");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -332,16 +317,14 @@ public class HttpRequestDecoderTest {
     @Test(expected = IllegalArgumentException.class)
     public void testSuggestNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=foo");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=foo");
         decoder.decode(null, request, results);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testSuggestURIWithInvalidTypeAnonAccess() throws Exception {
         decoder = new TestHttpQueryDecoder(anonConfig);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=foo");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=foo");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(SuggestRequest.class, results.iterator().next().getClass());
@@ -354,8 +337,7 @@ public class HttpRequestDecoderTest {
     @Test(expected = IllegalArgumentException.class)
     public void testSuggestURIWithInvalidType() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=foo");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=foo");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -369,8 +351,7 @@ public class HttpRequestDecoderTest {
     @Test(expected = IllegalArgumentException.class)
     public void testSuggestURIValidateWithInvalidTypeFails() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=foo");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=foo");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -385,8 +366,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testSuggestURIWithValidTypeNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=metrics");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=metrics");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Object o = results.get(0);
@@ -396,8 +376,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testSuggestURIWithValidType() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=metrics");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=metrics");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -418,8 +397,7 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/suggest");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/suggest");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -435,8 +413,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testSuggestWithValidTypeAndQuery() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=metrics&m=sys.cpu.user");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=metrics&m=sys.cpu.user");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -458,8 +435,7 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/suggest");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/suggest");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -475,8 +451,7 @@ public class HttpRequestDecoderTest {
     @Test
     public void testSuggestWithValidTypeAndQueryAndMax() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/suggest?type=metrics&m=sys.cpu.user&max=30");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/suggest?type=metrics&m=sys.cpu.user&max=30");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -499,8 +474,7 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/suggest");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/suggest");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -517,7 +491,7 @@ public class HttpRequestDecoderTest {
     public void testQueryWithNoSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
+                        "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Object o = results.get(0);
@@ -528,7 +502,7 @@ public class HttpRequestDecoderTest {
     public void testQueryURIAllAnonAccess() throws Exception {
         decoder = new TestHttpQueryDecoder(anonConfig);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
+                        "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(QueryRequest.class, results.iterator().next().getClass());
@@ -549,8 +523,8 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(0, firstRateOption.getResetValue());
         Assert.assertEquals(false, first.getDownsample().isPresent());
         Assert.assertEquals(1, first.getTags().size());
-        Iterator<Entry<String, String>> tags = first.getTags().entrySet().iterator();
-        Entry<String, String> firstTag = tags.next();
+        Iterator<Entry<String,String>> tags = first.getTags().entrySet().iterator();
+        Entry<String,String> firstTag = tags.next();
         Assert.assertEquals("rack", firstTag.getKey());
         Assert.assertEquals("r1|r2", firstTag.getValue());
         Assert.assertEquals(1, first.getFilters().size());
@@ -574,7 +548,7 @@ public class HttpRequestDecoderTest {
     public void testQueryURIAllWithSession() throws Exception {
         decoder = new TestHttpQueryDecoder(config);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
+                        "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -596,8 +570,8 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(0, firstRateOption.getResetValue());
         Assert.assertEquals(false, first.getDownsample().isPresent());
         Assert.assertEquals(1, first.getTags().size());
-        Iterator<Entry<String, String>> tags = first.getTags().entrySet().iterator();
-        Entry<String, String> firstTag = tags.next();
+        Iterator<Entry<String,String>> tags = first.getTags().entrySet().iterator();
+        Entry<String,String> firstTag = tags.next();
         Assert.assertEquals("rack", firstTag.getKey());
         Assert.assertEquals("r1|r2", firstTag.getValue());
         Assert.assertEquals(1, first.getFilters().size());
@@ -637,8 +611,7 @@ public class HttpRequestDecoderTest {
                         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -710,8 +683,7 @@ public class HttpRequestDecoderTest {
         "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -734,11 +706,11 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(0, firstRateOption.getResetValue());
         Assert.assertEquals(false, first.getDownsample().isPresent());
         Assert.assertEquals(2, first.getTags().size());
-        Iterator<Entry<String, String>> tags = first.getTags().entrySet().iterator();
-        Entry<String, String> firstTag = tags.next();
+        Iterator<Entry<String,String>> tags = first.getTags().entrySet().iterator();
+        Entry<String,String> firstTag = tags.next();
         Assert.assertEquals("host", firstTag.getKey());
         Assert.assertEquals("*", firstTag.getValue());
-        Entry<String, String> secondTag = tags.next();
+        Entry<String,String> secondTag = tags.next();
         Assert.assertEquals("rack", secondTag.getKey());
         Assert.assertEquals("r1", secondTag.getValue());
         Assert.assertEquals(2, first.getFilters().size());
@@ -783,8 +755,7 @@ public class HttpRequestDecoderTest {
         + "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);
@@ -823,8 +794,7 @@ public class HttpRequestDecoderTest {
         + "}";
         // @formatter:on
         decoder = new TestHttpQueryDecoder(config);
-        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                "/api/query");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/api/query");
         request.content().writeBytes(content.getBytes());
         addCookie(request);
         decoder.decode(null, request, results);

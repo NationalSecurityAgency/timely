@@ -24,16 +24,15 @@ public class TabletMetadataQuery {
 
     public TabletMetadataView run() throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
         TabletMetadataView view = new TabletMetadataView();
-        Map<String, String> tableMap = accumuloClient.tableOperations().tableIdMap();
+        Map<String,String> tableMap = accumuloClient.tableOperations().tableIdMap();
         String tableId = tableMap.get(tableName);
         if (null == tableId) {
             throw new IllegalStateException("Unable to find " + MetadataTable.NAME);
         }
 
-        try (Scanner s = accumuloClient.createScanner(MetadataTable.NAME,
-                accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()))) {
+        try (Scanner s = accumuloClient.createScanner(MetadataTable.NAME, accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()))) {
             s.setRange(Range.prefix(tableId));
-            for (Map.Entry<Key, Value> e : s) {
+            for (Map.Entry<Key,Value> e : s) {
                 view.addEntry(e);
             }
         }

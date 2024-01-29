@@ -124,20 +124,18 @@ public class MetricQueryLoadTest {
                 long now = System.currentTimeMillis();
                 long begin = now - (1000 * queryDurationMins * 60);
                 String metric = getNextMetric();
-                Map<String, String> tags = new HashMap<>();
+                Map<String,String> tags = new HashMap<>();
                 tags.put("host", ".*");
                 MetricQuery q = new MetricQuery(metric, begin, now, tags);
 
-                TimelyHttpsUtil connection = new TimelyHttpsUtil(trustStoreFile, trustStoreType, trustStorePass,
-                        keyStoreFile, keyStoreType, keyStorePass);
+                TimelyHttpsUtil connection = new TimelyHttpsUtil(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType, keyStorePass);
 
                 long start = System.currentTimeMillis();
                 CloseableHttpResponse response = connection.query(q, host, port);
                 long stop = System.currentTimeMillis();
                 long duration = stop - start;
                 if (!testDone) {
-                    System.out.println("Query for " + metric + " response: " + response.getStatusLine() + " in "
-                            + duration + "ms");
+                    System.out.println("Query for " + metric + " response: " + response.getStatusLine() + " in " + duration + "ms");
                     totalQueryDuration.addAndGet(duration);
                     totalQueriesCompleted.incrementAndGet();
                 }
@@ -180,8 +178,7 @@ public class MetricQueryLoadTest {
             long endQueries = System.currentTimeMillis();
 
             long asSeenTime = totalQueryDuration.get() / totalQueriesCompleted.get();
-            System.out.println(
-                    "Average individual rate for " + totalQueriesCompleted.get() + " = " + asSeenTime + "ms/query");
+            System.out.println("Average individual rate for " + totalQueriesCompleted.get() + " = " + asSeenTime + "ms/query");
             double msPerQuery = (endQueries - beginQueries) / ((double) queriesCompleted);
             long numQueriesPerHour = Math.round((60 * 60 * 1000) / msPerQuery);
             System.out.println("Aggregate rate for " + queriesCompleted + " = " + msPerQuery + "ms/query");
@@ -233,8 +230,7 @@ public class MetricQueryLoadTest {
                 lt.run();
 
             } else {
-                System.out.println("Usage " + MetricQueryLoadTest.class.getName()
-                        + " host port metricTestData queryDurationMins testDurationMins");
+                System.out.println("Usage " + MetricQueryLoadTest.class.getName() + " host port metricTestData queryDurationMins testDurationMins");
                 System.exit(-1);
             }
         } catch (Exception e) {

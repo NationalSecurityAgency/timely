@@ -2,6 +2,7 @@ package timely.api.response.timeseries;
 
 import org.junit.Assert;
 import org.junit.Test;
+
 import timely.util.JsonUtil;
 
 public class AggregatorsResponseTest {

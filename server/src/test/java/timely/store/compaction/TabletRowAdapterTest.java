@@ -21,11 +21,11 @@ public class TabletRowAdapterTest {
 
     private static final Lexicoder<String> prefixCoder = new StringLexicoder();
     private static final Lexicoder<Long> offsetCoder = new LongLexicoder();
-    private static final PairLexicoder<String, Long> pairCoder = new PairLexicoder<>(prefixCoder, offsetCoder);
+    private static final PairLexicoder<String,Long> pairCoder = new PairLexicoder<>(prefixCoder, offsetCoder);
 
     @Test
     public void decodePrefix() {
-        ComparablePair<String, Long> p = new ComparablePair<>("test", 1L);
+        ComparablePair<String,Long> p = new ComparablePair<>("test", 1L);
         byte[] bytes = pairCoder.encode(p);
         OptionalLong decoded = TabletRowAdapter.decodeRowOffset(new Text(bytes));
         assertTrue(decoded.isPresent());
@@ -33,7 +33,7 @@ public class TabletRowAdapterTest {
 
     @Test
     public void decodeOffsetOnly() {
-        ComparablePair<String, Long> p = new ComparablePair<>("test", 1L);
+        ComparablePair<String,Long> p = new ComparablePair<>("test", 1L);
         byte[] bytes = pairCoder.encode(p);
         OptionalLong decoded = TabletRowAdapter.decodeRowOffset(new Text(bytes));
         assertTrue(decoded.isPresent());
@@ -44,7 +44,7 @@ public class TabletRowAdapterTest {
     public void decodeOffsetWithTruncatedOffset() {
         // offset is truncated on tablet extents
         long truncateOffset = 1554962382848L;
-        ComparablePair<String, Long> p = new ComparablePair<>("sys.disk.disk_octets", truncateOffset);
+        ComparablePair<String,Long> p = new ComparablePair<>("sys.disk.disk_octets", truncateOffset);
         byte[] bytes = pairCoder.encode(p);
         bytes = Arrays.copyOf(bytes, bytes.length - 4);
         OptionalLong decoded = TabletRowAdapter.decodeRowOffset(new Text(bytes));
@@ -54,7 +54,7 @@ public class TabletRowAdapterTest {
 
     @Test
     public void decodeOffsetWithBadDataWillSet() {
-        ComparablePair<String, String> p = new ComparablePair<>("test", "<");
+        ComparablePair<String,String> p = new ComparablePair<>("test", "<");
         byte[] bytes = new PairLexicoder<>(prefixCoder, prefixCoder).encode(p);
         OptionalLong decoded = TabletRowAdapter.decodeRowOffset(new Text(bytes));
         assertFalse(decoded.isPresent());
@@ -63,7 +63,7 @@ public class TabletRowAdapterTest {
     @Test
     public void debugOutputTest() {
         long offset = 1554962382848L;
-        ComparablePair<String, Long> p = new ComparablePair<>("sys.disk.disk_octets", offset);
+        ComparablePair<String,Long> p = new ComparablePair<>("sys.disk.disk_octets", offset);
         byte[] bytes = pairCoder.encode(p);
         TabletId tid = EasyMock.createMock(TabletId.class);
         EasyMock.expect(tid.getEndRow()).andReturn(new Text(bytes));

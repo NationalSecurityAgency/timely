@@ -4,14 +4,15 @@ import java.util.*;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+
 import io.netty.handler.codec.http.HttpHeaders;
 
 public class HttpHeaderUtils {
 
-    public static Multimap<String, String> toMultimap(HttpHeaders headers) {
-        Multimap<String, String> headerMultimap = HashMultimap.create();
+    public static Multimap<String,String> toMultimap(HttpHeaders headers) {
+        Multimap<String,String> headerMultimap = HashMultimap.create();
         if (headers != null) {
-            for (Map.Entry<String, String> e : headers.entries()) {
+            for (Map.Entry<String,String> e : headers.entries()) {
                 // lower case for HTTP/2 compatibility; even for HTTP/1, these were always
                 // case-insensitive
                 headerMultimap.put(e.getKey().toLowerCase(), e.getValue());
@@ -20,8 +21,7 @@ public class HttpHeaderUtils {
         return headerMultimap;
     }
 
-    public static String getSingleHeader(Multimap<String, String> headers, String headerName, boolean enforceOneValue)
-            throws IllegalArgumentException {
+    public static String getSingleHeader(Multimap<String,String> headers, String headerName, boolean enforceOneValue) throws IllegalArgumentException {
         if (headers == null) {
             return null;
         } else {

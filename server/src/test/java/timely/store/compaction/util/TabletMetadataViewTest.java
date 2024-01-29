@@ -10,11 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.Lists;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.hadoop.io.Text;
 import org.junit.Test;
+
+import com.google.common.collect.Lists;
+
 import timely.adapter.accumulo.MetricAdapter;
 import timely.test.TestTabletMetadata;
 
@@ -65,7 +67,7 @@ public class TabletMetadataViewTest {
 
     @Test
     public void noRowsOnView() {
-        Collection<Map.Entry<Key, Value>> metadata = Collections.emptyList();
+        Collection<Map.Entry<Key,Value>> metadata = Collections.emptyList();
         TabletMetadataView view = new TabletMetadataView();
         view.addEntry(metadata);
         List<MetadataAccumulator.Entry> accumulated = Lists.newArrayList(view.getEntries());

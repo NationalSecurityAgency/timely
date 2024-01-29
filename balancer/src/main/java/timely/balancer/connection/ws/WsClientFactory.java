@@ -5,11 +5,12 @@ import javax.net.ssl.SSLContext;
 import org.apache.commons.pool2.KeyedPooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
+
 import timely.balancer.configuration.BalancerConfiguration;
 import timely.balancer.connection.TimelyBalancedHost;
 import timely.client.websocket.subscription.WebSocketSubscriptionClient;
 
-public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, WebSocketSubscriptionClient> {
+public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost,WebSocketSubscriptionClient> {
 
     private final SSLContext sslContext;
     private BalancerConfiguration balancerConfig;
@@ -23,10 +24,9 @@ public class WsClientFactory implements KeyedPooledObjectFactory<TimelyBalancedH
     public PooledObject<WebSocketSubscriptionClient> makeObject(TimelyBalancedHost k) throws Exception {
 
         int bufferSize = balancerConfig.getWebsocket().getIncomingBufferSize();
-        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslContext, k.getHost(), k.getHttpPort(),
-                k.getWsPort(), balancerConfig.getSecurity().getClientSsl().isUseClientCert(),
-                balancerConfig.isLoginRequired(), "", "",
-                balancerConfig.getSecurity().getClientSsl().isHostVerificationEnabled(), bufferSize);
+        WebSocketSubscriptionClient client = new WebSocketSubscriptionClient(sslContext, k.getHost(), k.getHttpPort(), k.getWsPort(),
+                        balancerConfig.getSecurity().getClientSsl().isUseClientCert(), balancerConfig.isLoginRequired(), "", "",
+                        balancerConfig.getSecurity().getClientSsl().isHostVerificationEnabled(), bufferSize);
         return new DefaultPooledObject<>(client);
     }
 

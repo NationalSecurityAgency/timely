@@ -33,7 +33,7 @@ public class IteratorTestBase {
         }
 
         @Override
-        public SortedKeyValueIterator<Key, Value> reserveMapFileReader(String mapFileName) throws IOException {
+        public SortedKeyValueIterator<Key,Value> reserveMapFileReader(String mapFileName) throws IOException {
             Configuration conf = new Configuration();
             FileSystem fs = FileSystem.get(conf);
             return new MapFileIterator(fs, mapFileName, conf);
@@ -55,7 +55,7 @@ public class IteratorTestBase {
         }
 
         @Override
-        public void registerSideChannel(SortedKeyValueIterator<Key, Value> iter) {
+        public void registerSideChannel(SortedKeyValueIterator<Key,Value> iter) {
             throw new UnsupportedOperationException();
         }
 

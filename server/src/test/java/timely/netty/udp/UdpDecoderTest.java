@@ -3,11 +3,12 @@ package timely.netty.udp;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.MetricRequest;
 import timely.auth.VisibilityCache;
@@ -34,8 +35,7 @@ public class UdpDecoderTest {
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(MetricRequest.class, results.get(0).getClass());
         Metric m = ((MetricRequest) results.get(0)).getMetric();
-        Metric expected = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1"))
-                .tag(new Tag("tag2", "value2")).build();
+        Metric expected = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2")).build();
         Assert.assertEquals(expected, m);
     }
 
@@ -49,8 +49,8 @@ public class UdpDecoderTest {
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(MetricRequest.class, results.get(0).getClass());
         Metric m = ((MetricRequest) results.get(0)).getMetric();
-        Metric expected = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1"))
-                .tag(new Tag("tag2", "value2")).tag(MetricAdapter.VISIBILITY_TAG, "a&b").build();
+        Metric expected = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1")).tag(new Tag("tag2", "value2"))
+                        .tag(MetricAdapter.VISIBILITY_TAG, "a&b").build();
         Assert.assertEquals(expected, m);
     }
 

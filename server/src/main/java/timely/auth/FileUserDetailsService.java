@@ -11,13 +11,14 @@ import org.springframework.security.core.userdetails.AuthenticationUserDetailsSe
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
+
 import timely.netty.http.auth.TimelyUserDetails;
 
 public class FileUserDetailsService implements AuthenticationUserDetailsService<PreAuthenticatedAuthenticationToken> {
 
-    private HashMap<String, TimelyUser> users;
+    private HashMap<String,TimelyUser> users;
 
-    public Map<String, TimelyUser> getUsers() {
+    public Map<String,TimelyUser> getUsers() {
         return users;
     }
 
@@ -27,8 +28,7 @@ public class FileUserDetailsService implements AuthenticationUserDetailsService<
     }
 
     @Override
-    public UserDetails loadUserDetails(final PreAuthenticatedAuthenticationToken token)
-            throws UsernameNotFoundException {
+    public UserDetails loadUserDetails(final PreAuthenticatedAuthenticationToken token) throws UsernameNotFoundException {
         // Determine if the user is allowed to access the system, if not throw
         // UsernameNotFoundException
         String username = token.getName();

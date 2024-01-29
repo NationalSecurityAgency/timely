@@ -49,10 +49,9 @@ public class TabletRowAdapter {
                     offset = OptionalLong.of(decodedOffset);
                 } else if (LOG.isTraceEnabled()) {
                     Optional<String> prefix = decodeRowPrefix(row);
-                    LOG.trace(
-                            "Delimiter identified but offset could not parse { prefix: {}, byte-len: {}, "
-                                    + "offset-len: {}, offset-bytes: {}, row-bytes: {} }",
-                            prefix, bytes.length, buffer.length, Hex.encodeHex(buffer), Hex.encodeHex(bytes));
+                    LOG.trace("Delimiter identified but offset could not parse { prefix: {}, byte-len: {}, "
+                                    + "offset-len: {}, offset-bytes: {}, row-bytes: {} }", prefix, bytes.length, buffer.length, Hex.encodeHex(buffer),
+                                    Hex.encodeHex(bytes));
                 }
             } catch (IllegalArgumentException e) {
                 if (LOG.isTraceEnabled()) {
@@ -88,8 +87,7 @@ public class TabletRowAdapter {
             OptionalLong offset = decodeRowOffset(endRow);
             prefix.ifPresent(s -> joiner.add("prefix: " + s));
             if (offset.isPresent()) {
-                LocalDateTime date = Instant.ofEpochMilli(offset.getAsLong()).atZone(ZoneId.of("UTC"))
-                        .toLocalDateTime();
+                LocalDateTime date = Instant.ofEpochMilli(offset.getAsLong()).atZone(ZoneId.of("UTC")).toLocalDateTime();
                 joiner.add("date: " + date.toString());
                 joiner.add("millis: " + offset.getAsLong());
             }

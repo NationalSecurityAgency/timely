@@ -42,8 +42,7 @@ public class UdpClient implements AutoCloseable {
         this.sock.send(packet);
     }
 
-    public void flush() throws IOException {
-    }
+    public void flush() throws IOException {}
 
     public void close() throws IOException {
         if (null != sock) {

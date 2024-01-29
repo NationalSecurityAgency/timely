@@ -5,9 +5,11 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.util.concurrent.AtomicDouble;
+
 import timely.configuration.Configuration;
 import timely.model.Metric;
 import timely.model.Tag;

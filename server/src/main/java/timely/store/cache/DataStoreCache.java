@@ -17,7 +17,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
@@ -35,6 +34,8 @@ import org.apache.curator.retry.RetryForever;
 import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.handler.codec.http.HttpResponseStatus;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.timeseries.QueryRequest;
@@ -65,7 +66,7 @@ public class DataStoreCache {
 
     public static final String DEFAULT_AGEOFF_KEY = "default";
 
-    private Map<String, Map<TaggedMetric, GorillaStore>> gorillaMap = new HashMap<>();
+    private Map<String,Map<TaggedMetric,GorillaStore>> gorillaMap = new HashMap<>();
     private StampedLock gorillaMapLock = new StampedLock();
 
     private Set<String> nonCachedMetrics = Collections.synchronizedSet(new HashSet<>());
@@ -74,8 +75,8 @@ public class DataStoreCache {
     private long staleCacheExpiration;
     private long maxUniqueTagSets;
     private final Security security;
-    private Map<String, Long> minimumAgeOff;
-    private Map<String, String> minimumAgeOffForIterator;
+    private Map<String,Long> minimumAgeOff;
+    private Map<String,String> minimumAgeOffForIterator;
     private int flushBatch = 0;
     private int numBatches = 5;
     private InternalMetrics internalMetrics;
@@ -92,12 +93,12 @@ public class DataStoreCache {
         maxUniqueTagSets = conf.getCache().getMaxUniqueTagSets();
         staleCacheExpiration = conf.getCache().getStaleCacheExpiration();
         security = conf.getSecurity();
-        Map<String, Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
-        Map<String, Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
+        Map<String,Integer> cacheAgeOff = conf.getCache().getMetricAgeOffHours();
+        Map<String,Integer> accumuloAgeOff = conf.getMetricAgeOffDays();
         LOG.info("cacheAgeOff:{} accumuloAgeOff:{}", cacheAgeOff, accumuloAgeOff);
         minimumAgeOff = getMinimumAgeOffs(accumuloAgeOff, cacheAgeOff);
 
-        for (Map.Entry<String, Long> e : minimumAgeOff.entrySet()) {
+        for (Map.Entry<String,Long> e : minimumAgeOff.entrySet()) {
             LOG.info("minimumAgeOff key:{} value:{}", e.getKey(), e.getValue());
         }
 
@@ -171,8 +172,7 @@ public class DataStoreCache {
                             currentNonCachedMetricsIP = new TreeSet<>();
                         } else {
                             try {
-                                currentNonCachedMetricsIP = SerializationUtils
-                                        .deserialize(currentNonCachedMetricsDistributedBytes);
+                                currentNonCachedMetricsIP = SerializationUtils.deserialize(currentNonCachedMetricsDistributedBytes);
                             } catch (Exception e) {
                                 LOG.error(e.getMessage());
                                 currentNonCachedMetricsIP = new TreeSet<>();
@@ -263,8 +263,7 @@ public class DataStoreCache {
         } catch (Exception e1) {
             try {
                 curatorFramework.delete().deletingChildrenIfNeeded().forPath(path);
-                curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
-                        .forPath(path);
+                curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT).forPath(path);
             } catch (Exception e2) {
                 LOG.info(e2.getMessage(), e2);
             }
@@ -289,10 +288,10 @@ public class DataStoreCache {
                 long cachedEntries = 0;
                 long oldestCacheEntry = Long.MAX_VALUE;
                 String oldestMetric = "";
-                for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> e : gorillaMap.entrySet()) {
+                for (Map.Entry<String,Map<TaggedMetric,GorillaStore>> e : gorillaMap.entrySet()) {
                     String metric = e.getKey();
-                    Map<TaggedMetric, GorillaStore> e1 = e.getValue();
-                    for (Map.Entry<TaggedMetric, GorillaStore> e2 : e1.entrySet()) {
+                    Map<TaggedMetric,GorillaStore> e1 = e.getValue();
+                    for (Map.Entry<TaggedMetric,GorillaStore> e2 : e1.entrySet()) {
                         cachedEntries += e2.getValue().getNumEntries();
                         long oldestTimestamp = e2.getValue().getOldestTimestamp();
                         if (oldestTimestamp < oldestCacheEntry) {
@@ -303,8 +302,8 @@ public class DataStoreCache {
                                 } else {
                                     oldestCacheEntryAge = Long.toString((now - oldestCacheEntry) / (60 * 1000));
                                 }
-                                LOG.trace("setInternalMetrics changing {} oldestCacheEntry from ageMin:{} to ageMin:{}",
-                                        metric, oldestCacheEntryAge, (now - oldestTimestamp) / (60 * 1000));
+                                LOG.trace("setInternalMetrics changing {} oldestCacheEntry from ageMin:{} to ageMin:{}", metric, oldestCacheEntryAge,
+                                                (now - oldestTimestamp) / (60 * 1000));
                             }
                             oldestCacheEntry = oldestTimestamp;
                             oldestMetric = metric;
@@ -319,8 +318,7 @@ public class DataStoreCache {
                     oldestCachedMetricAge = System.currentTimeMillis() - oldestCacheEntry;
                 }
                 internalMetrics.setAgeOfOldestCachedMetric(oldestCachedMetricAge);
-                LOG.trace("reporting oldest cached metric as metric:{} ageMin:{}", oldestMetric,
-                        oldestCachedMetricAge / (60 * 1000));
+                LOG.trace("reporting oldest cached metric as metric:{} ageMin:{}", oldestMetric, oldestCachedMetricAge / (60 * 1000));
             } finally {
                 gorillaMapLock.unlockRead(stamp);
             }
@@ -330,14 +328,13 @@ public class DataStoreCache {
     private void pruneStats() {
         long stamp = gorillaMapLock.writeLock();
         try {
-            Iterator<Map.Entry<String, Map<TaggedMetric, GorillaStore>>> metricItr = gorillaMap.entrySet().iterator();
+            Iterator<Map.Entry<String,Map<TaggedMetric,GorillaStore>>> metricItr = gorillaMap.entrySet().iterator();
 
             while (metricItr.hasNext()) {
-                Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry1 = metricItr.next();
+                Map.Entry<String,Map<TaggedMetric,GorillaStore>> entry1 = metricItr.next();
                 int numberTagVariations = entry1.getValue().size();
                 if (numberTagVariations > maxUniqueTagSets) {
-                    LOG.info("Cache of metric {} has {} tag variations.  Discontinuing cache.", entry1.getKey(),
-                            numberTagVariations);
+                    LOG.info("Cache of metric {} has {} tag variations.  Discontinuing cache.", entry1.getKey(), numberTagVariations);
                     metricItr.remove();
                     addNonCachedMetrics(Collections.singleton(entry1.getKey()));
                 }
@@ -352,18 +349,16 @@ public class DataStoreCache {
         try {
             long numRemovedTotal = 0;
             long now = System.currentTimeMillis();
-            Iterator<Map.Entry<String, Map<TaggedMetric, GorillaStore>>> metricIterator = gorillaMap.entrySet()
-                    .iterator();
+            Iterator<Map.Entry<String,Map<TaggedMetric,GorillaStore>>> metricIterator = gorillaMap.entrySet().iterator();
             while (metricIterator.hasNext()) {
-                Map.Entry<String, Map<TaggedMetric, GorillaStore>> metricEntry = metricIterator.next();
+                Map.Entry<String,Map<TaggedMetric,GorillaStore>> metricEntry = metricIterator.next();
                 String metric = metricEntry.getKey();
                 long maxAge = getAgeOffForMetric(metric);
                 long oldestTs = Long.MAX_VALUE;
                 long numRemovedMetric = 0;
-                Iterator<Map.Entry<TaggedMetric, GorillaStore>> taggedMetricItr = metricEntry.getValue().entrySet()
-                        .iterator();
+                Iterator<Map.Entry<TaggedMetric,GorillaStore>> taggedMetricItr = metricEntry.getValue().entrySet().iterator();
                 while (taggedMetricItr.hasNext()) {
-                    Map.Entry<TaggedMetric, GorillaStore> taggedMetricEntry = taggedMetricItr.next();
+                    Map.Entry<TaggedMetric,GorillaStore> taggedMetricEntry = taggedMetricItr.next();
                     GorillaStore store = taggedMetricEntry.getValue();
                     numRemovedMetric += store.ageOffArchivedCompressors();
                     long oldestTimestampInStore = store.getOldestTimestamp();
@@ -371,8 +366,7 @@ public class DataStoreCache {
                         oldestTs = oldestTimestampInStore;
                     }
                     if (oldestTimestampInStore == Long.MAX_VALUE && store.isEmpty()) {
-                        LOG.trace("Gorilla store for {}:{} empty, removing", metric,
-                                taggedMetricEntry.getKey().getTags());
+                        LOG.trace("Gorilla store for {}:{} empty, removing", metric, taggedMetricEntry.getKey().getTags());
                         taggedMetricItr.remove();
                     }
                 }
@@ -384,9 +378,8 @@ public class DataStoreCache {
                     } else {
                         oldestAgeMin = Long.toString((now - oldestTs) / (60 * 1000));
                     }
-                    LOG.trace(
-                            "ageOffGorillaStores metric:{} with maxAgeMin:{}, oldestAgeMin:{} after aging off {} archived Gorilla compressors",
-                            metric, (maxAge / (60 * 1000)), oldestAgeMin, numRemovedTotal);
+                    LOG.trace("ageOffGorillaStores metric:{} with maxAgeMin:{}, oldestAgeMin:{} after aging off {} archived Gorilla compressors", metric,
+                                    (maxAge / (60 * 1000)), oldestAgeMin, numRemovedTotal);
                 }
             }
             LOG.trace("ageOffGorillaStores aged off {} archived Gorilla compressors", numRemovedTotal);
@@ -399,7 +392,7 @@ public class DataStoreCache {
         long stamp = gorillaMapLock.readLock();
         try {
             int x = 0;
-            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
+            for (Map.Entry<String,Map<TaggedMetric,GorillaStore>> entry : gorillaMap.entrySet()) {
                 if (flushBatch == -1 || x % numBatches == flushBatch) {
                     for (GorillaStore store : entry.getValue().values()) {
                         try {
@@ -419,7 +412,7 @@ public class DataStoreCache {
     private void archiveGorillaStoreCurrentCompressors() {
         long stamp = gorillaMapLock.readLock();
         try {
-            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
+            for (Map.Entry<String,Map<TaggedMetric,GorillaStore>> entry : gorillaMap.entrySet()) {
                 for (GorillaStore store : entry.getValue().values()) {
                     store.archiveCurrentCompressor();
                 }
@@ -435,7 +428,7 @@ public class DataStoreCache {
         long stamp = gorillaMapLock.readLock();
         try {
             long now = System.currentTimeMillis();
-            for (Map.Entry<String, Map<TaggedMetric, GorillaStore>> entry : gorillaMap.entrySet()) {
+            for (Map.Entry<String,Map<TaggedMetric,GorillaStore>> entry : gorillaMap.entrySet()) {
                 String metricName = entry.getKey();
                 long totalMsecToMetric = 0;
                 long numStoresWithMultipleEntries = 0;
@@ -455,19 +448,16 @@ public class DataStoreCache {
                     long ageOfNewest = now - getNewestTimestamp(metricName, stamp);
                     // do not delete slow-arriving metrics based on this criteria
                     // only consider metrics that should have arrived in staleCacheExpiration * 0.5
-                    LOG.trace("metric:{} tagVariations:{} avgMsecToMetric:{}", metricName, tagVariations,
-                            avgMsecToMetric);
+                    LOG.trace("metric:{} tagVariations:{} avgMsecToMetric:{}", metricName, tagVariations, avgMsecToMetric);
                     if (avgMsecToMetric < (staleCacheExpiration * 0.5)) {
                         if (ageOfNewest > staleCacheExpiration) {
-                            LOG.info(
-                                    "Removing metric:{} tagVariations:{} avgMsecToMetric:{} ageOfNewestEntry:{} > staleCacheExpiration:{}",
-                                    metricName, tagVariations, avgMsecToMetric, ageOfNewest, staleCacheExpiration);
+                            LOG.info("Removing metric:{} tagVariations:{} avgMsecToMetric:{} ageOfNewestEntry:{} > staleCacheExpiration:{}", metricName,
+                                            tagVariations, avgMsecToMetric, ageOfNewest, staleCacheExpiration);
                             metricsToRemove.add(metricName);
                         }
                     } else {
-                        LOG.trace(
-                                "Skipping staleness evaluation of metric:{} tagVariations:{} avgMsecToMetric:{} < (0.5 * staleCacheExpiration):{}",
-                                metricName, tagVariations, avgMsecToMetric, (staleCacheExpiration / 2));
+                        LOG.trace("Skipping staleness evaluation of metric:{} tagVariations:{} avgMsecToMetric:{} < (0.5 * staleCacheExpiration):{}",
+                                        metricName, tagVariations, avgMsecToMetric, (staleCacheExpiration / 2));
                     }
                 }
             }
@@ -501,41 +491,36 @@ public class DataStoreCache {
 
     public void setDefaultAgeOffMilliSec(long defaultAgeOffMilliSec) {
         this.minimumAgeOff.put(DEFAULT_AGEOFF_KEY, defaultAgeOffMilliSec);
-        this.minimumAgeOffForIterator.put(MetricAgeOffIterator.AGE_OFF_PREFIX + MetricAgeOffIterator.DEFAULT_AGEOFF_KEY,
-                Long.toString(defaultAgeOffMilliSec));
+        this.minimumAgeOffForIterator.put(MetricAgeOffIterator.AGE_OFF_PREFIX + MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, Long.toString(defaultAgeOffMilliSec));
     }
 
-    private Map<String, Long> getMinimumAgeOffs(Map<String, Integer> accumuloAgeOffDays,
-            Map<String, Integer> cacheAgeOffHours) {
-        Map<String, Long> minimumAgeOffs = new HashMap<>();
+    private Map<String,Long> getMinimumAgeOffs(Map<String,Integer> accumuloAgeOffDays, Map<String,Integer> cacheAgeOffHours) {
+        Map<String,Long> minimumAgeOffs = new HashMap<>();
         Set<String> keys = new HashSet<>();
         keys.addAll(accumuloAgeOffDays.keySet());
         keys.addAll(cacheAgeOffHours.keySet());
         for (String name : keys) {
-            Long accumuloAgeOffValue = (accumuloAgeOffDays.containsKey(name)) ? accumuloAgeOffDays.get(name) * 86400000L
-                    : Long.MAX_VALUE;
-            Long cacheAgeOffValue = (cacheAgeOffHours.containsKey(name)) ? cacheAgeOffHours.get(name) * 3600000L
-                    : Long.MAX_VALUE;
+            Long accumuloAgeOffValue = (accumuloAgeOffDays.containsKey(name)) ? accumuloAgeOffDays.get(name) * 86400000L : Long.MAX_VALUE;
+            Long cacheAgeOffValue = (cacheAgeOffHours.containsKey(name)) ? cacheAgeOffHours.get(name) * 3600000L : Long.MAX_VALUE;
             minimumAgeOffs.put(name, Math.min(accumuloAgeOffValue, cacheAgeOffValue));
         }
         return minimumAgeOffs;
     }
 
-    private Map<String, String> getAgeOffForIterator(Map<String, Long> minimumAgeOff) {
-        Map<String, String> ageOffOptions = new HashMap<>();
+    private Map<String,String> getAgeOffForIterator(Map<String,Long> minimumAgeOff) {
+        Map<String,String> ageOffOptions = new HashMap<>();
         minimumAgeOff.forEach((k, v) -> {
             String ageoff = Long.toString(v);
             LOG.trace("Adding age off for metric: {} of {} milliseconds", k, v);
             ageOffOptions.put(MetricAgeOffIterator.AGE_OFF_PREFIX + k, ageoff);
         });
-        ageOffOptions.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY,
-                Long.toString(minimumAgeOff.get(DEFAULT_AGEOFF_KEY)));
+        ageOffOptions.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, Long.toString(minimumAgeOff.get(DEFAULT_AGEOFF_KEY)));
         return ageOffOptions;
     }
 
-    public Map<TaggedMetric, GorillaStore> getGorillaStores(String metric) {
-        Map<TaggedMetric, GorillaStore> returnedMap = new HashMap<>();
-        Map<TaggedMetric, GorillaStore> metricMap;
+    public Map<TaggedMetric,GorillaStore> getGorillaStores(String metric) {
+        Map<TaggedMetric,GorillaStore> returnedMap = new HashMap<>();
+        Map<TaggedMetric,GorillaStore> metricMap;
         long stamp = gorillaMapLock.readLock();
         try {
             metricMap = gorillaMap.get(metric);
@@ -559,7 +544,7 @@ public class DataStoreCache {
 
     public GorillaStore getGorillaStore(String metric, TaggedMetric taggedMetric) {
 
-        Map<TaggedMetric, GorillaStore> metricMap;
+        Map<TaggedMetric,GorillaStore> metricMap;
         GorillaStore gStore;
         boolean needWrite = false;
         long stamp = gorillaMapLock.readLock();
@@ -637,8 +622,8 @@ public class DataStoreCache {
         try {
             Collection<QueryRequest.SubQuery> subQueries = msg.getQueries();
             for (QueryRequest.SubQuery query : subQueries) {
-                Map<Set<Tag>, List<Aggregation>> aggregations = subquery(msg, query);
-                for (Map.Entry<Set<Tag>, List<Aggregation>> entry : aggregations.entrySet()) {
+                Map<Set<Tag>,List<Aggregation>> aggregations = subquery(msg, query);
+                for (Map.Entry<Set<Tag>,List<Aggregation>> entry : aggregations.entrySet()) {
                     long tsDivisor = msg.isMsResolution() ? 1 : 1000;
                     result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
                 }
@@ -646,24 +631,22 @@ public class DataStoreCache {
             return result;
         } catch (Exception e) {
             LOG.error("Error during query: " + e.getMessage(), e);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                    "Error during query: " + e.getMessage(), e.getMessage(), e);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: " + e.getMessage(), e.getMessage(), e);
         }
     }
 
-    public Map<Set<Tag>, List<Aggregation>> subquery(QueryRequest msg, QueryRequest.SubQuery query)
-            throws TimelyException {
+    public Map<Set<Tag>,List<Aggregation>> subquery(QueryRequest msg, QueryRequest.SubQuery query) throws TimelyException {
 
-        Map<Set<Tag>, List<Aggregation>> aggregationList = new HashMap<>();
+        Map<Set<Tag>,List<Aggregation>> aggregationList = new HashMap<>();
         long start = System.currentTimeMillis();
         try {
-            SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
+            SortedKeyValueIterator<org.apache.accumulo.core.data.Key,org.apache.accumulo.core.data.Value> itr = null;
             Collection<Authorizations> authorizations = getSessionAuthorizations(msg);
             itr = setupIterator(msg, query, authorizations, getAgeOffForMetric(query.getMetric()));
-            Map<Set<Tag>, Set<Tag>> matchingTagCache = new HashMap<>();
+            Map<Set<Tag>,Set<Tag>> matchingTagCache = new HashMap<>();
             while (itr.hasTop()) {
-                Map<Set<Tag>, Aggregation> samples = AggregationIterator.decodeValue(itr.getTopValue());
-                for (Map.Entry<Set<Tag>, Aggregation> entry : samples.entrySet()) {
+                Map<Set<Tag>,Aggregation> samples = AggregationIterator.decodeValue(itr.getTopValue());
+                for (Map.Entry<Set<Tag>,Aggregation> entry : samples.entrySet()) {
                     Set<Tag> allMatchingTags = (Set<Tag>) matchingTagCache.get(entry.getKey());
                     if (allMatchingTags == null) {
                         allMatchingTags = new HashSet<>();
@@ -683,21 +666,19 @@ public class DataStoreCache {
             return aggregationList;
         } catch (Exception e) {
             LOG.error("Error during query: " + e.getMessage(), e);
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                    "Error during query: " + e.getMessage(), e.getMessage(), e);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: " + e.getMessage(), e.getMessage(), e);
         } finally {
             LOG.trace("Time for cache subquery for {} - {}ms", query.toString(), System.currentTimeMillis() - start);
         }
     }
 
-    public List<MetricResponse> getMetricsFromCache(AuthenticatedRequest request, String metric,
-            Map<String, String> tags, long begin, long end) {
+    public List<MetricResponse> getMetricsFromCache(AuthenticatedRequest request, String metric, Map<String,String> tags, long begin, long end) {
 
         List<MetricResponse> metricResponses = new ArrayList<>();
         QueryRequest.SubQuery subQuery = new QueryRequest.SubQuery();
         subQuery.setMetric(metric);
         if (tags != null) {
-            for (Map.Entry<String, String> t : tags.entrySet()) {
+            for (Map.Entry<String,String> t : tags.entrySet()) {
                 subQuery.addTag(t.getKey(), t.getValue());
             }
         }
@@ -728,10 +709,10 @@ public class DataStoreCache {
         return metricResponses;
     }
 
-    protected SortedKeyValueIterator<Key, Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery,
-            Collection<Authorizations> authorizations, long ageOffForMetric) throws TimelyException {
+    protected SortedKeyValueIterator<Key,Value> setupIterator(QueryRequest query, QueryRequest.SubQuery subQuery, Collection<Authorizations> authorizations,
+                    long ageOffForMetric) throws TimelyException {
 
-        SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
+        SortedKeyValueIterator<org.apache.accumulo.core.data.Key,org.apache.accumulo.core.data.Value> itr = null;
 
         long downsamplePeriod = DownsampleIterator.getDownsamplePeriod(subQuery);
         long startTs = query.getStart();
@@ -743,8 +724,7 @@ public class DataStoreCache {
 
         long startOfFirstPeriod = startTs - (startTs % downsamplePeriod);
         long endDistanceFromDownSample = endTs % downsamplePeriod;
-        long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsamplePeriod - endDistanceFromDownSample
-                : endTs);
+        long endOfLastPeriod = (endDistanceFromDownSample > 0 ? endTs + downsamplePeriod - endDistanceFromDownSample : endTs);
 
         try {
             // create DataStoreCacheIterator which is the base iterator of the stack
@@ -770,13 +750,12 @@ public class DataStoreCache {
             // in the stack even if only using the default downsample settings
             Class<? extends Aggregator> daggClass = DownsampleIterator.getDownsampleAggregator(subQuery);
             if (daggClass == null) {
-                throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                        "Error during query: programming error", "daggClass == null");
+                throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error during query: programming error", "daggClass == null");
             } else {
                 LOG.trace("Downsample Aggregator type {}", daggClass.getSimpleName());
                 IteratorSetting downsample = new IteratorSetting(500, DownsampleIterator.class);
-                DownsampleIterator.setDownsampleOptions(downsample, startOfFirstPeriod, endOfLastPeriod,
-                        DownsampleIterator.getDownsamplePeriod(subQuery), -1, daggClass.getName());
+                DownsampleIterator.setDownsampleOptions(downsample, startOfFirstPeriod, endOfLastPeriod, DownsampleIterator.getDownsamplePeriod(subQuery), -1,
+                                daggClass.getName());
                 DownsampleIterator downsampleIterator = new DownsampleIterator();
                 downsampleIterator.init(itr, downsample.getOptions(), null);
                 itr = downsampleIterator;
@@ -806,8 +785,7 @@ public class DataStoreCache {
         return AuthCache.getAuthorizations(request, security);
     }
 
-    private QueryResponse convertToQueryResponse(QueryRequest.SubQuery query, Set<Tag> tags,
-            Collection<Aggregation> values, long tsDivisor) {
+    private QueryResponse convertToQueryResponse(QueryRequest.SubQuery query, Set<Tag> tags, Collection<Aggregation> values, long tsDivisor) {
         QueryResponse response = new QueryResponse();
         response.setMetric(query.getMetric());
         for (Tag tag : tags) {
@@ -832,8 +810,8 @@ public class DataStoreCache {
         long newest = 0;
         long stamp = lockStamp == 0 ? gorillaMapLock.readLock() : lockStamp;
         try {
-            Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
-            for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
+            Map<TaggedMetric,GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
+            for (Map.Entry<TaggedMetric,GorillaStore> entry : gorillaStoreMap.entrySet()) {
                 if (entry.getValue().getNewestTimestamp() > newest) {
                     newest = entry.getValue().getNewestTimestamp();
                 }
@@ -850,9 +828,9 @@ public class DataStoreCache {
         long oldest = Long.MAX_VALUE;
         long stamp = gorillaMapLock.readLock();
         try {
-            Map<TaggedMetric, GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
+            Map<TaggedMetric,GorillaStore> gorillaStoreMap = gorillaMap.get(metric);
             if (gorillaStoreMap != null) {
-                for (Map.Entry<TaggedMetric, GorillaStore> entry : gorillaStoreMap.entrySet()) {
+                for (Map.Entry<TaggedMetric,GorillaStore> entry : gorillaStoreMap.entrySet()) {
                     if (entry.getValue().getOldestTimestamp() < oldest) {
                         oldest = entry.getValue().getOldestTimestamp();
                     }

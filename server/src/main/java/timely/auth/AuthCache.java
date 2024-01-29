@@ -6,12 +6,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.AuthenticatedWebSocketRequest;
 import timely.auth.util.AuthorizationsUtil;
@@ -21,7 +23,7 @@ import timely.netty.http.auth.TimelyAuthenticationToken;
 public class AuthCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthCache.class);
-    private static Cache<String, TimelyPrincipal> CACHE = null;
+    private static Cache<String,TimelyPrincipal> CACHE = null;
 
     private static int cacheExpirationMinutes = -1;
     private static int cacheRefreshMinutes = -1;
@@ -42,12 +44,12 @@ public class AuthCache {
         cacheRefreshMinutes = security.getCacheRefreshMinutes();
     }
 
-    private static Cache<String, TimelyPrincipal> getCache() {
+    private static Cache<String,TimelyPrincipal> getCache() {
         if (-1 == cacheExpirationMinutes) {
             throw new IllegalStateException("Cache session max age not configured.");
         }
         if (null == CACHE) {
-            Caffeine<Object, Object> caffeine = Caffeine.newBuilder();
+            Caffeine<Object,Object> caffeine = Caffeine.newBuilder();
             caffeine.expireAfterWrite(cacheExpirationMinutes, TimeUnit.MINUTES);
             if (cacheRefreshMinutes > 0) {
                 caffeine.refreshAfterWrite(cacheRefreshMinutes, TimeUnit.MINUTES);
@@ -65,18 +67,14 @@ public class AuthCache {
         String[] dnArray = key.split(" -> ");
         if (dnArray.length == 1) {
             SubjectIssuerDNPair pair = SubjectIssuerDNPair.parse(dnArray[0]);
-            TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(new Object(),
-                    pair.subjectDN(), pair.issuerDN());
-            timelyPrincipal = AuthenticationService.authenticate(token, pair, token.getTimelyPrincipal().getName(),
-                    false);
+            TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(new Object(), pair.subjectDN(), pair.issuerDN());
+            timelyPrincipal = AuthenticationService.authenticate(token, pair, token.getTimelyPrincipal().getName(), false);
         } else if (dnArray.length > 1) {
             Collection<TimelyUser> timelyUsers = new ArrayList<>();
             for (String s : dnArray) {
                 SubjectIssuerDNPair pair = SubjectIssuerDNPair.parse(s);
-                TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(new Object(),
-                        pair.subjectDN(), pair.issuerDN());
-                TimelyPrincipal p = AuthenticationService.authenticate(token, pair,
-                        token.getTimelyPrincipal().getName(), false);
+                TimelyAuthenticationToken token = AuthenticationService.getAuthenticationToken(new Object(), pair.subjectDN(), pair.issuerDN());
+                TimelyPrincipal p = AuthenticationService.authenticate(token, pair, token.getTimelyPrincipal().getName(), false);
                 timelyUsers.addAll(p.getProxiedUsers());
             }
             timelyPrincipal = new TimelyPrincipal(timelyUsers);
@@ -141,8 +139,7 @@ public class AuthCache {
             if (anonAccessAllowed) {
                 auths = Collections.singletonList(Authorizations.EMPTY);
             } else {
-                throw new IllegalArgumentException(
-                        "User must authenticate with a client certificate, OAuth token, or login credentials");
+                throw new IllegalArgumentException("User must authenticate with a client certificate, OAuth token, or login credentials");
             }
         } else if (StringUtils.isNotBlank(sessionId)) {
             auths = getAuthorizations(sessionId);

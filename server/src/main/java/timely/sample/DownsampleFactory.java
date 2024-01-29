@@ -21,8 +21,7 @@ public class DownsampleFactory {
         try {
             return new Downsample(start, end, period, aggClass.newInstance());
         } catch (InstantiationException | IllegalAccessException e) {
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                    "Error creating aggregator class: " + aggClass, e.getMessage(), e);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating aggregator class: " + aggClass, e.getMessage(), e);
         }
     }
 }

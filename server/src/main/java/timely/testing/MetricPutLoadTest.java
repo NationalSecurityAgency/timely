@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+
 import timely.client.tcp.TcpClient;
 
 public class MetricPutLoadTest {
@@ -30,8 +31,7 @@ public class MetricPutLoadTest {
     private int numThreads = 8;
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd HHmmss");
 
-    public MetricPutLoadTest(String host, int port, File testDataFile, int numThreads, long beginTs,
-            long samplePeriod) {
+    public MetricPutLoadTest(String host, int port, File testDataFile, int numThreads, long beginTs, long samplePeriod) {
         this.host = host;
         this.port = port;
         this.numThreads = numThreads;
@@ -54,7 +54,7 @@ public class MetricPutLoadTest {
             String lineSplit[] = l.split(",");
             if (lineSplit.length >= 2) {
                 String metric = lineSplit[0];
-                Map<String, String> tags = new HashMap<>();
+                Map<String,String> tags = new HashMap<>();
                 String tagSplitOnSpaces[] = lineSplit[1].split(" ");
                 for (String tagAndValue : tagSplitOnSpaces) {
                     String tagSplit[] = tagAndValue.split("=");
@@ -82,8 +82,7 @@ public class MetricPutLoadTest {
             if (metricsToPut.isEmpty()) {
                 metricsToPut.addAll(metrics);
                 nextTimestamp = nextTimestamp + samplePeriod;
-                System.out.println(
-                        "Sending metrics for ts=" + nextTimestamp + "(" + sdf.format(new Date(nextTimestamp)) + ")");
+                System.out.println("Sending metrics for ts=" + nextTimestamp + "(" + sdf.format(new Date(nextTimestamp)) + ")");
             }
             metricPut = metricsToPut.remove();
         }
@@ -149,8 +148,7 @@ public class MetricPutLoadTest {
                 MetricPutLoadTest lt = new MetricPutLoadTest(host, port, file, threads, beginTs, 60000);
                 lt.run();
             } else {
-                System.out.println(
-                        "Usage " + MetricPutLoadTest.class.getName() + " host port metricTestData backlogMinutes");
+                System.out.println("Usage " + MetricPutLoadTest.class.getName() + " host port metricTestData backlogMinutes");
                 System.exit(-1);
             }
         } catch (Exception e) {

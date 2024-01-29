@@ -18,6 +18,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.Server;
 import timely.auth.AuthCache;
 import timely.configuration.Configuration;
@@ -85,14 +86,12 @@ public class MacITBase {
     }
 
     private void clearTablesResetConf() {
-        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER,
-                new PasswordToken(MAC_ROOT_PASSWORD))) {
+        try (AccumuloClient accumuloClient = mac.createAccumuloClient(MAC_ROOT_USER, new PasswordToken(MAC_ROOT_PASSWORD))) {
             accumuloClient.tableOperations().list().forEach(t -> {
                 if (t.startsWith("timely")) {
                     try {
                         accumuloClient.tableOperations().delete(t);
-                    } catch (Exception e) {
-                    }
+                    } catch (Exception e) {}
                 }
             });
         }
@@ -103,7 +102,7 @@ public class MacITBase {
         conf.getSecurity().getServerSsl().setUseOpenssl(false);
         conf.getSecurity().getServerSsl().setUseGeneratedKeypair(true);
         conf.getWebsocket().setFlushIntervalSeconds(TestConfiguration.WAIT_SECONDS);
-        HashMap<String, Integer> ageOffSettings = new HashMap<>();
+        HashMap<String,Integer> ageOffSettings = new HashMap<>();
         ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 7);
         conf.setMetricAgeOffDays(ageOffSettings);
     }

@@ -45,7 +45,7 @@ public class MetricAgeOffFilter extends Filter {
         int rowStart = rowData.offset();
         int i = 0;
         if (null != prevMetricBytes && (rowData.length() >= (rowStart + prevMetricBytes.length + 1))
-                && (rowData.byteAt(rowStart + prevMetricBytes.length + 1) == 0x00)) {
+                        && (rowData.byteAt(rowStart + prevMetricBytes.length + 1) == 0x00)) {
             // Double check metric name is the same
             boolean same = true;
             for (; i < prevMetricBytes.length; i++) {
@@ -88,8 +88,7 @@ public class MetricAgeOffFilter extends Filter {
     }
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
-            throws IOException {
+    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
         super.init(source, options, env);
         validateOptions(options);
         ageoffs = new PatriciaTrie<>();
@@ -108,7 +107,7 @@ public class MetricAgeOffFilter extends Filter {
     }
 
     @Override
-    public SortedKeyValueIterator<Key, Value> deepCopy(IteratorEnvironment env) {
+    public SortedKeyValueIterator<Key,Value> deepCopy(IteratorEnvironment env) {
         MetricAgeOffFilter filter = (MetricAgeOffFilter) super.deepCopy(env);
         filter.ageoffs = this.ageoffs;
         return filter;
@@ -122,7 +121,7 @@ public class MetricAgeOffFilter extends Filter {
     }
 
     @Override
-    public boolean validateOptions(Map<String, String> options) {
+    public boolean validateOptions(Map<String,String> options) {
         if (null == options.get(MetricAgeOffFilter.AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY)) {
             throw new IllegalArgumentException(DEFAULT_AGEOFF_KEY + " must be configured for MetricAgeOffFilter");
         }

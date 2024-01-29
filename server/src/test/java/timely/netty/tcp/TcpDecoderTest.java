@@ -3,11 +3,12 @@ package timely.netty.tcp;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;

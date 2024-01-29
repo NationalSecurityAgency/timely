@@ -16,6 +16,7 @@ import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.MapConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.store.MetricAgeOffIterator;
 
 public class MetricCompactionStrategy extends CompactionStrategy {
@@ -40,7 +41,7 @@ public class MetricCompactionStrategy extends CompactionStrategy {
     public static final String DEFAULT_AGEOFF_KEY = AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY_SUFFIX;
 
     @Override
-    public void init(Map<String, String> options) {
+    public void init(Map<String,String> options) {
         // options:
         // logonly - disables compaction and will only log result
         // majciterator - the iterator name to gather age-off values
@@ -90,14 +91,14 @@ public class MetricCompactionStrategy extends CompactionStrategy {
         long currentTime = useExplicitTime ? explicitTimeMillis : System.currentTimeMillis();
         long ageOffComputed = currentTime - ageOffConfig.computeAgeOff(endName.get());
         boolean shouldCompact = (ageOffComputed > endOffset.getAsLong() && endName.equals(prevEndName))
-                && (null == filterPrefix || endName.get().startsWith(filterPrefix));
+                        && (null == filterPrefix || endName.get().startsWith(filterPrefix));
 
         if (LOG.isDebugEnabled() && logOnly && shouldCompact) {
-            LOG.debug("Tablet will be metric age-off compacted {threshold: {}, endKey: {}, offset: {}, prevKey: {}}",
-                    ageOffComputed, endName, endOffset.getAsLong(), prevEndName);
+            LOG.debug("Tablet will be metric age-off compacted {threshold: {}, endKey: {}, offset: {}, prevKey: {}}", ageOffComputed, endName,
+                            endOffset.getAsLong(), prevEndName);
         } else if (LOG.isTraceEnabled()) {
-            LOG.trace("Tablet check metric compaction {threshold: {}, endKey: {}, offset: {}, prevKey: {}, result: {}}",
-                    ageOffComputed, endName, endOffset.getAsLong(), prevEndName, shouldCompact);
+            LOG.trace("Tablet check metric compaction {threshold: {}, endKey: {}, offset: {}, prevKey: {}, result: {}}", ageOffComputed, endName,
+                            endOffset.getAsLong(), prevEndName, shouldCompact);
         }
 
         return shouldCompact && !logOnly;
@@ -135,8 +136,7 @@ public class MetricCompactionStrategy extends CompactionStrategy {
             this.defaultAgeOff = defaultAgeOff;
         }
 
-        public static MetricAgeOffConfiguration maximizeDefaultAgeOff(MetricAgeOffConfiguration x,
-                MetricAgeOffConfiguration y) {
+        public static MetricAgeOffConfiguration maximizeDefaultAgeOff(MetricAgeOffConfiguration x, MetricAgeOffConfiguration y) {
             return (x.defaultAgeOff > y.defaultAgeOff) ? x : y;
         }
 
@@ -144,8 +144,7 @@ public class MetricCompactionStrategy extends CompactionStrategy {
             return new MetricAgeOffConfiguration(new PatriciaTrie<>(), minAgeOff);
         }
 
-        public static MetricAgeOffConfiguration newFromRequest(MajorCompactionRequest request,
-                String majcIteratorName) {
+        public static MetricAgeOffConfiguration newFromRequest(MajorCompactionRequest request, String majcIteratorName) {
             Configuration config = new MapConfiguration(request.getTableProperties());
             String majcIteratorKey = Property.TABLE_ITERATOR_MAJC_PREFIX.getKey() + majcIteratorName;
 
@@ -155,8 +154,7 @@ public class MetricCompactionStrategy extends CompactionStrategy {
 
             Configuration configAgeOff = config.subset((majcIteratorKey + ".opt"));
             if (null == configAgeOff.getString(DEFAULT_AGEOFF_KEY)) {
-                throw new IllegalArgumentException(
-                        DEFAULT_AGEOFF_KEY_SUFFIX + " must be configured for  " + majcIteratorKey);
+                throw new IllegalArgumentException(DEFAULT_AGEOFF_KEY_SUFFIX + " must be configured for  " + majcIteratorKey);
             }
 
             PatriciaTrie<Long> ageoffs = new PatriciaTrie<>();

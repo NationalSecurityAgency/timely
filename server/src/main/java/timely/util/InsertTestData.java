@@ -57,7 +57,7 @@ public class InsertTestData {
         INSTANCES.add("3");
     }
 
-    private static final Map<String, String> VISIBILITIES = new HashMap<>();
+    private static final Map<String,String> VISIBILITIES = new HashMap<>();
     static {
         VISIBILITIES.put("sys.eth.rx-errors", "A");
         VISIBILITIES.put("sys.eth.rx-dropped", "B");
@@ -88,7 +88,7 @@ public class InsertTestData {
         }
 
         try (Socket sock = new Socket(hostname, Integer.parseInt(port));
-                PrintStream writer = new PrintStream(sock.getOutputStream(), true, StandardCharsets.UTF_8.name());) {
+                        PrintStream writer = new PrintStream(sock.getOutputStream(), true, StandardCharsets.UTF_8.name());) {
             while (true) {
                 long time = System.currentTimeMillis();
                 METRICS.forEach(m -> {
@@ -99,8 +99,7 @@ public class InsertTestData {
                                 if (!m.startsWith("sys.cpu.") && !instance.equals("0")) {
                                     return;
                                 }
-                                String put = MessageFormat.format(FMT, m, time,
-                                        ThreadLocalRandom.current().nextDouble(0.0D, 100.0D), host, rack, instance);
+                                String put = MessageFormat.format(FMT, m, time, ThreadLocalRandom.current().nextDouble(0.0D, 100.0D), host, rack, instance);
                                 if (viz != null)
                                     put += " viz=" + viz;
                                 writer.println(put);

@@ -12,6 +12,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
+
 import timely.model.Tag;
 import timely.model.parse.TagListParser;
 import timely.sample.Aggregation;
@@ -20,9 +21,8 @@ import timely.sample.Downsample;
 import timely.sample.Sample;
 
 /**
- * This iterator will aggregate across series as output from the
- * DownsampleIterator. The same set of aggregator functions are supported as in
- * the DownsampleIterator.
+ * This iterator will aggregate across series as output from the DownsampleIterator. The same set of aggregator functions are supported as in the
+ * DownsampleIterator.
  */
 public class AggregationIterator extends WrappingIterator {
 
@@ -38,15 +38,13 @@ public class AggregationIterator extends WrappingIterator {
     private Key last;
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
-            throws IOException {
+    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
         super.init(source, options, env);
         String aggClassname = options.get(AGGCLASS);
         Class<? extends Aggregator> aggClass = null;
         try {
             @SuppressWarnings("unchecked")
-            Class<? extends Aggregator> uncheckedAggClass = (Class<? extends Aggregator>) this.getClass()
-                    .getClassLoader().loadClass(aggClassname);
+            Class<? extends Aggregator> uncheckedAggClass = (Class<? extends Aggregator>) this.getClass().getClassLoader().loadClass(aggClassname);
             aggClass = uncheckedAggClass;
             tags = new HashSet<>(new TagListParser().parse(options.get(TAGS)));
             aggregation = new Aggregation(aggClass.newInstance());
@@ -64,7 +62,7 @@ public class AggregationIterator extends WrappingIterator {
             last = super.getTopKey();
 
             // decode the set of samples (or series)
-            Map<Set<Tag>, Downsample> samples = null;
+            Map<Set<Tag>,Downsample> samples = null;
             try {
                 samples = DownsampleIterator.decodeValue(super.getTopValue());
             } catch (IOException e) {
@@ -74,7 +72,7 @@ public class AggregationIterator extends WrappingIterator {
             }
 
             // add the downsampled values to the aggregation
-            for (Map.Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
+            for (Map.Entry<Set<Tag>,Downsample> entry : samples.entrySet()) {
                 for (Sample sample : entry.getValue()) {
                     aggregation.add(sample.timestamp, sample.value);
                 }
@@ -97,9 +95,8 @@ public class AggregationIterator extends WrappingIterator {
     @Override
     public Value getTopValue() {
         // return a value which is consistent with Map<Set<Tag>, Downsample>
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream out = new ObjectOutputStream(bos)) {
-            Map<Set<Tag>, Aggregation> aggregationMap = new HashMap<>();
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); ObjectOutputStream out = new ObjectOutputStream(bos)) {
+            Map<Set<Tag>,Aggregation> aggregationMap = new HashMap<>();
             aggregationMap.put(tags, aggregation);
             out.writeObject(aggregationMap);
             out.flush();
@@ -116,16 +113,16 @@ public class AggregationIterator extends WrappingIterator {
         last = null;
     }
 
-    public static void setAggregationOptions(IteratorSetting is, Map<String, String> tags, String classname) {
+    public static void setAggregationOptions(IteratorSetting is, Map<String,String> tags, String classname) {
         is.addOption(TAGS, new TagListParser().combine(tags));
         is.addOption(AGGCLASS, classname);
     }
 
-    public static Map<Set<Tag>, Aggregation> decodeValue(Value value) throws IOException, ClassNotFoundException {
+    public static Map<Set<Tag>,Aggregation> decodeValue(Value value) throws IOException, ClassNotFoundException {
         ByteArrayInputStream bis = new ByteArrayInputStream(value.get());
         ObjectInputStream ois = new ObjectInputStream(bis);
         @SuppressWarnings("unchecked")
-        Map<Set<Tag>, Aggregation> unchecked = (Map<Set<Tag>, Aggregation>) ois.readObject();
+        Map<Set<Tag>,Aggregation> unchecked = (Map<Set<Tag>,Aggregation>) ois.readObject();
         return unchecked;
     }
 }

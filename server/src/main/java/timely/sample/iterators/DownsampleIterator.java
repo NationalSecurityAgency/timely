@@ -20,6 +20,7 @@ import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iterators.WrappingIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
@@ -43,7 +44,7 @@ public class DownsampleIterator extends WrappingIterator {
     private static final String DEFAULT_DOWNSAMPLE_AGGREGATOR = Avg.class.getSimpleName().toLowerCase();
 
     private DownsampleFactory factory;
-    private final Map<Set<Tag>, Downsample> value = new HashMap<>();
+    private final Map<Set<Tag>,Downsample> value = new HashMap<>();
     private long start;
     private long end;
     private long period;
@@ -52,8 +53,7 @@ public class DownsampleIterator extends WrappingIterator {
     private DownsampleMemoryEstimator memoryEstimator = null;
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
-            throws IOException {
+    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
         super.init(source, options, env);
         start = Long.parseLong(options.get(START));
         end = Long.parseLong(options.get(END));
@@ -88,8 +88,7 @@ public class DownsampleIterator extends WrappingIterator {
                     Metric metric = MetricAdapter.parse(topKey, topValue);
                     long timestamp = metric.getValue().getTimestamp();
                     if (memoryEstimator.shouldReturnBasedOnMemoryUsage(timestamp, value)) {
-                        LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory
-                                + " for metric=" + metric);
+                        LOG.trace("returning current values - memory usage > " + memoryEstimator.maxDownsampleMemory + " for metric=" + metric);
                         break;
                     }
                     last = topKey;
@@ -124,8 +123,7 @@ public class DownsampleIterator extends WrappingIterator {
 
     @Override
     public Value getTopValue() {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream out = new ObjectOutputStream(bos)) {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); ObjectOutputStream out = new ObjectOutputStream(bos)) {
             out.writeObject(value);
             out.flush();
             // empty for next batch of downsamples
@@ -144,8 +142,7 @@ public class DownsampleIterator extends WrappingIterator {
         }
     }
 
-    public static void setDownsampleOptions(IteratorSetting is, long start, long end, long period,
-            long maxDownsampleMemory, String classname) {
+    public static void setDownsampleOptions(IteratorSetting is, long start, long end, long period, long maxDownsampleMemory, String classname) {
         is.addOption(START, "" + start);
         is.addOption(END, "" + end);
         is.addOption(PERIOD, "" + period);
@@ -153,11 +150,11 @@ public class DownsampleIterator extends WrappingIterator {
         is.addOption(AGGCLASS, classname);
     }
 
-    public static Map<Set<Tag>, Downsample> decodeValue(Value value) throws IOException, ClassNotFoundException {
+    public static Map<Set<Tag>,Downsample> decodeValue(Value value) throws IOException, ClassNotFoundException {
         ByteArrayInputStream bis = new ByteArrayInputStream(value.get());
         ObjectInputStream ois = new ObjectInputStream(bis);
         @SuppressWarnings("unchecked")
-        Map<Set<Tag>, Downsample> unchecked = (Map<Set<Tag>, Downsample>) ois.readObject();
+        Map<Set<Tag>,Downsample> unchecked = (Map<Set<Tag>,Downsample>) ois.readObject();
         return unchecked;
     }
 

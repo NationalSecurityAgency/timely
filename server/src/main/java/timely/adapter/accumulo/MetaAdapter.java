@@ -1,6 +1,7 @@
 package timely.adapter.accumulo;
 
 import org.apache.accumulo.core.data.Key;
+
 import timely.api.model.Meta;
 import timely.model.Metric;
 

@@ -9,11 +9,11 @@ import org.apache.flink.api.common.accumulators.Accumulator;
  * Custom accumulator that retains a sorted map of strings and their counts
  *
  */
-public class SortedStringAccumulator implements Accumulator<String, ConcurrentSkipListMap<String, MutableLong>> {
+public class SortedStringAccumulator implements Accumulator<String,ConcurrentSkipListMap<String,MutableLong>> {
 
     private static final long serialVersionUID = 1L;
 
-    private ConcurrentSkipListMap<String, MutableLong> values = new ConcurrentSkipListMap<>();
+    private ConcurrentSkipListMap<String,MutableLong> values = new ConcurrentSkipListMap<>();
 
     @Override
     public void add(String value) {
@@ -25,7 +25,7 @@ public class SortedStringAccumulator implements Accumulator<String, ConcurrentSk
     }
 
     @Override
-    public ConcurrentSkipListMap<String, MutableLong> getLocalValue() {
+    public ConcurrentSkipListMap<String,MutableLong> getLocalValue() {
         return values;
     }
 
@@ -35,7 +35,7 @@ public class SortedStringAccumulator implements Accumulator<String, ConcurrentSk
     }
 
     @Override
-    public void merge(Accumulator<String, ConcurrentSkipListMap<String, MutableLong>> other) {
+    public void merge(Accumulator<String,ConcurrentSkipListMap<String,MutableLong>> other) {
         other.getLocalValue().forEach((k, v) -> {
             if (values.containsKey(k)) {
                 values.get(k).add(v.longValue());
@@ -46,7 +46,7 @@ public class SortedStringAccumulator implements Accumulator<String, ConcurrentSk
     }
 
     @Override
-    public Accumulator<String, ConcurrentSkipListMap<String, MutableLong>> clone() {
+    public Accumulator<String,ConcurrentSkipListMap<String,MutableLong>> clone() {
         SortedStringAccumulator a = new SortedStringAccumulator();
         a.getLocalValue().putAll(this.values);
         return a;
