@@ -605,7 +605,7 @@
             <compilerCompliance>${maven.compiler.source}</compilerCompliance>
             <compilerSource>${maven.compiler.source}</compilerSource>
             <compilerTargetPlatform>${maven.compiler.target}</compilerTargetPlatform>
-            <configFile>${project.parent.basedir}/eclipse/Eclipse-Formatter.xml</configFile>
+            <configFile>${project.parent.basedir}/src/main/resources/eclipse/Eclipse-Timely-Codestyle.xml</configFile>
             <lineEnding>LF</lineEnding>
             <skipCssFormatting>true</skipCssFormatting>
             <skipHtmlFormatting>true</skipHtmlFormatting>
@@ -613,6 +613,13 @@
             <skipJsonFormatting>true</skipJsonFormatting>
             <skipXmlFormatting>true</skipXmlFormatting>
           </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>format</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>com.github.ekryd.sortpom</groupId>
@@ -630,6 +637,33 @@
             <spaceBeforeCloseEmptyElement>true</spaceBeforeCloseEmptyElement>
             <verifyFail>Stop</verifyFail>
           </configuration>
+          <executions>
+            <execution>
+              <id>sort-pom</id>
+              <goals>
+                <goal>sort</goal>
+              </goals>
+              <phase>process-sources</phase>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>net.revelc.code</groupId>
+          <artifactId>impsort-maven-plugin</artifactId>
+          <version>${version.impsort}</version>
+          <configuration>
+            <groups>java.,javax.,*</groups>
+            <removeUnused>true</removeUnused>
+          </configuration>
+          <executions>
+            <execution>
+              <id>sort-imports</id>
+              <goals>
+                <goal>sort</goal>
+              </goals>
+              <phase>process-sources</phase>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -783,15 +817,6 @@
           <version>${version.maven-rpm}</version>
         </plugin>
         <plugin>
-          <groupId>net.revelc.code</groupId>
-          <artifactId>impsort-maven-plugin</artifactId>
-          <version>${version.impsort}</version>
-          <configuration>
-            <groups>java.,javax.,*</groups>
-            <removeUnused>true</removeUnused>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.1.0</version>
@@ -891,6 +916,13 @@
       <plugin>
         <groupId>net.revelc.code</groupId>
         <artifactId>impsort-maven-plugin</artifactId>
+        <configuration>
+          <groups>java.,javax.,org.,com.</groups>
+          <staticGroups>java,*</staticGroups>
+          <excludes>
+            <exclude>**/thrift/*.java</exclude>
+          </excludes>
+        </configuration>
         <executions>
           <execution>
             <id>sort-imports</id>
@@ -986,6 +1018,30 @@
     </plugins>
   </reporting>
   <profiles>
+    <profile>
+      <id>autoformat</id>
+      <activation>
+        <property>
+          <name>!skipFormat</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.github.ekryd.sortpom</groupId>
+            <artifactId>sortpom-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>net.revelc.code</groupId>
+            <artifactId>impsort-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>net.revelc.code.formatter</groupId>
+            <artifactId>formatter-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>collectd</id>
       <modules>
