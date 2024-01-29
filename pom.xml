@@ -51,7 +51,7 @@
     <version.commons-pool2>2.6.1</version.commons-pool2>
     <version.commons-text>1.10.0</version.commons-text>
     <version.compression.gorilla>2.1.1</version.compression.gorilla>
-    <version.curator>4.1.0</version.curator>
+    <version.curator>5.5.0</version.curator>
     <version.datawave-in-memory-accumulo>2.1.1</version.datawave-in-memory-accumulo>
     <version.disruptor>3.4.2</version.disruptor>
     <version.easymock>4.0.2</version.easymock>
