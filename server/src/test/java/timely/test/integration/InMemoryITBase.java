@@ -91,13 +91,6 @@ public class InMemoryITBase {
         });
     }
 
-    protected void stopServer() {
-        if (s != null) {
-            s.setAccumuloClient(null);
-            s.shutdown();
-        }
-    }
-
     @After
     public void shutdownInMemoryBase() throws Exception {
         if (zookeeper != null) {
@@ -149,7 +142,16 @@ public class InMemoryITBase {
             s = new Server(conf, accumuloClient);
             s.run();
         } catch (Exception e) {
+            stopServer();
             throw new RuntimeException(e);
+        }
+    }
+
+    protected void stopServer() {
+        if (s != null) {
+            s.setAccumuloClient(null);
+            s.shutdown();
+            s = null;
         }
     }
 }

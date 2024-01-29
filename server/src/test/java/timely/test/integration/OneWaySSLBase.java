@@ -1,12 +1,16 @@
 package timely.test.integration;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.net.URL;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -25,7 +29,17 @@ import timely.configuration.Configuration;
  */
 public class OneWaySSLBase extends QueryBase {
 
-    protected static File clientTrustStoreFile = null;
+    protected static File clientTrustStoreFile;
+    private static SelfSignedCertificate serverCert;
+
+    static {
+        try {
+            serverCert = new SelfSignedCertificate();
+            clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Before
     public void setupOneWaySSLBase() throws Exception {
@@ -35,6 +49,10 @@ public class OneWaySSLBase extends QueryBase {
     @After
     public void shutdownOneWaySSLBase() {
         AuthCache.resetConfiguration();
+    }
+
+    public SelfSignedCertificate getServerCert() {
+        return serverCert;
     }
 
     protected SSLSocketFactory getSSLSocketFactory() throws Exception {
@@ -50,12 +68,28 @@ public class OneWaySSLBase extends QueryBase {
         return jdkSslContext.getSocketFactory();
     }
 
-    protected static void setupSSL(Configuration config) throws Exception {
-        SelfSignedCertificate serverCert = new SelfSignedCertificate();
-        clientTrustStoreFile = serverCert.certificate().getAbsoluteFile();
-        config.getSecurity().getServerSsl().setKeyStoreFile(serverCert.privateKey().getAbsolutePath());
+    protected void setupSSL(Configuration config) throws Exception {
+        SelfSignedCertificate serverCert = getServerCert();
+        String password = "password";
+
+        // write the keyStore with server certificate into a P12 trustStore
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(null, null);
+        keyStore.setCertificateEntry("cert", serverCert.cert());
+        keyStore.setKeyEntry("key", serverCert.key(), password.toCharArray(), new Certificate[] {serverCert.cert()});
+        // write the keyStore with private key and server certificate into a P12
+        // keyStore
+        File keyStoreP12File = File.createTempFile("keyStore_", ".p12");
+        try (OutputStream out = FileUtils.newOutputStream(keyStoreP12File, false)) {
+            keyStore.store(out, password.toCharArray());
+        }
+
+        config.getSecurity().getServerSsl().setKeyStoreType("PKCS12");
+        config.getSecurity().getServerSsl().setKeyStoreFile(keyStoreP12File.getAbsolutePath());
+        config.getSecurity().getServerSsl().setKeyStorePassword(password);
         config.getSecurity().getServerSsl().setUseOpenssl(false);
         config.getSecurity().getServerSsl().setUseGeneratedKeypair(false);
+        config.getSecurity().getServerSsl().setIgnoreSslHandshakeErrors(true);
         config.getSecurity().setAllowAnonymousHttpAccess(true);
     }
 
