@@ -135,7 +135,12 @@ public class TieredCompactionStrategy extends CompactionStrategy {
         public CompactionStrategy get(Map<String,String> tableProperties) {
             if (null == strategy) {
                 try {
-                    String tableContext = tableProperties.get(Property.TABLE_CLASSPATH.getKey());
+                    String tableContext = null;
+                    if (tableProperties.containsKey(Property.TABLE_CLASSLOADER_CONTEXT)) {
+                        tableContext = tableProperties.get(Property.TABLE_CLASSLOADER_CONTEXT.getKey());
+                    } else if (tableProperties.containsKey(Property.TABLE_CLASSPATH)) {
+                        tableContext = tableProperties.get(Property.TABLE_CLASSPATH.getKey());
+                    }
                     Class<? extends CompactionStrategy> clazz;
                     if (null != tableContext && !tableContext.equals("")) {
                         clazz = AccumuloVFSClassLoader.getContextClassLoader(tableContext).loadClass(clazzName).asSubclass(CompactionStrategy.class);
