@@ -25,6 +25,7 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import timely.common.configuration.SecurityProperties;
 
@@ -74,7 +75,8 @@ public class JWTTokenHandler {
 
     public static Collection<TimelyUser> createUsersFromToken(String token, String claimName) {
         logger.trace("Attempting to parse JWT {}", token);
-        Jws<Claims> claimsJws = Jwts.parser().setSigningKey(signatureCheckKey).parseClaimsJws(token);
+        JwtParser jwtParser = Jwts.parser().setSigningKey(signatureCheckKey).build();
+        Jws<Claims> claimsJws = jwtParser.parseClaimsJws(token);
         Claims claims = claimsJws.getBody();
         logger.trace("Resulting claims: {}", claims);
         List<?> principalsClaim = claims.get(claimName, List.class);

@@ -14,12 +14,12 @@ public class WebsocketProperties {
     private String ip;
     @NotNull
     private Integer port;
-    public int timeout = 60;
-    public int subscriptionLag = 120;
-    public int scannerBatchSize = 5000;
-    public int flushIntervalSeconds = 30;
-    public int scannerReadAhead = 1;
-    public int subscriptionBatchSize = 1000;
+    private int timeout = 60;
+    private int subscriptionLag = 120;
+    private int scannerBatchSize = 5000;
+    private int flushIntervalSeconds = 30;
+    private int scannerReadAhead = 1;
+    private int subscriptionBatchSize = 1000;
 
     public String getIp() {
         return ip;

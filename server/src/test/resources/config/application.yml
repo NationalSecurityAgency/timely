@@ -1,6 +1,6 @@
 logging:
   level:
-    ROOT: info
+    ROOT: debug
     timely: info
     org.apache.zookeeper: error
 

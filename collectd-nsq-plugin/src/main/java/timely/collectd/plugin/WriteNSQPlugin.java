@@ -38,7 +38,7 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
 
     // pool should be limited by the number of WriteThreads configured in
     // collectd
-    final private int POOL_MAX_SIZE = Integer.MAX_VALUE;
+    static final private int POOL_MAX_SIZE = Integer.MAX_VALUE;
 
     public WriteNSQPlugin() {
         Collectd.registerConfig(WriteNSQPlugin.class.getName(), this);

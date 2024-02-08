@@ -28,7 +28,7 @@ import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
 import fi.iki.yak.ts.compression.gorilla.LongArrayInput;
 import timely.model.Metric;
 
-public class GorillaStore {
+public final class GorillaStore {
 
     private static final Logger log = LoggerFactory.getLogger(GorillaStore.class);
     private Queue<WrappedGorillaCompressor> archivedCompressors = new LinkedList<WrappedGorillaCompressor>();

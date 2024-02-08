@@ -97,9 +97,9 @@ public class AggregationIteratorTest {
             long ts = 0;
             int count = 0;
             for (Sample sample : entry.getValue()) {
-                assertEquals(ts, sample.timestamp);
+                assertEquals(ts, sample.getTimestamp());
                 ts += 100;
-                assertEquals(0.2, sample.value, 0.0001);
+                assertEquals(0.2, sample.getValue(), 0.0001);
                 count++;
             }
             assertEquals(1000, ts);
@@ -119,9 +119,9 @@ public class AggregationIteratorTest {
             long ts = 0;
             int count = 0;
             for (Sample sample : entry.getValue()) {
-                assertEquals(ts, sample.timestamp);
+                assertEquals(ts, sample.getTimestamp());
                 ts += 100;
-                assertEquals(count == 0 ? 0.2 : (count == 10 ? 0.5 : 0.35), sample.value, 0.0001);
+                assertEquals(count == 0 ? 0.2 : (count == 10 ? 0.5 : 0.35), sample.getValue(), 0.0001);
                 count++;
             }
             assertEquals(11, count);

@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.apache.commons.lang3.SerializationUtils;
@@ -76,7 +77,6 @@ public class MetricResolver {
     private static final Logger log = LoggerFactory.getLogger(MetricResolver.class);
     private ReentrantReadWriteLock balancerLock = new ReentrantReadWriteLock();
     private Random r = new Random();
-    final private HealthChecker healthChecker;
     private ScheduledExecutorService assignmentExecutor = Executors.newScheduledThreadPool(2);
     private ScheduledExecutorService arrivalRateExecutor = Executors.newScheduledThreadPool(2);
     private int roundRobinCounter = 0;
@@ -89,10 +89,13 @@ public class MetricResolver {
     private InterProcessReadWriteLock assignmentsIPRWLock;
     private DistributedAtomicLong assignmentsLastUpdatedInHdfs;
     private AtomicLong assignmentsLastUpdatedLocal = new AtomicLong(0);
-    protected BalancerProperties balancerProperties;
     protected List<TimelyBalancedHost> serverList = new ArrayList<>();
     protected Map<String,TimelyBalancedHost> metricToHostMap = new TreeMap<>();
     protected Map<String,ArrivalRate> metricMap = new HashMap<>();
+    final protected CuratorFramework curatorFramework;
+    final protected BalancerProperties balancerProperties;
+    final protected CacheProperties cacheProperties;
+    final protected HealthChecker healthChecker;
 
     private enum BalanceType {
         HIGH_LOW, HIGH_AVG, AVG_LOW
@@ -100,9 +103,14 @@ public class MetricResolver {
 
     public MetricResolver(CuratorFramework curatorFramework, BalancerProperties balancerProperties, CacheProperties cacheProperties,
                     HealthChecker healthChecker) {
+        this.curatorFramework = curatorFramework;
         this.balancerProperties = balancerProperties;
+        this.cacheProperties = cacheProperties;
         this.healthChecker = healthChecker;
+    }
 
+    @PostConstruct
+    public void setup() {
         assignmentsIPRWLock = new InterProcessReadWriteLock(curatorFramework, ASSIGNMENTS_LOCK_PATH);
         testIPRWLock(curatorFramework, assignmentsIPRWLock, ASSIGNMENTS_LOCK_PATH);
         startLeaderLatch(curatorFramework);

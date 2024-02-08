@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.apache.accumulo.core.client.IteratorSetting;
@@ -91,21 +92,30 @@ public class DataStoreCache {
     private InternalMetrics internalMetrics;
     private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(6);
     private AuthenticationService authenticationService;
+    private CuratorFramework curatorFramework;
+    private TimelyProperties timelyProperties;
+    private CacheProperties cacheProperties;
 
     public DataStoreCache(CuratorFramework curatorFramework, AuthenticationService authenticationService, InternalMetrics internalMetrics,
                     TimelyProperties timelyProperties, CacheProperties cacheProperties) {
+        this.curatorFramework = curatorFramework;
+        this.authenticationService = authenticationService;
+        this.internalMetrics = internalMetrics;
+        this.timelyProperties = timelyProperties;
+        this.cacheProperties = cacheProperties;
+        this.maxUniqueTagSets = cacheProperties.getMaxUniqueTagSets();
+        this.staleCacheExpiration = cacheProperties.getStaleCacheExpiration();
+    }
+
+    @PostConstruct
+    public void setup() throws Exception {
         if (curatorFramework != null) {
             addNonCachedMetricsListener(curatorFramework);
         }
-        this.authenticationService = authenticationService;
-        this.internalMetrics = internalMetrics;
         log.info("Adding initial values from configuration");
         addNonCachedMetrics(cacheProperties.getNonCachedMetrics());
         log.info("Reading initial values from nonCachedMetricsIP");
         readNonCachedMetricsIP();
-        maxUniqueTagSets = cacheProperties.getMaxUniqueTagSets();
-        staleCacheExpiration = cacheProperties.getStaleCacheExpiration();
-
         configureAgeOff(timelyProperties, cacheProperties);
 
         executorService.scheduleAtFixedRate(() -> {
@@ -823,8 +833,8 @@ public class DataStoreCache {
         QueryRequest.RateOption rateOptions = query.getRateOptions();
         Aggregation combined = Aggregation.combineAggregation(values, rateOptions);
         for (Sample entry : combined) {
-            long ts = entry.timestamp / tsDivisor;
-            response.putDps(Long.toString(ts), entry.value);
+            long ts = entry.getTimestamp() / tsDivisor;
+            response.putDps(Long.toString(ts), entry.getValue());
         }
         log.trace("Created query response {}", response);
         return response;

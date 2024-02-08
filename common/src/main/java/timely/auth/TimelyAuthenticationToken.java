@@ -14,7 +14,7 @@ import com.google.common.collect.Multimap;
 import timely.auth.util.DnUtils;
 import timely.auth.util.HttpHeaderUtils;
 
-public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationToken {
+public final class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationToken {
 
     private static final long serialVersionUID = 1L;
     private static final Logger log = LoggerFactory.getLogger(TimelyAuthenticationToken.class);

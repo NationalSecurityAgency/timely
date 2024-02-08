@@ -35,7 +35,7 @@ import timely.common.configuration.TimelyProperties;
 import timely.common.configuration.ZookeeperProperties;
 import timely.model.Meta;
 
-public class MetaCache implements Iterable<Meta> {
+public final class MetaCache implements Iterable<Meta> {
 
     private static Logger log = LoggerFactory.getLogger(MetaCache.class);
     private static final Object DUMMY = new Object();

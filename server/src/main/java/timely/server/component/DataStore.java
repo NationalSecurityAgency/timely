@@ -34,9 +34,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
@@ -57,6 +60,7 @@ import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.security.VisibilityEvaluator;
+import org.apache.accumulo.core.security.VisibilityParseException;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
@@ -161,7 +165,7 @@ public class DataStore {
     public DataStore(ApplicationContext applicationContext, AccumuloClient accumuloClient, DataStoreCache dataStoreCache,
                     AuthenticationService authenticationService, InternalMetrics internalMetrics, MetaCache metaCache, TimelyProperties timelyProperties,
                     ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties, SecurityProperties securityProperties,
-                    CacheProperties cacheProperties) throws Exception {
+                    CacheProperties cacheProperties) {
 
         int numWriteThreads;
         if (timelyProperties.getTest()) {
@@ -182,14 +186,20 @@ public class DataStore {
         this.cacheProperties = cacheProperties;
         this.accumuloClient = accumuloClient;
 
+        bwConfig = new BatchWriterConfig();
+        bwConfig.setMaxLatency(getTimeInMillis(accumuloProperties.getWrite().getLatency()), TimeUnit.MILLISECONDS);
+        bwConfig.setMaxMemory(getMemoryAsBytes(accumuloProperties.getWrite().getBufferSize()) / numWriteThreads);
+        bwConfig.setMaxWriteThreads(accumuloProperties.getWrite().getThreads());
+        scannerThreads = accumuloProperties.getScan().getThreads();
+        maxDownsampleMemory = accumuloProperties.getScan().getMaxDownsampleMemory();
+        defaultVisibility = timelyProperties.getDefaultVisibility();
+        metricsTable = timelyProperties.getMetricsTable();
+        metaTable = timelyProperties.getMetaTable();
+    }
+
+    @PostConstruct
+    public void setup() throws Exception {
         try {
-            bwConfig = new BatchWriterConfig();
-            bwConfig.setMaxLatency(getTimeInMillis(accumuloProperties.getWrite().getLatency()), TimeUnit.MILLISECONDS);
-            bwConfig.setMaxMemory(getMemoryAsBytes(accumuloProperties.getWrite().getBufferSize()) / numWriteThreads);
-            bwConfig.setMaxWriteThreads(accumuloProperties.getWrite().getThreads());
-            scannerThreads = accumuloProperties.getScan().getThreads();
-            maxDownsampleMemory = accumuloProperties.getScan().getMaxDownsampleMemory();
-            defaultVisibility = timelyProperties.getDefaultVisibility();
             if (StringUtils.isNotBlank(defaultVisibility)) {
                 ColumnVisibility vis;
                 try {
@@ -215,7 +225,6 @@ public class DataStore {
                 }
             }
 
-            metricsTable = timelyProperties.getMetricsTable();
             if (metricsTable.contains(".")) {
                 final String[] parts = metricsTable.split("\\.", 2);
                 final String namespace = parts[0];
@@ -241,7 +250,6 @@ public class DataStore {
                 }
             }
 
-            metaTable = timelyProperties.getMetaTable();
             if (!tableIdMap.containsKey(metaTable)) {
                 try {
                     log.info("Creating table " + metaTable);
@@ -255,13 +263,13 @@ public class DataStore {
                 executorService.scheduleAtFixedRate(() -> internalMetrics.getMetricsAndReset().forEach(m -> store(m, false)), METRICS_PERIOD, METRICS_PERIOD,
                                 TimeUnit.MILLISECONDS);
             }
-        } catch (Exception e) {
+        } catch (AccumuloException | AccumuloSecurityException | VisibilityParseException e) {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStore", e.getMessage(), e);
         }
     }
 
     @PreDestroy
-    public void shutdown() throws Exception {
+    public void shutdown() {
         executorService.shutdown();
         try {
             executorService.awaitTermination(5, TimeUnit.SECONDS);
@@ -840,8 +848,8 @@ public class DataStore {
         RateOption rateOptions = query.getRateOptions();
         Aggregation combined = Aggregation.combineAggregation(values, rateOptions);
         for (Sample entry : combined) {
-            long ts = entry.timestamp / tsDivisor;
-            response.putDps(Long.toString(ts), entry.value);
+            long ts = entry.getTimestamp() / tsDivisor;
+            response.putDps(Long.toString(ts), entry.getValue());
         }
         log.trace("Created query response {}", response);
         return response;

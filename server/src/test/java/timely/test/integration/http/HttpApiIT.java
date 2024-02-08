@@ -94,8 +94,8 @@ public class HttpApiIT extends OneWaySSLBase {
     public void testSuggest() throws Exception {
         // @formatter:off
         put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                   "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                   "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+           "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+           "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
         // @formatter:on
         dataStore.flush();
         dataStoreCache.flushCaches(-1);

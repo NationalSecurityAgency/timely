@@ -80,9 +80,9 @@ public class DownsampleIteratorTest {
             assertEquals(Collections.singleton(new Tag("host", "host1")), tags);
             long ts = 0;
             for (Sample sample : entry.getValue()) {
-                assertEquals(ts, sample.timestamp);
+                assertEquals(ts, sample.getTimestamp());
                 ts += 100;
-                assertEquals(0.2, sample.value, 0.0001);
+                assertEquals(0.2, sample.getValue(), 0.0001);
             }
             assertEquals(1000, ts);
         }
@@ -103,9 +103,9 @@ public class DownsampleIteratorTest {
             }
             int count = 0;
             for (Sample sample : dsample) {
-                assertEquals(ts, sample.timestamp);
+                assertEquals(ts, sample.getTimestamp());
                 ts += 100;
-                assertEquals(value, sample.value, 0.0001);
+                assertEquals(value, sample.getValue(), 0.0001);
                 count++;
             }
             assertEquals(10, count);
@@ -127,9 +127,9 @@ public class DownsampleIteratorTest {
             }
             int count = 0;
             for (Sample sample : dsample) {
-                assertEquals(ts, sample.timestamp);
+                assertEquals(ts, sample.getTimestamp());
                 ts += 200;
-                assertEquals(value, sample.value, 0.0001);
+                assertEquals(value, sample.getValue(), 0.0001);
                 count++;
             }
             assertEquals(5, count);

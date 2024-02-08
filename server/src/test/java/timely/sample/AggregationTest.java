@@ -21,9 +21,9 @@ public class AggregationTest {
         }
         int i = 0;
         for (Sample sample : asample) {
-            assertEquals(10 + i, sample.timestamp);
-            assertTrue(sample.timestamp < 30);
-            assertEquals(i + 5, (int) sample.value);
+            assertEquals(10 + i, sample.getTimestamp());
+            assertTrue(sample.getTimestamp() < 30);
+            assertEquals(i + 5, (int) sample.getValue());
             i++;
         }
         assertEquals(20, i);
@@ -35,8 +35,8 @@ public class AggregationTest {
         }
         i = 0;
         for (Sample sample : asample) {
-            assertEquals(10 + i, sample.timestamp);
-            assertEquals((1 + 2 + 3 + 4), sample.value, 0.0D);
+            assertEquals(10 + i, sample.getTimestamp());
+            assertEquals((1 + 2 + 3 + 4), sample.getValue(), 0.0D);
             i++;
         }
         assertEquals(100 - 10, i);

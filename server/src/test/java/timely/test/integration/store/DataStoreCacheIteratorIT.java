@@ -37,6 +37,7 @@ import timely.sample.Aggregation;
 import timely.sample.Sample;
 import timely.sample.iterators.AggregationIterator;
 import timely.server.component.DataStoreCache;
+import timely.server.component.TestDataStoreCache;
 import timely.store.InternalMetrics;
 import timely.test.IntegrationTest;
 import timely.test.TimelyServerTestRule;
@@ -77,7 +78,7 @@ public class DataStoreCacheIteratorIT extends ITBase {
 
     private DataStoreCache getMetricMemoryStore1(long baseTime) throws TimelyException {
 
-        DataStoreCache mmStore = new DataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
+        DataStoreCache mmStore = new TestDataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
 
         Map<String,String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -101,9 +102,9 @@ public class DataStoreCacheIteratorIT extends ITBase {
         return mmStore;
     }
 
-    private DataStoreCache getMetricMemoryStore2(long baseTime) throws TimelyException {
+    private DataStoreCache getMetricMemoryStore2(long baseTime) {
 
-        DataStoreCache mmStore = new DataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
+        DataStoreCache mmStore = new TestDataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
 
         int increment = 10;
         Map<String,String> tags = new HashMap<>();
@@ -162,9 +163,9 @@ public class DataStoreCacheIteratorIT extends ITBase {
                     for (Sample s : entry.getValue()) {
                         numSamples++;
                         if (firstTimestamp == -1) {
-                            firstTimestamp = s.timestamp;
+                            firstTimestamp = s.getTimestamp();
                         }
-                        lastTimestamp = s.timestamp;
+                        lastTimestamp = s.getTimestamp();
                     }
                 }
             }
@@ -177,7 +178,7 @@ public class DataStoreCacheIteratorIT extends ITBase {
     }
 
     @Test
-    public void testRateIterator() throws TimelyException {
+    public void testRateIterator() throws Exception {
 
         long BASETIME = System.currentTimeMillis();
         // align basetime to a downsample period
@@ -198,7 +199,7 @@ public class DataStoreCacheIteratorIT extends ITBase {
         subQuery.setRateOptions(rateOption);
         query.setQueries(Collections.singleton(subQuery));
 
-        SortedKeyValueIterator<org.apache.accumulo.core.data.Key,org.apache.accumulo.core.data.Value> itr = null;
+        SortedKeyValueIterator<org.apache.accumulo.core.data.Key,org.apache.accumulo.core.data.Value> itr;
         try {
             // long firstTimestamp = Long.MAX_VALUE;
             long firstTimestamp = -1;
@@ -212,15 +213,9 @@ public class DataStoreCacheIteratorIT extends ITBase {
                     for (Sample s : entry.getValue()) {
                         numSamples++;
                         if (firstTimestamp == -1) {
-                            firstTimestamp = s.timestamp;
+                            firstTimestamp = s.getTimestamp();
                         }
-                        lastTimestamp = s.timestamp;
-                        // if (s.timestamp < firstTimestamp) {
-                        // firstTimestamp = s.timestamp;
-                        // }
-                        // if (s.timestamp > lastTimestamp) {
-                        // lastTimestamp = s.timestamp;
-                        // }
+                        lastTimestamp = s.getTimestamp();
                     }
                 }
             }

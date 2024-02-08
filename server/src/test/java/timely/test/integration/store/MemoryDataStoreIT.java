@@ -31,6 +31,7 @@ import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.Value;
 import timely.server.component.DataStoreCache;
+import timely.server.component.TestDataStoreCache;
 import timely.store.InternalMetrics;
 import timely.test.IntegrationTest;
 import timely.test.TimelyServerTestRule;
@@ -69,9 +70,9 @@ public class MemoryDataStoreIT extends ITBase {
         super.cleanup();
     }
 
-    private DataStoreCache getMetricMemoryStore1(long baseTimestamp) throws TimelyException {
+    private DataStoreCache getMetricMemoryStore1(long baseTimestamp) {
 
-        DataStoreCache mmStore = new DataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
+        DataStoreCache mmStore = new TestDataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
 
         long timestamp = baseTimestamp + 10000;
         Map<String,String> tags = new HashMap<>();
@@ -104,7 +105,7 @@ public class MemoryDataStoreIT extends ITBase {
 
     private DataStoreCache getMetricMemoryStore2(long baseTimestamp) {
 
-        DataStoreCache mmStore = new DataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
+        DataStoreCache mmStore = new TestDataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
 
         Map<String,String> tags = new HashMap<>();
         tags.put("part", "webservice");
@@ -189,7 +190,7 @@ public class MemoryDataStoreIT extends ITBase {
 
     @Test
     public void TestExtentOfStorage() throws TimelyException {
-        DataStoreCache mmStore = new DataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
+        DataStoreCache mmStore = new TestDataStoreCache(curatorFramework, authenticationService, internalMetrics, timelyProperties, cacheProperties);
 
         HashMap<String,String> tags = new HashMap<>();
         tags.put("host", "localhost");
