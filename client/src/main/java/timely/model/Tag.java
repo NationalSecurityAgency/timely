@@ -5,13 +5,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.builder.CompareToBuilder;
-import org.apache.commons.lang3.builder.EqualsBuilder;
+
 import timely.model.parse.TagParser;
 
 /**
@@ -27,8 +29,7 @@ public class Tag implements Comparable<Tag>, Serializable {
     private String key;
     private String value;
 
-    public Tag() {
-    }
+    public Tag() {}
 
     public Tag(Tag other) {
         this.setKey(other.getKey());
@@ -47,7 +48,7 @@ public class Tag implements Comparable<Tag>, Serializable {
     }
 
     @JsonAnyGetter
-    public Map<String, String> get() {
+    public Map<String,String> get() {
         return Stream.of(this).collect(Collectors.toMap(Tag::getKey, Tag::getValue));
     }
 

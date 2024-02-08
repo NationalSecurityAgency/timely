@@ -1,5 +1,8 @@
 package timely.netty.http;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -8,8 +11,6 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.MetricRequest;
 import timely.api.response.TimelyException;
 import timely.netty.Constants;
@@ -33,8 +34,7 @@ public class HttpMetricPutHandler extends SimpleChannelInboundHandler<MetricRequ
             this.sendHttpError(ctx, e);
             return;
         }
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.EMPTY_BUFFER);
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
         sendResponse(ctx, response);

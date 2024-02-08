@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.google.flatbuffers.FlatBufferBuilder;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.google.flatbuffers.FlatBufferBuilder;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import timely.api.request.MetricRequest;
 import timely.model.Metric;
 import timely.model.Tag;
@@ -19,18 +21,15 @@ public class MetricsBufferDecoderTest {
 
     private static final Long TEST_TIME = System.currentTimeMillis();
 
-    private int createMetric(FlatBufferBuilder builder, String name, long timestamp, double value,
-            Map<String, String> tags) {
+    private int createMetric(FlatBufferBuilder builder, String name, long timestamp, double value, Map<String,String> tags) {
         int n = builder.createString(name);
         int[] t = new int[tags.size()];
         int i = 0;
-        for (Entry<String, String> e : tags.entrySet()) {
-            t[i] = timely.api.flatbuffer.Tag.createTag(builder, builder.createString(e.getKey()),
-                    builder.createString(e.getValue()));
+        for (Entry<String,String> e : tags.entrySet()) {
+            t[i] = timely.api.flatbuffer.Tag.createTag(builder, builder.createString(e.getKey()), builder.createString(e.getValue()));
             i++;
         }
-        return timely.api.flatbuffer.Metric.createMetric(builder, n, timestamp, value,
-                timely.api.flatbuffer.Metric.createTagsVector(builder, t));
+        return timely.api.flatbuffer.Metric.createMetric(builder, n, timestamp, value, timely.api.flatbuffer.Metric.createTagsVector(builder, t));
     }
 
     @Test
@@ -38,7 +37,7 @@ public class MetricsBufferDecoderTest {
         FlatBufferBuilder builder = new FlatBufferBuilder(1);
 
         int[] metric = new int[1];
-        Map<String, String> t = new HashMap<>();
+        Map<String,String> t = new HashMap<>();
         t.put("tag1", "value1");
         t.put("tag2", "value2");
         metric[0] = createMetric(builder, "sys.cpu.user", TEST_TIME, 1.0D, t);
@@ -76,7 +75,7 @@ public class MetricsBufferDecoderTest {
         FlatBufferBuilder builder = new FlatBufferBuilder(1);
 
         int[] metric = new int[2];
-        Map<String, String> t = new HashMap<>();
+        Map<String,String> t = new HashMap<>();
         t.put("tag1", "value1");
         t.put("tag2", "value2");
         metric[0] = createMetric(builder, "sys.cpu.user", TEST_TIME, 1.0D, t);

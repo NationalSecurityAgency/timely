@@ -15,8 +15,8 @@ import org.glassfish.tyrus.client.SslContextConfigurator;
 
 public class HttpClient {
 
-    public static SSLContext getSSLContext(String trustStoreFile, String trustStoreType, String trustStorePass,
-            String keyStoreFile, String keyStoreType, String keyStorePass) {
+    public static SSLContext getSSLContext(String trustStoreFile, String trustStoreType, String trustStorePass, String keyStoreFile, String keyStoreType,
+                    String keyStorePass) {
         SslContextConfigurator scc = new SslContextConfigurator();
         scc.setTrustStoreFile(trustStoreFile);
         scc.setTrustStoreType(trustStoreType);
@@ -31,12 +31,10 @@ public class HttpClient {
         return scc.createSSLContext();
     }
 
-    public static CloseableHttpClient get(String trustStoreFile, String trustStoreType, String trustStorePass,
-            String keyStoreFile, String keyStoreType, String keyStorePass, CookieStore cookieStore,
-            boolean hostVerificationEnabled) {
+    public static CloseableHttpClient get(String trustStoreFile, String trustStoreType, String trustStorePass, String keyStoreFile, String keyStoreType,
+                    String keyStorePass, CookieStore cookieStore, boolean hostVerificationEnabled) {
 
-        SSLContext ssl = getSSLContext(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType,
-                keyStorePass);
+        SSLContext ssl = getSSLContext(trustStoreFile, trustStoreType, trustStorePass, keyStoreFile, keyStoreType, keyStorePass);
         return get(ssl, cookieStore, hostVerificationEnabled);
     }
 
@@ -44,8 +42,7 @@ public class HttpClient {
         return get(ssl, cookieStore, hostVerificationEnabled, false);
     }
 
-    public static CloseableHttpClient get(SSLContext ssl, CookieStore cookieStore, boolean hostVerificationEnabled,
-            boolean clientAuth) {
+    public static CloseableHttpClient get(SSLContext ssl, CookieStore cookieStore, boolean hostVerificationEnabled, boolean clientAuth) {
         HostnameVerifier hostnameVerifier;
         if (hostVerificationEnabled) {
             hostnameVerifier = SSLConnectionSocketFactory.getDefaultHostnameVerifier();
@@ -55,16 +52,15 @@ public class HttpClient {
         RequestConfig defaultRequestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
         HttpClientBuilder builder;
         if (cookieStore == null) {
-            builder = HttpClients.custom().setSSLContext(ssl).disableCookieManagement()
-                    .setDefaultRequestConfig(defaultRequestConfig).setSSLHostnameVerifier(hostnameVerifier);
+            builder = HttpClients.custom().setSSLContext(ssl).disableCookieManagement().setDefaultRequestConfig(defaultRequestConfig)
+                            .setSSLHostnameVerifier(hostnameVerifier);
         } else {
-            builder = HttpClients.custom().setSSLContext(ssl).setDefaultCookieStore(cookieStore)
-                    .setDefaultRequestConfig(defaultRequestConfig).setSSLHostnameVerifier(hostnameVerifier);
+            builder = HttpClients.custom().setSSLContext(ssl).setDefaultCookieStore(cookieStore).setDefaultRequestConfig(defaultRequestConfig)
+                            .setSSLHostnameVerifier(hostnameVerifier);
         }
 
         if (clientAuth) {
-            SSLConnectionSocketFactory sslCSF = new SSLConnectionSocketFactory(ssl,
-                    new String[] { "TLSv1.1", "TLSv1.2" }, null, hostnameVerifier);
+            SSLConnectionSocketFactory sslCSF = new SSLConnectionSocketFactory(ssl, new String[] {"TLSv1.1", "TLSv1.2"}, null, hostnameVerifier);
             builder.setSSLSocketFactory(sslCSF);
         }
         return builder.build();

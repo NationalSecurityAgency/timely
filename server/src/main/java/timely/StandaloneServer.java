@@ -15,6 +15,7 @@ import org.apache.accumulo.minicluster.MiniAccumuloConfig;
 import org.apache.accumulo.minicluster.ServerType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.configuration.Configuration;
 
 public class StandaloneServer extends Server {

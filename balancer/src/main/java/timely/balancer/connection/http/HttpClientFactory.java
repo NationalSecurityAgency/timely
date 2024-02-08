@@ -6,10 +6,11 @@ import org.apache.commons.pool2.KeyedPooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.http.impl.client.CloseableHttpClient;
+
 import timely.balancer.configuration.BalancerSecurity;
 import timely.balancer.connection.TimelyBalancedHost;
 
-public class HttpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost, CloseableHttpClient> {
+public class HttpClientFactory implements KeyedPooledObjectFactory<TimelyBalancedHost,CloseableHttpClient> {
 
     private final SSLContext sslContext;
     private final BalancerSecurity security;
@@ -22,8 +23,8 @@ public class HttpClientFactory implements KeyedPooledObjectFactory<TimelyBalance
     @Override
     public PooledObject<CloseableHttpClient> makeObject(TimelyBalancedHost k) throws Exception {
         // disable cookie management because we are sharing connections
-        return new DefaultPooledObject<>(timely.client.http.HttpClient.get(this.sslContext, null,
-                security.getClientSsl().isHostVerificationEnabled(), security.getClientSsl().isUseClientCert()));
+        return new DefaultPooledObject<>(timely.client.http.HttpClient.get(this.sslContext, null, security.getClientSsl().isHostVerificationEnabled(),
+                        security.getClientSsl().isUseClientCert()));
     }
 
     @Override

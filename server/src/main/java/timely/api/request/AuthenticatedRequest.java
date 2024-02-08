@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+
 import timely.auth.TimelyUser;
 import timely.auth.util.HttpHeaderUtils;
 import timely.netty.http.auth.TimelyAuthenticationToken;
@@ -11,12 +12,12 @@ import timely.netty.http.auth.TimelyAuthenticationToken;
 /**
  * Base class for requests that require auth
  */
-@JsonIgnoreProperties({ "userName", "requestHeader" })
+@JsonIgnoreProperties({"userName", "requestHeader"})
 public class AuthenticatedRequest implements Request {
 
     private String sessionId = null;
     private TimelyAuthenticationToken token = null;
-    private Multimap<String, String> requestHeaders = HashMultimap.create();
+    private Multimap<String,String> requestHeaders = HashMultimap.create();
 
     public String getSessionId() {
         return sessionId;
@@ -26,11 +27,11 @@ public class AuthenticatedRequest implements Request {
         this.sessionId = sessionId;
     }
 
-    public void addHeaders(Multimap<String, String> headers) {
+    public void addHeaders(Multimap<String,String> headers) {
         requestHeaders.putAll(headers);
     }
 
-    public Multimap<String, String> getRequestHeaders() {
+    public Multimap<String,String> getRequestHeaders() {
         return requestHeaders;
     }
 

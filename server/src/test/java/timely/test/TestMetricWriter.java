@@ -11,6 +11,7 @@ import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Mutation;
+
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
 

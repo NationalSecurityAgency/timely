@@ -7,8 +7,7 @@ public class Sample {
     public long timestamp;
     public double value;
 
-    public Sample() {
-    }
+    public Sample() {}
 
     public Sample(long timestamp, double value) {
         this.timestamp = timestamp;

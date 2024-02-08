@@ -5,16 +5,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-@JsonPropertyOrder({ "metric", "tags", "aggregatedTags", "dps" })
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
+@JsonPropertyOrder({"metric", "tags", "aggregatedTags", "dps"})
 public class QueryResponse {
 
     private String metric;
-    private Map<String, String> tags = new LinkedHashMap<>();
+    private Map<String,String> tags = new LinkedHashMap<>();
     private List<String> aggregatedTags = new ArrayList<>();
-    private Map<String, Object> dps = new LinkedHashMap<>();
+    private Map<String,Object> dps = new LinkedHashMap<>();
 
     public String getMetric() {
         return metric;
@@ -24,11 +25,11 @@ public class QueryResponse {
         this.metric = metric;
     }
 
-    public Map<String, String> getTags() {
+    public Map<String,String> getTags() {
         return tags;
     }
 
-    public void setTags(Map<String, String> tags) {
+    public void setTags(Map<String,String> tags) {
         this.tags = tags;
     }
 
@@ -48,11 +49,11 @@ public class QueryResponse {
         this.aggregatedTags.add(tag);
     }
 
-    public Map<String, Object> getDps() {
+    public Map<String,Object> getDps() {
         return dps;
     }
 
-    public void setDps(Map<String, Object> dps) {
+    public void setDps(Map<String,Object> dps) {
         this.dps = dps;
     }
 

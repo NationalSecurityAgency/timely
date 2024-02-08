@@ -4,11 +4,13 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+
 import timely.auth.SubjectIssuerDNPair;
 import timely.auth.TimelyPrincipal;
 import timely.auth.TimelyUser;
@@ -22,18 +24,18 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
     public static final String PROXIED_ENTITIES_HEADER = "x-proxiedentitieschain";
     public static final String PROXIED_ISSUERS_HEADER = "x-proxiedissuerschain";
 
-    private Multimap<String, String> httpHeaders = null;
+    private Multimap<String,String> httpHeaders = null;
     private X509Certificate clientCert = null;
     private TimelyPrincipal timelyPrincipal;
 
-    public TimelyAuthenticationToken(TimelyPrincipal timelyPrincipal, Multimap<String, String> httpHeaders) {
+    public TimelyAuthenticationToken(TimelyPrincipal timelyPrincipal, Multimap<String,String> httpHeaders) {
         super(timelyPrincipal.getPrimaryUser().getDn(), null);
         this.httpHeaders = httpHeaders;
         this.timelyPrincipal = timelyPrincipal;
         LOG.trace("Created TimelyAuthenticationToken: {}", timelyPrincipal.getName());
     }
 
-    public TimelyAuthenticationToken(String subjectDn, Object clientCert, Multimap<String, String> httpHeaders) {
+    public TimelyAuthenticationToken(String subjectDn, Object clientCert, Multimap<String,String> httpHeaders) {
         super(subjectDn, clientCert);
         if (httpHeaders == null) {
             this.httpHeaders = HashMultimap.create();
@@ -55,15 +57,13 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
         }
         if (proxiedEntities != null && proxiedIssuers == null) {
             LOG.error(PROXIED_ENTITIES_HEADER + " supplied, but missing " + PROXIED_ISSUERS_HEADER);
-            throw new IllegalArgumentException(
-                    PROXIED_ENTITIES_HEADER + " supplied, but missing " + PROXIED_ISSUERS_HEADER);
+            throw new IllegalArgumentException(PROXIED_ENTITIES_HEADER + " supplied, but missing " + PROXIED_ISSUERS_HEADER);
         }
         List<SubjectIssuerDNPair> entities = extractEntities(subjectDn, issuerDn, proxiedEntities, proxiedIssuers);
         long now = System.currentTimeMillis();
         List<TimelyUser> timelyUsers = new ArrayList<>();
         for (SubjectIssuerDNPair ent : entities) {
-            TimelyUser.UserType userType = DnUtils.isServerDN(ent.subjectDN()) ? TimelyUser.UserType.SERVER
-                    : TimelyUser.UserType.USER;
+            TimelyUser.UserType userType = DnUtils.isServerDN(ent.subjectDN()) ? TimelyUser.UserType.SERVER : TimelyUser.UserType.USER;
             timelyUsers.add(new TimelyUser(ent, userType, null, null, null, now));
         }
         timelyPrincipal = new TimelyPrincipal(timelyUsers);
@@ -75,16 +75,13 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
         if (clientCert instanceof X509Certificate) {
             this.clientCert = (X509Certificate) clientCert;
         }
-        TimelyUser.UserType userType = DnUtils.isServerDN(subjectDn) ? TimelyUser.UserType.SERVER
-                : TimelyUser.UserType.USER;
-        TimelyUser timelyUser = new TimelyUser(SubjectIssuerDNPair.of(subjectDn, issuerDn), userType, null, null, null,
-                System.currentTimeMillis());
+        TimelyUser.UserType userType = DnUtils.isServerDN(subjectDn) ? TimelyUser.UserType.SERVER : TimelyUser.UserType.USER;
+        TimelyUser timelyUser = new TimelyUser(SubjectIssuerDNPair.of(subjectDn, issuerDn), userType, null, null, null, System.currentTimeMillis());
         timelyPrincipal = new TimelyPrincipal(timelyUser);
         LOG.trace("Created TimelyAuthenticationToken: {}", timelyPrincipal.getName());
     }
 
-    private List<SubjectIssuerDNPair> extractEntities(String subjectDn, String issuerDn, String proxiedEntities,
-            String proxiedIssuers) {
+    private List<SubjectIssuerDNPair> extractEntities(String subjectDn, String issuerDn, String proxiedEntities, String proxiedIssuers) {
         List<SubjectIssuerDNPair> entities = new ArrayList<>();
         entities.add(SubjectIssuerDNPair.of(subjectDn, issuerDn));
         if (proxiedEntities != null) {
@@ -94,8 +91,7 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
             }
             String[] issuers = DnUtils.splitProxiedDNs(proxiedIssuers, true);
             if (subjects.length != issuers.length) {
-                throw new IllegalArgumentException("Proxied subjects and issuers don't match up. Subjects="
-                        + proxiedEntities + " , Issuers=" + proxiedIssuers);
+                throw new IllegalArgumentException("Proxied subjects and issuers don't match up. Subjects=" + proxiedEntities + " , Issuers=" + proxiedIssuers);
             }
 
             for (int i = 0; i < subjects.length; ++i) {
@@ -105,7 +101,7 @@ public class TimelyAuthenticationToken extends PreAuthenticatedAuthenticationTok
         return entities;
     }
 
-    public Multimap<String, String> getHttpHeaders() {
+    public Multimap<String,String> getHttpHeaders() {
         return httpHeaders;
     }
 

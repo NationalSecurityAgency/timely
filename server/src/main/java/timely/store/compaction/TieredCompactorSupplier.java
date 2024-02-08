@@ -6,7 +6,7 @@ import org.apache.accumulo.tserver.compaction.CompactionStrategy;
 
 public interface TieredCompactorSupplier {
 
-    Map<String, String> options();
+    Map<String,String> options();
 
-    CompactionStrategy get(Map<String, String> tableProperties);
+    CompactionStrategy get(Map<String,String> tableProperties);
 }

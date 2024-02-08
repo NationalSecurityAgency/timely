@@ -9,11 +9,11 @@ public class TabletStatistic {
 
     private final String keyName;
     private final int keyCount;
-    private final Map<TabletStatisticType, SummaryStatistics> stats;
+    private final Map<TabletStatisticType,SummaryStatistics> stats;
     private final SummaryStatistics timeStat;
     private final SummaryStatistics sizeStat;
 
-    TabletStatistic(String keyName, int keyCount, Map<TabletStatisticType, SummaryStatistics> stats) {
+    TabletStatistic(String keyName, int keyCount, Map<TabletStatisticType,SummaryStatistics> stats) {
         this.keyName = keyName;
         this.keyCount = keyCount;
         this.stats = stats;
@@ -34,7 +34,7 @@ public class TabletStatistic {
         return this.stats.getOrDefault(statType, new SummaryStatistics());
     }
 
-    public Map<TabletStatisticType, SummaryStatistics> getSummaryMap() {
+    public Map<TabletStatisticType,SummaryStatistics> getSummaryMap() {
         return stats;
     }
 

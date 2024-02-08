@@ -4,6 +4,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -13,8 +16,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.auth.TimelyPrincipal;
 import timely.configuration.Http;
 import timely.configuration.Security;
@@ -39,8 +40,7 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
             LOG.trace("Authenticating {}", loginRequest);
             String sessionId = UUID.randomUUID().toString();
             TimelyPrincipal principal = authenticate(ctx, loginRequest, sessionId);
-            LOG.trace("Authenticated new sessionId {} for user {}", sessionId,
-                    principal.getPrimaryUser().getDn().subjectDN());
+            LOG.trace("Authenticated new sessionId {} for user {}", sessionId, principal.getPrimaryUser().getDn().subjectDN());
             String sessionIdEncoded = URLEncoder.encode(sessionId, StandardCharsets.UTF_8.name());
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
@@ -55,8 +55,7 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
             sendResponse(ctx, response);
         } catch (Exception e) {
             LOG.error("Login failure", e);
-            FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                    HttpResponseStatus.UNAUTHORIZED);
+            FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
             sendResponse(ctx, response);
@@ -64,6 +63,5 @@ public abstract class TimelyLoginRequestHandler<T> extends SimpleChannelInboundH
 
     }
 
-    protected abstract TimelyPrincipal authenticate(ChannelHandlerContext ctx, T loginRequest, String entity)
-            throws Exception;
+    protected abstract TimelyPrincipal authenticate(ChannelHandlerContext ctx, T loginRequest, String entity) throws Exception;
 }

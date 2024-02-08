@@ -5,8 +5,10 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.*;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import com.google.common.base.Preconditions;
+
 import timely.api.request.timeseries.QueryRequest;
 
 public class Aggregation implements Iterable<Sample>, Serializable {
@@ -53,7 +55,7 @@ public class Aggregation implements Iterable<Sample>, Serializable {
     protected transient Aggregator aggregator;
     protected final String aggregatorClassname;
 
-    protected final TreeMap<Long, AggregatedValue> buckets = new TreeMap<>();
+    protected final TreeMap<Long,AggregatedValue> buckets = new TreeMap<>();
 
     public Aggregation(Aggregator agg) {
         Preconditions.checkNotNull(agg, "Aggregator object cannot be null");
@@ -80,7 +82,7 @@ public class Aggregation implements Iterable<Sample>, Serializable {
     }
 
     public void merge(Aggregation other) {
-        for (Map.Entry<Long, AggregatedValue> e : other.buckets.entrySet()) {
+        for (Map.Entry<Long,AggregatedValue> e : other.buckets.entrySet()) {
             AggregatedValue thisVal = buckets.get(e.getKey());
             if (null == thisVal) {
                 buckets.put(e.getKey(), e.getValue());
@@ -117,7 +119,7 @@ public class Aggregation implements Iterable<Sample>, Serializable {
         ToStringBuilder tsb = new ToStringBuilder(this);
         tsb.append("aggregator", this.aggregatorClassname);
         tsb.append("values={");
-        for (Map.Entry<Long, AggregatedValue> e : this.buckets.entrySet()) {
+        for (Map.Entry<Long,AggregatedValue> e : this.buckets.entrySet()) {
             tsb.append(e.getKey()).append("=").append(e.getValue()).append(", ");
         }
         tsb.append("}");

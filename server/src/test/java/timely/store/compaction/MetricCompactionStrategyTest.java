@@ -19,6 +19,7 @@ import org.apache.accumulo.tserver.compaction.CompactionPlan;
 import org.apache.accumulo.tserver.compaction.CompactionStrategy;
 import org.apache.accumulo.tserver.compaction.MajorCompactionRequest;
 import org.junit.Test;
+
 import timely.test.CompactionRequestBuilder;
 
 public class MetricCompactionStrategyTest {
@@ -27,14 +28,12 @@ public class MetricCompactionStrategyTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void initThrowsWhenNoDefaultAgeOff() {
-        Map<String, String> config = new HashMap<>();
+        Map<String,String> config = new HashMap<>();
         MetricCompactionStrategy strategy = new MetricCompactionStrategy();
         strategy.init(config);
-        CompactionRequestBuilder builder = new CompactionRequestBuilder()
-                .endKeyMetric("sys.cpu", TimeUnit.DAYS.toMillis(11))
-                .prevEndKeyMetric("sys.cpu", TimeUnit.DAYS.toMillis(12))
-                .file("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao8.rf", 1, 1)
-                .file("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao7.rf", 1, 1);
+        CompactionRequestBuilder builder = new CompactionRequestBuilder().endKeyMetric("sys.cpu", TimeUnit.DAYS.toMillis(11))
+                        .prevEndKeyMetric("sys.cpu", TimeUnit.DAYS.toMillis(12)).file("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao8.rf", 1, 1)
+                        .file("hdfs://hdfs-name/accumulo/tables/2/default_tablet/C0000ao7.rf", 1, 1);
 
         MajorCompactionRequest request = builder.build();
         strategy.shouldCompact(request);
@@ -42,7 +41,7 @@ public class MetricCompactionStrategyTest {
 
     @Test
     public void minAgeOffOverridesMajcDefaultWillUseMaximum() throws IOException {
-        Map<String, String> config = new HashMap<>();
+        Map<String,String> config = new HashMap<>();
         config.put(MetricCompactionStrategy.MIN_AGEOFF_KEY, Long.toString(TimeUnit.DAYS.toMillis(10)));
         CompactionStrategy strategy = newStrategy(config);
         // @formatter:off
@@ -63,7 +62,7 @@ public class MetricCompactionStrategyTest {
 
     @Test
     public void minAgeOffOverridesMajcDefaultNotCompact() throws IOException {
-        Map<String, String> config = new HashMap<>();
+        Map<String,String> config = new HashMap<>();
         config.put(MetricCompactionStrategy.MIN_AGEOFF_KEY, Long.toString(TimeUnit.DAYS.toMillis(13)));
         CompactionStrategy strategy = newStrategy(config);
         // @formatter:off
@@ -205,7 +204,7 @@ public class MetricCompactionStrategyTest {
 
     @Test
     public void compactWithLogOnlyDoesNotCompact() throws IOException {
-        Map<String, String> defaults = new HashMap<>();
+        Map<String,String> defaults = new HashMap<>();
         defaults.put(MetricCompactionStrategy.LOG_ONLY_KEY, "true");
         CompactionStrategy strategy = newStrategy(defaults);
         // @formatter:off
@@ -226,7 +225,7 @@ public class MetricCompactionStrategyTest {
 
     @Test
     public void compactWithFilterPrefixWillCompact() throws IOException {
-        Map<String, String> defaults = new HashMap<>();
+        Map<String,String> defaults = new HashMap<>();
         defaults.put(MetricCompactionStrategy.FILTER_PREFIX_KEY, "sys.cp");
         CompactionStrategy strategy = newStrategy(defaults);
         // @formatter:off
@@ -249,7 +248,7 @@ public class MetricCompactionStrategyTest {
 
     @Test
     public void compactWithoutFilterPrefixWillNotCompact() throws IOException {
-        Map<String, String> defaults = new HashMap<>();
+        Map<String,String> defaults = new HashMap<>();
         defaults.put(MetricCompactionStrategy.FILTER_PREFIX_KEY, "sys.mem");
         CompactionStrategy strategy = newStrategy(defaults);
         // @formatter:off
@@ -269,16 +268,15 @@ public class MetricCompactionStrategyTest {
     }
 
     private static CompactionRequestBuilder newRequestBuilder(int defaultAgeOffDays) {
-        return new CompactionRequestBuilder(TIME_MILLIS).tableProperties(
-                Property.TABLE_ITERATOR_MAJC_PREFIX.getKey() + "ageoffmetrics.opt.ageoff.default",
-                Long.toString(TimeUnit.DAYS.toMillis(defaultAgeOffDays)));
+        return new CompactionRequestBuilder(TIME_MILLIS).tableProperties(Property.TABLE_ITERATOR_MAJC_PREFIX.getKey() + "ageoffmetrics.opt.ageoff.default",
+                        Long.toString(TimeUnit.DAYS.toMillis(defaultAgeOffDays)));
     }
 
     private static MetricCompactionStrategy newStrategy() {
         return newStrategy(new TreeMap<>());
     }
 
-    private static MetricCompactionStrategy newStrategy(Map<String, String> config) {
+    private static MetricCompactionStrategy newStrategy(Map<String,String> config) {
         if (!config.containsKey(MetricCompactionStrategy.LOG_ONLY_KEY)) {
             config.put(MetricCompactionStrategy.LOG_ONLY_KEY, "false");
         }

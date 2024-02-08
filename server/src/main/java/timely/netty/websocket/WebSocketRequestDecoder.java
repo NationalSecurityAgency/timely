@@ -5,7 +5,12 @@ import static timely.auth.AuthenticationService.AUTH_HEADER;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.Multimap;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -16,9 +21,6 @@ import io.netty.handler.ssl.SslCompletionEvent;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.AttributeKey;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.WebSocketRequest;
 import timely.api.response.TimelyException;
@@ -34,7 +36,7 @@ import timely.util.JsonUtil;
 
 public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFrame> {
 
-    public static final AttributeKey<Multimap<String, String>> HTTP_HEADERS_ATTR = AttributeKey.newInstance("headers");
+    public static final AttributeKey<Multimap<String,String>> HTTP_HEADERS_ATTR = AttributeKey.newInstance("headers");
     public static final AttributeKey<X509Certificate> CLIENT_CERT_ATTR = AttributeKey.newInstance("clientCert");
 
     private static final Logger LOG = LoggerFactory.getLogger(WebSocketRequestDecoder.class);
@@ -54,7 +56,7 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
             WebSocketRequest request = JsonUtil.getObjectMapper().readValue(content, WebSocketRequest.class);
             LOG.trace("Received WS request {}", content);
             String sessionId = ctx.channel().attr(SubscriptionRegistry.SESSION_ID_ATTR).get();
-            Multimap<String, String> headers = ctx.channel().attr(HTTP_HEADERS_ATTR).get();
+            Multimap<String,String> headers = ctx.channel().attr(HTTP_HEADERS_ATTR).get();
             X509Certificate clientCert = ctx.channel().attr(CLIENT_CERT_ATTR).get();
             if (request instanceof AuthenticatedRequest) {
                 if (headers != null) {
@@ -109,8 +111,7 @@ public class WebSocketRequestDecoder extends MessageToMessageDecoder<WebSocketFr
 
         } else {
             LOG.error("Unhandled web socket frame type");
-            ctx.writeAndFlush(new CloseWebSocketFrame(1003,
-                    "Unhandled web socket frame type, only TextWebSocketFrame is supported"));
+            ctx.writeAndFlush(new CloseWebSocketFrame(1003, "Unhandled web socket frame type, only TextWebSocketFrame is supported"));
         }
     }
 

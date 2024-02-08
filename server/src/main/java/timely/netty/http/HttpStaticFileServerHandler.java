@@ -50,6 +50,9 @@ import java.util.regex.Pattern;
 import javax.activation.MimetypesFileTypeMap;
 import javax.net.ssl.SSLHandshakeException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -67,29 +70,21 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.netty.Constants;
 
 /**
- * A simple handler that serves incoming HTTP requests to send their respective
- * HTTP responses. It also implements {@code 'If-Modified-Since'} header to take
- * advantage of browser cache, as described in
- * <a href="http://tools.ietf.org/html/rfc2616#section-14.25">RFC 2616</a>.
+ * A simple handler that serves incoming HTTP requests to send their respective HTTP responses. It also implements {@code 'If-Modified-Since'} header to take
+ * advantage of browser cache, as described in <a href="http://tools.ietf.org/html/rfc2616#section-14.25">RFC 2616</a>.
  *
  * <h3>How Browser Caching Works</h3>
  *
- * Web browser caching works with HTTP headers as illustrated by the following
- * sample:
+ * Web browser caching works with HTTP headers as illustrated by the following sample:
  * <ol>
  * <li>Request #1 returns the content of {@code /file1.txt}.</li>
  * <li>Contents of {@code /file1.txt} is cached by the browser.</li>
- * <li>Request #2 for {@code /file1.txt} does return the contents of the file
- * again. Rather, a 304 Not Modified is returned. This tells the browser to use
- * the contents stored in its cache.</li>
- * <li>The server knows the file has not been modified because the
- * {@code If-Modified-Since} date is the same as the file's last modified
- * date.</li>
+ * <li>Request #2 for {@code /file1.txt} does return the contents of the file again. Rather, a 304 Not Modified is returned. This tells the browser to use the
+ * contents stored in its cache.</li>
+ * <li>The server knows the file has not been modified because the {@code If-Modified-Since} date is the same as the file's last modified date.</li>
  * </ol>
  *
  * <pre>
@@ -117,8 +112,7 @@ import timely.netty.Constants;
  *
  * </pre>
  */
-public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<FullHttpRequest>
-        implements TimelyHttpHandler {
+public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements TimelyHttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpStaticFileServerHandler.class);
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
@@ -252,8 +246,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         // Simplistic dumb security check.
         // You will have to do something serious in the production environment.
-        if (uri.contains(File.separator + '.') || uri.contains('.' + File.separator) || uri.charAt(0) == '.'
-                || uri.charAt(uri.length() - 1) == '.' || INSECURE_URI.matcher(uri).matches()) {
+        if (uri.contains(File.separator + '.') || uri.contains('.' + File.separator) || uri.charAt(0) == '.' || uri.charAt(uri.length() - 1) == '.'
+                        || INSECURE_URI.matcher(uri).matches()) {
             return null;
         }
 
@@ -268,12 +262,12 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
 
         String dirPath = dir.getPath();
-        StringBuilder buf = new StringBuilder().append("<!DOCTYPE html>\r\n").append("<html><head><title>")
-                .append("Listing of: ").append(dirPath).append("</title></head><body>\r\n")
+        StringBuilder buf = new StringBuilder().append("<!DOCTYPE html>\r\n").append("<html><head><title>").append("Listing of: ").append(dirPath)
+                        .append("</title></head><body>\r\n")
 
-                .append("<h3>Listing of: ").append(dirPath).append("</h3>\r\n")
+                        .append("<h3>Listing of: ").append(dirPath).append("</h3>\r\n")
 
-                .append("<ul>").append("<li><a href=\"../\">..</a></li>\r\n");
+                        .append("<ul>").append("<li><a href=\"../\">..</a></li>\r\n");
 
         File[] files = dir.listFiles();
         if (null != files) {
@@ -311,8 +305,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status,
-                Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         // Close the connection as soon as the error message is sent.
@@ -321,8 +314,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     }
 
     /**
-     * When file timestamp is the same as what the browser is sending up, send a
-     * "304 Not Modified"
+     * When file timestamp is the same as what the browser is sending up, send a "304 Not Modified"
      *
      * @param ctx
      *            Context

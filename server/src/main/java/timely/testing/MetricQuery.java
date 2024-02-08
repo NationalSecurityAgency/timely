@@ -19,7 +19,7 @@ public class MetricQuery {
         this.subQuery.setDownsample(Optional.of("1ms-avg"));
     }
 
-    public MetricQuery(String metric, long begin, long end, Map<String, String> tags) {
+    public MetricQuery(String metric, long begin, long end, Map<String,String> tags) {
         this.queryRequest.addQuery(subQuery);
         this.queryRequest.setStart(begin);
         this.queryRequest.setEnd(end);
@@ -60,7 +60,7 @@ public class MetricQuery {
         this.subQuery.setRateOptions(rateOption);
     }
 
-    public void setTags(Map<String, String> tags) {
+    public void setTags(Map<String,String> tags) {
         this.subQuery.setTags(tags);
     }
 

@@ -11,17 +11,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.Multimap;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.ReferenceCountUtil;
 import org.apache.http.Header;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -33,6 +22,19 @@ import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StreamUtils;
+
+import com.google.common.collect.Multimap;
+
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.ReferenceCountUtil;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.MetricRequest;
 import timely.api.request.timeseries.HttpRequest;
@@ -88,7 +90,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 }
                 client = httpClientPool.borrowObject(k);
 
-                Multimap<String, String> headers = HttpHeaderUtils.toMultimap(request.headers());
+                Multimap<String,String> headers = HttpHeaderUtils.toMultimap(request.headers());
                 if (msg instanceof AuthenticatedRequest) {
                     AuthenticatedRequest authenticatedRequest = (AuthenticatedRequest) msg;
                     TimelyAuthenticationToken token = authenticatedRequest.getToken();
@@ -100,7 +102,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 }
 
                 List<Header> relayedHeaderList = new ArrayList<>();
-                for (Map.Entry<String, String> h : headers.entries()) {
+                for (Map.Entry<String,String> h : headers.entries()) {
                     if (!h.getKey().equals(CONTENT_LENGTH.toString())) {
                         relayedHeaderList.add(new BasicHeader(h.getKey(), h.getValue()));
                     }
@@ -138,8 +140,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                         LOG.error(message, e);
                     }
                 }
-                this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                        e.getMessage(), e.getLocalizedMessage(), e));
+                this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), e.getMessage(), e.getLocalizedMessage(), e));
                 return;
             } finally {
                 if (request != null) {
@@ -148,15 +149,13 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
             }
             FullHttpResponse response = null;
             if (relayedResponse == null) {
-                this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(),
-                        "Method not allowed", "Method not allowed"));
+                this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), "Method not allowed", "Method not allowed"));
             } else {
                 ByteArrayOutputStream baos = new MyByteArrayOutputStream();
                 StreamUtils.copy(relayedResponse.getEntity().getContent(), baos);
 
-                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                        HttpResponseStatus.valueOf(relayedResponse.getStatusLine().getStatusCode()),
-                        Unpooled.copiedBuffer(baos.toByteArray()));
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(relayedResponse.getStatusLine().getStatusCode()),
+                                Unpooled.copiedBuffer(baos.toByteArray()));
                 for (Header h : relayedResponse.getAllHeaders()) {
                     response.headers().add(h.getName(), h.getValue());
                 }
@@ -177,8 +176,7 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
 
     static public class MyByteArrayOutputStream extends ByteArrayOutputStream {
 
-        public MyByteArrayOutputStream() {
-        }
+        public MyByteArrayOutputStream() {}
 
         public MyByteArrayOutputStream(int size) {
             super(size);

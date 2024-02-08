@@ -18,6 +18,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.adapter.accumulo.MetricAdapter;
 
 public class MetricAgeOffIterator extends WrappingIterator implements OptionDescriber {
@@ -40,7 +41,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
     private boolean inclusive;
 
     @Override
-    public SortedKeyValueIterator<Key, Value> deepCopy(IteratorEnvironment env) {
+    public SortedKeyValueIterator<Key,Value> deepCopy(IteratorEnvironment env) {
         MetricAgeOffIterator iter = new MetricAgeOffIterator();
         iter.ageoffs = this.ageoffs;
         iter.defaultAgeOff = this.defaultAgeOff;
@@ -51,8 +52,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
     }
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
-            throws IOException {
+    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
         super.init(source, options, env);
         validateOptions(options);
         ageoffs = new PatriciaTrie<>();
@@ -92,8 +92,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                     // We are in the same metric, seek to data we want to
                     // process
                     String metricName = new String(prevMetricBytes.copyBytes(), UTF_8);
-                    LOG.trace("Current metric is older than age off for metric {}, seeking to start of valid data",
-                            metricName);
+                    LOG.trace("Current metric is older than age off for metric {}, seeking to start of valid data", metricName);
                     seekPastAgedOffMetricData(metricName, prevAgeOff);
                     return;
                 }
@@ -102,8 +101,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                 String metricName = MetricAdapter.decodeRowKey(top).getFirst();
                 handleNewMetricName(metricName);
                 if (currentTime - top.getTimestamp() > prevAgeOff) {
-                    LOG.trace("New metric found, but older than age off for metric {}, seeking to start of valid data",
-                            metricName);
+                    LOG.trace("New metric found, but older than age off for metric {}, seeking to start of valid data", metricName);
                     seekPastAgedOffMetricData(metricName, prevAgeOff);
                 }
             }
@@ -112,9 +110,8 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
 
     private boolean isNextMetricTheSame(Text nextRow) {
         byte[] next = nextRow.getBytes();
-        if (next.length > prevMetricBytes.getLength()
-                && 0 == prevMetricBytes.compareTo(next, 0, prevMetricBytes.getLength())
-                && nextRow.charAt(prevMetricBytes.getLength()) == 0x00) {
+        if (next.length > prevMetricBytes.getLength() && 0 == prevMetricBytes.compareTo(next, 0, prevMetricBytes.getLength())
+                        && nextRow.charAt(prevMetricBytes.getLength()) == 0x00) {
             return true;
         } else {
             return false;
@@ -139,7 +136,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
             newRange = new Range(new Key(new Text(newStartRow), timeTarget), null);
         } else {
             Key startKey = new Key(new Text(MetricAdapter.encodeRowKey(metricName, timeTarget)), timeTarget);
-            Pair<String, Long> start = MetricAdapter.decodeRowKey(startKey);
+            Pair<String,Long> start = MetricAdapter.decodeRowKey(startKey);
             byte[] newStartRow = MetricAdapter.encodeRowKey(start.getFirst(), timeTarget);
             // @formatter:off
             Key newStartKey = new Key(newStartRow,
@@ -151,8 +148,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
             if (this.range.getEndKey() == null || this.range.getEndKey().compareTo(newStartKey) >= 0) {
                 newRange = new Range(newStartKey, true, this.range.getEndKey(), this.range.isEndKeyInclusive());
             } else {
-                newRange = new Range(this.range.getEndKey(), false,
-                        this.range.getEndKey().followingKey(PartialKey.ROW_COLFAM_COLQUAL_COLVIS_TIME), false);
+                newRange = new Range(this.range.getEndKey(), false, this.range.getEndKey().followingKey(PartialKey.ROW_COLFAM_COLQUAL_COLVIS_TIME), false);
             }
         }
         try {
@@ -182,14 +178,13 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
     @Override
     public IteratorOptions describeOptions() {
         return new IteratorOptions("metric-age-off", "Iterator that ages off time series data for Timely metrics",
-                Collections.singletonMap(AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY, "default age off days"),
-                Collections.singletonList("Additional metric age off properties where the metric is specified as "
-                        + AGE_OFF_PREFIX
-                        + " the metric name and the value is an integer representing the number of days to keep"));
+                        Collections.singletonMap(AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY, "default age off days"),
+                        Collections.singletonList("Additional metric age off properties where the metric is specified as " + AGE_OFF_PREFIX
+                                        + " the metric name and the value is an integer representing the number of days to keep"));
     }
 
     @Override
-    public boolean validateOptions(Map<String, String> options) {
+    public boolean validateOptions(Map<String,String> options) {
         if (null == options.get(AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY)) {
             throw new IllegalArgumentException(DEFAULT_AGEOFF_KEY + " must be configured for MetricAgeOffFilter");
         }

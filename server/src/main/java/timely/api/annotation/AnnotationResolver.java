@@ -3,10 +3,11 @@ package timely.api.annotation;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
-import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
+import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import timely.api.request.HttpGetRequest;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.TcpRequest;
@@ -26,8 +27,7 @@ public class AnnotationResolver {
     private static List<Class<?>> wsClasses = new ArrayList<>();
     private static List<Class<?>> udpClasses = new ArrayList<>();
 
-    private AnnotationResolver() {
-    }
+    private AnnotationResolver() {}
 
     static {
         tcpClassNames = result.getNamesOfClassesWithAnnotation(Tcp.class);

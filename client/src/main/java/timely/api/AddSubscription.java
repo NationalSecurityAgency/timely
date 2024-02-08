@@ -7,7 +7,7 @@ public class AddSubscription extends SubscriptionRequest {
 
     private String operation = "add";
     private String metric = null;
-    private Optional<Map<String, String>> tags = Optional.empty();
+    private Optional<Map<String,String>> tags = Optional.empty();
     private Optional<Long> startTime = Optional.empty();
     private Optional<Long> endTime = Optional.empty();
     private Optional<Long> delayTime = Optional.empty();
@@ -20,7 +20,7 @@ public class AddSubscription extends SubscriptionRequest {
         return metric;
     }
 
-    public Optional<Map<String, String>> getTags() {
+    public Optional<Map<String,String>> getTags() {
         return tags;
     }
 
@@ -36,7 +36,7 @@ public class AddSubscription extends SubscriptionRequest {
         this.metric = metric;
     }
 
-    public void setTags(Optional<Map<String, String>> tags) {
+    public void setTags(Optional<Map<String,String>> tags) {
         this.tags = tags;
     }
 
@@ -71,9 +71,8 @@ public class AddSubscription extends SubscriptionRequest {
         }
         if (obj instanceof AddSubscription) {
             AddSubscription other = (AddSubscription) obj;
-            return (this.subscriptionId.equals(other.subscriptionId) && this.metric.equals(other.metric)
-                    && this.tags.equals(other.tags) && this.startTime.equals(other.startTime)
-                    && this.endTime.equals(other.endTime) && this.delayTime.equals(other.delayTime));
+            return (this.subscriptionId.equals(other.subscriptionId) && this.metric.equals(other.metric) && this.tags.equals(other.tags)
+                            && this.startTime.equals(other.startTime) && this.endTime.equals(other.endTime) && this.delayTime.equals(other.delayTime));
         } else {
             return false;
         }

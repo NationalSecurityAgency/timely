@@ -2,11 +2,12 @@ package timely.netty.websocket.subscription;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.subscription.AddSubscription;
 import timely.subscription.Subscription;
 import timely.subscription.SubscriptionRegistry;
@@ -24,7 +25,7 @@ public class WSAddSubscriptionRequestHandler extends SimpleChannelInboundHandler
                 LOG.error("Metric name cannot be null in add subscription");
                 ctx.writeAndFlush(new CloseWebSocketFrame(1008, "Metric name cannot be null in add subscription"));
             }
-            Map<String, String> tags = null;
+            Map<String,String> tags = null;
             Long startTime = 0L;
             Long endTime = 0L;
             Long delayTime = 5000L;

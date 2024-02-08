@@ -9,6 +9,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.util.format.FormatterConfig;
 import org.apache.hadoop.io.Text;
 import org.junit.Test;
+
 import timely.adapter.accumulo.MetricAdapter;
 import timely.test.TestTabletMetadata;
 

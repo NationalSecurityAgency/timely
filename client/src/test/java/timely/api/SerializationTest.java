@@ -1,8 +1,10 @@
 package timely.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import timely.serialize.JsonSerializer;
 
 public class SerializationTest {

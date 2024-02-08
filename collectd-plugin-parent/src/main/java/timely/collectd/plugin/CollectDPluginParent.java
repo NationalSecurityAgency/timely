@@ -15,8 +15,7 @@ import org.collectd.api.ValueList;
 public abstract class CollectDPluginParent {
 
     private static final String PUT = "put {0} {1} {2}{3}\n";
-    private static final Pattern HADOOP_STATSD_PATTERN = Pattern
-            .compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
+    private static final Pattern HADOOP_STATSD_PATTERN = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final String INSTANCE = " instance=";
     private static final String NAME = " name=";
     private static final String SAMPLE = " sample=";
@@ -29,8 +28,7 @@ public abstract class CollectDPluginParent {
     private static final String ABSOLUTE = "ABSOLUTE";
     private static final Pattern NSQ_PATTERN1 = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final Pattern NSQ_PATTERN2 = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
-    private static final Pattern NSQ_PATTERN3 = Pattern
-            .compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_#]+)\\.([\\w-_]+)");
+    private static final Pattern NSQ_PATTERN3 = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_#]+)\\.([\\w-_]+)");
     private static final Pattern ETHSTAT_PATTERN = Pattern.compile("([\\w-_]+)_queue_([\\w-_]+)_([\\w-_]+)");
     private static final String STATSD_PREFIX = "statsd";
     private static final String NSQ_PREFIX = STATSD_PREFIX + ".nsq.";
@@ -173,8 +171,7 @@ public abstract class CollectDPluginParent {
             metric.append("sys.snmp.").append(vl.getType());
             tags.append(INSTANCE).append(vl.getTypeInstance().replaceAll(" ", "_"));
         } else if (vl.getPlugin().equals("GenericJMX")) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD)
-                    .append(vl.getTypeInstance());
+            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD).append(vl.getTypeInstance());
             String[] pluginInstanceSplit = vl.getPluginInstance().split("-");
             if (pluginInstanceSplit.length > 0) {
                 tags.append(INSTANCE).append(pluginInstanceSplit[0].replaceAll(" ", "_"));
@@ -182,14 +179,11 @@ public abstract class CollectDPluginParent {
             if (pluginInstanceSplit.length > 1) {
                 tags.append(NAME).append(pluginInstanceSplit[1].replaceAll(" ", "_"));
             }
-        } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance())
-                && notEmpty(vl.getPlugin())) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD)
-                    .append(vl.getTypeInstance());
+        } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance()) && notEmpty(vl.getPlugin())) {
+            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD).append(vl.getTypeInstance());
             tags.append(INSTANCE).append(vl.getPluginInstance().replaceAll(" ", "_"));
         } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPlugin())) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD)
-                    .append(vl.getTypeInstance());
+            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD).append(vl.getTypeInstance());
         } else if (notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance()) && notEmpty(vl.getPlugin())) {
             metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType());
             tags.append(INSTANCE).append(vl.getPluginInstance().replaceAll(" ", "_"));
@@ -212,8 +206,7 @@ public abstract class CollectDPluginParent {
                 tagsWithSample.append(SAMPLE_TYPE).append(sampleType);
             }
             Double value = vl.getValues().get(i).doubleValue();
-            String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(),
-                    tagsWithSample.toString());
+            String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(), tagsWithSample.toString());
             Collectd.logDebug("Writing: " + datapoint);
             write(datapoint, out);
         }

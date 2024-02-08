@@ -8,8 +8,6 @@ import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import datawave.accumulo.inmemory.InMemoryAccumuloClient;
-import datawave.accumulo.inmemory.InMemoryInstance;
 import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.security.Authorizations;
@@ -22,6 +20,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import datawave.accumulo.inmemory.InMemoryAccumuloClient;
+import datawave.accumulo.inmemory.InMemoryInstance;
 import timely.Server;
 import timely.auth.AuthCache;
 import timely.configuration.Configuration;
@@ -48,8 +49,7 @@ public class InMemoryITBase {
         InMemoryInstance instance = new InMemoryInstance();
         try {
             AccumuloClient accumuloClient = new InMemoryAccumuloClient(ROOT_USER, instance);
-            accumuloClient.securityOperations().changeUserAuthorizations(accumuloClient.whoami(),
-                    new Authorizations("PUBLIC", "A", "B", "C"));
+            accumuloClient.securityOperations().changeUserAuthorizations(accumuloClient.whoami(), new Authorizations("PUBLIC", "A", "B", "C"));
         } catch (AccumuloSecurityException e) {
             LOG.error(e.getMessage(), e);
         }
@@ -116,8 +116,7 @@ public class InMemoryITBase {
             if (t.startsWith("timely")) {
                 try {
                     accumuloClient.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
+                } catch (Exception e) {}
             }
         });
         // Reset configuration
@@ -127,7 +126,7 @@ public class InMemoryITBase {
         conf.getSecurity().getServerSsl().setUseOpenssl(false);
         conf.getSecurity().getServerSsl().setUseGeneratedKeypair(true);
         conf.getWebsocket().setFlushIntervalSeconds(TestConfiguration.WAIT_SECONDS);
-        HashMap<String, Integer> ageOffSettings = new HashMap<>();
+        HashMap<String,Integer> ageOffSettings = new HashMap<>();
         ageOffSettings.put(MetricAgeOffIterator.DEFAULT_AGEOFF_KEY, 7);
         conf.setMetricAgeOffDays(ageOffSettings);
         // }
@@ -140,8 +139,7 @@ public class InMemoryITBase {
             if (t.startsWith("timely")) {
                 try {
                     accumuloClient.tableOperations().deleteRows(t, new Text("#"), new Text("~"));
-                } catch (Exception e) {
-                }
+                } catch (Exception e) {}
             }
         });
     }

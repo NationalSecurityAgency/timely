@@ -21,6 +21,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.TestServer;
 import timely.api.request.MetricRequest;
 import timely.auth.AuthCache;
@@ -43,8 +44,7 @@ public class UdpClientIT extends InMemoryITBase {
             if (t.startsWith("timely")) {
                 try {
                     accumuloClient.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
+                } catch (Exception e) {}
             }
         });
     }
@@ -90,8 +90,8 @@ public class UdpClientIT extends InMemoryITBase {
         m.run();
         try (UdpClient client = new UdpClient("127.0.0.1", 54325)) {
             client.open();
-            client.write(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle "
-                    + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4\n"));
+            client.write(("put sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2\n" + "put sys.cpu.idle " + (TEST_TIME + 1)
+                            + " 1.0 tag3=value3 tag4=value4\n"));
             while (2 != m.getUdpRequests().getCount()) {
                 Thread.sleep(5);
             }
@@ -144,22 +144,21 @@ public class UdpClientIT extends InMemoryITBase {
     public void testPersistence() throws Exception {
         startServer();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                    "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             assertTrue(accumuloClient.namespaceOperations().exists("timely"));
             assertTrue(accumuloClient.tableOperations().exists("timely.metrics"));
             assertTrue(accumuloClient.tableOperations().exists("timely.meta"));
             int count = 0;
-            for (final Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
+            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
                 final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
                 assertEquals(1.0, value, 1e-9);
                 count++;
             }
             assertEquals(6, count);
             count = 0;
-            for (final Entry<Key, Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
+            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
                 count++;
             }
             assertEquals(10, count);
@@ -169,7 +168,7 @@ public class UdpClientIT extends InMemoryITBase {
             // wait for zookeeper propagation
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             count = 0;
-            for (final Entry<Key, Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
+            for (final Entry<Key,Value> entry : accumuloClient.createScanner("timely.meta", Authorizations.EMPTY)) {
                 count++;
             }
             assertEquals(15, count);
@@ -182,15 +181,13 @@ public class UdpClientIT extends InMemoryITBase {
     public void testPersistenceWithVisibility() throws Exception {
         startServer();
         try {
-            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                    "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",
-                    "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
+            put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4 viz=(a|b)",
+                            "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 viz=(c&b)");
             sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
             accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("a", "b", "c"));
 
             int count = 0;
-            for (final Map.Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics",
-                    Authorizations.EMPTY)) {
+            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", Authorizations.EMPTY)) {
                 final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
                 assertEquals(1.0, value, 1e-9);
                 count++;
@@ -198,7 +195,7 @@ public class UdpClientIT extends InMemoryITBase {
             assertEquals(2, count);
             count = 0;
             Authorizations auth1 = new Authorizations("a");
-            for (final Map.Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics", auth1)) {
+            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth1)) {
                 final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
                 assertEquals(1.0, value, 1e-9);
                 count++;
@@ -206,7 +203,7 @@ public class UdpClientIT extends InMemoryITBase {
             assertEquals(4, count);
             count = 0;
             Authorizations auth2 = new Authorizations("b", "c");
-            for (final Map.Entry<Key, Value> entry : accumuloClient.createScanner("timely.metrics", auth2)) {
+            for (final Map.Entry<Key,Value> entry : accumuloClient.createScanner("timely.metrics", auth2)) {
                 final double value = ByteBuffer.wrap(entry.getValue().get()).getDouble();
                 assertEquals(1.0, value, 1e-9);
                 count++;

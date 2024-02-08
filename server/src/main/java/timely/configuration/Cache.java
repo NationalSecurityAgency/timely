@@ -9,17 +9,17 @@ import timely.store.cache.DataStoreCache;
 public class Cache {
 
     private boolean enabled = false;
-    private HashMap<String, Integer> metricAgeOffHours = new HashMap<>();
+    private HashMap<String,Integer> metricAgeOffHours = new HashMap<>();
     private List<String> nonCachedMetrics = new ArrayList<>();
     private long maxUniqueTagSets = 50000;
     private long flushInterval = 5000;
     private long staleCacheExpiration = 1800000;
 
-    public HashMap<String, Integer> getMetricAgeOffHours() {
+    public HashMap<String,Integer> getMetricAgeOffHours() {
         return metricAgeOffHours;
     }
 
-    public void setMetricAgeOffHours(HashMap<String, Integer> metricAgeOffHours) {
+    public void setMetricAgeOffHours(HashMap<String,Integer> metricAgeOffHours) {
         this.metricAgeOffHours = metricAgeOffHours;
     }
 

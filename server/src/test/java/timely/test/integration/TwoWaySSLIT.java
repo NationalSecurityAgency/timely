@@ -13,6 +13,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
@@ -32,14 +33,12 @@ public class TwoWaySSLIT extends TwoWaySSLBase {
 
     @Before
     public void setup() throws Exception {
-        accumuloClient.securityOperations().changeUserAuthorizations("root",
-                new Authorizations("A", "B", "C", "D", "E", "F"));
+        accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
         accumuloClient.tableOperations().list().forEach(t -> {
             if (t.startsWith("timely")) {
                 try {
                     accumuloClient.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
+                } catch (Exception e) {}
             }
         });
     }
@@ -93,9 +92,9 @@ public class TwoWaySSLIT extends TwoWaySSLBase {
         String metrics = "https://127.0.0.1:54322/api/query";
         List<QueryResponse> response = query(metrics, request);
         assertEquals(1, response.size());
-        Map<String, String> tags = response.get(0).getTags();
+        Map<String,String> tags = response.get(0).getTags();
         assertEquals(0, tags.size());
-        Map<String, Object> dps = response.get(0).getDps();
+        Map<String,Object> dps = response.get(0).getDps();
         assertEquals(3, dps.size());
     }
 

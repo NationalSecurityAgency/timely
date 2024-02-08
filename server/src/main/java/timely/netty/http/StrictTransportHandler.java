@@ -19,8 +19,7 @@ public class StrictTransportHandler extends SimpleChannelInboundHandler<StrictTr
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, StrictTransportResponse msg) throws Exception {
-        TimelyException e = new TimelyException(HttpResponseStatus.NOT_FOUND.code(),
-                "Returning HTTP Strict Transport Security response", null, null);
+        TimelyException e = new TimelyException(HttpResponseStatus.NOT_FOUND.code(), "Returning HTTP Strict Transport Security response", null, null);
         e.addResponseHeader(HSTS_HEADER_NAME, hstsMaxAge);
         // Don't call sendHttpError from here, throw an error instead and let
         // the exception handler catch it.

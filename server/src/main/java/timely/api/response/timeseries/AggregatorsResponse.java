@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseDeserializer;
 import timely.api.response.timeseries.AggregatorsResponse.AggregatorsResponseSerializer;
 import timely.sample.Aggregator;
@@ -30,8 +31,7 @@ public class AggregatorsResponse {
     public static class AggregatorsResponseSerializer extends JsonSerializer<AggregatorsResponse> {
 
         @Override
-        public void serialize(AggregatorsResponse value, JsonGenerator gen, SerializerProvider serializers)
-                throws IOException, JsonProcessingException {
+        public void serialize(AggregatorsResponse value, JsonGenerator gen, SerializerProvider serializers) throws IOException, JsonProcessingException {
             gen.writeStartArray();
             for (String a : value.getAggregators()) {
                 gen.writeString(a);
@@ -43,8 +43,7 @@ public class AggregatorsResponse {
     public static class AggregatorsResponseDeserializer extends JsonDeserializer<AggregatorsResponse> {
 
         @Override
-        public AggregatorsResponse deserialize(JsonParser p, DeserializationContext ctxt)
-                throws IOException, JsonProcessingException {
+        public AggregatorsResponse deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
             return new AggregatorsResponse();
         }
     }

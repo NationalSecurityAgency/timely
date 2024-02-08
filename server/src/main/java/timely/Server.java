@@ -16,6 +16,26 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.conf.ClientProperty;
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
+import org.apache.curator.retry.RetryForever;
+import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceInstanceBuilder;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -60,25 +80,6 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.apache.accumulo.core.client.AccumuloClient;
-import org.apache.accumulo.core.conf.ClientProperty;
-import org.apache.curator.RetryPolicy;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.leader.LeaderLatch;
-import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
-import org.apache.curator.retry.RetryForever;
-import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceInstanceBuilder;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.data.Stat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
 import timely.auth.JWTTokenHandler;
 import timely.auth.VisibilityCache;
@@ -163,8 +164,7 @@ public class Server {
     private final int DEFAULT_EVENT_LOOP_THREADS;
     private LeaderLatch leaderLatch;
 
-    private String[] zkPaths = new String[] { SERVICE_DISCOVERY_PATH, LEADER_LATCH_PATH, NON_CACHED_METRICS,
-            NON_CACHED_METRICS_LOCK_PATH };
+    private String[] zkPaths = new String[] {SERVICE_DISCOVERY_PATH, LEADER_LATCH_PATH, NON_CACHED_METRICS, NON_CACHED_METRICS_LOCK_PATH};
 
     private static boolean useEpoll() {
 
@@ -222,11 +222,11 @@ public class Server {
 
             ServiceInstanceBuilder<ServerDetails> builder = ServiceInstance.builder();
             String serviceName = host + ":" + config.getServer().getTcpPort();
-            ServiceInstance<ServerDetails> serviceInstance = builder.id(serviceName).name("timely-server")
-                    .address(config.getServer().getIp()).port(config.getServer().getTcpPort()).payload(payload).build();
+            ServiceInstance<ServerDetails> serviceInstance = builder.id(serviceName).name("timely-server").address(config.getServer().getIp())
+                            .port(config.getServer().getTcpPort()).payload(payload).build();
 
-            ServiceDiscovery<ServerDetails> discovery = ServiceDiscoveryBuilder.builder(ServerDetails.class)
-                    .client(curatorFramework).basePath(SERVICE_DISCOVERY_PATH).build();
+            ServiceDiscovery<ServerDetails> discovery = ServiceDiscoveryBuilder.builder(ServerDetails.class).client(curatorFramework)
+                            .basePath(SERVICE_DISCOVERY_PATH).build();
             discovery.start();
             discovery.registerService(serviceInstance);
 
@@ -431,8 +431,7 @@ public class Server {
     }
 
     public Server(Configuration conf, AccumuloClient accumuloClient) {
-        this(conf, accumuloClient, Math.max(1,
-                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2)));
+        this(conf, accumuloClient, Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2)));
     }
 
     public Server(Configuration conf) {
@@ -460,8 +459,7 @@ public class Server {
             try {
                 Stat stat = curatorFramework.checkExists().forPath(s);
                 if (stat == null) {
-                    curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
-                            .forPath(s);
+                    curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT).forPath(s);
                 }
             } catch (Exception e) {
                 LOG.info(e.getMessage());
@@ -495,13 +493,11 @@ public class Server {
 
         RetryPolicy retryPolicy = new RetryForever(1000);
         int timeout = Long.valueOf(getTimeInMillis(config.getAccumulo().getZookeeperTimeout())).intValue();
-        curatorFramework = CuratorFrameworkFactory.newClient(config.getAccumulo().getZookeepers(), timeout, 10000,
-                retryPolicy);
+        curatorFramework = CuratorFrameworkFactory.newClient(config.getAccumulo().getZookeepers(), timeout, 10000, retryPolicy);
         curatorFramework.start();
         ensureZkPaths(curatorFramework, zkPaths);
 
-        int nettyThreads = Math.max(1,
-                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
+        int nettyThreads = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
         dataStore = DataStoreFactory.create(config, accumuloClient, nettyThreads);
         if (config.getCache().isEnabled()) {
             dataStoreCache = new DataStoreCache(curatorFramework, config);
@@ -604,9 +600,8 @@ public class Server {
         }
         registerService(curatorFramework);
         shutdownHook();
-        LOG.info(
-                "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
-                tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
+        LOG.info("Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
+                        tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
     }
 
     protected SslContext createSSLContext(Configuration config) throws Exception {
@@ -663,14 +658,12 @@ public class Server {
                 CorsConfig cors = ccb.build();
                 LOG.trace("Cors configuration: {}", cors);
                 ch.pipeline().addLast("cors", new CorsHandler(cors));
-                ch.pipeline().addLast("queryDecoder",
-                        new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
+                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler()
-                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
+                                .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
                 ch.pipeline().addLast("strict", new StrictTransportHandler(config));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(config.getSecurity(), config.getHttp()));
-                ch.pipeline().addLast("doLogin",
-                        new BasicAuthLoginRequestHandler(config.getSecurity(), config.getHttp()));
+                ch.pipeline().addLast("doLogin", new BasicAuthLoginRequestHandler(config.getSecurity(), config.getHttp()));
                 ch.pipeline().addLast("aggregators", new HttpAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new HttpMetricsRequestHandler(config));
                 ch.pipeline().addLast("query", new HttpQueryRequestHandler(dataStore));
@@ -679,8 +672,8 @@ public class Server {
                 ch.pipeline().addLast("version", new HttpVersionRequestHandler());
                 ch.pipeline().addLast("cache", new HttpCacheRequestHandler(dataStoreCache));
                 ch.pipeline().addLast("put", new HttpMetricPutHandler(dataStore));
-                ch.pipeline().addLast("error", new TimelyExceptionHandler()
-                        .setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
+                ch.pipeline().addLast("error",
+                                new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(config.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
 
             }
         };
@@ -725,8 +718,7 @@ public class Server {
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler());
                 ch.pipeline().addLast("idle-handler", new IdleStateHandler(conf.getWebsocket().getTimeout(), 0, 0));
-                ch.pipeline().addLast("ws-protocol",
-                        new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, false, true));
+                ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, false, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(config.getSecurity()));
                 ch.pipeline().addLast("aggregators", new WSAggregatorsRequestHandler());
                 ch.pipeline().addLast("metrics", new WSMetricsRequestHandler(config));
@@ -735,8 +727,7 @@ public class Server {
                 ch.pipeline().addLast("suggest", new WSSuggestRequestHandler(dataStore));
                 ch.pipeline().addLast("version", new WSVersionRequestHandler());
                 ch.pipeline().addLast("put", new WSMetricPutHandler(dataStore));
-                ch.pipeline().addLast("create",
-                        new WSCreateSubscriptionRequestHandler(dataStore, dataStoreCache, config));
+                ch.pipeline().addLast("create", new WSCreateSubscriptionRequestHandler(dataStore, dataStoreCache, config));
                 ch.pipeline().addLast("add", new WSAddSubscriptionRequestHandler());
                 ch.pipeline().addLast("remove", new WSRemoveSubscriptionRequestHandler());
                 ch.pipeline().addLast("close", new WSCloseSubscriptionRequestHandler());

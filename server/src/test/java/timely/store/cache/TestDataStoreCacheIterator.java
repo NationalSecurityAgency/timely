@@ -17,6 +17,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
 import timely.configuration.Configuration;
@@ -36,7 +37,7 @@ public class TestDataStoreCacheIterator {
     public static void setup() {
         configuration = new Configuration();
         configuration.getSecurity().setAllowAnonymousHttpAccess(true);
-        HashMap<String, Integer> ageoffs = new HashMap<>();
+        HashMap<String,Integer> ageoffs = new HashMap<>();
         ageoffs.put(DataStoreCache.DEFAULT_AGEOFF_KEY, Integer.MAX_VALUE);
         configuration.getCache().setMetricAgeOffHours(ageoffs);
     }
@@ -45,7 +46,7 @@ public class TestDataStoreCacheIterator {
 
         DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
-        Map<String, String> tags = new HashMap<>();
+        Map<String,String> tags = new HashMap<>();
         tags.put("part", "webservice");
         tags.put("instance", "sample");
 
@@ -72,7 +73,7 @@ public class TestDataStoreCacheIterator {
         DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
         int increment = 10;
-        Map<String, String> tags = new HashMap<>();
+        Map<String,String> tags = new HashMap<>();
         tags.put("part", "webservice");
         tags.put("instance", "sample");
 
@@ -115,17 +116,16 @@ public class TestDataStoreCacheIterator {
         subQuery.addTag("host", ".*");
         query.setQueries(Collections.singleton(subQuery));
 
-        SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
+        SortedKeyValueIterator<org.apache.accumulo.core.data.Key,org.apache.accumulo.core.data.Value> itr = null;
         try {
             long firstTimestamp = -1;
             long lastTimestamp = -1;
             int numSamples = 0;
-            itr = mmStore.setupIterator(query, subQuery, Collections.singletonList(Authorizations.EMPTY),
-                    Long.MAX_VALUE);
+            itr = mmStore.setupIterator(query, subQuery, Collections.singletonList(Authorizations.EMPTY), Long.MAX_VALUE);
             while (itr.hasTop()) {
                 itr.next();
-                Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
-                for (Map.Entry<Set<Tag>, Aggregation> entry : aggregations.entrySet()) {
+                Map<Set<Tag>,Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
+                for (Map.Entry<Set<Tag>,Aggregation> entry : aggregations.entrySet()) {
                     for (Sample s : entry.getValue()) {
                         numSamples++;
                         if (firstTimestamp == -1) {
@@ -165,18 +165,17 @@ public class TestDataStoreCacheIterator {
         subQuery.setRateOptions(rateOption);
         query.setQueries(Collections.singleton(subQuery));
 
-        SortedKeyValueIterator<org.apache.accumulo.core.data.Key, org.apache.accumulo.core.data.Value> itr = null;
+        SortedKeyValueIterator<org.apache.accumulo.core.data.Key,org.apache.accumulo.core.data.Value> itr = null;
         try {
             // long firstTimestamp = Long.MAX_VALUE;
             long firstTimestamp = -1;
             long lastTimestamp = -1;
             int numSamples = 0;
-            itr = mmStore.setupIterator(query, subQuery, Collections.singletonList(Authorizations.EMPTY),
-                    Long.MAX_VALUE);
+            itr = mmStore.setupIterator(query, subQuery, Collections.singletonList(Authorizations.EMPTY), Long.MAX_VALUE);
             while (itr.hasTop()) {
                 itr.next();
-                Map<Set<Tag>, Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
-                for (Map.Entry<Set<Tag>, Aggregation> entry : aggregations.entrySet()) {
+                Map<Set<Tag>,Aggregation> aggregations = AggregationIterator.decodeValue(itr.getTopValue());
+                for (Map.Entry<Set<Tag>,Aggregation> entry : aggregations.entrySet()) {
                     for (Sample s : entry.getValue()) {
                         numSamples++;
                         if (firstTimestamp == -1) {
@@ -200,11 +199,11 @@ public class TestDataStoreCacheIterator {
         }
     }
 
-    private Metric createMetric(String metric, Map<String, String> tags, double value, long timestamp) {
+    private Metric createMetric(String metric, Map<String,String> tags, double value, long timestamp) {
         Metric m = new Metric();
         m.setName(metric);
         List<Tag> tagList = new ArrayList<>();
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
+        for (Map.Entry<String,String> entry : tags.entrySet()) {
             tagList.add(new Tag(entry.getKey(), entry.getValue()));
         }
         m.setTags(tagList);

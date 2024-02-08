@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Sets;
 import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.conf.Property;
@@ -27,6 +26,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Sets;
+
 import timely.auth.AuthCache;
 import timely.store.MetricAgeOffIterator;
 import timely.store.compaction.MetricCompactionStrategy;
@@ -45,8 +47,7 @@ public class MetricCompactionIT extends MacITBase {
     private final static Logger LOG = LoggerFactory.getLogger(MetricCompactionIT.class);
 
     private static final String AGE_OFF_ITERATOR_NAME = "ageoffmetrics";
-    private static final EnumSet<IteratorUtil.IteratorScope> AGEOFF_SCOPES = EnumSet
-            .allOf(IteratorUtil.IteratorScope.class);
+    private static final EnumSet<IteratorUtil.IteratorScope> AGEOFF_SCOPES = EnumSet.allOf(IteratorUtil.IteratorScope.class);
 
     private MetricConfigurationAdapter adapter;
 
@@ -64,8 +65,7 @@ public class MetricCompactionIT extends MacITBase {
         }
         accumuloClient.tableOperations().create(metricsTable);
         adapter = new MetricConfigurationAdapter(accumuloClient, conf.getMetricsTable());
-        accumuloClient.tableOperations().setProperty(conf.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(),
-                "50K");
+        accumuloClient.tableOperations().setProperty(conf.getMetricsTable(), Property.TABLE_SPLIT_THRESHOLD.getKey(), "50K");
         adapter.resetState();
     }
 
@@ -127,8 +127,7 @@ public class MetricCompactionIT extends MacITBase {
         String metricsTable = conf.getMetricsTable();
 
         // check to make sure the table has only one iterator
-        Map<String, EnumSet<IteratorUtil.IteratorScope>> itrs = accumuloClient.tableOperations()
-                .listIterators(metricsTable);
+        Map<String,EnumSet<IteratorUtil.IteratorScope>> itrs = accumuloClient.tableOperations().listIterators(metricsTable);
         assertEquals(1, itrs.size());
         assertTrue(itrs.containsKey("vers"));
 
@@ -199,24 +198,20 @@ public class MetricCompactionIT extends MacITBase {
         private final AccumuloClient accumuloClient;
         private final String tableName;
 
-        private static String[] CLEAR_PROPERTY_KEYS = {
-                Property.TABLE_COMPACTION_STRATEGY_PREFIX.getKey() + MetricCompactionStrategy.MIN_AGEOFF_KEY };
+        private static String[] CLEAR_PROPERTY_KEYS = {Property.TABLE_COMPACTION_STRATEGY_PREFIX.getKey() + MetricCompactionStrategy.MIN_AGEOFF_KEY};
 
         public MetricConfigurationAdapter(AccumuloClient accumuloClient, String tableName) {
             this.accumuloClient = accumuloClient;
             this.tableName = tableName;
         }
 
-        public void applyCompactionConfiguration(Class<? extends CompactionStrategy> clazz, long ageOff)
-                throws Exception {
-            Map<String, String> ageOffs = new HashMap<>();
+        public void applyCompactionConfiguration(Class<? extends CompactionStrategy> clazz, long ageOff) throws Exception {
+            Map<String,String> ageOffs = new HashMap<>();
             ageOffs.put("ageoff.default", Long.toString(ageOff));
-            IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, AGE_OFF_ITERATOR_NAME,
-                    MetricAgeOffIterator.class, ageOffs);
+            IteratorSetting ageOffIteratorSettings = new IteratorSetting(100, AGE_OFF_ITERATOR_NAME, MetricAgeOffIterator.class, ageOffs);
             accumuloClient.tableOperations().removeIterator(tableName, AGE_OFF_ITERATOR_NAME, AGEOFF_SCOPES);
             accumuloClient.tableOperations().attachIterator(tableName, ageOffIteratorSettings, AGEOFF_SCOPES);
-            accumuloClient.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(),
-                    clazz.getName());
+            accumuloClient.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(), clazz.getName());
         }
 
         public void runCompaction() throws Exception {
@@ -224,8 +219,7 @@ public class MetricCompactionIT extends MacITBase {
         }
 
         public void resetState() throws Exception {
-            Map<String, EnumSet<IteratorUtil.IteratorScope>> iters = accumuloClient.tableOperations()
-                    .listIterators(tableName);
+            Map<String,EnumSet<IteratorUtil.IteratorScope>> iters = accumuloClient.tableOperations().listIterators(tableName);
             for (String name : iters.keySet()) {
                 if (name.startsWith("ageoff")) {
                     accumuloClient.tableOperations().removeIterator(tableName, name, AGEOFF_SCOPES);
@@ -233,8 +227,7 @@ public class MetricCompactionIT extends MacITBase {
             }
 
             // reset compaction strategy to default
-            accumuloClient.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(),
-                    DefaultCompactionStrategy.class.getName());
+            accumuloClient.tableOperations().setProperty(tableName, Property.TABLE_COMPACTION_STRATEGY.getKey(), DefaultCompactionStrategy.class.getName());
 
             // reset any properties
             for (String s : CLEAR_PROPERTY_KEYS) {

@@ -36,7 +36,7 @@ public class TimelyEndpointConfig implements ClientEndpointConfig {
     }
 
     @Override
-    public Map<String, Object> getUserProperties() {
+    public Map<String,Object> getUserProperties() {
         return Collections.emptyMap();
     }
 
@@ -55,7 +55,7 @@ public class TimelyEndpointConfig implements ClientEndpointConfig {
         return new Configurator() {
 
             @Override
-            public void beforeRequest(Map<String, List<String>> headers) {
+            public void beforeRequest(Map<String,List<String>> headers) {
                 super.beforeRequest(headers);
                 if (null != sessionCookie) {
                     headers.put("Cookie", Collections.singletonList(sessionCookie));

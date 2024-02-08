@@ -1,7 +1,8 @@
 package timely.test.integration.http;
 
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
+
+import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -21,12 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import org.apache.commons.collections.CollectionUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -36,6 +31,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 import timely.api.request.VersionRequest;
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.request.timeseries.QueryRequest.SubQuery;
@@ -68,9 +71,8 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testSuggest() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
@@ -168,10 +170,8 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testLookup() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                        "sys.cpu.idle " + (TEST_TIME + 1) + " 1.0 tag3=value3 tag4=value4", "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
 
@@ -197,10 +197,9 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithMsResolution() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -214,14 +213,14 @@ public class HttpApiIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
-        Map<String, String> tags = response.get(0).getTags();
+        Map<String,String> tags = response.get(0).getTags();
         assertEquals(1, tags.size());
         assertTrue(tags.containsKey("tag3"));
         assertTrue(tags.get("tag3").equals("value3"));
-        Map<String, Object> dps = response.get(0).getDps();
+        Map<String,Object> dps = response.get(0).getDps();
         assertEquals(2, dps.size());
-        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-        Entry<String, Object> entry = entries.next();
+        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
+        Entry<String,Object> entry = entries.next();
         // We are downsampling to 1 second by default, which is why the
         // times in the results end with ms of the start parameter.
         assertEquals(getBaselineStart(TEST_TIME), entry.getKey());
@@ -239,10 +238,9 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithoutMsResolution() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -255,14 +253,14 @@ public class HttpApiIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
-        Map<String, String> tags = response.get(0).getTags();
+        Map<String,String> tags = response.get(0).getTags();
         assertEquals(1, tags.size());
         assertTrue(tags.containsKey("tag3"));
         assertTrue(tags.get("tag3").equals("value3"));
-        Map<String, Object> dps = response.get(0).getDps();
+        Map<String,Object> dps = response.get(0).getDps();
         assertEquals(2, dps.size());
-        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-        Entry<String, Object> entry = entries.next();
+        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
+        Entry<String,Object> entry = entries.next();
         assertEquals(Long.toString((TEST_TIME / 1000)), entry.getKey());
         assertEquals(1.0, entry.getValue());
         entry = entries.next();
@@ -272,10 +270,9 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithNoTags() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4",
+                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -287,12 +284,12 @@ public class HttpApiIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
-        Map<String, String> tags = response.get(0).getTags();
+        Map<String,String> tags = response.get(0).getTags();
         assertEquals(0, tags.size());
-        Map<String, Object> dps = response.get(0).getDps();
+        Map<String,Object> dps = response.get(0).getDps();
         assertEquals(2, dps.size());
-        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-        Entry<String, Object> entry = entries.next();
+        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
+        Entry<String,Object> entry = entries.next();
         assertEquals(Long.toString((TEST_TIME / 1000)), entry.getKey());
         assertEquals(1.0, entry.getValue());
         entry = entries.next();
@@ -302,12 +299,11 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithNoTagsMultipleSeries() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1",
-                "sys.cpu.user " + TEST_TIME + " 2.0 tag1=value1 tag2=value2 host=h2",
-                "sys.cpu.user " + (TEST_TIME + 1000) + " 4.0 tag1=value1 tag2=value2 host=h1",
-                "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2 host=h2",
-                "sys.cpu.user " + (TEST_TIME + 2000) + " 5.0 tag1=value1 tag2=value2 host=h1",
-                "sys.cpu.user " + (TEST_TIME + 2000) + " 6.0 tag1=value1 tag2=value2 host=h1");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 host=h1", "sys.cpu.user " + TEST_TIME + " 2.0 tag1=value1 tag2=value2 host=h2",
+                        "sys.cpu.user " + (TEST_TIME + 1000) + " 4.0 tag1=value1 tag2=value2 host=h1",
+                        "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2 host=h2",
+                        "sys.cpu.user " + (TEST_TIME + 2000) + " 5.0 tag1=value1 tag2=value2 host=h1",
+                        "sys.cpu.user " + (TEST_TIME + 2000) + " 6.0 tag1=value1 tag2=value2 host=h1");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -319,12 +315,12 @@ public class HttpApiIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
-        Map<String, String> tags = response.get(0).getTags();
+        Map<String,String> tags = response.get(0).getTags();
         assertEquals(0, tags.size());
-        Map<String, Object> dps = response.get(0).getDps();
+        Map<String,Object> dps = response.get(0).getDps();
         assertEquals(3, dps.size());
-        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-        Entry<String, Object> entry = entries.next();
+        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
+        Entry<String,Object> entry = entries.next();
         assertEquals(Long.toString((TEST_TIME / 1000)), entry.getKey());
         assertEquals(2.0, entry.getValue());
         entry = entries.next();
@@ -337,10 +333,9 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test(expected = NotSuccessfulException.class)
     public void testQueryWithNoMatchingTags() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -405,9 +400,9 @@ public class HttpApiIT extends OneWaySSLBase {
         // @formatter:on
     }
 
-    private Value parseDps(Map<String, Object> dps) {
-        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-        Entry<String, Object> entry = entries.next();
+    private Value parseDps(Map<String,Object> dps) {
+        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
+        Entry<String,Object> entry = entries.next();
         return new Value(Long.parseLong(entry.getKey()), (Double) entry.getValue());
     }
 
@@ -544,10 +539,9 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testQueryWithTagRegex() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -555,7 +549,7 @@ public class HttpApiIT extends OneWaySSLBase {
         request.setEnd(TEST_TIME + 6000);
         SubQuery subQuery = new SubQuery();
         subQuery.setMetric("sys.cpu.idle");
-        Map<String, String> t = new LinkedHashMap<>();
+        Map<String,String> t = new LinkedHashMap<>();
         t.put("rack", "r1|r2");
         t.put("tag3", "value3");
         subQuery.setTags(t);
@@ -565,40 +559,39 @@ public class HttpApiIT extends OneWaySSLBase {
 
         assertEquals(2, response.size());
         QueryResponse response1 = response.get(0);
-        Map<String, String> tags = response1.getTags();
+        Map<String,String> tags = response1.getTags();
         assertEquals(2, tags.size());
         assertTrue(tags.containsKey("rack"));
         assertTrue(tags.get("rack").equals("r2"));
         assertTrue(tags.containsKey("tag3"));
         assertTrue(tags.get("tag3").equals("value3"));
-        Map<String, Object> dps = response1.getDps();
+        Map<String,Object> dps = response1.getDps();
         assertEquals(1, dps.size());
-        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-        Entry<String, Object> entry = entries.next();
+        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
+        Entry<String,Object> entry = entries.next();
         assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
         assertEquals(3.0, entry.getValue());
 
         QueryResponse response2 = response.get(1);
-        Map<String, String> tags2 = response2.getTags();
+        Map<String,String> tags2 = response2.getTags();
         assertEquals(2, tags2.size());
         assertTrue(tags2.containsKey("rack"));
         assertTrue(tags2.get("rack").equals("r1"));
         assertTrue(tags.containsKey("tag3"));
         assertTrue(tags.get("tag3").equals("value3"));
-        Map<String, Object> dps2 = response2.getDps();
+        Map<String,Object> dps2 = response2.getDps();
         assertEquals(1, dps2.size());
-        Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
-        Entry<String, Object> entry2 = entries2.next();
+        Iterator<Entry<String,Object>> entries2 = dps2.entrySet().iterator();
+        Entry<String,Object> entry2 = entries2.next();
         assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
         assertEquals(1.0, entry2.getValue());
     }
 
     @Test
     public void testQueryWithTagRegex2() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
-                "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
-                "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1", "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
+                        "sys.cpu.idle " + (TEST_TIME + 2) + " 1.0 tag3=value3 tag4=value4 rack=r1",
+                        "sys.cpu.idle " + (TEST_TIME + 1000) + " 3.0 tag3=value3 tag4=value4 rack=r2");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -606,7 +599,7 @@ public class HttpApiIT extends OneWaySSLBase {
         request.setEnd(TEST_TIME + 6000);
         SubQuery subQuery = new SubQuery();
         subQuery.setMetric("sys.cpu.idle");
-        Map<String, String> t = new LinkedHashMap<>();
+        Map<String,String> t = new LinkedHashMap<>();
         t.put("rack", "r1|r2");
         t.put("tag3", "val.*");
         subQuery.setTags(t);
@@ -615,30 +608,30 @@ public class HttpApiIT extends OneWaySSLBase {
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(2, response.size());
         QueryResponse response1 = response.get(0);
-        Map<String, String> tags = response1.getTags();
+        Map<String,String> tags = response1.getTags();
         assertEquals(2, tags.size());
         assertTrue(tags.containsKey("rack"));
         assertTrue(tags.get("rack").equals("r2"));
         assertTrue(tags.containsKey("tag3"));
         assertTrue(tags.get("tag3").equals("value3"));
-        Map<String, Object> dps = response1.getDps();
+        Map<String,Object> dps = response1.getDps();
         assertEquals(1, dps.size());
-        Iterator<Entry<String, Object>> entries = dps.entrySet().iterator();
-        Entry<String, Object> entry = entries.next();
+        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
+        Entry<String,Object> entry = entries.next();
         assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
         assertEquals(3.0, entry.getValue());
 
         QueryResponse response2 = response.get(1);
-        Map<String, String> tags2 = response2.getTags();
+        Map<String,String> tags2 = response2.getTags();
         assertEquals(2, tags2.size());
         assertTrue(tags2.containsKey("rack"));
         assertTrue(tags2.get("rack").equals("r1"));
         assertTrue(tags.containsKey("tag3"));
         assertTrue(tags.get("tag3").equals("value3"));
-        Map<String, Object> dps2 = response2.getDps();
+        Map<String,Object> dps2 = response2.getDps();
         assertEquals(1, dps2.size());
-        Iterator<Entry<String, Object>> entries2 = dps2.entrySet().iterator();
-        Entry<String, Object> entry2 = entries2.next();
+        Iterator<Entry<String,Object>> entries2 = dps2.entrySet().iterator();
+        Entry<String,Object> entry2 = entries2.next();
         assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
         assertEquals(1.0, entry2.getValue());
     }
@@ -670,7 +663,7 @@ public class HttpApiIT extends OneWaySSLBase {
         request.setMsResolution(true);
         SubQuery subQuery = new SubQuery();
         subQuery.setMetric("sys.cpu.user");
-        Map<String, String> t = new LinkedHashMap<>();
+        Map<String,String> t = new LinkedHashMap<>();
         subQuery.setTags(t);
         subQuery.setDownsample(Optional.of("1ms-max"));
         subQuery.setRate(true);
@@ -678,10 +671,10 @@ public class HttpApiIT extends OneWaySSLBase {
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
         QueryResponse response1 = response.get(0);
-        Map<String, Object> dps = response1.getDps();
+        Map<String,Object> dps = response1.getDps();
         assertEquals(14, dps.size());
         int i = 1;
-        for (Entry<String, Object> e : dps.entrySet()) {
+        for (Entry<String,Object> e : dps.entrySet()) {
             assertEquals(Long.toString(TEST_TIME + i), e.getKey());
             assertEquals(1.0, e.getValue());
             i++;
@@ -715,7 +708,7 @@ public class HttpApiIT extends OneWaySSLBase {
         request.setMsResolution(true);
         SubQuery subQuery = new SubQuery();
         subQuery.setMetric("sys.cpu.user");
-        Map<String, String> t = new LinkedHashMap<>();
+        Map<String,String> t = new LinkedHashMap<>();
         subQuery.setTags(t);
         subQuery.setDownsample(Optional.of("1ms-max"));
         subQuery.setRate(true);
@@ -725,10 +718,10 @@ public class HttpApiIT extends OneWaySSLBase {
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
         QueryResponse response1 = response.get(0);
-        Map<String, Object> dps = response1.getDps();
+        Map<String,Object> dps = response1.getDps();
         assertEquals(14, dps.size());
         int i = 1;
-        for (Entry<String, Object> e : dps.entrySet()) {
+        for (Entry<String,Object> e : dps.entrySet()) {
             assertEquals(Long.toString(TEST_TIME + i), e.getKey());
             assertEquals(1.0, e.getValue());
             i++;
@@ -762,7 +755,7 @@ public class HttpApiIT extends OneWaySSLBase {
         request.setMsResolution(true);
         SubQuery subQuery = new SubQuery();
         subQuery.setMetric("sys.cpu.user");
-        Map<String, String> t = new LinkedHashMap<>();
+        Map<String,String> t = new LinkedHashMap<>();
         subQuery.setTags(t);
         subQuery.setDownsample(Optional.of("1ms-max"));
         subQuery.setRate(true);
@@ -774,10 +767,10 @@ public class HttpApiIT extends OneWaySSLBase {
         List<QueryResponse> response = query("https://127.0.0.1:54322/api/query", request);
         assertEquals(1, response.size());
         QueryResponse response1 = response.get(0);
-        Map<String, Object> dps = response1.getDps();
+        Map<String,Object> dps = response1.getDps();
         assertEquals(14, dps.size());
         int i = 1;
-        for (Entry<String, Object> e : dps.entrySet()) {
+        for (Entry<String,Object> e : dps.entrySet()) {
             assertEquals(Long.toString(TEST_TIME + i), e.getKey());
             assertEquals((i == 10 ? 0.0 : 1.0), e.getValue());
             i++;
@@ -793,8 +786,7 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testPutMetric() throws Exception {
-        Metric m = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1"))
-                .build();
+        Metric m = Metric.newBuilder().name("sys.cpu.user").value(TEST_TIME, 1.0D).tag(new Tag("tag1", "value1")).build();
         new Metric();
         URL url = new URL("https://127.0.0.1:54322/api/put");
         HttpsURLConnection con = getUrlConnection(url);

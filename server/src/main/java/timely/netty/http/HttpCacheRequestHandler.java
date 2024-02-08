@@ -29,12 +29,11 @@ public class HttpCacheRequestHandler extends SimpleChannelInboundHandler<CacheRe
             buf = JsonUtil.getObjectMapper().writeValueAsBytes(cache.getCacheStatus());
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
-            this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                    "Error getting cache status", "Error getting cache status", e));
+            this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error getting cache status",
+                            "Error getting cache status", e));
             return;
         }
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer(buf));
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.copiedBuffer(buf));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
         sendResponse(ctx, response);

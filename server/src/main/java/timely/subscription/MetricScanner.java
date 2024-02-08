@@ -11,12 +11,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
@@ -26,6 +20,14 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.util.concurrent.ScheduledFuture;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.response.MetricResponse;
@@ -43,7 +45,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private static final ObjectMapper om = JsonUtil.getObjectMapper();
 
     private final Scanner scanner;
-    private Iterator<Entry<Key, Value>> iter = null;
+    private Iterator<Entry<Key,Value>> iter = null;
     private final ChannelHandlerContext ctx;
     private final AuthenticatedRequest request;
     private volatile boolean closed = false;
@@ -66,10 +68,9 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
     private boolean completedResponseSent = false;
     private boolean done = false;
 
-    public MetricScanner(Subscription sub, String subscriptionId, String sessionId, DataStore store,
-            DataStoreCache cache, String metric, Map<String, String> tags, long beginTime, long endTime, long delay,
-            int lag, AuthenticatedRequest request, ChannelHandlerContext ctx, int scannerBatchSize,
-            int flushIntervalSeconds, int scannerReadAhead, int subscriptionBatchSize) throws TimelyException {
+    public MetricScanner(Subscription sub, String subscriptionId, String sessionId, DataStore store, DataStoreCache cache, String metric,
+                    Map<String,String> tags, long beginTime, long endTime, long delay, int lag, AuthenticatedRequest request, ChannelHandlerContext ctx,
+                    int scannerBatchSize, int flushIntervalSeconds, int scannerReadAhead, int subscriptionBatchSize) throws TimelyException {
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(this);
         this.store = store;
@@ -119,25 +120,19 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     if (this.beginTime < oldestTsForMetric) {
                         // add range this.beginTime to oldestTsForMetric - 1 because this range is not
                         // cached
-                        ranges.addAll(
-                                this.store.getQueryRanges(metric, this.beginTime, oldestTsForMetric - 1, colFamValues));
-                        metricsFromCache = cache.getMetricsFromCache(this.request, metric, tags, oldestTsForMetric,
-                                endTimeStamp);
-                        LOG.debug("[{}] MetricScanner request partially fulfilled from cache: {} metrics",
-                                subscriptionId, metricsFromCache.size());
+                        ranges.addAll(this.store.getQueryRanges(metric, this.beginTime, oldestTsForMetric - 1, colFamValues));
+                        metricsFromCache = cache.getMetricsFromCache(this.request, metric, tags, oldestTsForMetric, endTimeStamp);
+                        LOG.debug("[{}] MetricScanner request partially fulfilled from cache: {} metrics", subscriptionId, metricsFromCache.size());
                     } else {
-                        metricsFromCache = cache.getMetricsFromCache(this.request, metric, tags, this.beginTime,
-                                endTimeStamp);
-                        LOG.debug("[{}] Websocket request completely fulfilled from cache: {} metrics [{}]",
-                                subscriptionId, metricsFromCache.size());
+                        metricsFromCache = cache.getMetricsFromCache(this.request, metric, tags, this.beginTime, endTimeStamp);
+                        LOG.debug("[{}] Websocket request completely fulfilled from cache: {} metrics [{}]", subscriptionId, metricsFromCache.size());
                     }
 
                     if (metricsFromCache.isEmpty()) {
                         // no metrics from cache, clear ranges and add whole range
                         ranges.clear();
                         ranges.addAll(this.store.getQueryRanges(metric, this.beginTime, endTimeStamp, colFamValues));
-                        LOG.debug("[{}] MetricScanner request got no metrics from cache, re-adding complete range",
-                                subscriptionId);
+                        LOG.debug("[{}] MetricScanner request got no metrics from cache, re-adding complete range", subscriptionId);
                     } else {
                         for (MetricResponse r : metricsFromCache) {
                             responses.addResponse(r);
@@ -162,8 +157,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 this.scanner = null;
                 this.done = true;
             } else {
-                this.scanner = this.store.createScannerForMetric(this.request, metric, tags, scannerBatchSize,
-                        scannerReadAhead);
+                this.scanner = this.store.createScannerForMetric(this.request, metric, tags, scannerBatchSize, scannerReadAhead);
                 rangeItr = ranges.iterator();
                 if (rangeItr.hasNext()) {
                     Range r = rangeItr.next();
@@ -171,8 +165,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                 }
             }
         } catch (TableNotFoundException e) {
-            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                    "[" + subscriptionId + "] Error in MetricScanner", e.getMessage(), e);
+            throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "[" + subscriptionId + "] Error in MetricScanner", e.getMessage(), e);
         }
 
         if (!done) {
@@ -206,7 +199,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
             while (!done && !closed) {
 
                 if (this.iter.hasNext()) {
-                    Entry<Key, Value> e = this.iter.next();
+                    Entry<Key,Value> e = this.iter.next();
                     try {
                         m = MetricAdapter.parse(e.getKey(), e.getValue(), true);
                         if (responses.size() >= this.subscriptionBatchSize) {
@@ -214,8 +207,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                         }
                         this.responses.addResponse(MetricResponse.fromMetric(m, this.subscriptionId));
                     } catch (Exception e1) {
-                        LOG.error("[{}] Error {} parsing metric at key: {}", subscriptionId, e1.getMessage(),
-                                e.getKey().toString());
+                        LOG.error("[{}] Error {} parsing metric at key: {}", subscriptionId, e1.getMessage(), e.getKey().toString());
                     }
                 } else if (rangeItr.hasNext()) {
                     // set next range on the scanner
@@ -226,8 +218,7 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     flush();
                     long endTimeStamp = (System.currentTimeMillis() - (lag * 1000));
                     if (null == m) {
-                        LOG.debug("[{}] No results found, waiting {}ms to retry with new end time {}. [{}]",
-                                subscriptionId, delay, endTimeStamp);
+                        LOG.debug("[{}] No results found, waiting {}ms to retry with new end time {}. [{}]", subscriptionId, delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
                         ranges = this.store.getQueryRanges(metric, beginTime, endTimeStamp, colFamValues);
                         rangeItr = ranges.iterator();
@@ -239,11 +230,9 @@ public class MetricScanner extends Thread implements UncaughtExceptionHandler {
                     } else {
                         // Reset the starting range to the last key returned
                         LOG.debug("[{}] Exhausted scanner, last metric returned was {} [{}]", subscriptionId, m);
-                        LOG.debug("[{}] Waiting {}ms to retry with new end time {}. [{}]", subscriptionId, delay,
-                                endTimeStamp);
+                        LOG.debug("[{}] Waiting {}ms to retry with new end time {}. [{}]", subscriptionId, delay, endTimeStamp);
                         sleepUninterruptibly(delay, TimeUnit.MILLISECONDS);
-                        ranges = this.store.getQueryRanges(metric, m.getValue().getTimestamp() + 1, endTimeStamp,
-                                colFamValues);
+                        ranges = this.store.getQueryRanges(metric, m.getValue().getTimestamp() + 1, endTimeStamp, colFamValues);
                         rangeItr = ranges.iterator();
                         if (rangeItr.hasNext()) {
                             Range r = rangeItr.next();

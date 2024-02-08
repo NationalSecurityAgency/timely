@@ -33,7 +33,7 @@ public class TieredCompactionStrategy extends CompactionStrategy {
     }
 
     @Override
-    public void init(Map<String, String> config) {
+    public void init(Map<String,String> config) {
         // example:
         // <table-compaction-prefix>.tiered.0.class=<majcompaction-class>
         // <table-compaction-prefix>.tiered.0.opts.key=value
@@ -82,7 +82,7 @@ public class TieredCompactionStrategy extends CompactionStrategy {
         return plan;
     }
 
-    protected void createSuppliers(Map<String, String> config) {
+    protected void createSuppliers(Map<String,String> config) {
         int tier = 0;
         boolean continueLoop = true;
         while (continueLoop) {
@@ -103,28 +103,27 @@ public class TieredCompactionStrategy extends CompactionStrategy {
 
         private final String clazzName;
         private final int tier;
-        private final Map<String, String> initConfig;
+        private final Map<String,String> initConfig;
 
         private CompactionStrategy strategy;
-        private Map<String, String> options;
+        private Map<String,String> options;
 
-        TieredConfiguredSupplier(String clazzName, int tier, Map<String, String> initConfig) {
+        TieredConfiguredSupplier(String clazzName, int tier, Map<String,String> initConfig) {
             this.strategy = null;
             this.clazzName = clazzName;
             this.tier = tier;
             this.initConfig = initConfig;
         }
 
-        public Map<String, String> options() {
+        public Map<String,String> options() {
             if (null == options) {
                 options = new HashMap<>();
                 String tierCompare = Integer.toString(tier);
                 int tierIdx = TIERED_PREFIX.length();
                 int optsIdx = TIERED_PREFIX.length() + tierCompare.length() + 1;
-                for (Map.Entry<String, String> entry : initConfig.entrySet()) {
+                for (Map.Entry<String,String> entry : initConfig.entrySet()) {
                     String key = entry.getKey();
-                    if (key.regionMatches(tierIdx, tierCompare, 0, tierCompare.length())
-                            && key.regionMatches(optsIdx, TIERED_OPTS, 0, TIERED_OPTS.length())) {
+                    if (key.regionMatches(tierIdx, tierCompare, 0, tierCompare.length()) && key.regionMatches(optsIdx, TIERED_OPTS, 0, TIERED_OPTS.length())) {
                         options.put(key.substring(optsIdx + TIERED_OPTS.length() + 1), entry.getValue());
                     }
                 }
@@ -133,17 +132,15 @@ public class TieredCompactionStrategy extends CompactionStrategy {
             return Collections.unmodifiableMap(options);
         }
 
-        public CompactionStrategy get(Map<String, String> tableProperties) {
+        public CompactionStrategy get(Map<String,String> tableProperties) {
             if (null == strategy) {
                 try {
                     String tableContext = tableProperties.get(Property.TABLE_CLASSPATH.getKey());
                     Class<? extends CompactionStrategy> clazz;
                     if (null != tableContext && !tableContext.equals("")) {
-                        clazz = AccumuloVFSClassLoader.getContextClassLoader(tableContext).loadClass(clazzName)
-                                .asSubclass(CompactionStrategy.class);
+                        clazz = AccumuloVFSClassLoader.getContextClassLoader(tableContext).loadClass(clazzName).asSubclass(CompactionStrategy.class);
                     } else {
-                        clazz = AccumuloVFSClassLoader.getClassLoader().loadClass(clazzName)
-                                .asSubclass(CompactionStrategy.class);
+                        clazz = AccumuloVFSClassLoader.getClassLoader().loadClass(clazzName).asSubclass(CompactionStrategy.class);
                     }
                     strategy = clazz.newInstance();
                     strategy.init(options());

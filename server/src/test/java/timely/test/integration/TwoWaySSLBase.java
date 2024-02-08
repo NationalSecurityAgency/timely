@@ -11,6 +11,10 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.commons.io.FileUtils;
+import org.junit.Assert;
+import org.junit.Before;
+
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -20,9 +24,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.apache.commons.io.FileUtils;
-import org.junit.Assert;
-import org.junit.Before;
 import timely.configuration.Configuration;
 import timely.netty.Constants;
 
@@ -88,7 +89,7 @@ public class TwoWaySSLBase extends QueryBase {
 
         // write the keyStore with private key and server certificate into a P12
         // keyStore
-        keyStore.setKeyEntry("key", serverCert.key(), password.toCharArray(), new Certificate[] { serverCert.cert() });
+        keyStore.setKeyEntry("key", serverCert.key(), password.toCharArray(), new Certificate[] {serverCert.cert()});
         File keyStoreP12File = File.createTempFile("keyStore_", ".p12");
         try (OutputStream out = FileUtils.newOutputStream(keyStoreP12File, false)) {
             keyStore.store(out, password.toCharArray());

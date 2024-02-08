@@ -7,7 +7,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 
-import net.jcip.annotations.NotThreadSafe;
 import org.collectd.api.Collectd;
 import org.collectd.api.DataSet;
 import org.collectd.api.DataSource;
@@ -22,8 +21,10 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import net.jcip.annotations.NotThreadSafe;
+
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ Collectd.class })
+@PrepareForTest({Collectd.class})
 @NotThreadSafe
 @PowerMockIgnore("javax.management.*")
 public class WriteTimelyPluginTest {

@@ -8,7 +8,7 @@ public class TimelyException extends Exception {
     private static final long serialVersionUID = 1L;
     private int code = 500;
     private String details = null;
-    private Map<String, String> responseHeaders = new HashMap<>();
+    private Map<String,String> responseHeaders = new HashMap<>();
 
     public TimelyException(int code, String message, String details) {
         this(code, message, details, null);
@@ -40,7 +40,7 @@ public class TimelyException extends Exception {
         this.responseHeaders.put(name, value);
     }
 
-    public Map<String, String> getResponseHeaders() {
+    public Map<String,String> getResponseHeaders() {
         return this.responseHeaders;
     }
 }

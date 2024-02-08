@@ -5,6 +5,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.balancer.ArrivalRate;
 import timely.balancer.configuration.BalancerConfiguration;
 
@@ -27,8 +28,7 @@ public class TimelyBalancedHost {
 
     }
 
-    private TimelyBalancedHost(String host, int tcpPort, int httpPort, int wsPort, int udpPort,
-            ArrivalRate arrivalRate) {
+    private TimelyBalancedHost(String host, int tcpPort, int httpPort, int wsPort, int udpPort, ArrivalRate arrivalRate) {
         this.host = host;
         this.tcpPort = tcpPort;
         this.httpPort = httpPort;
@@ -37,8 +37,7 @@ public class TimelyBalancedHost {
         this.arrivalRate = arrivalRate;
     }
 
-    static public TimelyBalancedHost of(String host, int tcpPort, int httpPort, int wsPort, int udpPort,
-            ArrivalRate arrivalRate) {
+    static public TimelyBalancedHost of(String host, int tcpPort, int httpPort, int wsPort, int udpPort, ArrivalRate arrivalRate) {
         return new TimelyBalancedHost(host, tcpPort, httpPort, wsPort, udpPort, arrivalRate);
     }
 
@@ -56,8 +55,8 @@ public class TimelyBalancedHost {
         int p = tcpPort;
         synchronized (this) {
             if (LOG.isTraceEnabled()) {
-                LOG.trace("success reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}", h, p,
-                        isUp, (successes + 1), serverSuccessesBeforeUp);
+                LOG.trace("success reported host:{} port:{} isUp:{} successes:{} serverSuccessesBeforeUp:{}", h, p, isUp, (successes + 1),
+                                serverSuccessesBeforeUp);
             }
             if (!isUp) {
                 if (++successes >= serverSuccessesBeforeUp) {
@@ -75,8 +74,8 @@ public class TimelyBalancedHost {
         int p = tcpPort;
         synchronized (this) {
             if (LOG.isTraceEnabled()) {
-                LOG.trace("failure reported host:{} port:{} isUp:{} failures:{} serverFailuresBeforeUp:{}", h, p, isUp,
-                        (failures + 1), serverFailuresBeforeDown);
+                LOG.trace("failure reported host:{} port:{} isUp:{} failures:{} serverFailuresBeforeUp:{}", h, p, isUp, (failures + 1),
+                                serverFailuresBeforeDown);
             }
             if (isUp) {
                 if (++failures >= serverFailuresBeforeDown) {

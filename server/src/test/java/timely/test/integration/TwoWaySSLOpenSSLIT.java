@@ -13,6 +13,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.timeseries.QueryResponse;
 import timely.auth.AuthCache;
@@ -21,8 +22,7 @@ import timely.test.TestConfiguration;
 
 /**
  *
- * Tests that Two way SSL without anonymous access works using OpenSSL on the
- * server.
+ * Tests that Two way SSL without anonymous access works using OpenSSL on the server.
  *
  */
 @Category(IntegrationTest.class)
@@ -32,8 +32,7 @@ public class TwoWaySSLOpenSSLIT extends TwoWaySSLBase {
 
     @Before
     public void setup() throws Exception {
-        accumuloClient.securityOperations().changeUserAuthorizations("root",
-                new Authorizations("A", "B", "C", "D", "E", "F"));
+        accumuloClient.securityOperations().changeUserAuthorizations("root", new Authorizations("A", "B", "C", "D", "E", "F"));
         startServer();
     }
 
@@ -51,11 +50,10 @@ public class TwoWaySSLOpenSSLIT extends TwoWaySSLBase {
 
     @Test
     public void testQueryWithVisibility() throws Exception {
-        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
-                "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=A",
-                "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=D",
-                "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=G");
+        put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2", "sys.cpu.user " + (TEST_TIME + 1000) + " 3.0 tag1=value1 tag2=value2",
+                        "sys.cpu.user " + (TEST_TIME + 2000) + " 2.0 tag1=value1 tag3=value3 viz=A",
+                        "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=D",
+                        "sys.cpu.user " + (TEST_TIME + 3000) + " 2.0 tag1=value1 tag3=value3 viz=G");
         // Latency in TestConfiguration is 2s, wait for it
         sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
         QueryRequest request = new QueryRequest();
@@ -68,9 +66,9 @@ public class TwoWaySSLOpenSSLIT extends TwoWaySSLBase {
         String metrics = "https://127.0.0.1:54322/api/query";
         List<QueryResponse> response = query(metrics, request);
         assertEquals(1, response.size());
-        Map<String, String> tags = response.get(0).getTags();
+        Map<String,String> tags = response.get(0).getTags();
         assertEquals(0, tags.size());
-        Map<String, Object> dps = response.get(0).getDps();
+        Map<String,Object> dps = response.get(0).getDps();
         assertEquals(3, dps.size());
     }
 }

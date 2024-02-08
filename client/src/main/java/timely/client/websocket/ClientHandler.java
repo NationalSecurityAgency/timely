@@ -33,6 +33,5 @@ public abstract class ClientHandler extends Endpoint {
         LOG.error("Error occurred on Websocket session" + session.getId(), error);
     }
 
-    public void beforeRequest(Map<String, List<String>> headers) {
-    }
+    public void beforeRequest(Map<String,List<String>> headers) {}
 }

@@ -13,21 +13,19 @@ import org.apache.accumulo.core.util.format.DefaultFormatter;
 
 public class TimelyMetricsFormatter extends DefaultFormatter {
 
-    private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
-            new LongLexicoder());
-    private static final PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(),
-            new StringLexicoder());
+    private static final PairLexicoder<String,Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
+    private static final PairLexicoder<Long,String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
 
     @Override
     public String next() {
-        Entry<Key, Value> e = getScannerIterator().next();
+        Entry<Key,Value> e = getScannerIterator().next();
         StringBuilder b = new StringBuilder();
-        ComparablePair<String, Long> p = rowCoder.decode(e.getKey().getRow().copyBytes());
+        ComparablePair<String,Long> p = rowCoder.decode(e.getKey().getRow().copyBytes());
         b.append(p.getFirst()).append("\\x00").append(p.getSecond());
         b.append(" ");
         b.append(e.getKey().getColumnFamily().toString());
         b.append(":");
-        ComparablePair<Long, String> cq = colQualCoder.decode(e.getKey().getColumnQualifier().copyBytes());
+        ComparablePair<Long,String> cq = colQualCoder.decode(e.getKey().getColumnQualifier().copyBytes());
         b.append(cq.getFirst()).append("\\x00").append(cq.getSecond());
         b.append(" ");
         b.append(e.getKey().getColumnVisibility().toString());

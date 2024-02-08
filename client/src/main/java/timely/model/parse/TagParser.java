@@ -4,11 +4,11 @@ import java.util.List;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+
 import timely.model.Tag;
 
 /**
- * Parses tag1=val1 into a {@code Tag} Combines {@code Tag} into {@code String}
- * of tag1=val1
+ * Parses tag1=val1 into a {@code Tag} Combines {@code Tag} into {@code String} of tag1=val1
  */
 public class TagParser implements Parser<Tag>, Combiner<Tag> {
 

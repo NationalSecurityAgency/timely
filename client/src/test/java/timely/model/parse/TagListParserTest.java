@@ -7,6 +7,7 @@ import java.util.TreeMap;
 
 import org.junit.Assert;
 import org.junit.Test;
+
 import timely.model.Tag;
 
 public class TagListParserTest {
@@ -31,7 +32,7 @@ public class TagListParserTest {
 
     @Test
     public void testListCombineMap() {
-        Map<String, String> map = new TreeMap<>();
+        Map<String,String> map = new TreeMap<>();
         map.put("tag1", "value1");
         map.put("tag2", "value2");
         String combined = new TagListParser().combine(map);

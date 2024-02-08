@@ -1,4 +1,3 @@
 package timely.test;
 
-public interface IntegrationTest {
-}
+public interface IntegrationTest {}

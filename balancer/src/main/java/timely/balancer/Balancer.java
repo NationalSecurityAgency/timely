@@ -16,6 +16,18 @@ import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
 
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.RetryForever;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -56,17 +68,6 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.apache.curator.RetryPolicy;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.RetryForever;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.data.Stat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
 import timely.auth.AuthCache;
 import timely.auth.JWTTokenHandler;
 import timely.auth.util.SslHelper;
@@ -133,12 +134,11 @@ public class Balancer {
     protected volatile boolean shutdown = false;
     private static final int DEFAULT_EVENT_LOOP_THREADS;
 
-    private String[] zkPaths = new String[] { LEADER_LATCH_PATH, ASSIGNMENTS_LAST_UPDATED_PATH, ASSIGNMENTS_LOCK_PATH,
-            SERVICE_DISCOVERY_PATH, NON_CACHED_METRICS, NON_CACHED_METRICS_LOCK_PATH };
+    private String[] zkPaths = new String[] {LEADER_LATCH_PATH, ASSIGNMENTS_LAST_UPDATED_PATH, ASSIGNMENTS_LOCK_PATH, SERVICE_DISCOVERY_PATH,
+            NON_CACHED_METRICS, NON_CACHED_METRICS_LOCK_PATH};
 
     static {
-        DEFAULT_EVENT_LOOP_THREADS = Math.max(1,
-                SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+        DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
     }
 
     public Balancer(BalancerConfiguration balancerConf) throws Exception {
@@ -335,8 +335,8 @@ public class Balancer {
     protected SSLContext createSSLClientContext(BalancerConfiguration config) throws Exception {
 
         ClientSsl ssl = config.getSecurity().getClientSsl();
-        return HttpClient.getSSLContext(ssl.getTrustStoreFile(), ssl.getTrustStoreType(), ssl.getTrustStorePassword(),
-                ssl.getKeyStoreFile(), ssl.getKeyStoreType(), ssl.getKeyStorePassword());
+        return HttpClient.getSSLContext(ssl.getTrustStoreFile(), ssl.getTrustStoreType(), ssl.getTrustStorePassword(), ssl.getKeyStoreFile(),
+                        ssl.getKeyStoreType(), ssl.getKeyStorePassword());
     }
 
     private void ensureZkPaths(CuratorFramework curatorFramework, String[] paths) {
@@ -344,8 +344,7 @@ public class Balancer {
             try {
                 Stat stat = curatorFramework.checkExists().forPath(s);
                 if (stat == null) {
-                    curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT)
-                            .forPath(s);
+                    curatorFramework.create().creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT).forPath(s);
                 }
             } catch (Exception e) {
                 LOG.info(e.getMessage());
@@ -359,8 +358,7 @@ public class Balancer {
         // start curator framework
         RetryPolicy retryPolicy = new RetryForever(1000);
         int timeout = Long.valueOf(getTimeInMillis(balancerConfig.getZooKeeper().getTimeout())).intValue();
-        curatorFramework = CuratorFrameworkFactory.newClient(balancerConfig.getZooKeeper().getServers(), timeout, 10000,
-                retryPolicy);
+        curatorFramework = CuratorFrameworkFactory.newClient(balancerConfig.getZooKeeper().getServers(), timeout, 10000, retryPolicy);
         curatorFramework.start();
         ensureZkPaths(curatorFramework, zkPaths);
 
@@ -431,8 +429,7 @@ public class Balancer {
         httpServer.group(httpBossGroup, httpWorkerGroup);
         httpServer.channel(channelClass);
         httpServer.handler(new LoggingHandler());
-        HttpClientPool httpClientPool = new HttpClientPool(balancerConfig.getSecurity(), balancerConfig.getHttp(),
-                clientSSLContext);
+        HttpClientPool httpClientPool = new HttpClientPool(balancerConfig.getSecurity(), balancerConfig.getHttp(), clientSSLContext);
         httpServer.childHandler(setupHttpChannel(balancerConfig, sslCtx, metricResolver, httpClientPool));
         httpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         httpServer.option(ChannelOption.SO_BACKLOG, 128);
@@ -471,9 +468,8 @@ public class Balancer {
             udpChannelHandleList.add(udpServer.bind(udpIp, udpPort).sync().channel());
         }
         shutdownHook();
-        LOG.info(
-                "Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
-                tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
+        LOG.info("Server started. Listening on {}:{} for TCP traffic, {}:{} for HTTP traffic, {}:{} for WebSocket traffic, and {}:{} for UDP traffic",
+                        tcpAddress, tcpPort, httpAddress, httpPort, wsAddress, wsPort, wsAddress, udpPort);
     }
 
     public static void main(String[] args) throws Exception {
@@ -498,8 +494,8 @@ public class Balancer {
         }
     }
 
-    protected ChannelHandler setupHttpChannel(BalancerConfiguration balancerConfig, SslContext sslCtx,
-            MetricResolver metricResolver, HttpClientPool httpClientPool) {
+    protected ChannelHandler setupHttpChannel(BalancerConfiguration balancerConfig, SslContext sslCtx, MetricResolver metricResolver,
+                    HttpClientPool httpClientPool) {
 
         return new ChannelInitializer<SocketChannel>() {
 
@@ -513,15 +509,13 @@ public class Balancer {
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
-                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(
-                        balancerConfig.getSecurity(), balancerConfig.getHttp()));
-                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler().setIgnoreSslHandshakeErrors(
-                        balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
-                ch.pipeline().addLast("login",
-                        new X509LoginRequestHandler(balancerConfig.getSecurity(), balancerConfig.getHttp()));
+                ch.pipeline().addLast("queryDecoder", new timely.netty.http.HttpRequestDecoder(balancerConfig.getSecurity(), balancerConfig.getHttp()));
+                ch.pipeline().addLast("fileServer", new HttpStaticFileServerHandler()
+                                .setIgnoreSslHandshakeErrors(balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
+                ch.pipeline().addLast("login", new X509LoginRequestHandler(balancerConfig.getSecurity(), balancerConfig.getHttp()));
                 ch.pipeline().addLast("httpRelay", new HttpRelayHandler(metricResolver, httpClientPool));
-                ch.pipeline().addLast("error", new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(
-                        balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
+                ch.pipeline().addLast("error", new TimelyExceptionHandler()
+                                .setIgnoreSslHandshakeErrors(balancerConfig.getSecurity().getServerSsl().isIgnoreSslHandshakeErrors()));
             }
         };
     }
@@ -555,8 +549,7 @@ public class Balancer {
         };
     }
 
-    protected ChannelHandler setupWSChannel(BalancerConfiguration balancerConfig, SslContext sslCtx,
-            MetricResolver metricResolver, WsClientPool wsClientPool) {
+    protected ChannelHandler setupWSChannel(BalancerConfiguration balancerConfig, SslContext sslCtx, MetricResolver metricResolver, WsClientPool wsClientPool) {
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
@@ -566,10 +559,8 @@ public class Balancer {
                 ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
                 ch.pipeline().addLast("sessionExtractor", new WebSocketFullRequestHandler());
 
-                ch.pipeline().addLast("idle-handler",
-                        new IdleStateHandler(balancerConfig.getWebsocket().getTimeout(), 0, 0));
-                ch.pipeline().addLast("ws-protocol",
-                        new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, false, true));
+                ch.pipeline().addLast("idle-handler", new IdleStateHandler(balancerConfig.getWebsocket().getTimeout(), 0, 0));
+                ch.pipeline().addLast("ws-protocol", new WebSocketServerProtocolHandler(WS_PATH, null, true, 65536, false, true));
                 ch.pipeline().addLast("wsDecoder", new WebSocketRequestDecoder(balancerConfig.getSecurity()));
                 ch.pipeline().addLast("httpRelay", new WsRelayHandler(balancerConfig, metricResolver, wsClientPool));
                 ch.pipeline().addLast("error", new WSTimelyExceptionHandler());

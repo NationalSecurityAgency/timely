@@ -10,18 +10,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+
 import timely.model.parse.TagParser;
 
 /**
  * A Metric consists of a metric name, tags, and a Value
  *
- * Json has been flattened to reduce overhead. Example:
- * {"name":"m1","timestamp":1,"measure":1.0,"tags":[{"k1":"v1"}]}
+ * Json has been flattened to reduce overhead. Example: {"name":"m1","timestamp":1,"measure":1.0,"tags":[{"k1":"v1"}]}
  *
  */
 @JsonRootName("metric")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({ "name" })
+@JsonPropertyOrder({"name"})
 public class Metric implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -134,8 +134,7 @@ public class Metric implements Serializable {
     }
 
     /**
-     * Simple Builder for Metric. Note: cannot re-use a builder after build is
-     * called.
+     * Simple Builder for Metric. Note: cannot re-use a builder after build is called.
      */
     public static class Builder {
 

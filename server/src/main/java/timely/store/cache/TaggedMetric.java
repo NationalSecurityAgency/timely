@@ -8,6 +8,7 @@ import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import timely.model.Tag;
 
 public class TaggedMetric implements Comparable<TaggedMetric> {
@@ -18,7 +19,7 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
     private OrderedTags orderedTags = null;
 
     public TaggedMetric(String metric, List<Tag> tags) {
-        Map<String, String> tagMap = new LinkedHashMap<>();
+        Map<String,String> tagMap = new LinkedHashMap<>();
         for (Tag t : tags) {
             tagMap.put(t.getKey(), t.getValue());
         }
@@ -26,7 +27,7 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
         this.orderedTags = new OrderedTags(tagMap);
     }
 
-    public Map<String, String> getTags() {
+    public Map<String,String> getTags() {
         return orderedTags.getTags();
     }
 
@@ -58,7 +59,7 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
         return ctb.toComparison();
     }
 
-    public boolean matches(Map<String, String> tags) {
+    public boolean matches(Map<String,String> tags) {
         return orderedTags.matches(tags);
     }
 
@@ -71,7 +72,7 @@ public class TaggedMetric implements Comparable<TaggedMetric> {
         }
     }
 
-    private static ColumnVisibility extractVisibility(Map<String, String> tags) {
+    private static ColumnVisibility extractVisibility(Map<String,String> tags) {
 
         if (tags.containsKey(VISIBILITY_TAG)) {
             return new ColumnVisibility(tags.get(VISIBILITY_TAG));

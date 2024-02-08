@@ -6,15 +6,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import io.netty.channel.Channel;
-import io.netty.channel.local.LocalChannel;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import io.netty.channel.Channel;
+import io.netty.channel.local.LocalChannel;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import timely.api.request.MetricRequest;
 import timely.api.request.VersionRequest;
 import timely.api.request.subscription.AddSubscription;
@@ -143,8 +144,7 @@ public class WebSocketRequestDecoderTest {
 
     @Test
     public void testCreateSubscriptionWithInvalidSessionIdAndNonAnonymousAccess() throws Exception {
-        ctx.channel().attr(SubscriptionRegistry.SESSION_ID_ATTR)
-                .set(URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name()));
+        ctx.channel().attr(SubscriptionRegistry.SESSION_ID_ATTR).set(URLEncoder.encode(UUID.randomUUID().toString(), StandardCharsets.UTF_8.name()));
         decoder = new WebSocketRequestDecoder(config.getSecurity());
     // @formatter:off
         String request = "{ "+

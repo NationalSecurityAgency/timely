@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.Lists;
 import org.apache.accumulo.core.metadata.StoredTabletFile;
 import org.apache.accumulo.tserver.compaction.CompactionPlan;
 import org.apache.accumulo.tserver.compaction.CompactionStrategy;
@@ -23,13 +22,16 @@ import org.apache.accumulo.tserver.compaction.DefaultCompactionStrategy;
 import org.apache.accumulo.tserver.compaction.MajorCompactionRequest;
 import org.easymock.EasyMock;
 import org.junit.Test;
+
+import com.google.common.collect.Lists;
+
 import timely.test.CompactionRequestBuilder;
 
 public class TieredCompactionStrategyTest {
 
     @Test
     public void initConfiguresWithMultipleTiers() {
-        Map<String, String> config = new HashMap<>();
+        Map<String,String> config = new HashMap<>();
         config.put("tier.0.class", DefaultCompactionStrategy.class.getName());
         config.put("tier.0.opts.arg1", "foo");
         config.put("tier.0.opts.arg2", "sys");
@@ -51,7 +53,7 @@ public class TieredCompactionStrategyTest {
 
     @Test
     public void initConfiguresWithSingleTierNoArguments() {
-        Map<String, String> config = new HashMap<>();
+        Map<String,String> config = new HashMap<>();
         config.put("tier.0.class", DefaultCompactionStrategy.class.getName());
 
         TieredCompactionStrategy strategy = new TieredCompactionStrategy();
@@ -224,12 +226,12 @@ public class TieredCompactionStrategyTest {
         }
 
         @Override
-        public Map<String, String> options() {
+        public Map<String,String> options() {
             return Collections.emptyMap();
         }
 
         @Override
-        public CompactionStrategy get(Map<String, String> tableProperites) {
+        public CompactionStrategy get(Map<String,String> tableProperites) {
             return strategy;
         }
     }

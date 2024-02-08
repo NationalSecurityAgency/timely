@@ -10,11 +10,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -22,9 +27,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import timely.adapter.accumulo.MetricAdapter;
 import timely.api.model.Meta;
 import timely.configuration.Configuration;
@@ -127,8 +129,7 @@ public class MetricsResponse {
         } else {
             buf = this.generateHtml().toString().getBytes(StandardCharsets.UTF_8);
         }
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer(buf));
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.copiedBuffer(buf));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, responseType);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
         return response;
@@ -156,7 +157,7 @@ public class MetricsResponse {
         b.append(TR_END);
         String prevMetric = null;
         StringBuilder tags = new StringBuilder();
-        Map<String, Long> tagMap = new HashMap<>();
+        Map<String,Long> tagMap = new HashMap<>();
         for (Meta m : tree) {
             if (prevMetric != null && !m.getMetric().equals(prevMetric)) {
                 tagMap.clear();
@@ -193,7 +194,7 @@ public class MetricsResponse {
     protected String generateJson(final ObjectMapper mapper) throws JsonProcessingException {
         // map non-ignored metrics to their list of tags
         final MetaCache cache = MetaCacheFactory.getCache(conf);
-        Map<String, List<JsonNode>> metricTagMap = new HashMap<>();
+        Map<String,List<JsonNode>> metricTagMap = new HashMap<>();
         cache.forEach(m -> {
             if (!metricTagMap.containsKey(m.getMetric())) {
                 metricTagMap.put(m.getMetric(), new ArrayList<>());

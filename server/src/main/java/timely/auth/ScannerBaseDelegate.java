@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.Lists;
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.client.IteratorSetting.Column;
 import org.apache.accumulo.core.client.ScannerBase;
@@ -17,9 +16,10 @@ import org.apache.accumulo.core.dataImpl.thrift.IterInfo;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
 
+import com.google.common.collect.Lists;
+
 /**
- * A simple wrapper around a {@link ScannerBase} that overrides the methods that
- * configure iterators.
+ * A simple wrapper around a {@link ScannerBase} that overrides the methods that configure iterators.
  *
  * @see ScannerOptionsHelper
  */
@@ -37,21 +37,16 @@ public class ScannerBaseDelegate implements ScannerBase {
     @Override
     public void addScanIterator(IteratorSetting cfg) {
         if (cfg.getName().startsWith(SYSTEM_ITERATOR_NAME_PREFIX)) {
-            throw new IllegalArgumentException(
-                    "Non-system iterators' names cannot start with " + SYSTEM_ITERATOR_NAME_PREFIX);
+            throw new IllegalArgumentException("Non-system iterators' names cannot start with " + SYSTEM_ITERATOR_NAME_PREFIX);
         } else {
             delegate.addScanIterator(cfg);
         }
     }
 
     /**
-     * Adds a "system" scan iterator. The iterator name is automatically prefixed
-     * with {@link #SYSTEM_ITERATOR_NAME_PREFIX}. A "system" scan iterator can only
-     * be modified or removed by calling
-     * {@link #updateSystemScanIteratorOption(String, String, String)},
-     * {@link #removeSystemScanIterator(String)}, or
-     * {@link #clearSystemScanIterators()}. Updates the iterator configuration for
-     * {@code iteratorName}. The iterator name is automatically prefixed with
+     * Adds a "system" scan iterator. The iterator name is automatically prefixed with {@link #SYSTEM_ITERATOR_NAME_PREFIX}. A "system" scan iterator can only
+     * be modified or removed by calling {@link #updateSystemScanIteratorOption(String, String, String)}, {@link #removeSystemScanIterator(String)}, or
+     * {@link #clearSystemScanIterators()}. Updates the iterator configuration for {@code iteratorName}. The iterator name is automatically prefixed with
      * {@link #SYSTEM_ITERATOR_NAME_PREFIX}.
      *
      * @param cfg
@@ -74,8 +69,7 @@ public class ScannerBaseDelegate implements ScannerBase {
     }
 
     /**
-     * Removes a "system" scan iterator. The iterator name is automatically prefixed
-     * with {@link #SYSTEM_ITERATOR_NAME_PREFIX}.
+     * Removes a "system" scan iterator. The iterator name is automatically prefixed with {@link #SYSTEM_ITERATOR_NAME_PREFIX}.
      *
      * @param iteratorName
      *            the name of the system iterator to remove
@@ -97,8 +91,7 @@ public class ScannerBaseDelegate implements ScannerBase {
     }
 
     /**
-     * Updates the iterator configuration for {@code iteratorName}. The iterator
-     * name is automatically prefixed with {@link #SYSTEM_ITERATOR_NAME_PREFIX}.
+     * Updates the iterator configuration for {@code iteratorName}. The iterator name is automatically prefixed with {@link #SYSTEM_ITERATOR_NAME_PREFIX}.
      *
      * @param iteratorName
      *            the name of the system iterator to modify
@@ -145,8 +138,7 @@ public class ScannerBaseDelegate implements ScannerBase {
                 }
             }
         } else {
-            throw new UnsupportedOperationException(
-                    "Cannot clear scan iterators on a non-ScannerOptions class! (" + delegate.getClass() + ")");
+            throw new UnsupportedOperationException("Cannot clear scan iterators on a non-ScannerOptions class! (" + delegate.getClass() + ")");
         }
     }
 
@@ -158,7 +150,7 @@ public class ScannerBaseDelegate implements ScannerBase {
     }
 
     @Override
-    public Iterator<Map.Entry<Key, Value>> iterator() {
+    public Iterator<Map.Entry<Key,Value>> iterator() {
         return delegate.iterator();
     }
 
@@ -253,8 +245,7 @@ public class ScannerBaseDelegate implements ScannerBase {
         public Collection<IteratorSetting> getIterators() {
             Collection<IteratorSetting> settings = Lists.newArrayList();
             for (IterInfo iter : serverSideIteratorList) {
-                IteratorSetting setting = new IteratorSetting(iter.getPriority(), iter.getIterName(),
-                        iter.getClassName());
+                IteratorSetting setting = new IteratorSetting(iter.getPriority(), iter.getIterName(), iter.getClassName());
                 setting.addOptions(serverSideIteratorOptions.get(iter.getIterName()));
                 settings.add(setting);
             }

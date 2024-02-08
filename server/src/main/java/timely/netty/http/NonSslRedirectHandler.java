@@ -1,5 +1,8 @@
 package timely.netty.http;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -12,8 +15,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.OptionalSslHandler;
 import io.netty.handler.ssl.SslContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.configuration.Http;
 import timely.netty.Constants;
 
@@ -49,8 +50,7 @@ public class NonSslRedirectHandler extends OptionalSslHandler implements TimelyH
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 LOG.trace("Received non-SSL request, returning redirect");
-                FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                        HttpResponseStatus.MOVED_PERMANENTLY, Unpooled.EMPTY_BUFFER);
+                FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY, Unpooled.EMPTY_BUFFER);
                 response.headers().set(HttpHeaderNames.LOCATION, redirectAddress);
                 LOG.trace(Constants.LOG_RETURNING_RESPONSE, response);
                 encoder.write(ctx, response, ctx.voidPromise());

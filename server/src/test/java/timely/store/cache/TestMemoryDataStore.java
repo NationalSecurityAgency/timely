@@ -5,6 +5,7 @@ import java.util.*;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import timely.api.request.timeseries.QueryRequest;
 import timely.api.response.TimelyException;
 import timely.api.response.timeseries.QueryResponse;
@@ -29,18 +30,18 @@ public class TestMemoryDataStore {
         DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
         long timestamp = baseTimestamp + 10000;
-        Map<String, String> tags = new HashMap<>();
+        Map<String,String> tags = new HashMap<>();
 
         tags.put("part", "webservice");
         tags.put("host", "host1");
-        double[] values = new double[] { 2.1, 2.3, 2.0, 2.8, 4.2, 2.1, 7.2, 4.1, 10.2 };
+        double[] values = new double[] {2.1, 2.3, 2.0, 2.8, 4.2, 2.1, 7.2, 4.1, 10.2};
         for (double d : values) {
             mmStore.store(createMetric("mymetric", tags, d, timestamp));
             timestamp += 1000;
         }
 
         tags.put("host", "host2");
-        values = new double[] { 2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2 };
+        values = new double[] {2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2};
         for (double d : values) {
             mmStore.store(createMetric("mymetric", tags, d, timestamp));
             timestamp += 1000;
@@ -48,7 +49,7 @@ public class TestMemoryDataStore {
 
         tags.put("part", "ingest");
         tags.put("host", "host3");
-        values = new double[] { 2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2 };
+        values = new double[] {2.9, 2.4, 2.2, 2.7, 4.2, 2.1, 7.2, 4.1, 10.2};
         for (double d : values) {
             mmStore.store(createMetric("mymetric", tags, d, timestamp));
             timestamp += 1000;
@@ -61,7 +62,7 @@ public class TestMemoryDataStore {
 
         DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
-        Map<String, String> tags = new HashMap<>();
+        Map<String,String> tags = new HashMap<>();
         tags.put("part", "webservice");
         tags.put("host", "r01n01");
         tags.put("rack", "r01n01");
@@ -128,17 +129,15 @@ public class TestMemoryDataStore {
     }
 
     /*
-     * timely.api.response.timeseries.QueryResponse@4263b080[metric=metric.number.1,
-     * tags={host=r01n01},aggregatedTags=[],dps={1700008200000=484.239837398374,
-     * 1700008500000=469.02666666666664, 1700008800000=499.17,
-     * 1700009100000=504.14666666666665, 1700009400000=469.8576271186441}]
+     * timely.api.response.timeseries.QueryResponse@4263b080[metric=metric.number.1, tags={host=r01n01},aggregatedTags=[],dps={1700008200000=484.239837398374,
+     * 1700008500000=469.02666666666664, 1700008800000=499.17, 1700009100000=504.14666666666665, 1700009400000=469.8576271186441}]
      */
 
-    private Metric createMetric(String metric, Map<String, String> tags, double value, long timestamp) {
+    private Metric createMetric(String metric, Map<String,String> tags, double value, long timestamp) {
         Metric m = new Metric();
         m.setName(metric);
         List<Tag> tagList = new ArrayList<>();
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
+        for (Map.Entry<String,String> entry : tags.entrySet()) {
             tagList.add(new Tag(entry.getKey(), entry.getValue()));
         }
         m.setTags(tagList);
@@ -153,7 +152,7 @@ public class TestMemoryDataStore {
     public void TestExtentOfStorage() {
         DataStoreCache mmStore = new DataStoreCache(null, configuration);
 
-        HashMap<String, String> tags = new HashMap<>();
+        HashMap<String,String> tags = new HashMap<>();
         tags.put("host", "localhost");
 
         long start = System.currentTimeMillis();

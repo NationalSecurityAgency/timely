@@ -31,12 +31,14 @@ import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import org.springframework.util.ResourceUtils;
+
 import com.google.common.base.Preconditions;
+
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.util.concurrent.FastThreadLocal;
-import org.springframework.util.ResourceUtils;
 import timely.configuration.ServerSsl;
 import timely.configuration.Ssl;
 
@@ -49,7 +51,7 @@ public class SslHelper {
     public static SslContextBuilder getSslContextBuilder(Ssl ssl) throws Exception {
         KeyManagerFactory keyManagerFactory = getKeyManagerFactory(ssl);
         SslContextBuilder builder = ssl instanceof ServerSsl ? SslContextBuilder.forServer(keyManagerFactory)
-                : SslContextBuilder.forClient().keyManager(keyManagerFactory);
+                        : SslContextBuilder.forClient().keyManager(keyManagerFactory);
         boolean useOpenSSL = ssl.isUseOpenssl();
         if (useOpenSSL) {
             builder.sslProvider(SslProvider.OPENSSL);
@@ -75,10 +77,8 @@ public class SslHelper {
             KeyStore keyStore = getKeyStore(ssl);
 
             // Get key manager to provide client credentials.
-            KeyManagerFactory keyManagerFactory = KeyManagerFactory
-                    .getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            char[] keyStorePassword = ssl.getKeyStorePassword() == null ? null
-                    : ssl.getKeyStorePassword().toCharArray();
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            char[] keyStorePassword = ssl.getKeyStorePassword() == null ? null : ssl.getKeyStorePassword().toCharArray();
             keyManagerFactory.init(keyStore, keyStorePassword);
             if (ssl.getKeyAlias() != null)
                 return new KeyAliasKeyManagerFactory(keyManagerFactory, ssl.getKeyAlias());
@@ -89,8 +89,7 @@ public class SslHelper {
         }
     }
 
-    public static KeyStore getKeyStore(Ssl ssl)
-            throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
+    public static KeyStore getKeyStore(Ssl ssl) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
         String keyStoreType = ssl.getKeyStoreType();
         if (keyStoreType == null) {
             keyStoreType = "PKCS12";
@@ -114,8 +113,7 @@ public class SslHelper {
 
             X509Certificate trustedCertificate = getTrustedCertificate(ssl.getKeyAlias(), keyStore);
 
-            TrustManagerFactory trustManagerFactory = new TimelyTrustMangerFactory(
-                    TrustManagerFactory.getDefaultAlgorithm(), trustedCertificate);
+            TrustManagerFactory trustManagerFactory = new TimelyTrustMangerFactory(TrustManagerFactory.getDefaultAlgorithm(), trustedCertificate);
             trustManagerFactory.init(trustStore);
             return trustManagerFactory;
         } catch (Exception e) {
@@ -123,8 +121,7 @@ public class SslHelper {
         }
     }
 
-    public static KeyStore getTrustStore(Ssl ssl)
-            throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
+    public static KeyStore getTrustStore(Ssl ssl) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
         String trustStoreType = ssl.getTrustStoreType();
         if (trustStoreType == null) {
             trustStoreType = "JKS";
@@ -135,8 +132,7 @@ public class SslHelper {
         }
         KeyStore trustStore = KeyStore.getInstance(trustStoreType);
         URL url = ResourceUtils.getURL(trustStoreURL);
-        char[] trustStorePassword = ssl.getTrustStorePassword() == null ? null
-                : ssl.getTrustStorePassword().toCharArray();
+        char[] trustStorePassword = ssl.getTrustStorePassword() == null ? null : ssl.getTrustStorePassword().toCharArray();
         trustStore.load(url.openStream(), trustStorePassword);
         return trustStore;
     }
@@ -159,9 +155,7 @@ public class SslHelper {
     }
 
     /**
-     * A custom {@link TrustManagerFactory} that wraps any returned
-     * {@link TrustManager}s in order to apply custom behavior for trusting a remote
-     * server.
+     * A custom {@link TrustManagerFactory} that wraps any returned {@link TrustManager}s in order to apply custom behavior for trusting a remote server.
      */
     private static class TimelyTrustMangerFactory extends TrustManagerFactory {
 
@@ -177,8 +171,7 @@ public class SslHelper {
             }
         };
 
-        public TimelyTrustMangerFactory(String algorithm, X509Certificate trustedCertificate)
-                throws NoSuchAlgorithmException {
+        public TimelyTrustMangerFactory(String algorithm, X509Certificate trustedCertificate) throws NoSuchAlgorithmException {
             super(CURRENT_SPI.get(), PROVIDER, algorithm);
             CURRENT_SPI.get().init(TrustManagerFactory.getInstance(algorithm), trustedCertificate);
             CURRENT_SPI.remove();
@@ -188,9 +181,8 @@ public class SslHelper {
     }
 
     /**
-     * The {@link TrustManagerFactorySpi} that is used by
-     * {@link TimelyTrustMangerFactory} in order to wrap any returned
-     * {@link TrustManager}s with a {@link TimelyTrustManager}.
+     * The {@link TrustManagerFactorySpi} that is used by {@link TimelyTrustMangerFactory} in order to wrap any returned {@link TrustManager}s with a
+     * {@link TimelyTrustManager}.
      */
     private static class TimelyTrustManagerSpi extends TrustManagerFactorySpi {
 
@@ -209,8 +201,7 @@ public class SslHelper {
         }
 
         @Override
-        protected void engineInit(ManagerFactoryParameters managerFactoryParameters)
-                throws InvalidAlgorithmParameterException {
+        protected void engineInit(ManagerFactoryParameters managerFactoryParameters) throws InvalidAlgorithmParameterException {
             delegate.init(managerFactoryParameters);
         }
 
@@ -234,14 +225,10 @@ public class SslHelper {
     }
 
     /**
-     * An extension of {@link X509ExtendedTrustManager} that applies custom trust
-     * behavior for use with microservices. It is expected that these services will
-     * run on a cluster where DNS might be used for service discovery. However, the
-     * server certificate used by the microservices will not have the DNS names as
-     * Subject Alternative Name values, so normal trust for the certificate would
-     * fail. This trust manager trusts the remote server regardless of the host name
-     * used to access it, so long as the presented certificate is the one we expect.
-     * Otherwise, it falls back to the normal trust behavior.
+     * An extension of {@link X509ExtendedTrustManager} that applies custom trust behavior for use with microservices. It is expected that these services will
+     * run on a cluster where DNS might be used for service discovery. However, the server certificate used by the microservices will not have the DNS names as
+     * Subject Alternative Name values, so normal trust for the certificate would fail. This trust manager trusts the remote server regardless of the host name
+     * used to access it, so long as the presented certificate is the one we expect. Otherwise, it falls back to the normal trust behavior.
      */
     private static class TimelyTrustManager extends X509ExtendedTrustManager {
 
@@ -273,8 +260,7 @@ public class SslHelper {
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
-                throws CertificateException {
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket) throws CertificateException {
             Preconditions.checkNotNull(extendedDelegate, "Not wrapping an X509ExtendedTrustManager");
             boolean certChainTrusted = certChainTrusted(x509Certificates);
             if ((socket instanceof SSLSocket) && socket.isConnected() && certChainTrusted) {
@@ -299,8 +285,7 @@ public class SslHelper {
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
-                throws CertificateException {
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket) throws CertificateException {
             Preconditions.checkNotNull(extendedDelegate, "Not wrapping an X509ExtendedTrustManager");
             boolean certChainTrusted = certChainTrusted(x509Certificates);
             if ((socket instanceof SSLSocket) && socket.isConnected() && certChainTrusted) {
@@ -324,8 +309,7 @@ public class SslHelper {
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
-                throws CertificateException {
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) throws CertificateException {
             Preconditions.checkNotNull(extendedDelegate, "Not wrapping an X509ExtendedTrustManager");
             boolean certChainTrusted = certChainTrusted(x509Certificates);
             SSLParameters origParameters = sslEngine.getSSLParameters();
@@ -347,8 +331,7 @@ public class SslHelper {
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
-                throws CertificateException {
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) throws CertificateException {
             Preconditions.checkNotNull(extendedDelegate, "Not wrapping an X509ExtendedTrustManager");
             boolean certChainTrusted = certChainTrusted(x509Certificates);
             SSLParameters origParameters = sslEngine.getSSLParameters();
@@ -376,8 +359,7 @@ public class SslHelper {
             boolean peerCertIsTrusted = false;
             if (x509Certificates != null && trustedCertificate != null) {
                 for (X509Certificate cert : x509Certificates) {
-                    if (cert.getSubjectDN().equals(trustedCertificate.getSubjectDN())
-                            && cert.getIssuerDN().equals(trustedCertificate.getIssuerDN())) {
+                    if (cert.getSubjectDN().equals(trustedCertificate.getSubjectDN()) && cert.getIssuerDN().equals(trustedCertificate.getIssuerDN())) {
                         peerCertIsTrusted = true;
                         break;
                     }
@@ -421,14 +403,12 @@ public class SslHelper {
         }
 
         @Override
-        protected void engineInit(KeyStore keyStore, char[] chars)
-                throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        protected void engineInit(KeyStore keyStore, char[] chars) throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
             delegate.init(keyStore, chars);
         }
 
         @Override
-        protected void engineInit(ManagerFactoryParameters managerFactoryParameters)
-                throws InvalidAlgorithmParameterException {
+        protected void engineInit(ManagerFactoryParameters managerFactoryParameters) throws InvalidAlgorithmParameterException {
             delegate.init(managerFactoryParameters);
         }
 

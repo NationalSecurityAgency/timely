@@ -16,6 +16,7 @@ import org.apache.accumulo.core.iterators.WrappingIterator;
 import org.apache.commons.collections4.trie.PatriciaTrie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import timely.api.model.Meta;
 
 public class MetaAgeOffIterator extends WrappingIterator implements OptionDescriber {
@@ -32,7 +33,7 @@ public class MetaAgeOffIterator extends WrappingIterator implements OptionDescri
     private Long maxAgeOff = Long.MIN_VALUE;
 
     @Override
-    public SortedKeyValueIterator<Key, Value> deepCopy(IteratorEnvironment env) {
+    public SortedKeyValueIterator<Key,Value> deepCopy(IteratorEnvironment env) {
         MetaAgeOffIterator iter = new MetaAgeOffIterator();
         iter.ageoffs = this.ageoffs;
         iter.defaultAgeOff = this.defaultAgeOff;
@@ -43,8 +44,7 @@ public class MetaAgeOffIterator extends WrappingIterator implements OptionDescri
     }
 
     @Override
-    public void init(SortedKeyValueIterator<Key, Value> source, Map<String, String> options, IteratorEnvironment env)
-            throws IOException {
+    public void init(SortedKeyValueIterator<Key,Value> source, Map<String,String> options, IteratorEnvironment env) throws IOException {
         super.init(source, options, env);
         validateOptions(options);
         ageoffs = new PatriciaTrie<>();
@@ -99,14 +99,13 @@ public class MetaAgeOffIterator extends WrappingIterator implements OptionDescri
     @Override
     public IteratorOptions describeOptions() {
         return new IteratorOptions("meta-age-off", "Iterator that ages off meta entries for Timely metrics",
-                Collections.singletonMap(AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY, "default age off days"),
-                Collections.singletonList("Additional meta age off properties where the value is specified as "
-                        + AGE_OFF_PREFIX
-                        + " the metric name and the value is an integer representing the number of days to keep"));
+                        Collections.singletonMap(AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY, "default age off days"),
+                        Collections.singletonList("Additional meta age off properties where the value is specified as " + AGE_OFF_PREFIX
+                                        + " the metric name and the value is an integer representing the number of days to keep"));
     }
 
     @Override
-    public boolean validateOptions(Map<String, String> options) {
+    public boolean validateOptions(Map<String,String> options) {
         if (null == options.get(AGE_OFF_PREFIX + DEFAULT_AGEOFF_KEY)) {
             throw new IllegalArgumentException(DEFAULT_AGEOFF_KEY + " must be configured for MetaAgeOffFilter");
         }

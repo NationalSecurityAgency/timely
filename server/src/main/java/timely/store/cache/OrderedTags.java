@@ -11,11 +11,11 @@ import org.apache.commons.lang3.tuple.Pair;
 
 public class OrderedTags {
 
-    private Set<Pair<String, String>> tagSet = new TreeSet<>();
+    private Set<Pair<String,String>> tagSet = new TreeSet<>();
     private static final Pattern REGEX_TEST = Pattern.compile("^\\w+$");
 
-    public OrderedTags(Map<String, String> tags) {
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
+    public OrderedTags(Map<String,String> tags) {
+        for (Map.Entry<String,String> entry : tags.entrySet()) {
             tagSet.add(Pair.of(entry.getKey(), entry.getValue()));
         }
     }
@@ -40,27 +40,27 @@ public class OrderedTags {
         return this.tagSet.equals(other.tagSet);
     }
 
-    public Map<String, String> getTags() {
-        Map<String, String> t = new LinkedHashMap<>();
-        for (Pair<String, String> p : tagSet) {
+    public Map<String,String> getTags() {
+        Map<String,String> t = new LinkedHashMap<>();
+        for (Pair<String,String> p : tagSet) {
             t.put(p.getLeft(), p.getRight());
         }
         return t;
     }
 
-    public boolean matches(Map<String, String> tags) {
+    public boolean matches(Map<String,String> tags) {
         int matches = 0;
         if (tags.isEmpty()) {
             return true;
         } else {
-            Iterator<Map.Entry<String, String>> requestedTagItr = tags.entrySet().iterator();
+            Iterator<Map.Entry<String,String>> requestedTagItr = tags.entrySet().iterator();
             boolean matchFailure = false;
             while (requestedTagItr.hasNext() && !matchFailure) {
-                Map.Entry<String, String> entry = requestedTagItr.next();
-                Iterator<Pair<String, String>> storedTagItr = tagSet.iterator();
+                Map.Entry<String,String> entry = requestedTagItr.next();
+                Iterator<Pair<String,String>> storedTagItr = tagSet.iterator();
                 boolean matchSuccess = false;
                 while (storedTagItr.hasNext() && !matchSuccess && !matchFailure) {
-                    Pair<String, String> p = storedTagItr.next();
+                    Pair<String,String> p = storedTagItr.next();
                     if (entry.getKey().equals(p.getLeft())) {
                         boolean regex = isTagValueRegex(entry.getValue());
                         if (regex) {

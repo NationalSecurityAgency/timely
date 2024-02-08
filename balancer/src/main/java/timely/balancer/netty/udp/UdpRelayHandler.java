@@ -2,13 +2,14 @@ package timely.balancer.netty.udp;
 
 import java.nio.charset.StandardCharsets;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.MetricRequest;
 import timely.api.request.UdpRequest;
 import timely.balancer.connection.TimelyBalancedHost;
@@ -37,7 +38,7 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
         try {
             MetricRequest metricRequest = (MetricRequest) msg;
             String metricName = metricRequest.getMetric().getName();
-            Pair<TimelyBalancedHost, UdpClient> keyClientPair = null;
+            Pair<TimelyBalancedHost,UdpClient> keyClientPair = null;
             try {
                 keyClientPair = getClient(metricName, true);
                 keyClientPair.getRight().write(metricRequest.getLine() + "\n");
@@ -50,22 +51,20 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
 
         } catch (Exception e) {
             LOG.error(LOG_ERR_MSG, msg, e);
-            ChannelFuture cf = ctx.writeAndFlush(
-                    Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
+            ChannelFuture cf = ctx.writeAndFlush(Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
             if (!cf.isSuccess()) {
                 LOG.error(Constants.ERR_WRITING_RESPONSE, cf.cause());
             }
         }
     }
 
-    private Pair<TimelyBalancedHost, UdpClient> getClient(String metric, boolean metricRequest) {
+    private Pair<TimelyBalancedHost,UdpClient> getClient(String metric, boolean metricRequest) {
         UdpClient client = null;
         TimelyBalancedHost k = null;
         int failures = 0;
         while (client == null) {
             try {
-                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric)
-                        : metricResolver.getHostPortKey(metric);
+                k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver.getHostPortKey(metric);
                 client = udpClientPool.borrowObject(k);
             } catch (Exception e1) {
                 failures++;

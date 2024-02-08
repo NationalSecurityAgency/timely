@@ -2,10 +2,11 @@ package timely.test.integration;
 
 import java.io.File;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import timely.auth.AuthCache;
 
 public class TwoWaySSLFailureIT extends TwoWaySSLBase {
@@ -36,8 +37,7 @@ public class TwoWaySSLFailureIT extends TwoWaySSLBase {
             if (t.startsWith("timely")) {
                 try {
                     accumuloClient.tableOperations().delete(t);
-                } catch (Exception e) {
-                }
+                } catch (Exception e) {}
             }
         });
         startServer();

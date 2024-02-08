@@ -17,6 +17,7 @@ import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.iteratorsImpl.system.SortedMapIterator;
 import org.junit.Before;
 import org.junit.Test;
+
 import timely.adapter.accumulo.MetricAdapter;
 import timely.model.Metric;
 import timely.model.ObjectSizeOf;
@@ -27,8 +28,8 @@ import timely.sample.aggregators.Avg;
 
 public class DownsampleIteratorTest {
 
-    final private SortedMap<Key, Value> testData1 = new TreeMap<>();
-    final private SortedMap<Key, Value> testData2 = new TreeMap<>();
+    final private SortedMap<Key,Value> testData1 = new TreeMap<>();
+    final private SortedMap<Key,Value> testData2 = new TreeMap<>();
 
     @Before
     public void createTestData() {
@@ -43,18 +44,16 @@ public class DownsampleIteratorTest {
             Metric m = new Metric("sys.loadAvg", i, .2, tags);
             Mutation mutation = MetricAdapter.toMutation(m);
             for (ColumnUpdate cu : mutation.getUpdates()) {
-                Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(),
-                        cu.getColumnVisibility(), cu.getTimestamp());
+                Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(), cu.getColumnVisibility(), cu.getTimestamp());
                 testData1.put(key, new Value(cu.getValue()));
             }
         }
     }
 
-    void put(Map<Key, Value> testData, Metric m) {
+    void put(Map<Key,Value> testData, Metric m) {
         Mutation mutation = MetricAdapter.toMutation(m);
         for (ColumnUpdate cu : mutation.getUpdates()) {
-            Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(),
-                    cu.getColumnVisibility(), cu.getTimestamp());
+            Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(), cu.getColumnVisibility(), cu.getTimestamp());
             testData.put(key, new Value(cu.getValue()));
         }
     }
@@ -73,9 +72,9 @@ public class DownsampleIteratorTest {
     public void simpleGetOneSample() throws Exception {
         // check that data gets pulled out
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData1, 100, -1);
+        Map<Set<Tag>,Downsample> samples = runQuery(iter, testData1, 100, -1);
         assertEquals(1, samples.size());
-        for (Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
+        for (Entry<Set<Tag>,Downsample> entry : samples.entrySet()) {
             Set<Tag> tags = entry.getKey();
             assertEquals(1, tags.size());
             assertEquals(Collections.singleton(new Tag("host", "host1")), tags);
@@ -92,9 +91,9 @@ public class DownsampleIteratorTest {
     @Test
     public void simpleGetTwoSamples() throws Exception {
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 100, -1);
+        Map<Set<Tag>,Downsample> samples = runQuery(iter, testData2, 100, -1);
         assertEquals(2, samples.size());
-        for (Tag tag : new Tag[] { new Tag("host", "host1"), new Tag("host", "host2") }) {
+        for (Tag tag : new Tag[] {new Tag("host", "host1"), new Tag("host", "host2")}) {
             Downsample dsample = samples.get(Collections.singleton(tag));
             assertNotNull(dsample);
             long ts = 0;
@@ -116,9 +115,9 @@ public class DownsampleIteratorTest {
     @Test
     public void simpleTestDownsampling() throws Exception {
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData2, 200, -1);
+        Map<Set<Tag>,Downsample> samples = runQuery(iter, testData2, 200, -1);
         assertEquals(2, samples.size());
-        for (Tag tag : new Tag[] { new Tag("host", "host1"), new Tag("host", "host2") }) {
+        for (Tag tag : new Tag[] {new Tag("host", "host1"), new Tag("host", "host2")}) {
             Downsample dsample = samples.get(Collections.singleton(tag));
             assertNotNull(dsample);
             long ts = 0;
@@ -167,8 +166,7 @@ public class DownsampleIteratorTest {
             if (memoryEstimator.isNewBucket()) {
                 long memoryPercentageUsedCalculated = Math.round((double) o.sizeInBytes() / maxMemory * 100);
                 long memoryPercentageUsedEstimate = Math.round(memoryEstimator.getMemoryUsedPercentage());
-                long percentError = Math.round(Math.abs(memoryPercentageUsedCalculated - memoryPercentageUsedEstimate)
-                        / memoryPercentageUsedCalculated * 100);
+                long percentError = Math.round(Math.abs(memoryPercentageUsedCalculated - memoryPercentageUsedEstimate) / memoryPercentageUsedCalculated * 100);
                 assertTrue(percentError == 0);
             }
 
@@ -196,8 +194,7 @@ public class DownsampleIteratorTest {
             if (memoryEstimator.isNewBucket()) {
                 long memoryPercentageUsedCalculated = Math.round((double) o.sizeInBytes() / maxMemory * 100);
                 long memoryPercentageUsedEstimate = Math.round(memoryEstimator.getMemoryUsedPercentage());
-                long percentError = Math.round(Math.abs(memoryPercentageUsedCalculated - memoryPercentageUsedEstimate)
-                        / memoryPercentageUsedCalculated * 100);
+                long percentError = Math.round(Math.abs(memoryPercentageUsedCalculated - memoryPercentageUsedEstimate) / memoryPercentageUsedCalculated * 100);
                 assertTrue(percentError == 0);
                 assertTrue(memoryEstimator.isHighVolumeBuckets());
             }
@@ -210,8 +207,8 @@ public class DownsampleIteratorTest {
         assertTrue(shouldReturn);
     }
 
-    private SortedMap<Key, Value> createTestData3(int elapsedTime, int skipInterval, int numTagVariations) {
-        SortedMap<Key, Value> testData3 = new TreeMap<>();
+    private SortedMap<Key,Value> createTestData3(int elapsedTime, int skipInterval, int numTagVariations) {
+        SortedMap<Key,Value> testData3 = new TreeMap<>();
         List<List<Tag>> listOfTagVariations = new ArrayList<>();
         for (int x = 1; x <= numTagVariations; x++) {
             listOfTagVariations.add(Collections.singletonList(new Tag("instance", Integer.toString(x))));
@@ -232,32 +229,32 @@ public class DownsampleIteratorTest {
         int sampleInterval = 50;
         int elapsedTime = 100;
         int skipInterval = 10;
-        SortedMap<Key, Value> testData3 = createTestData3(elapsedTime, skipInterval, numTagVariations);
+        SortedMap<Key,Value> testData3 = createTestData3(elapsedTime, skipInterval, numTagVariations);
         DownsampleIterator iter = new DownsampleIterator();
-        Map<Set<Tag>, Downsample> samples = runQuery(iter, testData3, sampleInterval, 1000);
+        Map<Set<Tag>,Downsample> samples = runQuery(iter, testData3, sampleInterval, 1000);
         assertEquals(numTagVariations, samples.size());
         long totalBuckets = 0;
-        for (Entry<Set<Tag>, Downsample> entry : samples.entrySet()) {
+        for (Entry<Set<Tag>,Downsample> entry : samples.entrySet()) {
             totalBuckets = totalBuckets + entry.getValue().getNumBuckets();
         }
         assertEquals((elapsedTime / sampleInterval) * numTagVariations, totalBuckets);
     }
 
-    private Map<Set<Tag>, Downsample> runQuery(SortedKeyValueIterator<Key, Value> iter, SortedMap<Key, Value> testData,
-            long period, long maxDownsampleMemory) throws Exception {
+    private Map<Set<Tag>,Downsample> runQuery(SortedKeyValueIterator<Key,Value> iter, SortedMap<Key,Value> testData, long period, long maxDownsampleMemory)
+                    throws Exception {
         IteratorSetting is = new IteratorSetting(100, DownsampleIterator.class);
         DownsampleIterator.setDownsampleOptions(is, 0, 1000, period, maxDownsampleMemory, Avg.class.getName());
-        SortedKeyValueIterator<Key, Value> source = new SortedMapIterator(testData);
+        SortedKeyValueIterator<Key,Value> source = new SortedMapIterator(testData);
         iter.init(source, is.getOptions(), null);
         iter.seek(new Range(), Collections.emptyList(), true);
         boolean hasTop = iter.hasTop();
         assertTrue(hasTop);
         Key key;
-        Map<Set<Tag>, Downsample> samples = new HashMap<>();
+        Map<Set<Tag>,Downsample> samples = new HashMap<>();
         do {
-            Map<Set<Tag>, Downsample> currentSamples = DownsampleIterator.decodeValue(iter.getTopValue());
+            Map<Set<Tag>,Downsample> currentSamples = DownsampleIterator.decodeValue(iter.getTopValue());
             List<Downsample> downsampleArray = new ArrayList<>();
-            for (Entry<Set<Tag>, Downsample> entry : currentSamples.entrySet()) {
+            for (Entry<Set<Tag>,Downsample> entry : currentSamples.entrySet()) {
                 Downsample downsample = samples.get(entry.getKey());
                 if (downsample == null) {
                     samples.put(entry.getKey(), entry.getValue());

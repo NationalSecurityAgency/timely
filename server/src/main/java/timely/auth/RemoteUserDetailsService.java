@@ -5,7 +5,6 @@ import static timely.auth.AuthenticationService.PRINCIPALS_CLAIM;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import io.netty.handler.ssl.SslContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.client.reactive.ClientHttpConnector;
@@ -16,6 +15,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import io.netty.handler.ssl.SslContext;
 import reactor.netty.http.client.HttpClient;
 import timely.auth.util.SslHelper;
 import timely.configuration.AuthorizationProperties;
@@ -34,8 +35,7 @@ public class RemoteUserDetailsService implements AuthenticationUserDetailsServic
 
     }
 
-    public RemoteUserDetailsService(ClientSsl clientSsl, AuthorizationProperties authorizationProperties)
-            throws Exception {
+    public RemoteUserDetailsService(ClientSsl clientSsl, AuthorizationProperties authorizationProperties) throws Exception {
         this.clientSsl = clientSsl;
         this.authorizationProperties = authorizationProperties;
         initialize();
@@ -46,8 +46,7 @@ public class RemoteUserDetailsService implements AuthenticationUserDetailsServic
         SslContext sslContext = SslHelper.getSslContext(clientSsl);
         HttpClient httpClient = HttpClient.create().secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
         ClientHttpConnector httpConnector = new ReactorClientHttpConnector(httpClient);
-        this.webClient = webClientBuilder.clientConnector(httpConnector)
-                .baseUrl(authorizationProperties.getAuthorizationUrl()).build();
+        this.webClient = webClientBuilder.clientConnector(httpConnector).baseUrl(authorizationProperties.getAuthorizationUrl()).build();
     }
 
     public void setClientSsl(ClientSsl clientSsl) {
@@ -78,8 +77,7 @@ public class RemoteUserDetailsService implements AuthenticationUserDetailsServic
                     .bodyToMono(String.class)
                     .block();
             // @formatter:on
-            log.trace("Authenticated {} via the authorization microservice with {} result", subjectDN,
-                    jwt == null ? "null" : "non-null");
+            log.trace("Authenticated {} via the authorization microservice with {} result", subjectDN, jwt == null ? "null" : "non-null");
             if (jwt != null) {
                 Collection<TimelyUser> timelyUsers = JWTTokenHandler.createUsersFromToken(jwt, PRINCIPALS_CLAIM);
                 if (timelyUsers.iterator().hasNext()) {

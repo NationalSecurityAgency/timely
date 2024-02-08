@@ -184,8 +184,8 @@ public class SummarizationJobParameters extends GlobalJobParameters implements S
     }
 
     @Override
-    public Map<String, String> toMap() {
-        Map<String, String> m = new HashMap<>();
+    public Map<String,String> toMap() {
+        Map<String,String> m = new HashMap<>();
         m.put("timelyHostname", this.timelyHostname);
         m.put("timelyHttpsPort", Integer.toString(this.timelyHttpsPort));
         m.put("timelyWssPort", Integer.toString(this.timelyWssPort));

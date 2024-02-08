@@ -2,14 +2,16 @@ package timely.api.response;
 
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import timely.model.Metric;
 import timely.model.Tag;
 
-@JsonPropertyOrder({ "metric", "timestamp", "value", "tags", "subscriptionId", "complete" })
+@JsonPropertyOrder({"metric", "timestamp", "value", "tags", "subscriptionId", "complete"})
 public class MetricResponse {
 
     private String metric;

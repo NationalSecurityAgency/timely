@@ -13,12 +13,11 @@ import javax.validation.ReportAsSingleViolation;
 import javax.validation.constraints.NotNull;
 
 /**
- * Validates that field {@code notNullFieldName} is not null if
- * {@code fieldName} is set to {@code fieldValue}
+ * Validates that field {@code notNullFieldName} is not null if {@code fieldName} is set to {@code fieldValue}
  */
 @Documented
-@Constraint(validatedBy = { NotEmptyIfFieldSetValidator.class })
-@Target({ TYPE, ANNOTATION_TYPE })
+@Constraint(validatedBy = {NotEmptyIfFieldSetValidator.class})
+@Target({TYPE, ANNOTATION_TYPE})
 @Retention(RUNTIME)
 @ReportAsSingleViolation
 @NotNull
@@ -36,7 +35,7 @@ public @interface NotEmptyIfFieldSet {
 
     Class<? extends Payload>[] payload() default {};
 
-    @Target({ TYPE, ANNOTATION_TYPE })
+    @Target({TYPE, ANNOTATION_TYPE})
     @Retention(RUNTIME)
     @Documented
     @interface List {

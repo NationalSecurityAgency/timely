@@ -20,7 +20,7 @@ public class TabletMetadataFormatter extends AggregatingFormatter {
     }
 
     @Override
-    public void aggregateStats(Map.Entry<Key, Value> entry) {
+    public void aggregateStats(Map.Entry<Key,Value> entry) {
         view.addEntry(entry);
     }
 

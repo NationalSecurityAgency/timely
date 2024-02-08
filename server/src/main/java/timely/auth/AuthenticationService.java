@@ -5,10 +5,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Multimap;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.ssl.SslHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +13,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
+
+import com.google.common.collect.Multimap;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.ssl.SslHandler;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.response.TimelyException;
 import timely.auth.util.DnUtils;
@@ -29,8 +31,8 @@ public class AuthenticationService {
     private static final Logger LOG = LoggerFactory.getLogger(AuthenticationService.class);
     private static ApplicationContext springContext;
     private static AuthenticationManager authManager;
-    private static ConcurrentHashMap<String, Object> fetchingEntity = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<String, Object> fetchingPrincipal = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String,Object> fetchingEntity = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String,Object> fetchingPrincipal = new ConcurrentHashMap<>();
     private static Collection<String> requiredRoles;
     private static Collection<String> requiredAuths;
     public static final String AUTH_HEADER = "Authorization";
@@ -49,8 +51,7 @@ public class AuthenticationService {
             requiredAuths = uncheckedAuths;
             requiredAuths.removeIf(String::isEmpty);
         } catch (BeansException e) {
-            throw new ServiceConfigurationError("Error setting up Authentication objects: " + e.getMessage(),
-                    e.getRootCause());
+            throw new ServiceConfigurationError("Error setting up Authentication objects: " + e.getMessage(), e.getRootCause());
         }
     }
 
@@ -66,8 +67,7 @@ public class AuthenticationService {
         return authenticate(authentication, pair, entity, true);
     }
 
-    public static TimelyPrincipal authenticate(Authentication authentication, SubjectIssuerDNPair pair, String entity,
-            boolean useCache) {
+    public static TimelyPrincipal authenticate(Authentication authentication, SubjectIssuerDNPair pair, String entity, boolean useCache) {
 
         // only one thread should call the authenticationManager for a given entity
         TimelyPrincipal principal = null;
@@ -115,12 +115,11 @@ public class AuthenticationService {
         String oauthToken = request.getRequestHeader(AUTH_HEADER);
         if (StringUtils.isBlank(sessionId) && StringUtils.isBlank(oauthToken) && clientCert == null) {
             throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must authenticate",
-                    "User must authenticate with a client certificate, OAuth token, or login credentials");
+                            "User must authenticate with a client certificate, OAuth token, or login credentials");
         } else if (StringUtils.isNotBlank(sessionId)) {
             verifiedPrincipal = AuthCache.get(sessionId);
             if (verifiedPrincipal == null) {
-                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must authenticate",
-                        "Unknown session id was submitted, log in again");
+                throw new TimelyException(HttpResponseStatus.UNAUTHORIZED.code(), "User must authenticate", "Unknown session id was submitted, log in again");
             }
         } else {
             try {
@@ -130,8 +129,7 @@ public class AuthenticationService {
                 if (oauthToken != null) {
                     // if the requestPrincipal came from an oauthToken, use that
                     TimelyPrincipal cachedPrincipal = AuthCache.get(entity);
-                    if (cachedPrincipal == null
-                            || (cachedPrincipal.getCreationTime() != requestPrincipal.getCreationTime())) {
+                    if (cachedPrincipal == null || (cachedPrincipal.getCreationTime() != requestPrincipal.getCreationTime())) {
                         AuthCache.put(entity, requestPrincipal);
                     }
                     verifiedPrincipal = requestPrincipal;
@@ -153,16 +151,14 @@ public class AuthenticationService {
                                     List<TimelyUser> authenticatedTimelyUsers = new ArrayList<>();
                                     for (TimelyUser user : requestPrincipal.getProxiedUsers()) {
                                         SubjectIssuerDNPair p = user.getDn();
-                                        TimelyAuthenticationToken entityToken = getAuthenticationToken(clientCert,
-                                                p.subjectDN(), p.issuerDN());
-                                        TimelyPrincipal entityPrincipal = authenticate(entityToken, p,
-                                                entityToken.getTimelyPrincipal().getName());
+                                        TimelyAuthenticationToken entityToken = getAuthenticationToken(clientCert, p.subjectDN(), p.issuerDN());
+                                        TimelyPrincipal entityPrincipal = authenticate(entityToken, p, entityToken.getTimelyPrincipal().getName());
                                         authenticatedTimelyUsers.addAll(entityPrincipal.getProxiedUsers());
                                     }
                                     verifiedPrincipal = new TimelyPrincipal(authenticatedTimelyUsers);
                                     AuthCache.put(verifiedPrincipal.getName(), verifiedPrincipal);
-                                    LOG.debug("Authenticated user {} with authorizations {}",
-                                            verifiedPrincipal.getName(), verifiedPrincipal.getAuthorizationsString());
+                                    LOG.debug("Authenticated user {} with authorizations {}", verifiedPrincipal.getName(),
+                                                    verifiedPrincipal.getAuthorizationsString());
                                 } else {
                                     LOG.trace("Verified principal {} in AuthCache on 2nd attempt", entity);
                                 }
@@ -211,8 +207,7 @@ public class AuthenticationService {
         if (!missingRoles.isEmpty() || !missingAuths.isEmpty()) {
             String message = "";
             if (!missingRoles.isEmpty() && !missingAuths.isEmpty()) {
-                message = "User:" + primaryUser.getName() + " is missing role(s):" + missingRoles + " and auth(s):"
-                        + missingAuths;
+                message = "User:" + primaryUser.getName() + " is missing role(s):" + missingRoles + " and auth(s):" + missingAuths;
 
             } else if (!missingRoles.isEmpty()) {
                 message = "User:" + primaryUser.getName() + " is missing role(s):" + missingRoles;
@@ -245,13 +240,13 @@ public class AuthenticationService {
         return new TimelyPrincipal(JWTTokenHandler.createUsersFromToken(token, PRINCIPALS_CLAIM));
     }
 
-    public static TimelyPrincipal createPrincipalFromHeaders(Multimap<String, String> httpHeaders) {
+    public static TimelyPrincipal createPrincipalFromHeaders(Multimap<String,String> httpHeaders) {
         String header = HttpHeaderUtils.getSingleHeader(httpHeaders, AUTH_HEADER, true);
         String token = header.substring("Bearer".length()).trim();
         return createPrincipalFromToken(token);
     }
 
-    public static TimelyAuthenticationToken getAuthenticationToken(Multimap<String, String> headers) {
+    public static TimelyAuthenticationToken getAuthenticationToken(Multimap<String,String> headers) {
         TimelyAuthenticationToken authenticationToken = null;
         try {
             TimelyPrincipal timelyPrincipal = createPrincipalFromHeaders(headers);
@@ -262,20 +257,17 @@ public class AuthenticationService {
         return authenticationToken;
     }
 
-    public static TimelyAuthenticationToken getAuthenticationToken(X509Certificate clientCert,
-            Multimap<String, String> headers) {
+    public static TimelyAuthenticationToken getAuthenticationToken(X509Certificate clientCert, Multimap<String,String> headers) {
         TimelyAuthenticationToken authenticationToken = null;
         try {
-            authenticationToken = new TimelyAuthenticationToken(clientCert.getSubjectDN().getName(), clientCert,
-                    headers);
+            authenticationToken = new TimelyAuthenticationToken(clientCert.getSubjectDN().getName(), clientCert, headers);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
         return authenticationToken;
     }
 
-    public static TimelyAuthenticationToken getAuthenticationToken(Object clientCert, String subjectDn,
-            String issuerDn) {
+    public static TimelyAuthenticationToken getAuthenticationToken(Object clientCert, String subjectDn, String issuerDn) {
         TimelyAuthenticationToken authenticationToken = null;
         try {
             authenticationToken = new TimelyAuthenticationToken(subjectDn, issuerDn, clientCert);
@@ -285,20 +277,16 @@ public class AuthenticationService {
         return authenticationToken;
     }
 
-    private static TimelyPrincipal getTimelyPrincipal(Authentication authentication,
-            SubjectIssuerDNPair subjectIssuerDNPair) {
+    private static TimelyPrincipal getTimelyPrincipal(Authentication authentication, SubjectIssuerDNPair subjectIssuerDNPair) {
         String subjectDn = subjectIssuerDNPair.subjectDN();
-        TimelyUser.UserType userType = DnUtils.isServerDN(subjectDn) ? TimelyUser.UserType.SERVER
-                : TimelyUser.UserType.USER;
-        Collection<String> auths = authentication.getAuthorities().stream().map(a -> a.getAuthority())
-                .collect(Collectors.toList());
+        TimelyUser.UserType userType = DnUtils.isServerDN(subjectDn) ? TimelyUser.UserType.SERVER : TimelyUser.UserType.USER;
+        Collection<String> auths = authentication.getAuthorities().stream().map(a -> a.getAuthority()).collect(Collectors.toList());
         Object o = authentication.getPrincipal();
         Collection<String> roles = null;
         if (o instanceof TimelyUserDetails) {
             roles = ((TimelyUserDetails) o).getRoles();
         }
-        TimelyUser timelyUser = new TimelyUser(subjectIssuerDNPair, userType, auths, roles, null,
-                System.currentTimeMillis());
+        TimelyUser timelyUser = new TimelyUser(subjectIssuerDNPair, userType, auths, roles, null, System.currentTimeMillis());
         return new TimelyPrincipal(Arrays.asList(timelyUser));
     }
 }

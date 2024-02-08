@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import org.apache.commons.math3.stat.descriptive.AggregateSummaryStatistics;
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+
 import timely.store.compaction.TabletRowAdapter;
 
 public class TabletSummary {
@@ -26,7 +27,7 @@ public class TabletSummary {
         return new Builder(entries);
     }
 
-    public Map<TabletStatisticType, StatisticalSummary> aggregateSummary() {
+    public Map<TabletStatisticType,StatisticalSummary> aggregateSummary() {
         // @formatter:off
         return tabletStats.stream()
                 .flatMap(m -> m.getSummaryMap().entrySet().stream())
@@ -111,7 +112,7 @@ public class TabletSummary {
         }
 
         private TabletStatistic computeStatistic(Collection<MetadataAccumulator.Entry> entries, String keyName) {
-            Map<TabletStatisticType, SummaryStatistics> stats = new HashMap<>(TabletStatisticType.values().length);
+            Map<TabletStatisticType,SummaryStatistics> stats = new HashMap<>(TabletStatisticType.values().length);
             int maxSize = entries.size();
             long timeMillis = useExplicitTime ? explictTimeMillis : System.currentTimeMillis();
             for (TabletStatisticType statType : TabletStatisticType.values()) {

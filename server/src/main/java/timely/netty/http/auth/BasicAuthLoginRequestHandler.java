@@ -1,10 +1,11 @@
 package timely.netty.http.auth;
 
-import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
+
+import io.netty.channel.ChannelHandlerContext;
 import timely.api.request.auth.BasicAuthLoginRequest;
 import timely.auth.AuthenticationService;
 import timely.auth.TimelyPrincipal;
@@ -20,15 +21,12 @@ public class BasicAuthLoginRequestHandler extends TimelyLoginRequestHandler<Basi
     }
 
     @Override
-    protected TimelyPrincipal authenticate(ChannelHandlerContext ctx, BasicAuthLoginRequest msg, String sessionId)
-            throws AuthenticationException {
+    protected TimelyPrincipal authenticate(ChannelHandlerContext ctx, BasicAuthLoginRequest msg, String sessionId) throws AuthenticationException {
         // Perform the login process using username/password
-        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(msg.getUsername(),
-                msg.getPassword());
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(msg.getUsername(), msg.getPassword());
         TimelyPrincipal principal = AuthenticationService.authenticate(token, sessionId);
 
-        LOG.debug("Authenticated user {} with authorizations {}", principal.getPrimaryUser().getDn().subjectDN(),
-                principal.getAuthorizationsString());
+        LOG.debug("Authenticated user {} with authorizations {}", principal.getPrimaryUser().getDn().subjectDN(), principal.getAuthorizationsString());
         return principal;
     }
 

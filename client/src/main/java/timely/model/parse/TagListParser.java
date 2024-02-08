@@ -8,8 +8,7 @@ import java.util.Map;
 import timely.model.Tag;
 
 /**
- * Parses tag1=val1,tag2=val2,tag3=val3 into a {@code List} of {@code Tag}
- * Combines {@code List} of {@code Tag} into {@code String} of
+ * Parses tag1=val1,tag2=val2,tag3=val3 into a {@code List} of {@code Tag} Combines {@code List} of {@code Tag} into {@code String} of
  * tag1=val1,tag2=val2,tag3=val3.
  */
 public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag>> {
@@ -44,12 +43,11 @@ public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag
     }
 
     /**
-     * An alternative combiner for a map of string to string instead of a list of
-     * tags
+     * An alternative combiner for a map of string to string instead of a list of tags
      *
      * @return string representation
      */
-    public String combine(Map<String, String> tags) {
+    public String combine(Map<String,String> tags) {
         StringBuilder builder = new StringBuilder();
         if (!tags.isEmpty()) {
             tags.forEach((k, v) -> builder.append(tagParser.combine(new Tag(k, v))).append(','));

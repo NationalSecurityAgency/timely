@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+
 import timely.model.Metric;
 
 public class MetricParser implements Parser<Metric> {

@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Joiner;
 import org.apache.accumulo.core.client.lexicoder.LongLexicoder;
 import org.apache.accumulo.core.client.lexicoder.PairLexicoder;
 import org.apache.accumulo.core.client.lexicoder.StringLexicoder;
@@ -21,6 +20,9 @@ import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.util.ComparablePair;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.hadoop.io.Text;
+
+import com.google.common.base.Joiner;
+
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.parse.TagListParser;
@@ -31,11 +33,9 @@ import timely.model.parse.TagParser;
  */
 public class MetricAdapter {
 
-    private static final PairLexicoder<String, Long> rowCoder = new PairLexicoder<>(new StringLexicoder(),
-            new LongLexicoder());
+    private static final PairLexicoder<String,Long> rowCoder = new PairLexicoder<>(new StringLexicoder(), new LongLexicoder());
 
-    private static final PairLexicoder<Long, String> colQualCoder = new PairLexicoder<>(new LongLexicoder(),
-            new StringLexicoder());
+    private static final PairLexicoder<Long,String> colQualCoder = new PairLexicoder<>(new LongLexicoder(), new StringLexicoder());
 
     private static final TagParser tagParser = new TagParser();
     private static final TagListParser tagListParser = new TagListParser();
@@ -68,9 +68,9 @@ public class MetricAdapter {
         return newTags;
     }
 
-    private static Map<String, String> escapeDelimiters(Map<String, String> tags) {
-        Map<String, String> newTags = new LinkedHashMap<>();
-        for (Map.Entry<String, String> t : tags.entrySet()) {
+    private static Map<String,String> escapeDelimiters(Map<String,String> tags) {
+        Map<String,String> newTags = new LinkedHashMap<>();
+        for (Map.Entry<String,String> t : tags.entrySet()) {
             // escape all commas and equals in the tag key and value since they
             // are used as a delimiter
             String k = t.getKey();
@@ -103,19 +103,19 @@ public class MetricAdapter {
                     .collect(Collectors.joining(","));
             // @formatter:on
             byte[] cqBytes = encodeColQual(metric.getValue().getTimestamp(), cq);
-            mutation.put(new Text(cf.getBytes(Charset.forName("UTF-8"))), new Text(cqBytes), extractVisibility(tags),
-                    metric.getValue().getTimestamp(), extractValue(metric));
+            mutation.put(new Text(cf.getBytes(Charset.forName("UTF-8"))), new Text(cqBytes), extractVisibility(tags), metric.getValue().getTimestamp(),
+                            extractValue(metric));
         }
         return mutation;
     }
 
-    public static Key toKey(String metric, Map<String, String> tags, long timestamp) {
+    public static Key toKey(String metric, Map<String,String> tags, long timestamp) {
         byte[] row = encodeRowKey(metric, timestamp);
 
         tags = escapeDelimiters(tags);
         StringBuilder colQualSb = new StringBuilder();
         String cf = null;
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
+        for (Map.Entry<String,String> entry : tags.entrySet()) {
             if (entry.getKey().equals(VISIBILITY_TAG))
                 continue;
 
@@ -158,7 +158,7 @@ public class MetricAdapter {
         // @formatter:on
     }
 
-    public static ColumnVisibility extractVisibility(Map<String, String> tags) {
+    public static ColumnVisibility extractVisibility(Map<String,String> tags) {
         if (tags.containsKey(VISIBILITY_TAG)) {
             return new ColumnVisibility(tags.get(VISIBILITY_TAG));
         } else {
@@ -167,14 +167,14 @@ public class MetricAdapter {
     }
 
     public static Metric parse(Key k, Value v, boolean includeVizTag) {
-        ComparablePair<String, Long> row = rowCoder.decode(k.getRow().getBytes());
+        ComparablePair<String,Long> row = rowCoder.decode(k.getRow().getBytes());
         // @formatter:off
         Metric.Builder builder = Metric.newBuilder()
                 .name(row.getFirst())
                 .value(k.getTimestamp(), ByteBuffer.wrap(v.get()).getDouble())
                 .tag(tagParser.parse(k.getColumnFamily().toString()));
         // @formatter:on
-        ComparablePair<Long, String> cq = colQualCoder.decode(k.getColumnQualifier().getBytes());
+        ComparablePair<Long,String> cq = colQualCoder.decode(k.getColumnQualifier().getBytes());
         tagListParser.parse(cq.getSecond()).forEach(builder::tag);
         if (includeVizTag && k.getColumnVisibility().getLength() > 0) {
             tagListParser.parse("viz=" + k.getColumnVisibility().toString()).forEach(builder::tag);
@@ -199,11 +199,11 @@ public class MetricAdapter {
         return colQualCoder.encode(new ComparablePair<>(timestamp, colQual));
     }
 
-    public static Pair<Long, String> decodeColQual(byte[] colQual) {
+    public static Pair<Long,String> decodeColQual(byte[] colQual) {
         return colQualCoder.decode(colQual);
     }
 
-    public static Pair<String, Long> decodeRowKey(Key k) {
+    public static Pair<String,Long> decodeRowKey(Key k) {
         return rowCoder.decode(k.getRow().getBytes());
     }
 }

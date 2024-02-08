@@ -21,13 +21,13 @@ public class TabletMetadataView {
         accumulator = new MetadataAccumulator();
     }
 
-    public void addEntry(Collection<Map.Entry<Key, Value>> entries) {
-        for (Map.Entry<Key, Value> entry : entries) {
+    public void addEntry(Collection<Map.Entry<Key,Value>> entries) {
+        for (Map.Entry<Key,Value> entry : entries) {
             addEntry(entry);
         }
     }
 
-    public void addEntry(Map.Entry<Key, Value> entry) {
+    public void addEntry(Map.Entry<Key,Value> entry) {
         Text endRow = MetadataSchema.TabletsSection.decodeRow(entry.getKey().getRow()).getSecond();
         if (endRow == null) {
             return;
@@ -53,7 +53,7 @@ public class TabletMetadataView {
                 }
             }
         } else if (cf.equals(MetadataSchema.TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.getColumnFamily())
-                && cq.equals(MetadataSchema.TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.getColumnQualifier())) {
+                        && cq.equals(MetadataSchema.TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.getColumnQualifier())) {
             Text prevEndRow = MetadataSchema.TabletsSection.TabletColumnFamily.decodePrevEndRow(entry.getValue());
             candidate.setTablePrev(prevEndRow);
         }
@@ -79,7 +79,7 @@ public class TabletMetadataView {
 
         StringBuilder sb = new StringBuilder();
         TabletSummary summary = computeSummary().build();
-        Map<TabletStatisticType, StatisticalSummary> tabletAggregate = summary.aggregateSummary();
+        Map<TabletStatisticType,StatisticalSummary> tabletAggregate = summary.aggregateSummary();
         StatisticalSummary tabletSizes = tabletAggregate.get(TabletStatisticType.SIZE);
         StatisticalSummary tabletTime = tabletAggregate.get(TabletStatisticType.TIME);
         long tabletMax = unit.convert((long) tabletTime.getMax(), TimeUnit.MILLISECONDS);
@@ -87,12 +87,10 @@ public class TabletMetadataView {
         Collection<TabletStatistic> topOldestMetrics = summary.findTabletPrefixesByOldest(DEFAULT_TOP_COUNT);
         Collection<TabletStatistic> topSizeMetrics = summary.findTabletPrefixesByLargest(DEFAULT_TOP_COUNT);
 
-        sb.append(String.format("Tablets { prefix: %d, total: %d } %s", summary.totalTabletPrefixes(),
-                summary.totalTablets(), System.lineSeparator()));
+        sb.append(String.format("Tablets { prefix: %d, total: %d } %s", summary.totalTabletPrefixes(), summary.totalTablets(), System.lineSeparator()));
         sb.append(System.lineSeparator());
-        sb.append(String.format("Size: { sum: %s, avg: %s } %s",
-                FileUtils.byteCountToDisplaySize((long) tabletSizes.getSum()),
-                FileUtils.byteCountToDisplaySize((long) tabletSizes.getMean()), System.lineSeparator()));
+        sb.append(String.format("Size: { sum: %s, avg: %s } %s", FileUtils.byteCountToDisplaySize((long) tabletSizes.getSum()),
+                        FileUtils.byteCountToDisplaySize((long) tabletSizes.getMean()), System.lineSeparator()));
 
         sb.append(String.format("Age: { max: %d, avg: %d } %s", tabletMax, tabletMean, System.lineSeparator()));
 
@@ -105,7 +103,7 @@ public class TabletMetadataView {
 
         for (TabletStatistic entry : topOldestMetrics) {
             sb.append(String.format("%s = { tablets: %d, max-age: %d } %s", entry.getKeyName(), entry.getKeyCount(),
-                    unit.convert(entry.maxAge(), TimeUnit.MILLISECONDS), System.lineSeparator()));
+                            unit.convert(entry.maxAge(), TimeUnit.MILLISECONDS), System.lineSeparator()));
         }
 
         sb.append(System.lineSeparator());
@@ -117,8 +115,8 @@ public class TabletMetadataView {
 
         for (TabletStatistic entry : topSizeMetrics) {
             long totalSize = (long) entry.getSummary(TabletStatisticType.SIZE).getSum();
-            sb.append(String.format("%s = { tablets: %d, size: %s } %s", entry.getKeyName(), entry.getKeyCount(),
-                    FileUtils.byteCountToDisplaySize(totalSize), System.lineSeparator()));
+            sb.append(String.format("%s = { tablets: %d, size: %s } %s", entry.getKeyName(), entry.getKeyCount(), FileUtils.byteCountToDisplaySize(totalSize),
+                            System.lineSeparator()));
         }
 
         sb.append(System.lineSeparator());
@@ -130,9 +128,8 @@ public class TabletMetadataView {
 
         for (TabletStatistic entry : summary.getSummary()) {
             long totalSize = (long) entry.getSummary(TabletStatisticType.SIZE).getSum();
-            sb.append(String.format("%s = { tablets: %d, size: %s, max-age: %d } %s", entry.getKeyName(),
-                    entry.getKeyCount(), FileUtils.byteCountToDisplaySize(totalSize),
-                    unit.convert(entry.maxAge(), TimeUnit.MILLISECONDS), System.lineSeparator()));
+            sb.append(String.format("%s = { tablets: %d, size: %s, max-age: %d } %s", entry.getKeyName(), entry.getKeyCount(),
+                            FileUtils.byteCountToDisplaySize(totalSize), unit.convert(entry.maxAge(), TimeUnit.MILLISECONDS), System.lineSeparator()));
         }
 
         sb.append(System.lineSeparator());

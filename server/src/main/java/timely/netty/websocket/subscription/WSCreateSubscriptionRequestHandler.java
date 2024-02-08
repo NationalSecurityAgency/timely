@@ -1,11 +1,12 @@
 package timely.netty.websocket.subscription;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timely.api.request.subscription.CreateSubscription;
 import timely.configuration.Configuration;
 import timely.store.DataStore;
@@ -29,8 +30,7 @@ public class WSCreateSubscriptionRequestHandler extends SimpleChannelInboundHand
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, CreateSubscription create) throws Exception {
         final String subscriptionId = create.getSubscriptionId();
-        SubscriptionRegistry.get().put(subscriptionId,
-                new Subscription(subscriptionId, create.getSessionId(), store, cache, ctx, this.conf));
+        SubscriptionRegistry.get().put(subscriptionId, new Subscription(subscriptionId, create.getSessionId(), store, cache, ctx, this.conf));
 
         // Store the session id as an attribute on the context.
         ctx.channel().attr(SubscriptionRegistry.SUBSCRIPTION_ID_ATTR).set(subscriptionId);

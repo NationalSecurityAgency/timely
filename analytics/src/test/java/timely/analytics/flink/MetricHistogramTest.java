@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
 import timely.model.Metric;
 import timely.model.Tag;
 import timely.model.parse.MetricParser;
@@ -96,9 +97,8 @@ public class MetricHistogramTest {
             Metric metric = metricParser.parse(put);
             Assert.assertEquals("sys.cpu.user_summarized", metric.getName());
             metric.getTags().forEach(t -> {
-                Assert.assertTrue(
-                        t.equals(t1) || t.equals(t2) || t.equals(avg) || t.equals(min) || t.equals(max) || t.equals(sum)
-                                || t.equals(count) || t.equals(p50) || t.equals(p75) || t.equals(p90) || t.equals(p99));
+                Assert.assertTrue(t.equals(t1) || t.equals(t2) || t.equals(avg) || t.equals(min) || t.equals(max) || t.equals(sum) || t.equals(count)
+                                || t.equals(p50) || t.equals(p75) || t.equals(p90) || t.equals(p99));
             });
         }
     }

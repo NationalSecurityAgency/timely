@@ -9,7 +9,7 @@ import timely.api.annotation.WebSocket;
 public class AddSubscription extends SubscriptionRequest {
 
     private String metric = null;
-    private Optional<Map<String, String>> tags = Optional.empty();
+    private Optional<Map<String,String>> tags = Optional.empty();
     private Optional<Long> startTime = Optional.empty();
     private Optional<Long> endTime = Optional.empty();
     private Optional<Long> delayTime = Optional.empty();
@@ -22,11 +22,11 @@ public class AddSubscription extends SubscriptionRequest {
         this.metric = metric;
     }
 
-    public Optional<Map<String, String>> getTags() {
+    public Optional<Map<String,String>> getTags() {
         return tags;
     }
 
-    public void setTags(Map<String, String> tags) {
+    public void setTags(Map<String,String> tags) {
         this.tags = Optional.ofNullable(tags);
     }
 
