@@ -27,7 +27,7 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
 
     // pool should be limited by the number of WriteThreads configured in
     // collectd
-    final private int POOL_MAX_SIZE = Integer.MAX_VALUE;
+    static final private int POOL_MAX_SIZE = Integer.MAX_VALUE;
 
     public WriteTimelyPlugin() {
         Collectd.registerConfig(WriteTimelyPlugin.class.getName(), this);

@@ -22,7 +22,7 @@ public class BalancerWebsocketProperties extends WebsocketProperties {
         return wsClientPool;
     }
 
-    public int incomingBufferSize = 50000000;
+    private int incomingBufferSize = 50000000;
 
     public int getIncomingBufferSize() {
         return incomingBufferSize;

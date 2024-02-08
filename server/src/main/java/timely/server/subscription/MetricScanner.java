@@ -42,7 +42,7 @@ import timely.server.store.cache.DataStoreCache;
 import timely.subscription.Subscription;
 import timely.util.JsonUtil;
 
-public class MetricScanner extends Thread implements UncaughtExceptionHandler {
+public final class MetricScanner extends Thread implements UncaughtExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MetricScanner.class);
     private static final ObjectMapper om = JsonUtil.getObjectMapper();

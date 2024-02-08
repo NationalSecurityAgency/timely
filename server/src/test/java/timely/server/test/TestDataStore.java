@@ -30,7 +30,7 @@ public class TestDataStore extends DataStore {
     public TestDataStore(ApplicationContext applicationContext, AccumuloClient accumuloClient, DataStoreCache dataStoreCache,
                     AuthenticationService authenticationService, InternalMetrics internalMetrics, MetaCache metaCache, TimelyProperties timelyProperties,
                     ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties, SecurityProperties securityProperties,
-                    CacheProperties cacheProperties) throws Exception {
+                    CacheProperties cacheProperties) {
         super(applicationContext, accumuloClient, dataStoreCache, authenticationService, internalMetrics, metaCache, timelyProperties, zookeeperProperties,
                         accumuloProperties, securityProperties, cacheProperties);
         this.metaCache = metaCache;

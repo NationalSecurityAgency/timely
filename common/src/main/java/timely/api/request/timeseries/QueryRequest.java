@@ -27,7 +27,7 @@ import timely.util.JsonUtil;
 @WebSocket(operation = "query")
 public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest, HttpPostRequest, WebSocketRequest {
 
-    public static class RateOption {
+    public final static class RateOption {
 
         private boolean counter = false;
         private long counterMax = 0;

@@ -4,8 +4,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 public class Sample {
 
-    public long timestamp;
-    public double value;
+    private long timestamp;
+    private double value;
 
     public Sample() {}
 
@@ -17,6 +17,14 @@ public class Sample {
     public void set(long timestamp, double value) {
         this.timestamp = timestamp;
         this.value = value;
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 
     @Override

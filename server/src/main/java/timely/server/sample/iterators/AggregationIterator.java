@@ -74,7 +74,7 @@ public class AggregationIterator extends WrappingIterator {
             // add the downsampled values to the aggregation
             for (Map.Entry<Set<Tag>,Downsample> entry : samples.entrySet()) {
                 for (Sample sample : entry.getValue()) {
-                    aggregation.add(sample.timestamp, sample.value);
+                    aggregation.add(sample.getTimestamp(), sample.getValue());
                 }
             }
 

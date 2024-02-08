@@ -155,7 +155,7 @@ public class SslHelper {
     /**
      * A custom {@link TrustManagerFactory} that wraps any returned {@link TrustManager}s in order to apply custom behavior for trusting a remote server.
      */
-    private static class TimelyTrustMangerFactory extends TrustManagerFactory {
+    private static final class TimelyTrustMangerFactory extends TrustManagerFactory {
 
         private static final Provider PROVIDER = new Provider("", 0.0, "") {
 

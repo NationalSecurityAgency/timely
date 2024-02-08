@@ -24,9 +24,9 @@ public class DownsampleTest {
         }
         int i = 0;
         for (Sample sample : dsample) {
-            assertEquals(10 + i, sample.timestamp);
-            assertTrue(sample.timestamp < 30);
-            assertEquals(i, (int) sample.value);
+            assertEquals(10 + i, sample.getTimestamp());
+            assertTrue(sample.getTimestamp() < 30);
+            assertEquals(i, (int) sample.getValue());
             i++;
         }
         assertEquals(20, i);
@@ -38,8 +38,8 @@ public class DownsampleTest {
         }
         i = 0;
         for (Sample sample : dsample) {
-            assertEquals((1 + 2 + 3 + 4) * Math.min(7, (100 - (10 + i * 7))), sample.value, 0.0D);
-            assertEquals(10 + i * 7, sample.timestamp);
+            assertEquals((1 + 2 + 3 + 4) * Math.min(7, (100 - (10 + i * 7))), sample.getValue(), 0.0D);
+            assertEquals(10 + i * 7, sample.getTimestamp());
             i++;
         }
         assertEquals((100 - 10) / 7 + 1, i);
@@ -55,11 +55,11 @@ public class DownsampleTest {
         i = 0;
         for (Sample sample : dsample) {
             if (i == 0) {
-                assertEquals(2.25, sample.value, 0.0D);
+                assertEquals(2.25, sample.getValue(), 0.0D);
             } else {
-                assertEquals(4.5, sample.value, 0.0D);
+                assertEquals(4.5, sample.getValue(), 0.0D);
             }
-            assertEquals(10 * i + 10, sample.timestamp);
+            assertEquals(10 * i + 10, sample.getTimestamp());
             i++;
         }
         assertEquals(2, i);
@@ -74,7 +74,7 @@ public class DownsampleTest {
         Downsample result = Downsample.combineDownsample(Collections.singleton(ds), null);
         int count = 0;
         for (Sample s : result) {
-            assertEquals(.2, s.value, 0.0D);
+            assertEquals(.2, s.getValue(), 0.0D);
             count++;
         }
         assertEquals(10, count);
@@ -91,7 +91,7 @@ public class DownsampleTest {
         Downsample result = Downsample.combineDownsample(Collections.singleton(ds), null);
         int count = 0;
         for (Sample s : result) {
-            assertEquals(.2, s.value, 0.0D);
+            assertEquals(.2, s.getValue(), 0.0D);
             count++;
         }
         assertEquals(9, count);
