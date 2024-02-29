@@ -9,7 +9,7 @@ Configuration:
       - name: PID
         value: "????"
       - name: LOG_PATTERN
-        value: "%clr{%d{yyyy-MM-dd HH:mm:ss.SSS}}{faint} %clr{%5p} %clr{${sys:PID}}{magenta} %clr{---}{faint} %clr{[%15.15t]}{faint} %clr{%-40.40c{1.}}{cyan} %clr{:}{faint} %m%n%wEx"
+        value: "%d{ISO8601} %-5p [%-40.40t] [%-40.40c{1.}] %m%n%wEx"
 
   Appenders:
     RollingFile:

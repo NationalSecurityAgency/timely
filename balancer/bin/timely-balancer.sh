@@ -55,6 +55,7 @@ if [ "$PID" == "" ]; then
     JVM_ARGS="-Xmx2G -Xms2G -XX:NewSize=1G -XX:MaxNewSize=1G"
     JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
     JVM_ARGS="${JVM_ARGS} -Dlogging.config=${CONF_DIR}/log4j2.yml"
+    JVM_ARGS="${JVM_ARGS} -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
     JVM_ARGS="${JVM_ARGS} -XX:+UseG1GC -XX:+UseStringDeduplication"
     JVM_ARGS="${JVM_ARGS} -Djava.net.preferIPv4Stack=true"
     JVM_ARGS="${JVM_ARGS} -XX:+UseNUMA"

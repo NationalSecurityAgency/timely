@@ -19,6 +19,7 @@ set +a
 
 JVM_ARGS="-Xmx256m -Xms128m"
 JVM_ARGS="${JVM_ARGS} -Dlogging.config=${CONF_DIR}/log4j2-console.yml"
+JVM_ARGS="${JVM_ARGS} -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
 
 echo "$JAVA_HOME/bin/java ${JVM_ARGS} -jar ${THIS_DIR}/timely-server*-exec.jar metrics"
 $JAVA_HOME/bin/java ${JVM_ARGS} -jar ${THIS_DIR}/timely-server-*-exec.jar metrics
