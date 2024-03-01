@@ -39,9 +39,11 @@ public class SslServerConfig {
         Boolean generate = sslServerProperties.isUseGeneratedKeypair();
         SslContextBuilder sslContextBuilder;
         if (generate) {
-            log.debug("Using generated self signed server certificate");
+            log.debug("Creating nettySslContext using generated self signed server certificate");
             sslContextBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
         } else {
+            log.debug("Creating nettySslContext using keyStoreFile:{} trustStoreFile:{}", sslServerProperties.getKeyStoreFile(),
+                            sslServerProperties.getTrustStoreFile());
             sslContextBuilder = SslHelper.getSslContextBuilder(sslServerProperties);
         }
 

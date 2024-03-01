@@ -9,9 +9,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import io.netty.handler.ssl.SslContext;
+import reactor.netty.http.client.HttpClient;
 import timely.auth.FileUserDetailsService;
 import timely.auth.RemoteAuthenticationProvider;
 import timely.auth.SubjectIssuerDNPair;
@@ -30,7 +33,11 @@ public class SecurityConfiguration {
 
     @Bean
     @ConditionalOnExpression("T(org.apache.commons.lang3.StringUtils).isNotEmpty('${timely.security.authorization-url:}')")
-    public RemoteAuthenticationProvider remoteAuthenticationProvider(SecurityProperties securityProperties, WebClient.Builder builder) {
+    public RemoteAuthenticationProvider remoteAuthenticationProvider(SecurityProperties securityProperties, WebClient.Builder builder,
+                    @Qualifier("outboundNettySslContext") SslContext sslContext) {
+        HttpClient httpClient = HttpClient.create().secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
+        ReactorClientHttpConnector clientHttpConnector = new ReactorClientHttpConnector(httpClient);
+        builder.clientConnector(clientHttpConnector);
         return new RemoteAuthenticationProvider(builder, securityProperties);
     }
 
