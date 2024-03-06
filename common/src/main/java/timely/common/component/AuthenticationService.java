@@ -205,10 +205,9 @@ public class AuthenticationService {
             String message = "";
             if (!missingRoles.isEmpty() && !missingAuths.isEmpty()) {
                 message = "User:" + primaryUser.getName() + " is missing role(s):" + missingRoles + " and auth(s):" + missingAuths;
-
             } else if (!missingRoles.isEmpty()) {
                 message = "User:" + primaryUser.getName() + " is missing role(s):" + missingRoles;
-            } else if (missingAuths.isEmpty()) {
+            } else if (!missingAuths.isEmpty()) {
                 message = "User:" + primaryUser.getName() + " is missing auths(s):" + missingAuths;
             }
             log.debug(message);

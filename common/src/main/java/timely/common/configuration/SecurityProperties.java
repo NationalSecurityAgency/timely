@@ -1,14 +1,10 @@
 package timely.common.configuration;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -106,13 +102,6 @@ public class SecurityProperties {
         this.requiredAuths = requiredAuths;
     }
 
-    public void setRequiredAuths(String requiredAuths) {
-        if (StringUtils.isNotBlank(requiredAuths)) {
-            this.requiredAuths = Arrays.stream(StringUtils.split(requiredAuths)).filter(Objects::nonNull).filter(s -> StringUtils.isNotBlank(s))
-                            .map(String::trim).collect(Collectors.toList());
-        }
-    }
-
     public List<String> getRequiredRoles() {
         return requiredRoles;
     }
@@ -121,10 +110,4 @@ public class SecurityProperties {
         this.requiredRoles = requiredRoles;
     }
 
-    public void setRequiredRoles(String requiredRoles) {
-        if (StringUtils.isNotBlank(requiredRoles)) {
-            this.requiredRoles = Arrays.stream(StringUtils.split(requiredRoles)).filter(Objects::nonNull).filter(s -> StringUtils.isNotBlank(s))
-                            .map(String::trim).collect(Collectors.toList());
-        }
-    }
 }

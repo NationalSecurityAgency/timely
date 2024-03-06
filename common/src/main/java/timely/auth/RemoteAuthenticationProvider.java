@@ -37,7 +37,9 @@ public class RemoteAuthenticationProvider implements AuthenticationProvider {
     public static final String ISSUERS_HEADER = "X-ProxiedIssuersChain";
 
     public RemoteAuthenticationProvider(WebClient.Builder builder, SecurityProperties securityProperties) {
-        log.debug("Creating RemoteAuthenticationProvider");
+        log.debug("creating RemoteAuthenticationProvider with authorizationUrl:{} anonymousHttp:{} anonymousWs:{} requiredRoles:{} requiredAuths{}",
+                        securityProperties.getAuthorizationUrl(), securityProperties.isAllowAnonymousHttpAccess(),
+                        securityProperties.isAllowAnonymousWsAccess(), securityProperties.getRequiredRoles(), securityProperties.getRequiredAuths());
         this.webClient = builder.baseUrl(securityProperties.getAuthorizationUrl()).build();
     }
 

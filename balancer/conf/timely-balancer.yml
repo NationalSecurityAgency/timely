@@ -8,8 +8,6 @@ timely:
     cache-expiration-minutes: 60
     cache-refresh-minutes: 5
     authorization-url: ${AUTHORIZATION_URL}
-    required-roles: ${REQUIRED_ROLES}
-    required-auths: ${REQUIRED_AUTHS}
     allow-anonymous-http-access: ${ANONYMOUS_HTTP:true}
     allow-anonymous-ws-access: ${ANONYMOUS_WEBSOCKET:true}
     server-ssl:
