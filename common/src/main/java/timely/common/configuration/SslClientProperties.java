@@ -7,8 +7,7 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 @ConfigurationProperties(prefix = "timely.security.client-ssl")
 public class SslClientProperties implements SslProperties {
 
-    private String[] ciphers = new String[] {"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256",
-            "TLS_RSA_WITH_AES_128_CBC_SHA", "SSL_RSA_WITH_3DES_EDE_CBC_SHA"};
+    private String[] ciphers;
     private String[] enabledProtocols;
     private String keyStoreType;
     private String keyStoreFile;
