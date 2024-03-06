@@ -19,8 +19,10 @@
       <directory>${project.build.directory}/lib</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>
-        <include>netty-tcnative-boringssl-static*.jar</include>
-        <include>netty-all*.jar</include>
+        <include>netty-tcnative-boringssl-static*linux-x86_64.jar</include>
+        <include>netty-tcnative-boringssl-static*linux-aarch_64.jar</include>
+        <include>netty-transport-native-epoll*linux-x86_64.jar</include>
+        <include>netty-transport-native-epoll*linux-aarch_64.jar</include>
       </includes>
     </fileSet>
     <fileSet>
