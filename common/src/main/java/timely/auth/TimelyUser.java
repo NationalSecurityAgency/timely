@@ -3,7 +3,7 @@ package timely.auth;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.TreeSet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -51,10 +51,10 @@ public class TimelyUser implements Serializable {
         this.userType = DnUtils.isServerDN(subjectDn) ? UserType.SERVER : UserType.USER;
         this.email = null;
         this.login = ProxiedEntityUtils.getShortName(dn.subjectDN());
-        this.auths = auths == null ? Collections.emptyList() : new LinkedHashSet<>(auths);
-        this.unmodifiableAuths = Collections.unmodifiableCollection(this.auths);
-        this.roles = roles == null ? Collections.emptyList() : new LinkedHashSet<>(roles);
-        this.unmodifiableRoles = Collections.unmodifiableCollection(this.roles);
+        this.auths = auths == null ? Collections.emptySortedSet() : new TreeSet<>(auths);
+        this.unmodifiableAuths = Collections.unmodifiableSortedSet(new TreeSet<>(this.auths));
+        this.roles = roles == null ? Collections.emptySortedSet() : new TreeSet<>(roles);
+        this.unmodifiableRoles = Collections.unmodifiableSortedSet(new TreeSet(this.roles));
         this.roleToAuthMapping = null;
         this.creationTime = System.currentTimeMillis();
         this.expirationTime = -1L;
@@ -89,10 +89,10 @@ public class TimelyUser implements Serializable {
         this.email = email;
         this.dn = dn;
         this.userType = userType;
-        this.auths = auths == null ? Collections.emptyList() : new LinkedHashSet<>(auths);
-        this.unmodifiableAuths = Collections.unmodifiableCollection(this.auths);
-        this.roles = roles == null ? Collections.emptyList() : new LinkedHashSet<>(roles);
-        this.unmodifiableRoles = Collections.unmodifiableCollection(this.roles);
+        this.auths = auths == null ? Collections.emptySortedSet() : new TreeSet<>(auths);
+        this.unmodifiableAuths = Collections.unmodifiableSortedSet(new TreeSet<>(this.auths));
+        this.roles = roles == null ? Collections.emptySortedSet() : new TreeSet<>(roles);
+        this.unmodifiableRoles = Collections.unmodifiableSortedSet(new TreeSet<>(this.roles));
         this.roleToAuthMapping = roleToAuthMapping == null ? LinkedHashMultimap.create() : LinkedHashMultimap.create(roleToAuthMapping);
         this.creationTime = creationTime;
         this.expirationTime = expirationTime;
