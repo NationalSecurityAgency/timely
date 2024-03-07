@@ -21,8 +21,13 @@
       <artifactId>httpclient</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+    </dependency>
+    <dependency>
       <groupId>timely</groupId>
       <artifactId>collectd-plugin-parent</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
   <build>
