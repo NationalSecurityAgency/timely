@@ -26,7 +26,7 @@ public class PluginParentTest {
     public class TestPlugin extends CollectDPluginParent {
 
         public TestPlugin() {
-            super.addlTags.add(" addl1=foo");
+            super.addlTags.put("addl1", "foo");
         }
 
         @Override

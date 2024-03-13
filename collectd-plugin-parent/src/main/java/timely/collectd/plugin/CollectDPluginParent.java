@@ -2,51 +2,58 @@ package timely.collectd.plugin;
 
 import java.io.OutputStream;
 import java.text.MessageFormat;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.collectd.api.Collectd;
-import org.collectd.api.DataSource;
 import org.collectd.api.OConfigItem;
 import org.collectd.api.ValueList;
 
 public abstract class CollectDPluginParent {
 
-    private static final String PUT = "put {0} {1} {2}{3}\n";
-    private static final Pattern HADOOP_STATSD_PATTERN = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
-    private static final String INSTANCE = " instance=";
-    private static final String NAME = " name=";
-    private static final String SAMPLE = " sample=";
-    private static final String CODE = " code=";
+    private static final String PUT = "put {0} {1} {2} {3}";
+    private static final String INSTANCE = "instance";
+    private static final String NAME = "name";
+    private static final String SAMPLE_TYPE = "sampleType";
+    private static final String CODE = "code";
     private static final String PERIOD = ".";
-    private static final String SAMPLE_TYPE = " sampleType=";
     private static final String COUNTER = "COUNTER";
     private static final String GAUGE = "GAUGE";
     private static final String DERIVE = "DERIVE";
     private static final String ABSOLUTE = "ABSOLUTE";
-    private static final Pattern NSQ_PATTERN1 = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
-    private static final Pattern NSQ_PATTERN2 = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
-    private static final Pattern NSQ_PATTERN3 = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_#]+)\\.([\\w-_]+)");
+    private static final Pattern STATSD_PATTERN_3_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
+    private static final Pattern STATSD_PATTERN_4_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
+    private static final Pattern STATSD_PATTERN_6_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_#]+)\\.([\\w-_]+)");
     private static final Pattern ETHSTAT_PATTERN = Pattern.compile("([\\w-_]+)_queue_([\\w-_]+)_([\\w-_]+)");
     private static final String STATSD_PREFIX = "statsd";
     private static final String NSQ_PREFIX = STATSD_PREFIX + ".nsq.";
     private static final Pattern HAPROXY_PATTERN = Pattern.compile("\\[([\\w-_=]+),([\\w-_=]+)\\]");
 
     private final SMARTCodeMapping smart = new SMARTCodeMapping();
-
-    protected Set<String> addlTags = new HashSet<>();
+    protected Map<String,String> addlTags = new TreeMap<>();
+    private boolean debug = false;
 
     public int config(OConfigItem config) {
         for (OConfigItem child : config.getChildren()) {
             switch (child.getKey()) {
                 case "Tags":
                 case "tags":
-                    String[] additionalTags = child.getValues().get(0).getString().split(",");
-                    for (String t : additionalTags) {
-                        addlTags.add(" " + t.trim());
-                    }
+                    String tagValue = child.getValues().get(0).getString();
+                    Arrays.stream(tagValue.split(",")).map(String::trim).forEach(p -> {
+                        String[] pair = p.split("=");
+                        if (pair.length == 2) {
+                            addTag(addlTags, pair[0], pair[1]);
+                        }
+                    });
+                    break;
+                case "Debug":
+                case "debug":
+                    debug = child.getValues().get(0).getBoolean();
+                    break;
                 default:
             }
         }
@@ -55,196 +62,240 @@ public abstract class CollectDPluginParent {
 
     public abstract void write(String metric, OutputStream out);
 
+    protected void addTag(Map<String,String> m, String k, String v) {
+        if (k != null && !k.isBlank() && v != null && !v.isBlank()) {
+            m.put(k.trim(), v.trim());
+        }
+    }
+
+    protected void addTag(Map<String,String> m, String kv) {
+        if (kv != null && !kv.isBlank()) {
+            String[] parts = kv.split("=");
+            if (parts.length == 2 && !parts[0].isBlank() && !parts[1].isBlank()) {
+                m.put(parts[0].trim(), parts[1].trim());
+            }
+        }
+    }
+
     public void process(ValueList vl, OutputStream out) {
+        try {
+            processInternal(vl, out);
+        } catch (Exception e) {
+            Collectd.logError(e.getMessage());
+            e.printStackTrace(System.err);
+        }
+    }
+
+    private void processInternal(ValueList vl, OutputStream out) {
         debugValueList(vl);
 
         StringBuilder metric = new StringBuilder();
         Long timestamp = vl.getTime();
-        StringBuilder tags = new StringBuilder();
+        Map<String,String> tagMap = new TreeMap<>();
         String host = vl.getHost();
         int idx = host.indexOf(PERIOD);
         if (-1 != idx) {
-            tags.append(" host=").append(host.substring(0, idx));
+            addTag(tagMap, "host", host.substring(0, idx));
         } else {
-            tags.append(" host=").append(host);
+            addTag(tagMap, "host", host);
         }
         int nIdx = host.indexOf('n');
         if (-1 != nIdx) {
-            tags.append(" rack=").append(host.substring(0, nIdx));
+            addTag(tagMap, "rack", host.substring(0, nIdx));
         }
-        for (String tag : addlTags) {
-            tags.append(tag);
-        }
-        if (vl.getPlugin().equals(STATSD_PREFIX)) {
-            Matcher m = HADOOP_STATSD_PATTERN.matcher(vl.getTypeInstance());
-            Matcher n1 = NSQ_PATTERN1.matcher(vl.getTypeInstance());
-            Matcher n2 = NSQ_PATTERN2.matcher(vl.getTypeInstance());
-            Matcher n3 = NSQ_PATTERN3.matcher(vl.getTypeInstance());
-            String instance = null;
-            if (m.matches() && !vl.getTypeInstance().startsWith("nsq")) {
-                // Here we are processing the statsd metrics coming from the
-                // Hadoop Metrics2 StatsDSink without the host name.
-                // The format of metric is:
-                // serviceName.contextName.recordName.metricName. The recordName
-                // is typically duplicative and is dropped here. The serviceName
-                // is used as the instance.
-                metric.append(STATSD_PREFIX).append(PERIOD).append(m.group(2)).append(PERIOD).append(m.group(4));
-                instance = m.group(1);
-            } else if (n1.matches() && vl.getTypeInstance().startsWith("nsq")) {
-                metric.append(NSQ_PREFIX).append(n1.group(2)).append(PERIOD).append(n1.group(3));
-            } else if (n2.matches() && vl.getTypeInstance().startsWith("nsq")) {
-                metric.append(NSQ_PREFIX).append(n2.group(2)).append(PERIOD).append(n2.group(4));
-                instance = n2.group(3);
-            } else if (n3.matches() && vl.getTypeInstance().startsWith("nsq")) {
-                metric.append(NSQ_PREFIX).append(n3.group(4)).append(PERIOD).append(n3.group(6));
-                instance = n3.group(5);
-            } else {
-                // Handle StatsD metrics of unknown formats. If there is a
-                // period in the metric name, use everything up to that as
-                // the instance.
-                int period = vl.getTypeInstance().indexOf('.');
-                if (-1 == period) {
-                    metric.append(STATSD_PREFIX).append(PERIOD).append(vl.getTypeInstance());
+        tagMap.putAll(addlTags);
+
+        String plugin = vl.getPlugin();
+        String pluginInstance = vl.getPluginInstance();
+        String type = vl.getType();
+        String typeInstance = vl.getTypeInstance();
+
+        switch (plugin) {
+            case STATSD_PREFIX:
+                Matcher statsd_3_groups = STATSD_PATTERN_3_GROUPS.matcher(typeInstance);
+                Matcher statsd_4_groups = STATSD_PATTERN_4_GROUPS.matcher(typeInstance);
+                Matcher statsd_6_groups = STATSD_PATTERN_6_GROUPS.matcher(typeInstance);
+                String instance = null;
+                if (!typeInstance.startsWith("nsq")) {
+                    String[] parts = typeInstance.split("\\.");
+                    if (parts.length % 2 == 1) {
+                        // EtsyStatsD format -- metric.(tagName.tagValue)*
+                        metric.append(STATSD_PREFIX).append(PERIOD).append(parts[0]);
+                        for (int x = 1; x < parts.length; x += 2) {
+                            addTag(tagMap, parts[x], parts[x + 1]);
+                        }
+                    } else if (statsd_4_groups.matches()) {
+                        // Here we are processing the statsd metrics coming from the Hadoop Metrics2 StatsDSink without the host name.
+                        // The format of metric is: serviceName.contextName.recordName.metricName. The recordName is typically duplicative
+                        // and is dropped here. The serviceName is used as the instance.
+                        metric.append(STATSD_PREFIX).append(PERIOD).append(statsd_4_groups.group(2)).append(PERIOD).append(statsd_4_groups.group(4));
+                        instance = statsd_4_groups.group(1);
+                    }
+                } else if (statsd_3_groups.matches()) {
+                    metric.append(NSQ_PREFIX).append(statsd_3_groups.group(2)).append(PERIOD).append(statsd_3_groups.group(3));
+                } else if (statsd_4_groups.matches()) {
+                    metric.append(NSQ_PREFIX).append(statsd_4_groups.group(2)).append(PERIOD).append(statsd_4_groups.group(4));
+                    instance = statsd_4_groups.group(3);
+                } else if (statsd_6_groups.matches()) {
+                    metric.append(NSQ_PREFIX).append(statsd_6_groups.group(4)).append(PERIOD).append(statsd_6_groups.group(6));
+                    instance = statsd_6_groups.group(5);
                 } else {
-                    instance = vl.getTypeInstance().substring(0, period);
-                    metric.append(STATSD_PREFIX).append(PERIOD).append(vl.getTypeInstance().substring(period + 1));
+                    // Handle StatsD metrics of unknown formats. If there is a
+                    // period in the metric name, use everything up to that as
+                    // the instance.
+                    int period = typeInstance.indexOf('.');
+                    if (-1 == period) {
+                        metric.append(STATSD_PREFIX).append(PERIOD).append(typeInstance);
+                    } else {
+                        instance = typeInstance.substring(0, period);
+                        metric.append(STATSD_PREFIX).append(PERIOD).append(typeInstance.substring(period + 1));
+                    }
                 }
-            }
-            timestamp = vl.getTime();
-            if (null != instance) {
-                tags.append(INSTANCE).append(instance);
-            }
-        } else if (vl.getPlugin().equals("ethstat")) {
-            metric.append("sys.ethstat.");
-            if (vl.getTypeInstance().contains("queue")) {
-                Matcher m = ETHSTAT_PATTERN.matcher(vl.getTypeInstance());
-                if (m.matches()) {
-                    metric.append(m.group(1)).append("_").append(m.group(3));
-                    tags.append(" queue=").append(m.group(2));
+                if (null != instance) {
+                    addTag(tagMap, INSTANCE, instance);
+                }
+                break;
+            case "ethstat":
+                metric.append("sys.ethstat.");
+                if (typeInstance.contains("queue")) {
+                    Matcher ethstat_m = ETHSTAT_PATTERN.matcher(typeInstance);
+                    if (ethstat_m.matches()) {
+                        metric.append(ethstat_m.group(1)).append("_").append(ethstat_m.group(3));
+                        addTag(tagMap, "queue", ethstat_m.group(2));
+                    } else {
+                        metric.append(typeInstance);
+                    }
                 } else {
-                    metric.append(vl.getTypeInstance());
+                    metric.append(typeInstance);
                 }
-            } else {
-                metric.append(vl.getTypeInstance());
-            }
-            tags.append(INSTANCE).append(vl.getPluginInstance());
-        } else if (vl.getPlugin().equals("hddtemp")) {
-            metric.append("sys.hddtemp.").append(vl.getType());
-            tags.append(INSTANCE).append(vl.getTypeInstance());
-        } else if (vl.getPlugin().equals("smart")) {
-            int code = -1;
-            String name = null;
-            if (vl.getTypeInstance().startsWith("attribute-")) {
-                int hyphen = vl.getTypeInstance().indexOf('-');
-                code = Integer.parseInt(vl.getTypeInstance().substring(hyphen + 1));
-                name = smart.get(code);
-            }
-            if (code == -1) {
-                if (notEmpty(vl.getTypeInstance())) {
-                    metric.append("sys.smart.").append(vl.getTypeInstance());
+                addTag(tagMap, INSTANCE, pluginInstance);
+                break;
+            case "hddtemp":
+                metric.append("sys.hddtemp.").append(type);
+                addTag(tagMap, INSTANCE, typeInstance);
+                break;
+            case "smart":
+                int code = -1;
+                String name = null;
+                if (typeInstance.startsWith("attribute-")) {
+                    int hyphen = typeInstance.indexOf('-');
+                    code = Integer.parseInt(typeInstance.substring(hyphen + 1));
+                    name = smart.get(code);
+                }
+                if (code == -1) {
+                    if (notEmpty(typeInstance)) {
+                        metric.append("sys.smart.").append(typeInstance);
+                    } else {
+                        metric.append("sys.smart.").append(type);
+                    }
                 } else {
-                    metric.append("sys.smart.").append(vl.getType());
+                    metric.append("sys.smart.").append(name);
+                    addTag(tagMap, CODE, Integer.toString(code));
                 }
-            } else {
-                metric.append("sys.smart.").append(name);
-                tags.append(CODE).append(code);
-            }
-            tags.append(INSTANCE).append(vl.getPluginInstance());
-        } else if (vl.getPlugin().equals("sensors")) {
-            String instance = "";
-            if (vl.getTypeInstance().startsWith("temp")) {
-                instance = vl.getTypeInstance().substring(4);
-            }
-            metric.append("sys.sensors.").append(vl.getType()).append(PERIOD).append(vl.getPluginInstance());
-            tags.append(INSTANCE).append(instance);
-        } else if (vl.getPlugin().equals("haproxy")) {
-            metric.append("sys.haproxy.").append(vl.getTypeInstance());
-            Matcher m = HAPROXY_PATTERN.matcher(vl.getPluginInstance());
-            if (m.matches()) {
-                tags.append(" ").append(m.group(1));
-                tags.append(" ").append(m.group(2));
-            }
-        } else if (vl.getPlugin().equals("ipmi")) {
-            metric.append("sys.ipmi.").append(vl.getType());
-            tags.append(INSTANCE).append(vl.getTypeInstance().replaceAll(" ", "_"));
-        } else if (vl.getPlugin().equals("snmp")) {
-            metric.append("sys.snmp.").append(vl.getType());
-            tags.append(INSTANCE).append(vl.getTypeInstance().replaceAll(" ", "_"));
-        } else if (vl.getPlugin().equals("GenericJMX")) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD).append(vl.getTypeInstance());
-            String[] pluginInstanceSplit = vl.getPluginInstance().split("-");
-            if (pluginInstanceSplit.length > 0) {
-                tags.append(INSTANCE).append(pluginInstanceSplit[0].replaceAll(" ", "_"));
-            }
-            if (pluginInstanceSplit.length > 1) {
-                tags.append(NAME).append(pluginInstanceSplit[1].replaceAll(" ", "_"));
-            }
-        } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance()) && notEmpty(vl.getPlugin())) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD).append(vl.getTypeInstance());
-            tags.append(INSTANCE).append(vl.getPluginInstance().replaceAll(" ", "_"));
-        } else if (notEmpty(vl.getTypeInstance()) && notEmpty(vl.getType()) && notEmpty(vl.getPlugin())) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType()).append(PERIOD).append(vl.getTypeInstance());
-        } else if (notEmpty(vl.getType()) && notEmpty(vl.getPluginInstance()) && notEmpty(vl.getPlugin())) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType());
-            tags.append(INSTANCE).append(vl.getPluginInstance().replaceAll(" ", "_"));
-        } else if (notEmpty(vl.getType()) && notEmpty(vl.getPlugin())) {
-            metric.append("sys.").append(vl.getPlugin()).append(PERIOD).append(vl.getType());
-        } else {
-            Collectd.logWarning("Unhandled metric: " + vl.toString());
-            return;
+                addTag(tagMap, INSTANCE, pluginInstance);
+                break;
+            case "sensors":
+                if (typeInstance.startsWith("temp")) {
+                    addTag(tagMap, INSTANCE, typeInstance.substring(4));
+                }
+                metric.append("sys.sensors.").append(type).append(PERIOD).append(pluginInstance);
+                break;
+            case "haproxy":
+                metric.append("sys.haproxy.").append(typeInstance);
+                Matcher hadoop_m2 = HAPROXY_PATTERN.matcher(pluginInstance);
+                if (hadoop_m2.matches()) {
+                    addTag(tagMap, hadoop_m2.group(1));
+                    addTag(tagMap, hadoop_m2.group(2));
+                }
+                break;
+            case "ipmi":
+            case "snmp":
+                metric.append("sys.").append(plugin).append(PERIOD).append(type);
+                addTag(tagMap, INSTANCE, typeInstance.replaceAll(" ", "_"));
+                break;
+            case "GenericJMX":
+                metric.append("sys.").append(plugin).append(PERIOD).append(type).append(PERIOD).append(typeInstance);
+                String[] pluginInstanceSplit = pluginInstance.split("-");
+                if (pluginInstanceSplit.length > 0) {
+                    addTag(tagMap, INSTANCE, pluginInstanceSplit[0].replaceAll(" ", "_"));
+                }
+                if (pluginInstanceSplit.length > 1) {
+                    addTag(tagMap, NAME, pluginInstanceSplit[1].replaceAll(" ", "_"));
+                }
+            default:
+                if (notEmpty(type) && notEmpty(typeInstance) && notEmpty(plugin) && notEmpty(pluginInstance)) {
+                    metric.append("sys.").append(plugin).append(PERIOD).append(type).append(PERIOD).append(typeInstance);
+                    addTag(tagMap, INSTANCE, pluginInstance.replaceAll(" ", "_"));
+                } else if (notEmpty(type) && notEmpty(typeInstance) && notEmpty(plugin)) {
+                    metric.append("sys.").append(plugin).append(PERIOD).append(type).append(PERIOD).append(typeInstance);
+                } else if (notEmpty(type) && notEmpty(plugin) && notEmpty(pluginInstance)) {
+                    metric.append("sys.").append(plugin).append(PERIOD).append(type);
+                    addTag(tagMap, INSTANCE, pluginInstance.replaceAll(" ", "_"));
+                } else if (notEmpty(type) && notEmpty(plugin)) {
+                    metric.append("sys.").append(plugin).append(PERIOD).append(type);
+                } else {
+                    Collectd.logWarning("Unhandled metric: " + vl);
+                    return;
+                }
+                break;
         }
         final String metricName = metric.toString().replaceAll(" ", "_");
         for (int i = 0; i < vl.getValues().size(); i++) {
-            StringBuilder tagsWithSample = new StringBuilder(tags.toString());
-            String sampleName = vl.getDataSet().getDataSources().get(i).getName();
-            int type = vl.getDataSet().getDataSources().get(i).getType();
-            String sampleType = convertType(type);
-            if (null != sampleName) {
-                tagsWithSample.append(SAMPLE).append(sampleName);
-            }
+            int dataSourceSampleType = vl.getDataSet().getDataSources().get(i).getType();
+            String sampleType = convertType(dataSourceSampleType);
             if (null != sampleType) {
-                tagsWithSample.append(SAMPLE_TYPE).append(sampleType);
+                addTag(tagMap, SAMPLE_TYPE, sampleType);
             }
             Double value = vl.getValues().get(i).doubleValue();
-            String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(), tagsWithSample.toString());
-            Collectd.logDebug("Writing: " + datapoint);
-            write(datapoint, out);
+            String tagString = tagMap.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining(" "));
+            String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(), tagString);
+            logDebug(String.format("Writing: %s", datapoint));
+            write(datapoint + "\n", out);
+        }
+    }
+
+    private void logDebug(String s) {
+        // collectd must be compiled with debug enabled in order for log level debug to work
+        if (debug) {
+            Collectd.logInfo(s);
+        } else {
+            Collectd.logDebug(s);
         }
     }
 
     private void debugValueList(ValueList vl) {
-        Collectd.logDebug("Input: " + vl.toString());
-        Collectd.logDebug("Plugin: " + vl.getPlugin());
-        Collectd.logDebug("PluginInstance: " + vl.getPluginInstance());
-        Collectd.logDebug("Type: " + vl.getType());
-        Collectd.logDebug("TypeInstance: " + vl.getTypeInstance());
-        for (int i = 0; i < vl.getValues().size(); i++) {
-            Number value = vl.getValues().get(i);
-            DataSource ds = vl.getDataSet().getDataSources().get(i);
-            Collectd.logDebug(convertType(ds.getType()) + " " + ds.getName() + " = " + value);
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("Plugin:%s", vl.getPlugin()));
+            if (vl.getPluginInstance() != null && !vl.getPluginInstance().isBlank()) {
+                sb.append(String.format(" PluginInstance:%s", vl.getPluginInstance()));
+            }
+            sb.append(String.format(" Type:%s", vl.getType()));
+            sb.append(String.format(" TypeInstance:%s", vl.getTypeInstance()));
+            for (int i = 0; i < vl.getValues().size(); i++) {
+                Number value = vl.getValues().get(i);
+                sb.append(String.format(" Value:%s", value.toString()));
+            }
+            logDebug(sb.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            logDebug(e.getMessage());
         }
     }
 
     private String convertType(int type) {
-        String result = null;
         switch (type) {
             case 0:
-                result = COUNTER;
-                break;
+                return COUNTER;
             case 1:
-                result = GAUGE;
-                break;
+                return GAUGE;
             case 2:
-                result = DERIVE;
-                break;
+                return DERIVE;
             case 3:
-                result = ABSOLUTE;
-                break;
+                return ABSOLUTE;
             default:
-                result = GAUGE;
-                break;
+                return GAUGE;
         }
-        return result;
     }
 
     private boolean notEmpty(String arg) {
