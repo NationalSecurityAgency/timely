@@ -62,8 +62,8 @@ if [ "$PID" == "" ]; then
       JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
     fi
 
-    echo "${JAVA_HOME}/bin/java ${JVM_ARGS} -jar ${THIS_DIR}/timely-balancer-*-exec.jar --instance=${INSTANCE}"
-    nohup "${JAVA_HOME}"/bin/java ${JVM_ARGS} -jar "${THIS_DIR}"/timely-balancer-*-exec.jar --instance="${INSTANCE}" >> "${LOG_DIR}/timely-balancer${INSTANCE}.out" 2>&1 &
+    echo "${JAVA_HOME}/bin/java ${JVM_ARGS} -jar ${BIN_DIR}/timely-balancer-*-exec.jar --instance=${INSTANCE}"
+    nohup "${JAVA_HOME}"/bin/java ${JVM_ARGS} -jar "${BIN_DIR}"/timely-balancer-*-exec.jar --instance="${INSTANCE}" >> "${LOG_DIR}/timely-balancer${INSTANCE}.out" 2>&1 &
 else
     echo "timely-balancer --instance=${INSTANCE} already running with pid ${PID}"
 fi
