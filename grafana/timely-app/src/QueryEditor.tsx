@@ -37,6 +37,7 @@ export class QueryEditor extends Component<Props, State> {
       downsampleInterval: '1m',
       downsampleAggregator: 'avg',
       shouldComputeRate: false,
+      rateInterval: '1m',
       isCounter: false,
       tags: {},
     };
@@ -118,6 +119,15 @@ export class QueryEditor extends Component<Props, State> {
     const checked = option.currentTarget.checked;
     this.setState((state, props) => {
       var query = Object.assign(state.query, { shouldComputeRate: checked });
+      this.updateQuery(query);
+      return { query: query };
+    });
+  };
+
+  onRateIntervalChange = (option: React.FormEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    this.setState((state, props) => {
+      var query = Object.assign(state.query, { rateInterval: value });
       this.updateQuery(query);
       return { query: query };
     });
@@ -247,7 +257,7 @@ export class QueryEditor extends Component<Props, State> {
     const { metric, aggregator, alias } = this.state.query;
     const { downsampleInterval, downsampleAggregator, disableDownsampling } = this.state.query;
     const { tags } = this.state.query;
-    const { shouldComputeRate, isCounter, counterResetValue, counterMax } = this.state.query;
+    const { shouldComputeRate, rateInterval, isCounter, counterResetValue, counterMax } = this.state.query;
     const aggregatorOptions: Array<{}> = _.map(this.state.aggregatorTypes, (value: string) => ({
       label: value,
       value: value,
@@ -345,7 +355,7 @@ export class QueryEditor extends Component<Props, State> {
               spellCheck={false}
               value={downsampleInterval || ''}
               onChange={this.onDownsampleChange}
-              placeholder={'interval'}
+              placeholder={'downsample interval'}
             />
           </div>
           <div className="gf-form timely">
@@ -390,6 +400,13 @@ export class QueryEditor extends Component<Props, State> {
               onChange={this.onRateChange}
             />
             <div hidden={!shouldComputeRate}>
+              <Input
+                  className={'min-width-6 flex-grow-1'}
+                  spellCheck={false}
+                  value={rateInterval || ''}
+                  onChange={this.onRateIntervalChange}
+                  placeholder={'rate interval'}
+              />
               <Switch
                 label={'Counter'}
                 labelClass="width-10"

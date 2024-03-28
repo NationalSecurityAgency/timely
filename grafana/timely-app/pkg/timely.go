@@ -398,6 +398,13 @@ func (td *TimelyDatasource) convertTimelyQuery(timelyQueryForm *TimelyQueryForm)
 		timelyQuery.RateOptions.Counter = timelyQueryForm.IsCounter
 	}
 
+    if len(timelyQueryForm.RateInterval) > 0 {
+        rateInterval, error := strconv.ParseInt(timelyQueryForm.RateInterval, 10, 32)
+        if error == nil {
+            timelyQuery.RateOptions.Interval = int32(rateInterval)
+        }
+    }
+
 	if len(timelyQueryForm.CounterMax) > 0 {
 		counterMax, error := strconv.ParseInt(timelyQueryForm.CounterMax, 10, 32)
 		if error == nil {

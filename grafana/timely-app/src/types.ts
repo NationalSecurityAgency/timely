@@ -9,6 +9,7 @@ export interface TimelyQueryForm extends DataQuery {
   downsampleAggregator?: string;
   tags: { [key: string]: string };
   shouldComputeRate?: boolean;
+  rateInterval?: string;
   isCounter?: boolean;
   counterMax?: string;
   counterResetValue?: string;

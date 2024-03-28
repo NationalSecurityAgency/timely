@@ -11,6 +11,7 @@ type TimelyQueryForm struct {
     Tags                 map[string]string `json:"tags"`
     Filters              []Filter          `json:"filters"`
     ShouldComputeRate    bool              `json:"shouldComputeRate"`
+    RateInterval         string            `json:"rateInterval"`
     IsCounter            bool              `json:"isCounter"`
     CounterMax           string            `json:"counterMax"`
     CounterResetValue    string            `json:"counterResetValue"`
@@ -34,6 +35,7 @@ type TimelyQueryServer struct {
     Tags                 map[string]string `json:"tags"`
     Filters              []Filter          `json:"filters"`
     ShouldComputeRate    bool              `json:"shouldComputeRate"`
+    RateInterval         string            `json:"rateInterval"`
     IsCounter            bool              `json:"isCounter"`
     CounterMax           string            `json:"counterMax"`
     CounterResetValue    string            `json:"counterResetValue"`
@@ -50,6 +52,7 @@ type Filter struct {
 }
 
 type RateOptions struct {
+    Interval   int32 `json:"interval"`
     Counter    bool  `json:"counter"`
     CounterMax int32 `json:"counterMax"`
     ResetValue int32 `json:"resetValue"`

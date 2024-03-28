@@ -118,11 +118,27 @@ public abstract class CollectDPluginParent {
                 String instance = null;
                 if (!typeInstance.startsWith("nsq")) {
                     String[] parts = typeInstance.split("\\.");
-                    if (parts.length % 2 == 1) {
-                        // EtsyStatsD format -- metric.(tagName.tagValue)*
-                        metric.append(STATSD_PREFIX).append(PERIOD).append(parts[0]);
-                        for (int x = 1; x < parts.length; x += 2) {
-                            addTag(tagMap, parts[x], parts[x + 1]);
+                    if (parts.length % 2 == 1 && parts.length >= 3) {
+                        switch(parts[0]) {
+                            case "dwingest":
+                                if (parts.length >= 4) {
+                                    metric.append(STATSD_PREFIX).append(PERIOD).append(parts[1]).append(PERIOD).append(parts[3]);
+                                    instance = parts[0];
+                                }
+                                break;
+                            case "dwquery":
+                                if (parts.length >= 4) {
+                                    metric.append(STATSD_PREFIX).append(PERIOD).append(parts[1]).append(PERIOD).append(parts[3]);
+                                    addTag(tagMap, "queryId", parts[0]);
+                                }
+                                break;
+                            default:
+                                // EtsyStatsD format -- metric.(tagName.tagValue)*
+                                metric.append(STATSD_PREFIX).append(PERIOD).append(parts[0]);
+                                for (int x = 1; x < parts.length; x += 2) {
+                                    addTag(tagMap, parts[x], parts[x + 1]);
+                                }
+                            }
                         }
                     } else if (statsd_4_groups.matches()) {
                         // Here we are processing the statsd metrics coming from the Hadoop Metrics2 StatsDSink without the host name.

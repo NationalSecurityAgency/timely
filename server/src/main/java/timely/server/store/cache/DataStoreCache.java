@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
@@ -765,7 +766,13 @@ public class DataStoreCache {
             if (subQuery.isRate()) {
                 log.trace("Adding rate iterator");
                 IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
-                RateIterator.setRateOptions(rate, subQuery.getRateOptions());
+                QueryRequest.RateOption rateOptions = subQuery.getRateOptions();
+                // if there is no rate interval set, then use the downsample value
+                // so that the result is the change per downsample period
+                if (rateOptions != null && !rateOptions.getInterval().isPresent()) {
+                    rateOptions.setInterval(Optional.of(downsamplePeriod + "ms"));
+                }
+                RateIterator.setRateOptions(rate, rateOptions);
                 RateIterator rateIterator = new RateIterator();
                 rateIterator.init(itr, rate.getOptions(), null);
                 itr = rateIterator;
