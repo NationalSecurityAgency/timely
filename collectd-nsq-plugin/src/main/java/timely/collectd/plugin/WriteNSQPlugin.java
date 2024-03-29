@@ -79,6 +79,7 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
                 } catch (IOException e1) {}
                 try {
                     clientPool.invalidateObject(client);
+                    client = null;
                 } catch (Exception e2) {}
             }
         } finally {
