@@ -99,7 +99,7 @@ public abstract class CollectDPluginParent {
         } else {
             addTag(tagMap, "host", host);
         }
-        int nIdx = host.indexOf('n');
+        int nIdx = host.lastIndexOf('n');
         if (-1 != nIdx) {
             addTag(tagMap, "rack", host.substring(0, nIdx));
         }
@@ -119,10 +119,15 @@ public abstract class CollectDPluginParent {
                 if (!typeInstance.startsWith("nsq")) {
                     String[] parts = typeInstance.split("\\.");
                     if (parts.length % 2 == 1) {
-                        // EtsyStatsD format -- metric.(tagName.tagValue)*
-                        metric.append(STATSD_PREFIX).append(PERIOD).append(parts[0]);
-                        for (int x = 1; x < parts.length; x += 2) {
-                            addTag(tagMap, parts[x], parts[x + 1]);
+                        if (parts[0].equals("dwquery") && parts.length >= 4) {
+                            metric.append(STATSD_PREFIX).append(PERIOD).append(parts[1]).append(PERIOD).append(parts[3]);
+                            addTag(tagMap, "queryId", parts[0]);
+                        } else {
+                            // EtsyStatsD format -- metric.(tagName.tagValue)*
+                            metric.append(STATSD_PREFIX).append(PERIOD).append(parts[0]);
+                            for (int x = 1; x < parts.length; x += 2) {
+                                addTag(tagMap, parts[x], parts[x + 1]);
+                            }
                         }
                     } else if (statsd_4_groups.matches()) {
                         // Here we are processing the statsd metrics coming from the Hadoop Metrics2 StatsDSink without the host name.
