@@ -499,7 +499,7 @@ public class HttpRequestDecoderIT extends ITBase {
     public void testQueryURIAllAnonAccess() throws Exception {
         decoder = new HttpRequestDecoder(authenticationService, anonymousSecurity, httpProperties);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                        "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
+                        "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,1s,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(QueryRequest.class, results.iterator().next().getClass());
@@ -515,6 +515,7 @@ public class HttpRequestDecoderIT extends ITBase {
         Assert.assertEquals("sys.cpu.user", first.getMetric());
         Assert.assertEquals(true, first.isRate());
         RateOption firstRateOption = first.getRateOptions();
+        Assert.assertEquals("1s", firstRateOption.getInterval());
         Assert.assertEquals(false, firstRateOption.isCounter());
         Assert.assertEquals(100, firstRateOption.getCounterMax());
         Assert.assertEquals(0, firstRateOption.getResetValue());
@@ -545,7 +546,7 @@ public class HttpRequestDecoderIT extends ITBase {
     public void testQueryURIAllWithSession() throws Exception {
         decoder = new HttpRequestDecoder(authenticationService, requireUserSecurity, httpProperties);
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                        "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
+                        "/api/query?start=1356998400&end=1356998460&m=sum:rate{false,1s,100,0}:sys.cpu.user{host=*}{rack=r1|r2}&tsuid=sum:000001000002000042,000001000002000043");
         addCookie(request);
         decoder.decode(null, request, results);
         Assert.assertEquals(1, results.size());
@@ -562,6 +563,7 @@ public class HttpRequestDecoderIT extends ITBase {
         Assert.assertEquals("sys.cpu.user", first.getMetric());
         Assert.assertEquals(true, first.isRate());
         RateOption firstRateOption = first.getRateOptions();
+        Assert.assertEquals("1s", firstRateOption.getInterval());
         Assert.assertEquals(false, firstRateOption.isCounter());
         Assert.assertEquals(100, firstRateOption.getCounterMax());
         Assert.assertEquals(0, firstRateOption.getResetValue());

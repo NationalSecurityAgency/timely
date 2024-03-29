@@ -1,5 +1,7 @@
 package timely.server.sample.iterators;
 
+import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getTimeInMillis;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -12,6 +14,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.util.Pair;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,18 +23,25 @@ import timely.api.request.timeseries.QueryRequest;
 public class RateIterator extends TimeSeriesGroupingIterator {
 
     private static final Logger log = LoggerFactory.getLogger(RateIterator.class);
-    private static final String COUNTER_MAX = "rate.counter.max";
-    private static final String RATE_RESET_VALUE = "rate.reset.value";
+    public static final String COUNTER_MAX = "rate.counter.max";
+    public static final String RATE_RESET_VALUE = "rate.reset.value";
+    public static final String RATE_INTERVAL = "rate.interval";
 
     private boolean isCounter = false;
     private long maxCounter = 0;
     private long resetValue = 0;
+    private long interval = 1000;
 
     public static void setRateOptions(IteratorSetting is, QueryRequest.RateOption options) {
         if (options != null && options.isCounter()) {
             log.trace("Setting rate counter options cm:{}, rv:{}", options.getCounterMax(), options.getResetValue());
             is.addOption(COUNTER_MAX, Long.toString(options.getCounterMax()));
             is.addOption(RATE_RESET_VALUE, Long.toString(options.getResetValue()));
+        }
+        if (options != null && StringUtils.isNotBlank(options.getInterval())) {
+            is.addOption(RATE_INTERVAL, Long.toString(getTimeInMillis(options.getInterval())));
+        } else {
+            is.addOption(RATE_INTERVAL, "1000");
         }
     }
 
@@ -41,8 +51,11 @@ public class RateIterator extends TimeSeriesGroupingIterator {
             this.isCounter = true;
             this.maxCounter = Long.parseLong(options.get(COUNTER_MAX));
             this.resetValue = Long.parseLong(options.get(RATE_RESET_VALUE));
-            log.trace("Setting rate counter options cm:{}, rv:{}", this.maxCounter, this.resetValue);
         }
+        if (options.containsKey(RATE_INTERVAL)) {
+            this.interval = Long.parseLong(options.get(RATE_INTERVAL));
+        }
+        log.trace("Setting rate options interval:{} isCounter:{} cm:{}, rv:{}", this.interval, this.isCounter, this.maxCounter, this.resetValue);
         Map<String,String> opts = new HashMap<>(options);
         opts.put(FILTER, "-1,1");
         super.init(source, opts, env);
@@ -64,9 +77,12 @@ public class RateIterator extends TimeSeriesGroupingIterator {
 
         if (isCounter && (secondVal < firstVal)) {
             if (maxCounter > 0) {
+                // assume that the data has reset so add maxCounter to the lower value to calculate the difference
                 secondVal += maxCounter;
                 log.trace("second counter reset based on max:{} to ts:{}, value:{}", maxCounter, secondTs, secondVal);
             } else {
+                // assume that the data has reset but no maxCounter set, so add the higher value
+                // (approximate maxCounter) to the lower value to calculate the difference
                 secondVal += firstVal;
                 log.trace("second counter reset based on first:{} to ts:{}, value:{}", firstVal, secondTs, secondVal);
             }
@@ -76,7 +92,9 @@ public class RateIterator extends TimeSeriesGroupingIterator {
         if (timeDiff == 0) {
             return 0.0D;
         }
-        Double result = ((secondVal - firstVal) / timeDiff);
+        // (secondVal - firstVal) / timeDiff will be value per millisecond, so multiply by interval to get
+        // value per interval. Example 60000 milliseconds in 1m, so multiply by 60000 milliseconds
+        Double result = ((secondVal - firstVal) / timeDiff * interval);
         log.trace("compute - result: {}", result);
 
         if (isCounter && resetValue > 0 && result > resetValue) {

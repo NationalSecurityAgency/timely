@@ -46,14 +46,26 @@ public class RateIteratorTest extends IteratorTestBase {
 
     @Test
     public void testConstantTimeRate() throws Exception {
+        testInterval(null, 1.0D);
+        testInterval("1ms", 0.001D);
+        testInterval("1s", 1.0D);
+        testInterval("60s", 60.0D);
+    }
+
+    private void testInterval(String interval, double result) throws Exception {
         SortedMapIterator source = new SortedMapIterator(table);
         RateIterator iter = new RateIterator();
         IteratorSetting settings = new IteratorSetting(100, RateIterator.class);
+        QueryRequest.RateOption rateOption = new QueryRequest.RateOption();
+        if (interval != null) {
+            rateOption.setInterval(interval);
+        }
+        RateIterator.setRateOptions(settings, rateOption);
         iter.init(source, settings.getOptions(), SCAN_IE);
         iter.seek(new Range(), EMPTY_COL_FAMS, true);
         for (int i = 0; i < 99; i++) {
             assertTrue(iter.hasTop());
-            assertEquals(0.001D, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
+            assertEquals(result, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
             iter.next();
         }
         assertFalse(iter.hasTop());
@@ -83,7 +95,7 @@ public class RateIteratorTest extends IteratorTestBase {
             Value v = source.getTopValue();
             if (prevTs != -1L) {
                 Double thisValue = MetricAdapter.decodeValue(v.get());
-                expected.add((thisValue + (prevValue * -1)) / (k.getTimestamp() - prevTs));
+                expected.add((thisValue + (prevValue * -1)) / (k.getTimestamp() - prevTs) * 1000);
             }
             prevTs = k.getTimestamp();
             prevValue = MetricAdapter.decodeValue(v.get());
@@ -132,7 +144,7 @@ public class RateIteratorTest extends IteratorTestBase {
         iter.seek(new Range(), EMPTY_COL_FAMS, true);
         for (int i = 0; i < 99; i++) {
             assertTrue(iter.hasTop());
-            assertEquals(0.001D, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
+            assertEquals(1.0D, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
             iter.next();
         }
         assertFalse(iter.hasTop());
@@ -166,7 +178,7 @@ public class RateIteratorTest extends IteratorTestBase {
         iter.seek(new Range(), EMPTY_COL_FAMS, true);
         for (int i = 0; i < 99; i++) {
             assertTrue(iter.hasTop());
-            assertEquals(0.001D, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
+            assertEquals(1.0D, MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
             iter.next();
         }
         assertFalse(iter.hasTop());
@@ -201,7 +213,7 @@ public class RateIteratorTest extends IteratorTestBase {
         iter.seek(new Range(), EMPTY_COL_FAMS, true);
         for (int i = 0; i < 99; i++) {
             assertTrue(iter.hasTop());
-            assertEquals(((i + 1) % 10 == 0 ? 0.0D : 0.001D), MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
+            assertEquals(((i + 1) % 10 == 0 ? 0.0D : 1.0D), MetricAdapter.decodeValue(iter.getTopValue().get()), 0.0D);
             iter.next();
         }
         assertFalse(iter.hasTop());

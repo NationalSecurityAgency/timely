@@ -189,10 +189,8 @@ public class DataStoreCacheIteratorIT extends ITBase {
         subQuery.setDownsample(Optional.of("1ms-avg"));
         subQuery.setMetric("metric.number.1");
         subQuery.addTag("host", ".*");
-        QueryRequest.RateOption rateOption = new QueryRequest.RateOption();
-        rateOption.setCounter(false);
         subQuery.setRate(true);
-        subQuery.setRateOptions(rateOption);
+        subQuery.getRateOptions().setCounter(false);
         query.setQueries(Collections.singleton(subQuery));
 
         SortedKeyValueIterator<org.apache.accumulo.core.data.Key,org.apache.accumulo.core.data.Value> itr;

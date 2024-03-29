@@ -32,6 +32,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
         private boolean counter = false;
         private long counterMax = 0;
         private long resetValue = 0;
+        private String interval = null;
 
         public RateOption() {}
 
@@ -84,12 +85,21 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
             this.resetValue = resetValue;
         }
 
+        public String getInterval() {
+            return interval;
+        }
+
+        public void setInterval(String interval) {
+            this.interval = interval;
+        }
+
         @Override
         public String toString() {
             ToStringBuilder tsb = new ToStringBuilder(this);
             tsb.append("counter", counter);
             tsb.append("counterMax", counterMax);
             tsb.append("resetValue", resetValue);
+            tsb.append("interval", interval);
             return tsb.toString();
         }
 
@@ -99,6 +109,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
             hcb.append(counter);
             hcb.append(counterMax);
             hcb.append(resetValue);
+            hcb.append(interval);
             return hcb.toHashCode();
         }
 
@@ -210,7 +221,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
         private String aggregator;
         private String metric;
         private boolean rate = false;
-        private RateOption rateOptions = null;
+        private RateOption rateOptions = new RateOption();
         private Optional<String> downsample = Optional.empty();
         private Map<String,String> tags = new LinkedHashMap<>();
         private Collection<Filter> filters = new ArrayList<>();
@@ -536,9 +547,12 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
                                         options.setCounter(rateOptions[x].endsWith("counter"));
                                         break;
                                     case 1:
-                                        options.setCounterMax(Long.parseLong(rateOptions[x]));
+                                        options.setInterval(rateOptions[x]);
                                         break;
                                     case 2:
+                                        options.setCounterMax(Long.parseLong(rateOptions[x]));
+                                        break;
+                                    case 3:
                                         options.setResetValue(Long.parseLong(rateOptions[x]));
                                         break;
                                     default:

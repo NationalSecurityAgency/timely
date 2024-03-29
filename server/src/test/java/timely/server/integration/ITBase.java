@@ -185,7 +185,7 @@ public class ITBase {
         TestDataStore.StoreCallback storeCallback = () -> PUT_REQUESTS.countDown();
         try {
             dataStore.addStoreCallback(storeCallback);
-            StringBuffer format = new StringBuffer();
+            StringBuilder format = new StringBuilder();
             for (String line : lines) {
                 format.append("put ");
                 format.append(line);

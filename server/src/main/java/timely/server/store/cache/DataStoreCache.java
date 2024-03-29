@@ -28,6 +28,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicValue;
 import org.apache.curator.framework.recipes.cache.TreeCache;
@@ -765,7 +766,13 @@ public class DataStoreCache {
             if (subQuery.isRate()) {
                 log.trace("Adding rate iterator");
                 IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
-                RateIterator.setRateOptions(rate, subQuery.getRateOptions());
+                // if there is no rate interval set, then use the downsample value
+                // so that the result is the change per downsample period
+                QueryRequest.RateOption rateOptions = subQuery.getRateOptions();
+                if (StringUtils.isBlank(rateOptions.getInterval())) {
+                    rateOptions.setInterval(downsamplePeriod + "ms");
+                }
+                RateIterator.setRateOptions(rate, rateOptions);
                 RateIterator rateIterator = new RateIterator();
                 rateIterator.init(itr, rate.getOptions(), null);
                 itr = rateIterator;

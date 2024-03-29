@@ -53,11 +53,9 @@ public class MetricQuery {
     }
 
     public void setCounterOptions(long max, long resetValue) {
-        QueryRequest.RateOption rateOption = new QueryRequest.RateOption();
-        rateOption.setCounter(true);
-        rateOption.setCounterMax(max);
-        rateOption.setResetValue(resetValue);
-        this.subQuery.setRateOptions(rateOption);
+        this.subQuery.getRateOptions().setCounter(true);
+        this.subQuery.getRateOptions().setCounterMax(max);
+        this.subQuery.getRateOptions().setResetValue(resetValue);
     }
 
     public void setTags(Map<String,String> tags) {

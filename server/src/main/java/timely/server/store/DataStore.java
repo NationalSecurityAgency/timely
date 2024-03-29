@@ -700,6 +700,12 @@ public class DataStore {
                             if (query.isRate()) {
                                 log.trace("Adding rate iterator");
                                 IteratorSetting rate = new IteratorSetting(499, RateIterator.class);
+                                // if there is no rate interval set, then use the downsample value
+                                // so that the result is the change per downsample period
+                                RateOption rateOptions = query.getRateOptions();
+                                if (StringUtils.isBlank(rateOptions.getInterval())) {
+                                    rateOptions.setInterval(downsample + "ms");
+                                }
                                 RateIterator.setRateOptions(rate, query.getRateOptions());
                                 scanner.addScanIterator(rate);
                             }

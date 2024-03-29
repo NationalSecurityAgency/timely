@@ -702,25 +702,20 @@ public class HttpApiIT extends OneWaySSLBase {
         assertEquals(1.0, entry2.getValue());
     }
 
+    private void addRateData(String metric, String tagString, long testStartTime, long timeIncrement, long testStopTime, double startValue, double maxValue,
+                    double valueIncrement) throws Exception {
+        long ts = testStartTime;
+        double value = startValue;
+        while (ts <= testStopTime) {
+            put(metric + " " + ts + " " + value + " " + tagString);
+            ts += timeIncrement;
+            value = (value >= maxValue) ? startValue : (value + valueIncrement);
+        }
+    }
+
     @Test
     public void testRateQuery() throws Exception {
-        // @formatter:off
-        put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 10) + " 11.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 11) + " 12.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 12) + " 13.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 13) + " 14.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME + 14) + " 15.0 tag1=value1 tag2=value2 rack=r1");
-        // @formatter:on
+        addRateData("sys.cpu.user", "tag1=value1 tag2=value2 rack=r1", TEST_TIME, 1, TEST_TIME + 14, 1.0, Double.MAX_VALUE, 1.0);
         dataStore.flush();
         dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
@@ -751,23 +746,7 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testRateCounterQuery() throws Exception {
-      // @formatter:off
-        put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+10) + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+11) + " 2.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+12) + " 3.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+13) + " 4.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+14) + " 5.0 tag1=value1 tag2=value2 rack=r1");
-        // @formatter:on
+        addRateData("sys.cpu.user", "tag1=value1 tag2=value2 rack=r1", TEST_TIME, 1, TEST_TIME + 14, 1.0, 10.0, 1.0);
         dataStore.flush();
         dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
@@ -782,7 +761,6 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setTags(t);
         subQuery.setDownsample(Optional.of("1ms-max"));
         subQuery.setRate(true);
-        subQuery.setRateOptions(new QueryRequest.RateOption());
         subQuery.getRateOptions().setCounter(true);
         request.addQuery(subQuery);
         List<QueryResponse> response = query(baseUrl + "/api/query", request);
@@ -799,24 +777,8 @@ public class HttpApiIT extends OneWaySSLBase {
     }
 
     @Test
-    public void testRateCounterWithOptions() throws Exception {
-      // @formatter:off
-        put("sys.cpu.user " + (TEST_TIME) + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+1) + " 2.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+2) + " 3.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+3) + " 4.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+4) + " 5.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+5) + " 6.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+6) + " 7.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+7) + " 8.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+8) + " 9.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+9) + " 10.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+10) + " 0.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+11) + " 1.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+12) + " 2.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+13) + " 3.0 tag1=value1 tag2=value2 rack=r1",
-                "sys.cpu.user " + (TEST_TIME+14) + " 4.0 tag1=value1 tag2=value2 rack=r1");
-        // @formatter:on
+    public void testRateCounterWithCounterMaxOption() throws Exception {
+        addRateData("sys.cpu.user", "tag1=value1 tag2=value2 rack=r1", TEST_TIME, 1, TEST_TIME + 14, 1.0, 10.0, 1.0);
         dataStore.flush();
         dataStoreCache.flushCaches(-1);
         // Latency in TestConfiguration is 2s, wait for it
@@ -831,9 +793,8 @@ public class HttpApiIT extends OneWaySSLBase {
         subQuery.setTags(t);
         subQuery.setDownsample(Optional.of("1ms-max"));
         subQuery.setRate(true);
-        subQuery.setRateOptions(new QueryRequest.RateOption());
         subQuery.getRateOptions().setCounter(true);
-        subQuery.getRateOptions().setCounterMax(Long.MAX_VALUE);
+        subQuery.getRateOptions().setCounterMax(10);
         subQuery.getRateOptions().setResetValue(2);
         request.addQuery(subQuery);
         List<QueryResponse> response = query(baseUrl + "/api/query", request);
@@ -844,7 +805,54 @@ public class HttpApiIT extends OneWaySSLBase {
         int i = 1;
         for (Entry<String,Object> e : dps.entrySet()) {
             assertEquals(Long.toString(TEST_TIME + i), e.getKey());
-            assertEquals((i == 10 ? 0.0 : 1.0), e.getValue());
+            assertEquals(1.0, e.getValue());
+            i++;
+        }
+    }
+
+    @Test
+    public void testRateCounterWithRateIntervalOption() throws Exception {
+        Long TEST_TIME = (System.currentTimeMillis() / 60000) * 60000;
+        addRateData("sys.cpu.user", "tag1=value1 tag2=value2 rack=r1", TEST_TIME, 60000, TEST_TIME + 600000, 1.0, Double.MAX_VALUE, 5);
+        dataStore.flush();
+        dataStoreCache.flushCaches(-1);
+        // Latency in TestConfiguration is 2s, wait for it
+        sleepUninterruptibly(TestConfiguration.WAIT_SECONDS, TimeUnit.SECONDS);
+        QueryRequest request = new QueryRequest();
+        request.setStart(TEST_TIME);
+        request.setEnd(TEST_TIME + 600000);
+        request.setMsResolution(true);
+        SubQuery subQuery = new SubQuery();
+        subQuery.setMetric("sys.cpu.user");
+        subQuery.setDownsample(Optional.of("1m-max"));
+        subQuery.setRate(true);
+        subQuery.getRateOptions().setInterval("2m");
+        request.addQuery(subQuery);
+
+        // test interval (2m) that is different from the downsample period (1m)
+        List<QueryResponse> response = query(baseUrl + "/api/query", request);
+        assertEquals(1, response.size());
+        QueryResponse response1 = response.get(0);
+        Map<String,Object> dps = response1.getDps();
+        assertEquals(10, dps.size());
+        int i = 1;
+        for (Entry<String,Object> e : dps.entrySet()) {
+            assertEquals(Long.toString(TEST_TIME + (60000 * i)), e.getKey());
+            assertEquals(10.0, e.getValue());
+            i++;
+        }
+
+        // test that interval defaults to downsample period
+        subQuery.getRateOptions().setInterval(null);
+        response = query(baseUrl + "/api/query", request);
+        assertEquals(1, response.size());
+        response1 = response.get(0);
+        dps = response1.getDps();
+        assertEquals(10, dps.size());
+        i = 1;
+        for (Entry<String,Object> e : dps.entrySet()) {
+            assertEquals(Long.toString(TEST_TIME + (60000 * i)), e.getKey());
+            assertEquals(5.0, e.getValue());
             i++;
         }
     }
