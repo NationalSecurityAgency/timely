@@ -4,7 +4,6 @@ if [[ $(uname) == "Darwin" ]]; then
         THIS_SCRIPT=$(python -c 'import os,sys; print os.path.realpath(sys.argv[1])' "$0")
 else
         THIS_SCRIPT=$(readlink -f "$0")
-        TCNATIVE_SUFFIX="so"
         HW=`uname -m`
         OS_PATH=linux-${HW}
 fi
@@ -54,12 +53,13 @@ if [ "$PID" == "" ]; then
     JVM_ARGS="${JVM_ARGS} -Djava.net.preferIPv4Stack=true"
     JVM_ARGS="${JVM_ARGS} -XX:+UseNUMA"
 
-    if [[ -n "$OS_PATH" ]]; then
-      pushd "${BASE_DIR}/bin" || exit
-      "${JAVA_HOME}"/bin/jar xf "${LIB_DIR}"/netty-tcnative-boringssl-static-*.Final-"${OS_PATH}".jar META-INF/native/libnetty_tcnative_linux_"${HW}".so
-      "${JAVA_HOME}"/bin/jar xf "${LIB_DIR}"/netty-transport-native-epoll-*-"${OS_PATH}".jar META-INF/native/libnetty_transport_native_epoll_"${HW}".so
-      popd || exit
-      JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
+    # for linux varieties of OS, extract native libraries if not already present
+    if [[ -n "$OS_PATH" && (! -d ${NATIVE_DIR} || -z "$(ls -A ${NATIVE_DIR})") ]]; then
+        pushd "${BASE_DIR}/bin" || exit
+        "${JAVA_HOME}"/bin/jar xf "${LIB_DIR}"/netty-tcnative-boringssl-static-*.Final-"${OS_PATH}".jar ${NATIVE_DIR}/libnetty_tcnative_linux_"${HW}".so
+        "${JAVA_HOME}"/bin/jar xf "${LIB_DIR}"/netty-transport-native-epoll-*-"${OS_PATH}".jar ${NATIVE_DIR}/libnetty_transport_native_epoll_"${HW}".so
+        popd || exit
+        JVM_ARGS="${JVM_ARGS} -Djava.library.path=${NATIVE_DIR}"
     fi
 
     echo "${JAVA_HOME}/bin/java ${JVM_ARGS} -jar ${BIN_DIR}/timely-balancer-*-exec.jar --instance=${INSTANCE}"
