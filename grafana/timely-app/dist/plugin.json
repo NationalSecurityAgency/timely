@@ -28,8 +28,8 @@
       }
     ],
     "screenshots": [],
-    "version": "2.1.4-SNAPSHOT",
-    "updated": "2024-03-13"
+    "version": "2.1.4",
+    "updated": "2024-03-29"
   },
   "dependencies": {
     "classnames": "2.2.6",
