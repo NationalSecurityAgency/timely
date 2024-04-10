@@ -48,7 +48,7 @@ public class TestBalancerConfiguration {
 
     @Bean
     public TestMetricResolver metricResolver(CuratorFramework curatorFramework, BalancerProperties balancerProperties, CacheProperties cacheProperties,
-                    HealthChecker healthChecker) {
+                    HealthChecker healthChecker) throws Exception {
         TestMetricResolver metricResolver = new TestMetricResolver(curatorFramework, balancerProperties, cacheProperties, healthChecker);
         metricResolver.start();
         return metricResolver;

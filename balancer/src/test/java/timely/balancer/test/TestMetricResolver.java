@@ -20,7 +20,7 @@ public class TestMetricResolver extends MetricResolver {
     private static final Logger log = LoggerFactory.getLogger(TestMetricResolver.class);
 
     public TestMetricResolver(CuratorFramework curatorFramework, BalancerProperties balancerProperties, CacheProperties cacheProperties,
-                    HealthChecker healthChecker) {
+                    HealthChecker healthChecker) throws Exception {
         super(curatorFramework, balancerProperties, cacheProperties, healthChecker);
     }
 

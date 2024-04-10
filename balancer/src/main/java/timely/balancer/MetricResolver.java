@@ -91,17 +91,21 @@ public class MetricResolver {
     final protected BalancerProperties balancerProperties;
     final protected CacheProperties cacheProperties;
     final protected HealthChecker healthChecker;
+    final protected Path assignmentFile;
+    final protected FileSystem fs;
 
     private enum BalanceType {
         HIGH_LOW, HIGH_AVG, AVG_LOW
     }
 
     public MetricResolver(CuratorFramework curatorFramework, BalancerProperties balancerProperties, CacheProperties cacheProperties,
-                    HealthChecker healthChecker) {
+                    HealthChecker healthChecker) throws Exception {
         this.curatorFramework = curatorFramework;
         this.balancerProperties = balancerProperties;
         this.cacheProperties = cacheProperties;
         this.healthChecker = healthChecker;
+        this.assignmentFile = new Path(balancerProperties.getAssignmentFile());
+        this.fs = getFileSystem(this.assignmentFile);
     }
 
     public void start() {
@@ -916,10 +920,8 @@ public class MetricResolver {
 
     protected void createAssignmentFile() {
         try {
-            log.info("Creating assignment file: " + balancerProperties.getAssignmentFile());
-            Path assignmentFile = new Path(balancerProperties.getAssignmentFile());
-            FileSystem fs = getFileSystem(assignmentFile);
-            fs.create(assignmentFile);
+            log.info("Creating assignment file: " + this.assignmentFile);
+            this.fs.create(this.assignmentFile);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
@@ -927,9 +929,7 @@ public class MetricResolver {
 
     protected long getLastWrittenToHdfsTimestamp() {
         try {
-            Path assignmentFile = new Path(balancerProperties.getAssignmentFile());
-            FileSystem fs = getFileSystem(assignmentFile);
-            FileStatus fileStatus = fs.getFileStatus(assignmentFile);
+            FileStatus fileStatus = this.fs.getFileStatus(this.assignmentFile);
             return fileStatus.getModificationTime();
         } catch (FileNotFoundException e) {
             createAssignmentFile();
@@ -960,16 +960,15 @@ public class MetricResolver {
         // proceed with reading from HDFS
 
         Map<String,TimelyBalancedHost> assignedMetricToHostMap = new TreeMap<>();
+        CsvReader reader = null;
         try {
             boolean acquired = false;
             while (!acquired) {
                 acquired = assignmentsIPRWLock.readLock().acquire(60, TimeUnit.SECONDS);
             }
             balancerLock.writeLock().lock();
-            Path assignmentFile = new Path(balancerProperties.getAssignmentFile());
-            FileSystem fs = getFileSystem(assignmentFile);
-            FSDataInputStream iStream = fs.open(assignmentFile);
-            CsvReader reader = new CsvReader(iStream, ',', Charset.forName("UTF-8"));
+            FSDataInputStream iStream = this.fs.open(this.assignmentFile);
+            reader = new CsvReader(iStream, ',', Charset.forName("UTF-8"));
             reader.setUseTextQualifier(false);
 
             // skip the headers
@@ -1031,6 +1030,9 @@ public class MetricResolver {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         } finally {
+            if (reader != null) {
+                reader.close();
+            }
             balancerLock.writeLock().unlock();
             try {
                 assignmentsIPRWLock.readLock().release();
@@ -1052,12 +1054,10 @@ public class MetricResolver {
             nonCachedMetricsLocalLock.readLock().lock();
             try {
                 if (!metricToHostMap.isEmpty()) {
-                    Path assignmentFile = new Path(balancerProperties.getAssignmentFile());
-                    FileSystem fs = getFileSystem(assignmentFile);
-                    if (!fs.exists(assignmentFile.getParent())) {
-                        fs.mkdirs(assignmentFile.getParent());
+                    if (!this.fs.exists(this.assignmentFile.getParent())) {
+                        this.fs.mkdirs(this.assignmentFile.getParent());
                     }
-                    FSDataOutputStream oStream = fs.create(assignmentFile, true);
+                    FSDataOutputStream oStream = this.fs.create(this.assignmentFile, true);
                     writer = new CsvWriter(oStream, ',', Charset.forName("UTF-8"));
                     writer.setUseTextQualifier(false);
                     writer.write("metric");
@@ -1080,7 +1080,7 @@ public class MetricResolver {
                     if (!assignmentsLastUpdatedInHdfs.get().succeeded()) {
                         assignmentsLastUpdatedInHdfs.forceSet(now);
                     }
-                    log.debug("Wrote {} assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
+                    log.info("Wrote {} assignments to hdfs lastHdfsUpdate = lastLocalUpdate ({})", metricToHostMap.size(),
                                     new Date(assignmentsLastUpdatedLocal.get()));
                     // remove metric from metricMap (ArrivalRate) if not being cached
                     metricMap.entrySet().removeIf(e -> !metricToHostMap.containsKey(e.getKey()));

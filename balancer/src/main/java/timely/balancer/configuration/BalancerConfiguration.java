@@ -50,7 +50,7 @@ public class BalancerConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public MetricResolver metricResolver(CuratorFramework curatorFramework, BalancerProperties balancerProperties, CacheProperties cacheProperties,
-                    HealthChecker healthChecker) {
+                    HealthChecker healthChecker) throws Exception {
         MetricResolver metricResolver = new MetricResolver(curatorFramework, balancerProperties, cacheProperties, healthChecker);
         metricResolver.start();
         return metricResolver;
