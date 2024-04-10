@@ -1,6 +1,6 @@
 {
   "name": "timely-datasource",
-  "version": "2.1.5-SNAPSHOT",
+  "version": "2.1.5",
   "description": "Timely",
   "backend": true,
   "alerting": true,

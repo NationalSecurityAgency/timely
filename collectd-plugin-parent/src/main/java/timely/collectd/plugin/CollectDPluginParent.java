@@ -77,7 +77,7 @@ public abstract class CollectDPluginParent {
     protected void addTag(Map<String,String> m, String kv) {
         if (kv != null && !kv.isBlank()) {
             String[] parts = kv.split("=");
-            if (parts.length == 2 ) {
+            if (parts.length == 2) {
                 addTag(m, parts[0], parts[1]);
             }
         }
@@ -297,10 +297,10 @@ public abstract class CollectDPluginParent {
             }
             Double value = vl.getValues().get(i).doubleValue();
             String tagString = tagMap.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining(" "));
-            
+
             if (metricName.isBlank() || timestamp == null || value == null) {
-                logDebug(String.format("Not writing unhandled metric: plugin:%s pluginInstance:%s type:%s typeInstance:%s",
-                                plugin, pluginInstance, type, typeInstance));
+                logDebug(String.format("Not writing unhandled metric: plugin:%s pluginInstance:%s type:%s typeInstance:%s", plugin, pluginInstance, type,
+                                typeInstance));
             } else {
                 String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(), tagString);
                 logDebug(String.format("Writing: %s", datapoint));
