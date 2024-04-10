@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>timely</groupId>
   <artifactId>timely</artifactId>
-  <version>2.1.5</version>
+  <version>2.1.6-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Timely</name>
   <description>A secure and scalable time series database based on Apache Accumulo</description>
