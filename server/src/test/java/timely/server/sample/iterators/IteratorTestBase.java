@@ -1,6 +1,5 @@
 package timely.server.sample.iterators;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -8,15 +7,9 @@ import org.apache.accumulo.core.client.sample.SamplerConfiguration;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.data.ByteSequence;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
-import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
-import org.apache.accumulo.core.iteratorsImpl.system.MapFileIterator;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 
 public class IteratorTestBase {
 
@@ -33,29 +26,12 @@ public class IteratorTestBase {
         }
 
         @Override
-        public SortedKeyValueIterator<Key,Value> reserveMapFileReader(String mapFileName) throws IOException {
-            Configuration conf = new Configuration();
-            FileSystem fs = FileSystem.get(conf);
-            return new MapFileIterator(fs, mapFileName, conf);
-        }
-
-        @Override
-        public AccumuloConfiguration getConfig() {
-            return conf;
-        }
-
-        @Override
         public IteratorScope getIteratorScope() {
             throw new UnsupportedOperationException();
         }
 
         @Override
         public boolean isFullMajorCompaction() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void registerSideChannel(SortedKeyValueIterator<Key,Value> iter) {
             throw new UnsupportedOperationException();
         }
 

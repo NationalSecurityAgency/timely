@@ -69,7 +69,6 @@ public class MiniAccumuloConfiguration {
         }
 
         macConfig.setZooKeeperPort(zookeeperPort);
-        macConfig.setNumTservers(1);
         macConfig.setMemory(ServerType.TABLET_SERVER, 1, MemoryUnit.GIGABYTE);
         try {
             miniAccumuloCluster = new MiniAccumuloCluster(macConfig);

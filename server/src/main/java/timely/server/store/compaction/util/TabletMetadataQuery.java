@@ -10,7 +10,7 @@ import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.metadata.MetadataTable;
+import org.apache.accumulo.core.metadata.AccumuloTable;
 
 import timely.common.configuration.TimelyProperties;
 import timely.server.configuration.TabletMetadataProperties;
@@ -32,10 +32,11 @@ public class TabletMetadataQuery {
         Map<String,String> tableMap = accumuloClient.tableOperations().tableIdMap();
         String tableId = tableMap.get(timelyProperties.getMetricsTable());
         if (null == tableId) {
-            throw new IllegalStateException("Unable to find " + MetadataTable.NAME);
+            throw new IllegalStateException("Unable to find " + AccumuloTable.METADATA.tableName());
         }
 
-        try (Scanner s = accumuloClient.createScanner(MetadataTable.NAME, accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()))) {
+        try (Scanner s = accumuloClient.createScanner(AccumuloTable.METADATA.tableName(),
+                        accumuloClient.securityOperations().getUserAuthorizations(accumuloClient.whoami()))) {
             s.setRange(Range.prefix(tableId));
             for (Map.Entry<Key,Value> e : s) {
                 tabletMetadataView.addEntry(e);
