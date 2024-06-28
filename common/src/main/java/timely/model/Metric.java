@@ -1,6 +1,7 @@
 package timely.model;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
@@ -23,6 +24,12 @@ import timely.model.parse.TagParser;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({"name"})
 public class Metric implements Serializable {
+
+    // Capture the time that this class is loaded by the JVM for the purposes of
+    // comparing the timestamp. Some systems, like Telegraf's OpenTSDB output
+    // plugin, send the timestamp in seconds.
+    private static final long TIME_LOADED = System.currentTimeMillis();
+    private static final long TS_THRESHOLD = Duration.ofMillis(TIME_LOADED).minusDays(365).toMillis();
 
     private static final long serialVersionUID = 1L;
 
@@ -176,6 +183,9 @@ public class Metric implements Serializable {
         }
 
         public Builder value(long timestamp, double measure) {
+            if (timestamp <= TS_THRESHOLD) {
+                timestamp = timestamp * 1000;
+            }
             metric.setValue(new Value(timestamp, measure));
             return this;
         }

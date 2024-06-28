@@ -31,6 +31,9 @@ public class DownsampleIteratorTest {
     final private SortedMap<Key,Value> testData1 = new TreeMap<>();
     final private SortedMap<Key,Value> testData2 = new TreeMap<>();
 
+    private long now = System.currentTimeMillis();
+    private long startingTimestamp = now - (now % 100);
+
     @Before
     public void createTestData() {
         createTestData1();
@@ -41,7 +44,7 @@ public class DownsampleIteratorTest {
         List<Tag> tags = Collections.singletonList(new Tag("host", "host1"));
 
         for (long i = 0; i < 1000; i += 100) {
-            Metric m = new Metric("sys.loadAvg", i, .2, tags);
+            Metric m = new Metric("sys.loadAvg", startingTimestamp + i, .2, tags);
             Mutation mutation = MetricAdapter.toMutation(m);
             for (ColumnUpdate cu : mutation.getUpdates()) {
                 Key key = new Key(mutation.getRow(), cu.getColumnFamily(), cu.getColumnQualifier(), cu.getColumnVisibility(), cu.getTimestamp());
@@ -63,8 +66,8 @@ public class DownsampleIteratorTest {
         List<Tag> tags2 = Collections.singletonList(new Tag("host", "host2"));
 
         for (long i = 0; i < 1000; i += 100) {
-            put(testData2, new Metric("sys.loadAvg", i, .2, tags));
-            put(testData2, new Metric("sys.loadAvg", i + 50, .5, tags2));
+            put(testData2, new Metric("sys.loadAvg", startingTimestamp + i, .2, tags));
+            put(testData2, new Metric("sys.loadAvg", startingTimestamp + i + 50, .5, tags2));
         }
     }
 
@@ -78,13 +81,14 @@ public class DownsampleIteratorTest {
             Set<Tag> tags = entry.getKey();
             assertEquals(1, tags.size());
             assertEquals(Collections.singleton(new Tag("host", "host1")), tags);
-            long ts = 0;
+
+            long ts = startingTimestamp - (startingTimestamp % 100);
             for (Sample sample : entry.getValue()) {
                 assertEquals(ts, sample.getTimestamp());
                 ts += 100;
                 assertEquals(0.2, sample.getValue(), 0.0001);
             }
-            assertEquals(1000, ts);
+            assertEquals(startingTimestamp - (startingTimestamp % 100) + 1000, ts);
         }
     }
 
@@ -96,7 +100,7 @@ public class DownsampleIteratorTest {
         for (Tag tag : new Tag[] {new Tag("host", "host1"), new Tag("host", "host2")}) {
             Downsample dsample = samples.get(Collections.singleton(tag));
             assertNotNull(dsample);
-            long ts = 0;
+            long ts = startingTimestamp - (startingTimestamp % 100);
             double value = .2;
             if (tag.getValue().equals("host2")) {
                 value = .5;
@@ -120,7 +124,7 @@ public class DownsampleIteratorTest {
         for (Tag tag : new Tag[] {new Tag("host", "host1"), new Tag("host", "host2")}) {
             Downsample dsample = samples.get(Collections.singleton(tag));
             assertNotNull(dsample);
-            long ts = 0;
+            long ts = startingTimestamp - (startingTimestamp % 200);
             double value = .2;
             if (tag.getValue().equals("host2")) {
                 value = .5;
@@ -216,7 +220,7 @@ public class DownsampleIteratorTest {
 
         for (long i = 0; i < elapsedTime; i += skipInterval) {
             for (List<Tag> tags : listOfTagVariations) {
-                put(testData3, new Metric("sys.loadAvg", i, i * 2, tags));
+                put(testData3, new Metric("sys.loadAvg", startingTimestamp + i, i * 2, tags));
             }
         }
         return testData3;

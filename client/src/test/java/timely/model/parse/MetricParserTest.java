@@ -14,11 +14,32 @@ public class MetricParserTest {
     @Test
     public void testParseWithEscapedCharacters() {
 
+        Long now = System.currentTimeMillis();
+        String ts = Long.toString(now);
+
         MetricParser parser = new MetricParser();
-        Metric m = parser.parse("put mymetric 12341234 5.0 tag1=value1,value1 tag2=value2=value2");
+        Metric m = parser.parse("put mymetric " + ts + " 5.0 tag1=value1,value1 tag2=value2=value2");
 
         Assert.assertEquals("mymetric", m.getName());
-        Assert.assertEquals(12341234, (long) m.getValue().getTimestamp());
+        Assert.assertEquals(now, m.getValue().getTimestamp());
+        Assert.assertEquals(5.0, (double) m.getValue().getMeasure(), 0);
+        List<Tag> expected = new ArrayList<>();
+        expected.add(new Tag("tag1", "value1,value1"));
+        expected.add(new Tag("tag2", "value2=value2"));
+        Assert.assertEquals(expected, m.getTags());
+    }
+
+    @Test
+    public void testParseWithSecondsTimestamp() {
+
+        Long now = System.currentTimeMillis() / 1000;
+        String ts = Long.toString(now);
+
+        MetricParser parser = new MetricParser();
+        Metric m = parser.parse("put mymetric " + ts + " 5.0 tag1=value1,value1 tag2=value2=value2");
+
+        Assert.assertEquals("mymetric", m.getName());
+        Assert.assertEquals((Long) (now * 1000L), m.getValue().getTimestamp());
         Assert.assertEquals(5.0, (double) m.getValue().getMeasure(), 0);
         List<Tag> expected = new ArrayList<>();
         expected.add(new Tag("tag1", "value1,value1"));
