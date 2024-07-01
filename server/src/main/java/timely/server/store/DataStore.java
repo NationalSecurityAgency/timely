@@ -952,7 +952,7 @@ public class DataStore {
             pattern.append(tag.getValue());
             pattern.append("(,.*|$)");
 
-            IteratorSetting setting = new IteratorSetting(priority++, tag.getKey() + " tag filter", RegExFilter.class);
+            IteratorSetting setting = new IteratorSetting(priority++, tag.getKey().replaceAll("\\.", "_") + " tag filter", RegExFilter.class);
             log.trace("Using {} additional filter on tag: {}", pattern, tag.getKey());
             RegExFilter.setRegexs(setting, null, null, pattern.toString(), null, false, true);
             scanner.addScanIterator(setting);
