@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import timely.model.Tag;
 
@@ -24,9 +25,7 @@ public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag
             if (!p.isEmpty()) {
                 Tag tag = tagParser.parse(p);
                 // unescape commas in the key and value of the tag
-                tag.setKey(tag.getKey().replaceAll("\\\\,", ","));
-                tag.setValue(tag.getValue().replaceAll("\\\\,", ","));
-                tags.add(tag);
+                tags.add(unescapeCommas(tag));
             }
         }
         return tags;
@@ -36,7 +35,9 @@ public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag
     public String combine(Collection<Tag> tags) {
         StringBuilder builder = new StringBuilder();
         if (!tags.isEmpty()) {
-            tags.forEach(p -> builder.append(tagParser.combine(p)).append(','));
+            tags.forEach(p -> {
+                builder.append(tagParser.combine(escapeCommas(p))).append(',');
+            });
             builder.setLength(builder.length() - 1);
         }
         return builder.toString();
@@ -48,11 +49,26 @@ public class TagListParser implements Parser<List<Tag>>, Combiner<Collection<Tag
      * @return string representation
      */
     public String combine(Map<String,String> tags) {
-        StringBuilder builder = new StringBuilder();
-        if (!tags.isEmpty()) {
-            tags.forEach((k, v) -> builder.append(tagParser.combine(new Tag(k, v))).append(','));
-            builder.setLength(builder.length() - 1);
-        }
-        return builder.toString();
+        return combine(tags.entrySet().stream().map(e -> new Tag(e.getKey(), e.getValue())).collect(Collectors.toList()));
+    }
+
+    private Tag escapeCommas(Tag tag) {
+        return escapeCommas(tag.getKey(), tag.getValue());
+    }
+
+    private Tag escapeCommas(String k, String v) {
+        k = k.replaceAll(",", "\\\\,");
+        v = v.replaceAll(",", "\\\\,");
+        return new Tag(k, v);
+    }
+
+    private Tag unescapeCommas(Tag tag) {
+        return unescapeCommas(tag.getKey(), tag.getValue());
+    }
+
+    private Tag unescapeCommas(String k, String v) {
+        k = k.replaceAll("\\\\,", ",");
+        v = v.replaceAll("\\\\,", ",");
+        return new Tag(k, v);
     }
 }
