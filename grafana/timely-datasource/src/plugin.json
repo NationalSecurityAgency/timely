@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "datasource",
+  "name": "Timely",
+  "id": "nsa-timely-datasource",
+  "category": "tsdb",
+  "metrics": true,
+  "backend": true,
+  "alerting": true,
+  "executable": "timely_datasource",
+  "info": {
+    "description": "Datasource for Timely",
+    "author": {
+      "name": "National Security Agency"
+    },
+    "keywords": ["datasource"],
+    "logos": {
+      "small": "static/img/timely_square_small.png",
+      "large": "static/img/timely_square_large.png"
+    },
+    "links": [
+      {
+        "name": "Website",
+        "url": "https://code.nsa.gov/timely"
+      },
+      {
+        "name": "License",
+        "url": "https://github.com/NationalSecurityAgency/timely/blob/master/LICENSE"
+      }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=10.0.0",
+    "plugins": []
+  }
+}

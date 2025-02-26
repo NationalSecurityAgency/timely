@@ -1,0 +1,56 @@
+/* color of input fields */
+div.timely input.form-control {
+  color: #464c54;
+  background-color: #ffffff;
+}
+
+div.timely .dropdown-item {
+  color: #464c54;
+}
+
+div.timely .dropdown-item-text {
+  color: #464c54;
+}
+
+div.timely .dropdown-item:hover,
+.dropdown-item:focus {
+  color: #464c54;
+  background-color: #e3e6e9;
+}
+
+div.timely .dropdown-item.active,
+.dropdown-item:active {
+  color: #464c54;
+  background-color: #e3e6e9;
+}
+
+div.timely .dropdown-item.disabled,
+.dropdown-item:disabled {
+  color: #abadaf;
+}
+
+div.timely .dropdown-header {
+  color: #464c54;
+}
+
+div.timely .dropdown-menu {
+  box-shadow: 0px 4px 2px 0px #cbcbcb;
+}
+
+div.timely input.form-control:focus {
+  color: #464c54;
+  outline: 0;
+  box-shadow: 0px 0px 0px 2px #ffffff, 0px 0px 0px 4px #5794f2;
+  outline-offset: 2px;
+  transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1) 0s;
+}
+
+/* color of highlighted text in autocomplete */
+div.timely mark.rbt-highlight-text {
+  background: linear-gradient(90deg, #bfc0c1, #abadaf);
+  color: #ff0;
+}
+
+.queryErrorFieldRow {
+  background-color: rgb(244, 245, 245);
+}

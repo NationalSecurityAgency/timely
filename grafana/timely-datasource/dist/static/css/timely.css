@@ -1,0 +1,110 @@
+div.timely input:focus {
+  z-index: 1;
+}
+
+div.timely input.form-control {
+  border-color: rgb(44, 50, 53);
+  border-top-color: rgb(44, 50, 53);
+  border-right-color: rgb(44, 50, 53);
+  border-bottom-color: rgb(44, 50, 53);
+  border-left-color: rgb(44, 50, 53);
+}
+
+div.timely.tag {
+  min-width: 16px !important;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+div.timely-edior-row div.gf-form {
+  margin-right: 4px !important;
+}
+
+div.timely.tag.error {
+  margin-left: 4px;
+}
+
+div.timely.tag.error svg {
+  color: #f19d06;
+}
+
+div.timely.tag.edit {
+  margin-left: 6px;
+}
+
+div.timely.tag.edit svg {
+  color: #62a562;
+}
+
+div.timely.tag.save {
+  margin-left: 6px;
+}
+
+div.timely.tag.save svg {
+  color: #62a562;
+}
+
+div.timely.tag.delete svg {
+  color: #d9162d;
+}
+
+div.timely.tag.addtag svg {
+  color: #62a562;
+}
+
+div.timely.tag.deletetag svg {
+  color: #d9162d;
+}
+
+button[title='Move query down'] div svg {
+  color: #b3bfbd;
+}
+
+button[title='Move query up'] div svg {
+  color: #b3bfbd;
+}
+
+button[title='Duplicate query'] div svg {
+  color: #62a562;
+}
+
+button[title='Disable/enable query'] div svg {
+  color: #2ab4f5;
+}
+
+button[title='Remove query'] div svg {
+  color: #d9162d;
+}
+
+.queryErrorFieldRow {
+  margin-bottom: 4px;
+}
+
+.queryErrorContainer {
+  display: flex;
+}
+
+.queryErrorIconDiv {
+  background-color: rgb(209, 14, 92);
+  padding: 8px;
+}
+
+.queryErrorIcon {
+  height: 16px;
+  width: 16px;
+  display: inline-block;
+  flex-shrink: 0;
+  line-height: 0;
+  vertical-align: middle;
+  fill: rgb(255, 255, 255);
+  overflow-clip-margin: content-box;
+  overflow: hidden;
+}
+
+.queryErrorText {
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.857143rem;
+  font-family: "Roboto Mono", monospace;
+  padding: 8px;
+}
