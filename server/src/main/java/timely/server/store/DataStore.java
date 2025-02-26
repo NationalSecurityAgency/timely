@@ -53,7 +53,6 @@ import org.apache.accumulo.core.data.PartialKey;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
-import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.security.VisibilityEvaluator;
@@ -934,29 +933,24 @@ public class DataStore {
             scanner.fetchColumnFamily(colf);
             log.trace("Fetching metric table column family: {}", colf);
         }
-        // Add the regular expression to filter the other tags
-        int priority = 100;
-        Iterator<Entry<String,String>> tagIter = tags.entrySet().iterator();
-        // skip over first tag which was already expanded into colFamValues
-        if (tagIter.hasNext()) {
-            tagIter.next();
+        // remove the first tag
+        Map<String,String> otherTags = tags.entrySet().stream().skip(1).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        if (!otherTags.isEmpty()) {
+            int tagFilterCacheSize = timelyProperties.getTagFilterCacheSize();
+            log.debug("Adding TagFilter with tags {} and tagFilterCacheSize {}", otherTags, tagFilterCacheSize);
+            addTagFilter(scanner, otherTags, tagFilterCacheSize);
         }
-        Entry<String,String> tag;
-        while (tagIter.hasNext()) {
-            tag = tagIter.next();
-            log.trace("Adding regex filter for tag {}", tag);
-            StringBuffer pattern = new StringBuffer();
-            pattern.append("(^.*\\x00|.*,)");
-            pattern.append(tag.getKey());
-            pattern.append("=");
-            pattern.append(tag.getValue());
-            pattern.append("(,.*|$)");
+    }
 
-            IteratorSetting setting = new IteratorSetting(priority++, tag.getKey() + " tag filter", RegExFilter.class);
-            log.trace("Using {} additional filter on tag: {}", pattern, tag.getKey());
-            RegExFilter.setRegexs(setting, null, null, pattern.toString(), null, false, true);
-            scanner.addScanIterator(setting);
-        }
+    private void addTagFilter(ScannerBase scanner, Map<String,String> tags, int cacheSize) {
+        // skip the first tag, join the rest on = then on ,
+        List<String> tagList = tags.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.toList());
+        String tagListString = String.join(",", tagList);
+        IteratorSetting setting = new IteratorSetting(100, "tag filter", TagFilter.class);
+        log.trace("Using tag filter for tags: {}", tagListString);
+        setting.addOption(TagFilter.TAGS, tagListString);
+        setting.addOption(TagFilter.CACHE_SIZE, Integer.toString(cacheSize));
+        scanner.addScanIterator(setting);
     }
 
     private Set<Tag> expandTagValues(Entry<String,String> firstTag, Iterator<Pair<String,String>> knownKeyValues) {
