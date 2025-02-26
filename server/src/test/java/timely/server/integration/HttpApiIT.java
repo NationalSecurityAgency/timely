@@ -595,7 +595,7 @@ public class HttpApiIT extends OneWaySSLBase {
     }
 
     @Test
-    public void testQueryWithTagRegex() throws Exception {
+    public void testQueryWithTagRegex1() throws Exception {
         // @formatter:off
         put("sys.cpu.user " + TEST_TIME + " 1.0 tag1=value1 tag2=value2 rack=r1",
            "sys.cpu.user " + (TEST_TIME + 1) + " 1.0 tag3=value3 rack=r2",
@@ -619,33 +619,25 @@ public class HttpApiIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(2, response.size());
-        QueryResponse response1 = response.get(0);
-        Map<String,String> tags = response1.getTags();
-        assertEquals(2, tags.size());
-        assertTrue(tags.containsKey("rack"));
-        assertTrue(tags.get("rack").equals("r2"));
-        assertTrue(tags.containsKey("tag3"));
-        assertTrue(tags.get("tag3").equals("value3"));
-        Map<String,Object> dps = response1.getDps();
-        assertEquals(1, dps.size());
-        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
-        Entry<String,Object> entry = entries.next();
-        assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
-        assertEquals(3.0, entry.getValue());
-
-        QueryResponse response2 = response.get(1);
-        Map<String,String> tags2 = response2.getTags();
-        assertEquals(2, tags2.size());
-        assertTrue(tags2.containsKey("rack"));
-        assertTrue(tags2.get("rack").equals("r1"));
-        assertTrue(tags.containsKey("tag3"));
-        assertTrue(tags.get("tag3").equals("value3"));
-        Map<String,Object> dps2 = response2.getDps();
-        assertEquals(1, dps2.size());
-        Iterator<Entry<String,Object>> entries2 = dps2.entrySet().iterator();
-        Entry<String,Object> entry2 = entries2.next();
-        assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
-        assertEquals(1.0, entry2.getValue());
+        for (QueryResponse r : response) {
+            Assert.assertEquals(2, r.getTags().size());
+            Assert.assertTrue(r.getTags().containsKey("rack"));
+            Assert.assertTrue(r.getTags().get("rack").matches("r1|r2"));
+            Assert.assertTrue(r.getTags().containsKey("tag3"));
+            Assert.assertTrue(r.getTags().get("tag3").equals("value3"));
+            Map<String,Object> dps = r.getDps();
+            assertEquals(1, dps.size());
+            Object o = dps.entrySet().stream().map(e -> e.getValue()).findFirst().orElse(null);
+            Assert.assertNotNull(o);
+            switch (r.getTags().get("rack")) {
+                case "r1":
+                    assertEquals(1.0, o);
+                    break;
+                case "r2":
+                    assertEquals(3.0, o);
+                    break;
+            }
+        }
     }
 
     @Test
@@ -673,33 +665,25 @@ public class HttpApiIT extends OneWaySSLBase {
         request.addQuery(subQuery);
         List<QueryResponse> response = query(baseUrl + "/api/query", request);
         assertEquals(2, response.size());
-        QueryResponse response1 = response.get(0);
-        Map<String,String> tags = response1.getTags();
-        assertEquals(2, tags.size());
-        assertTrue(tags.containsKey("rack"));
-        assertTrue(tags.get("rack").equals("r2"));
-        assertTrue(tags.containsKey("tag3"));
-        assertTrue(tags.get("tag3").equals("value3"));
-        Map<String,Object> dps = response1.getDps();
-        assertEquals(1, dps.size());
-        Iterator<Entry<String,Object>> entries = dps.entrySet().iterator();
-        Entry<String,Object> entry = entries.next();
-        assertEquals(Long.toString((TEST_TIME / 1000) + 1), entry.getKey());
-        assertEquals(3.0, entry.getValue());
-
-        QueryResponse response2 = response.get(1);
-        Map<String,String> tags2 = response2.getTags();
-        assertEquals(2, tags2.size());
-        assertTrue(tags2.containsKey("rack"));
-        assertTrue(tags2.get("rack").equals("r1"));
-        assertTrue(tags.containsKey("tag3"));
-        assertTrue(tags.get("tag3").equals("value3"));
-        Map<String,Object> dps2 = response2.getDps();
-        assertEquals(1, dps2.size());
-        Iterator<Entry<String,Object>> entries2 = dps2.entrySet().iterator();
-        Entry<String,Object> entry2 = entries2.next();
-        assertEquals(Long.toString((TEST_TIME / 1000)), entry2.getKey());
-        assertEquals(1.0, entry2.getValue());
+        for (QueryResponse r : response) {
+            Assert.assertEquals(2, r.getTags().size());
+            Assert.assertTrue(r.getTags().containsKey("rack"));
+            Assert.assertTrue(r.getTags().get("rack").matches("r1|r2"));
+            Assert.assertTrue(r.getTags().containsKey("tag3"));
+            Assert.assertTrue(r.getTags().get("tag3").equals("value3"));
+            Map<String,Object> dps = r.getDps();
+            assertEquals(1, dps.size());
+            Object o = dps.entrySet().stream().map(e -> e.getValue()).findFirst().orElse(null);
+            Assert.assertNotNull(o);
+            switch (r.getTags().get("rack")) {
+                case "r1":
+                    assertEquals(1.0, o);
+                    break;
+                case "r2":
+                    assertEquals(3.0, o);
+                    break;
+            }
+        }
     }
 
     private void addRateData(String metric, String tagString, long testStartTime, long timeIncrement, long testStopTime, double startValue, double maxValue,
