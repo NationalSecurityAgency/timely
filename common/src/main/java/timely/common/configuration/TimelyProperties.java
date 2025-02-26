@@ -24,6 +24,7 @@ public class TimelyProperties {
     private int instance = 1;
     private int portIncrement = 100;
     private String defaultVisibility = null;
+    private int tagFilterCacheSize = 10000;
 
     public boolean isTest() {
         return test;
@@ -90,5 +91,13 @@ public class TimelyProperties {
     public TimelyProperties setMetricsReportIgnoredTags(List<String> metricsReportIgnoredTags) {
         this.metricsReportIgnoredTags = metricsReportIgnoredTags;
         return this;
+    }
+
+    public void setTagFilterCacheSize(int tagFilterCacheSize) {
+        this.tagFilterCacheSize = tagFilterCacheSize;
+    }
+
+    public int getTagFilterCacheSize() {
+        return tagFilterCacheSize;
     }
 }
