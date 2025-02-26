@@ -1,0 +1,393 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "timely-datasource",
+        "uid": "timelydatasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "aggregator": "none",
+          "alias": "${tag_instance}",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "avg",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "isCounter": false,
+          "metric": "sys.interface.if_packets",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "A",
+          "shouldComputeRate": true,
+          "tags": {
+            "instance": ".*"
+          }
+        }
+      ],
+      "title": "Interface Packets",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "timely-datasource",
+        "uid": "timelydatasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.system",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "A",
+          "shouldComputeRate": true,
+          "tags": {}
+        },
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "hide": false,
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.user",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "B",
+          "shouldComputeRate": true,
+          "tags": {}
+        },
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "hide": false,
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.idle",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "C",
+          "shouldComputeRate": true,
+          "tags": {}
+        },
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "hide": false,
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.wait",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "D",
+          "shouldComputeRate": true,
+          "tags": {}
+        },
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "hide": false,
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.interrupt",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "E",
+          "shouldComputeRate": true,
+          "tags": {}
+        },
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "hide": false,
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.nice",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "F",
+          "shouldComputeRate": true,
+          "tags": {}
+        },
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "hide": false,
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.softirq",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "G",
+          "shouldComputeRate": true,
+          "tags": {}
+        },
+        {
+          "aggregator": "none",
+          "alias": "",
+          "datasource": {
+            "type": "timely-datasource",
+            "uid": "timelydatasource"
+          },
+          "disableDownsampling": false,
+          "downsampleAggregator": "sum",
+          "downsampleFillPolicy": "none",
+          "downsampleInterval": "1m",
+          "hide": false,
+          "isCounter": false,
+          "metric": "sys.cpu.cpu.steal",
+          "queryType": "metricQuery",
+          "rateInterval": "1m",
+          "refId": "H",
+          "shouldComputeRate": true,
+          "tags": {}
+        }
+      ],
+      "title": "Cpu Usage",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 40,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Collectd",
+  "uid": "bee9pmhr0os1sa",
+  "version": 2,
+  "weekStart": ""
+}

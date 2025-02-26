@@ -6,7 +6,7 @@
     <artifactId>timely</artifactId>
     <version>2.1.6-SNAPSHOT</version>
   </parent>
-  <artifactId>timely-app</artifactId>
+  <artifactId>timely-datasource</artifactId>
   <packaging>pom</packaging>
   <build>
     <plugins>

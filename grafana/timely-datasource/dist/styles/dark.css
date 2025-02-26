@@ -1,0 +1,61 @@
+/* color of input fields */
+div.timely input.form-control {
+  color: #c7d0d9;
+  background-color: #0b0c0e;
+}
+
+div.timely .dropdown-item {
+  color: #c7d0d9;
+  background-color: #0b0c0e;
+}
+
+div.timely .dropdown-item-text {
+  color: #c7d0d9;
+  background-color: #0b0c0e;
+}
+
+div.timely .dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: #4f5255;
+}
+
+div.timely .dropdown-item.active,
+.dropdown-item:active {
+  background-color: #4f5255;
+}
+
+div.timely .dropdown-item.disabled,
+.dropdown-item:disabled {
+  color: #0b0c0e;
+}
+
+div.timely .dropdown-header {
+  color: #0b0c0e;
+}
+
+div.timely .dropdown-menu {
+  background-color: #0b0c0e;
+  box-shadow: 0px 2px 2px 2px #31343b;
+}
+
+div.timely input.form-control:focus {
+  color: #c7d0d9;
+  outline: 0;
+  box-shadow: 0px 0px 0px 2px #141619, 0px 0px 0px 4px #1f60c4;
+  outline-offset: 2px;
+  transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1) 0s;
+}
+
+/* color of highlighted text in autocomplete */
+div.timely mark.rbt-highlight-text {
+  background: linear-gradient(90deg, #56585c, #4c5057);
+  color: #ff0;
+}
+
+.queryErrorFieldRow {
+  background-color: rgb(34, 37, 43);
+}
+
+.queryErrorIcon {
+  color: rgb(255, 255, 255);
+}

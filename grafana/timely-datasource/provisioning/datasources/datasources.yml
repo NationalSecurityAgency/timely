@@ -1,0 +1,49 @@
+apiVersion: 1
+
+deleteDatasources:
+  - name: Timely
+    orgId: 1
+  - name: timely-datasource
+    orgId: 1
+
+datasources:
+  - name: Timely (prod)
+    type: timely-datasource
+    access: proxy
+    uid: timelydatasource
+    orgId: 1
+    version: 1
+    editable: true
+    isDefault: true
+    jsonData:
+      timelyHost: host.docker.internal
+      httpsPort: 4243
+      oauthPassThru: true
+      useClientCertWhenOAuthMissing: true
+      clientCertificatePath: '/etc/pki/testServer.cert'
+      clientKeyPath: '/etc/pki/testServer.key'
+      certificateAuthorityPath: '/etc/pki/ca.cert'
+      allowInsecureSsl: true
+      datasourceTags:
+    secureJsonData:
+  - name: Timely (test)
+    type: timely-datasource
+    access: proxy
+    uid: timelydatasource-test
+    orgId: 1
+    version: 1
+    editable: true
+    isDefault: false
+    jsonData:
+      timelyHost: host.docker.internal
+      httpsPort: 4243
+      oauthPassThru: true
+      useClientCertWhenOAuthMissing: true
+      clientCertificatePath: '/etc/pki/testServer.cert'
+      clientKeyPath: '/etc/pki/testServer.key'
+      certificateAuthorityPath: '/etc/pki/ca.cert'
+      allowInsecureSsl: true
+      datasourceTags:
+        cluster: test
+        part: test
+    secureJsonData:

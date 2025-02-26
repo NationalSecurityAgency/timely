@@ -8,4 +8,5 @@ logs/
 server/pki/
 client/src/main/python/setup.py
 grafana/timely-app/yarn-error.log
+grafana/timely-app/data/
 

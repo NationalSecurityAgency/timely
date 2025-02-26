@@ -7,8 +7,8 @@
   </formats>
   <fileSets>
     <fileSet>
-      <directory>timely-app/dist</directory>
-      <outputDirectory>timely-app</outputDirectory>
+      <directory>timely-datasource/dist</directory>
+      <outputDirectory>timely-datasource</outputDirectory>
     </fileSet>
   </fileSets>
   <includeBaseDirectory>false</includeBaseDirectory>
