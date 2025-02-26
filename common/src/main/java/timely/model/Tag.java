@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -90,7 +91,7 @@ public class Tag implements Comparable<Tag>, Serializable {
 
     @Override
     public int hashCode() {
-        return this.toString().hashCode();
+        return new HashCodeBuilder().append(this.key).append(this.value).toHashCode();
     }
 
     @Override
