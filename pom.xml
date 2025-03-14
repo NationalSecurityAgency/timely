@@ -17,6 +17,7 @@
     <module>common</module>
     <module>test</module>
     <module>client</module>
+    <module>nsq-relay</module>
     <module>server</module>
     <module>balancer</module>
     <module>grafana</module>
@@ -269,6 +270,11 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${version.junit}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${version.jcip-annotations}</version>
       </dependency>
       <dependency>
         <groupId>net.sourceforge.javacsv</groupId>
@@ -696,12 +702,6 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${version.junit}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>net.jcip</groupId>
-        <artifactId>jcip-annotations</artifactId>
-        <version>${version.jcip-annotations}</version>
         <scope>test</scope>
       </dependency>
       <dependency>

@@ -1,0 +1,36 @@
+Configuration:
+  status: warn
+  monitorInterval: 60
+
+  Properties:
+    Property:
+      - name: logDir
+        value: ${env:LOG_DIR}
+      - name: PID
+        value: "????"
+      - name: LOG_PATTERN
+        value: "%d{ISO8601} %-5p [%-20.20t] [%-40.40c{1.}] %m%n%wEx"
+
+  Appenders:
+    RollingFile:
+      - name: File
+        fileName: "${sys:logDir}/timely-nsq-relay.log"
+        filePattern: "${sys:logDir}/timely-nsq-relay.log.%d{yyyy-MM-dd}-%i.gz"
+        append: true
+        bufferedIO: true
+        bufferSize: 8192
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 1
+          SizeBasedTriggeringPolicy:
+            size: 250MB
+        DefaultRolloverStrategy:
+          max: 10
+        PatternLayout:
+          pattern: "${LOG_PATTERN}"
+
+  Loggers:
+    Root:
+      level: info
+      AppenderRef:
+        - ref: File

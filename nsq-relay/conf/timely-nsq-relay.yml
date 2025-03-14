@@ -1,0 +1,26 @@
+timely:
+  nsq:
+    lookupd-http-address:
+      - localhost:4161
+    lookup-interval-secs: 2
+    max-lookup-failures-before-error: 10
+    topic: metrics
+    channel: Timely#ephemeral
+    max-in-flight: 1000
+    max-delivery-attempts: 5
+    message-handler-threads: 4
+    message-handler-queue-size: 1000
+
+  client:
+    host: localhost
+    tcp-port: 4242
+    time-to-live-ms: -1
+    max-latency-ms: 5000
+    writes-to-buffer: -1
+    relay-handler-threads: 4
+
+logging:
+  level:
+    ROOT: info
+    timely: trace
+    com.sproutsocial.nsq: trace

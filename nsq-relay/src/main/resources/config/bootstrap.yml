@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: timely-nsq-relay
+  config:
+    name: timely-nsq-relay
+    location: ${CONF_DIR:}/
