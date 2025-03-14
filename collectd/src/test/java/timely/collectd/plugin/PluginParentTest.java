@@ -16,11 +16,8 @@ import org.powermock.api.easymock.PowerMock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import net.jcip.annotations.NotThreadSafe;
-
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({Collectd.class})
-@NotThreadSafe
 public class PluginParentTest {
 
     public class TestPlugin extends CollectDPluginParent {

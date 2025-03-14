@@ -1,12 +1,12 @@
 package timely.collectd.plugin;
 
-import java.net.Socket;
-
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.collectd.api.Collectd;
 import org.collectd.api.OConfigItem;
+
+import java.net.Socket;
 
 public class PooledSocketFactory implements PooledObjectFactory<Socket> {
 

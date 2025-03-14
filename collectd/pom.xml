@@ -6,7 +6,7 @@
     <artifactId>timely</artifactId>
     <version>2.1.6-SNAPSHOT</version>
   </parent>
-  <artifactId>collectd-timely-plugin</artifactId>
+  <artifactId>timely-collectd</artifactId>
   <dependencies>
     <dependency>
       <groupId>collectd</groupId>
@@ -17,22 +17,16 @@
       <artifactId>commons-pool2</artifactId>
     </dependency>
     <dependency>
-      <groupId>timely</groupId>
-      <artifactId>collectd-plugin-parent</artifactId>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.jcip</groupId>
-      <artifactId>jcip-annotations</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -49,7 +43,17 @@
         <artifactId>maven-shade-plugin</artifactId>
         <configuration>
           <artifactSet>
-            <includes />
+            <includes>
+              <include>com.google.guava:guava</include>
+              <include>commons-codec:commons-codec</include>
+              <include>org.apache.commons:commons-lang3</include>
+              <include>org.apache.commons:commons-pool2</include>
+              <include>org.apache.httpcomponents:httpclient</include>
+              <include>org.apache.httpcomponents:httpcore</include>
+              <include>org.slf4j:jcl-over-slf4j</include>
+              <include>org.slf4j:slf4j-api</include>
+              <include>timely:timely-common</include>
+            </includes>
           </artifactSet>
           <filters>
             <filter>
