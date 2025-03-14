@@ -1301,19 +1301,8 @@
     <profile>
       <id>collectd</id>
       <modules>
-        <module>collectd-timely-plugin</module>
-        <module>collectd-nsq-plugin</module>
-        <module>collectd-plugin-parent</module>
+        <module>collectd</module>
       </modules>
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>timely</groupId>
-            <artifactId>collectd-plugin-parent</artifactId>
-            <version>${project.version}</version>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
     </profile>
     <profile>
       <id>add-spotbugs-excludes</id>
