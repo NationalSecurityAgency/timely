@@ -1,12 +1,6 @@
 package timely.collectd.plugin;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.Collections;
-
+import net.jcip.annotations.NotThreadSafe;
 import org.collectd.api.Collectd;
 import org.collectd.api.DataSet;
 import org.collectd.api.DataSource;
@@ -21,7 +15,12 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import net.jcip.annotations.NotThreadSafe;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Collections;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({Collectd.class})
