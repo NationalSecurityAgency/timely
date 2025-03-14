@@ -207,13 +207,11 @@ public class Server {
         this.DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
     }
 
-    // @PostConstruct
     public void start() {
         log.info("Starting {}", this.getClass().getSimpleName());
         try {
             shutdownQuietPeriod = serverProperties.getShutdownQuietPeriod();
             ensureZkPaths(curatorFramework, zkPaths);
-            startLeaderLatch(this.curatorFramework);
             JWTTokenHandler.init(securityProperties, accumuloClient);
             final boolean useEpoll = useEpoll();
             Class<? extends ServerSocketChannel> channelClass;
@@ -315,19 +313,6 @@ public class Server {
             log.error(e.getMessage(), e);
             SpringApplication.exit(applicationContext, () -> 0);
         }
-    }
-
-    protected Channel bind2(AbstractBootstrap server, String ip, int port) {
-        Channel channel = null;
-        try {
-            channel = server.bind(ip, port).sync().channel();
-        } catch (InterruptedException e) {
-            log.error("Failed to bind to {}:{} -- {}", ip, port, e.getMessage());
-        }
-        if (channel == null) {
-            throw new IllegalStateException("Failed to bind to port:" + ip + ":" + port);
-        }
-        return channel;
     }
 
     public void shutdown() {
@@ -475,9 +460,9 @@ public class Server {
         }
     }
 
-    private void startLeaderLatch(CuratorFramework curatorFramework) {
+    public void startLeaderLatch() {
         try {
-            this.leaderLatch = new LeaderLatch(curatorFramework, LEADER_LATCH_PATH);
+            this.leaderLatch = new LeaderLatch(this.curatorFramework, LEADER_LATCH_PATH);
             this.leaderLatch.start();
             this.leaderLatch.addListener(new LeaderLatchListener() {
 

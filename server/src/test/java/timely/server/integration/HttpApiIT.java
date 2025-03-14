@@ -67,7 +67,7 @@ import timely.util.JsonUtil;
 @ActiveProfiles({"oneWaySsl"})
 public class HttpApiIT extends OneWaySSLBase {
 
-    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
+    private static final Long TEST_TIME = ITBase.roundTimestampToLastHour(System.currentTimeMillis());
 
     @Autowired
     @Rule
@@ -796,7 +796,6 @@ public class HttpApiIT extends OneWaySSLBase {
 
     @Test
     public void testRateCounterWithRateIntervalOption() throws Exception {
-        Long TEST_TIME = (System.currentTimeMillis() / 60000) * 60000;
         addRateData("sys.cpu.user", "tag1=value1 tag2=value2 rack=r1", TEST_TIME, 60000, TEST_TIME + 600000, 1.0, Double.MAX_VALUE, 5);
         dataStore.flush();
         dataStoreCache.flushCaches(-1);

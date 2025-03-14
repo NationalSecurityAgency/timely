@@ -7,9 +7,9 @@ timely:
   in-memory-accumulo:
     enabled: false
   server:
-    tcp-base-port: 55322
-    udp-base-port: 55325
+    tcp-base-port: 6322
+    udp-base-port: 6325
   http:
-    base-port: 55323
+    base-port: 6323
   websocket:
-    base-port: 55324
+    base-port: 6324

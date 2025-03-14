@@ -201,4 +201,8 @@ public class ITBase {
             dataStore.removeStoreCallback(storeCallback);
         }
     }
+
+    public static long roundTimestampToLastHour(long timestamp) {
+        return timestamp - (timestamp % 3600000);
+    }
 }

@@ -62,7 +62,7 @@ timely:
     assignment-file: file://${java.io.tmpdir}/timely/balancer/assignments.csv
     server:
       ip: 127.0.0.1
-      tcp-base-port: 4242
+      tcp-base-port: 9242
       num-tcp-pools: 1
       tcp-buffer-size: 100
       tcp-client-pool:
@@ -82,7 +82,7 @@ timely:
         jmx-enabled: true
         test-on-borrow: false
         test-on-return: false
-      udp-base-port: 4245
+      udp-base-port: 9245
       udp-client-pool:
         min-idle-per-key: 0
         max-idle-per-key: 40
@@ -103,7 +103,7 @@ timely:
     http:
       host: localhost
       ip: 127.0.0.1
-      base-port: 4243
+      base-port: 9243
       redirect-path: /secure-me
       strict-transport-max-age: 604800
       cors:
@@ -132,7 +132,7 @@ timely:
         test-on-return: false
     websocket:
       ip: 127.0.0.1
-      base-port: 5244
+      base-port: 9244
       timeout: 60
       subscription-lag: 120
       scanner-batch-size: 10000

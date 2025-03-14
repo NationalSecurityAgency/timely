@@ -49,7 +49,7 @@ import timely.test.TimelyTestRule;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public class TimelyTcpIT extends ITBase {
 
-    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
+    private static final Long TEST_TIME = ITBase.roundTimestampToLastHour(System.currentTimeMillis());
 
     @Autowired
     @Rule

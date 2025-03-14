@@ -41,7 +41,7 @@ import timely.test.TimelyTestRule;
 @ActiveProfiles({"oneWaySsl"})
 public class TcpClientIT extends OneWaySSLBase {
 
-    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
+    private static final Long TEST_TIME = ITBase.roundTimestampToLastHour(System.currentTimeMillis());
 
     @Autowired
     @Rule

@@ -55,7 +55,7 @@ public class DataStoreCacheIterator implements SortedKeyValueIterator<Key,Value>
         for (Map.Entry<Key,Value> entry : entries.entrySet()) {
             kvQueue.add(new KeyValue(entry.getKey(), entry.getValue()));
         }
-        log.info("Time to initialize cache iterator for {} with {} TaggedMetric/GorillaStore pairs and {} K/V entries - {}ms", query, storeMap.size(),
+        log.debug("Time to initialize cache iterator for {} with {} TaggedMetric/GorillaStore pairs and {} K/V entries - {}ms", query, storeMap.size(),
                         entries.size(), System.currentTimeMillis() - start);
     }
 

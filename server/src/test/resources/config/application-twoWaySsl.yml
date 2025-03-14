@@ -20,9 +20,9 @@ timely:
       trust-store-file: classpath:ssl/ca.jks
       trust-store-password: ChangeIt
   server:
-    tcp-base-port: 57322
-    udp-base-port: 57325
+    tcp-base-port: 8322
+    udp-base-port: 8325
   http:
-    base-port: 57323
+    base-port: 8323
   websocket:
-    base-port: 57324
+    base-port: 8324

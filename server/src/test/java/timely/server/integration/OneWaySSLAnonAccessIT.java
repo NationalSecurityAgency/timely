@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,7 +38,7 @@ import timely.test.TimelyTestRule;
 @ActiveProfiles({"oneWaySsl"})
 public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
 
-    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
+    private static final Long TEST_TIME = ITBase.roundTimestampToLastHour(System.currentTimeMillis());
 
     @Autowired
     @Rule
@@ -54,9 +55,9 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
         baseUrl = "https://" + httpProperties.getHost() + ":" + httpProperties.getPort();
     }
 
-    @Before
+    @After
     public void cleanup() {
-        super.setup();
+        super.cleanup();
     }
 
     @Test

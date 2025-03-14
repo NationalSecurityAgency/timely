@@ -77,8 +77,6 @@ public class MetricCompactionIT extends ITBase {
     @After
     public void cleanup() {
         super.cleanup();
-        deleteTable(timelyProperties.getMetricsTable());
-        deleteTable(timelyProperties.getMetaTable());
     }
 
     @After
