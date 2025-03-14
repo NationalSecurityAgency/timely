@@ -271,6 +271,11 @@
         <version>${version.junit}</version>
       </dependency>
       <dependency>
+        <groupId>net.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${version.jcip-annotations}</version>
+      </dependency>
+      <dependency>
         <groupId>net.sourceforge.javacsv</groupId>
         <artifactId>javacsv</artifactId>
         <version>${version.javacsv}</version>
@@ -931,6 +936,10 @@
             </includes>
             <groups>timely.test.IntegrationTest</groups>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            <systemProperties>
+              <log4j.configuration>file:${project.build.testOutputDirectory}/log4j.yml</log4j.configuration>
+              <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
+            </systemProperties>
           </configuration>
           <executions>
             <execution>
@@ -983,6 +992,10 @@
             <runOrder>random</runOrder>
             <excludedGroups>timely.test.IntegrationTest</excludedGroups>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            <systemProperties>
+              <log4j.configuration>file:${project.build.testOutputDirectory}/log4j.yml</log4j.configuration>
+              <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
+            </systemProperties>
           </configuration>
         </plugin>
         <plugin>

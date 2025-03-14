@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,9 +55,9 @@ public class OneWaySSLAnonAccessIT extends OneWaySSLBase {
         baseUrl = "https://" + httpProperties.getHost() + ":" + httpProperties.getPort();
     }
 
-    @Before
+    @After
     public void cleanup() {
-        super.setup();
+        super.cleanup();
     }
 
     @Test

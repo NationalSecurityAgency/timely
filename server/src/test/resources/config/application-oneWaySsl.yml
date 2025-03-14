@@ -13,9 +13,9 @@ timely:
       use-generated-keypair: false
       ignore-ssl-handshake-errors: true
   server:
-    tcp-base-port: 56322
-    udp-base-port: 56325
+    tcp-base-port: 7322
+    udp-base-port: 7325
   http:
-    base-port: 56323
+    base-port: 7323
   websocket:
-    base-port: 56324
+    base-port: 7324
