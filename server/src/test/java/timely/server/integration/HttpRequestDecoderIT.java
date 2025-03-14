@@ -65,7 +65,7 @@ public class HttpRequestDecoderIT extends ITBase {
     @Autowired
     private HttpProperties httpProperties;
 
-    private static final Long TEST_TIME = (System.currentTimeMillis() / 1000) * 1000;
+    private static final Long TEST_TIME = ITBase.roundTimestampToLastHour(System.currentTimeMillis());
 
     private SecurityProperties requireUserSecurity = TestConfiguration.requireUserSecurity();
     private SecurityProperties anonymousSecurity = TestConfiguration.anonymousSecurity();

@@ -58,13 +58,13 @@ timely:
     required-auths: X, Y, Z
   server:
     ip: 127.0.0.1
-    tcp-base-port: 54322
-    udp-base-port: 54325
+    tcp-base-port: 5322
+    udp-base-port: 5325
     shutdown-quiet-period: 0
   http:
     host: localhost
     ip: 127.0.0.1
-    base-port: 54323
+    base-port: 5323
     redirect-path: /secure-me
     strict-transport-max-age: 604800
     cors:
@@ -76,7 +76,7 @@ timely:
       allowed-headers: content-type
   websocket:
     ip: 127.0.0.1
-    base-port: 54324
+    base-port: 5324
     timeout: 20
     subscription-lag: 120
     scanner-batch-size: 10000

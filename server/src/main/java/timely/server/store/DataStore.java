@@ -218,39 +218,8 @@ public class DataStore {
                 }
             }
 
-            if (metricsTable.contains(".")) {
-                final String[] parts = metricsTable.split("\\.", 2);
-                final String namespace = parts[0];
-                if (!accumuloClient.namespaceOperations().exists(namespace)) {
-                    try {
-                        log.info("Creating namespace " + namespace);
-                        accumuloClient.namespaceOperations().create(namespace);
-                    } catch (final NamespaceExistsException ex) {
-                        // don't care
-                    }
-                }
-            }
-
+            verifyTables();
             configureAgeOff(timelyProperties);
-
-            final Map<String,String> tableIdMap = accumuloClient.tableOperations().tableIdMap();
-            if (!tableIdMap.containsKey(metricsTable)) {
-                try {
-                    log.info("Creating table " + metricsTable);
-                    accumuloClient.tableOperations().create(metricsTable);
-                } catch (final TableExistsException ex) {
-                    // don't care
-                }
-            }
-
-            if (!tableIdMap.containsKey(metaTable)) {
-                try {
-                    log.info("Creating table " + metaTable);
-                    accumuloClient.tableOperations().create(metaTable);
-                } catch (final TableExistsException ex) {
-                    // don't care
-                }
-            }
 
             if (!timelyProperties.isTest()) {
                 executorService.scheduleAtFixedRate(() -> internalMetrics.getMetricsAndReset().forEach(m -> store(m, false)), METRICS_PERIOD, METRICS_PERIOD,
@@ -258,6 +227,40 @@ public class DataStore {
             }
         } catch (AccumuloException | AccumuloSecurityException | VisibilityParseException e) {
             throw new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Error creating DataStore", e.getMessage(), e);
+        }
+    }
+
+    public void verifyTables() throws AccumuloException, AccumuloSecurityException {
+        if (metricsTable.contains(".")) {
+            final String[] parts = metricsTable.split("\\.", 2);
+            final String namespace = parts[0];
+            if (!accumuloClient.namespaceOperations().exists(namespace)) {
+                try {
+                    log.info("Creating namespace " + namespace);
+                    accumuloClient.namespaceOperations().create(namespace);
+                } catch (final NamespaceExistsException ex) {
+                    // don't care
+                }
+            }
+        }
+
+        final Map<String,String> tableIdMap = accumuloClient.tableOperations().tableIdMap();
+        if (!tableIdMap.containsKey(metricsTable)) {
+            try {
+                log.info("Creating table " + metricsTable);
+                accumuloClient.tableOperations().create(metricsTable);
+            } catch (final TableExistsException ex) {
+                // don't care
+            }
+        }
+
+        if (!tableIdMap.containsKey(metaTable)) {
+            try {
+                log.info("Creating table " + metaTable);
+                accumuloClient.tableOperations().create(metaTable);
+            } catch (final TableExistsException ex) {
+                // don't care
+            }
         }
     }
 
@@ -890,7 +893,7 @@ public class DataStore {
             }
             final boolean ONLY_RETURN_FIRST_TAG = onlyFirstRow;
             Iterator<Entry<Key,Value>> iter = meta.iterator();
-            Iterator<Pair<String,String>> knownKeyValues = new Iterator<Pair<String,String>>() {
+            Iterator<Pair<String,String>> knownKeyValues = new Iterator<>() {
 
                 Text firstTag = null;
                 Text tagName = null;

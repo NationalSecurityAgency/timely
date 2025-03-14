@@ -1,6 +1,7 @@
 package timely.server.test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.accumulo.core.client.AccumuloClient;
@@ -26,7 +27,7 @@ public class TestDataStore extends DataStore {
 
     private static final Logger log = LoggerFactory.getLogger(TestDataStore.class);
     private final MetaCache metaCache;
-    private List<StoreCallback> storeCallbacks = new ArrayList<>();
+    private List<StoreCallback> storeCallbacks = Collections.synchronizedList(new ArrayList<>());
 
     public TestDataStore(ApplicationContext applicationContext, AccumuloClient accumuloClient, DataStoreCache dataStoreCache,
                     AuthenticationService authenticationService, InternalMetrics internalMetrics, MetaCache metaCache, TimelyProperties timelyProperties,
@@ -64,8 +65,10 @@ public class TestDataStore extends DataStore {
     @Override
     public void store(Metric metric, boolean cacheEnabled) {
         super.store(metric, cacheEnabled);
-        for (StoreCallback c : storeCallbacks) {
-            c.onStore();
+        synchronized (storeCallbacks) {
+            for (StoreCallback c : storeCallbacks) {
+                c.onStore();
+            }
         }
     }
 

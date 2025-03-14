@@ -54,6 +54,7 @@ public class TimelyConfiguration {
         Server server = new Server(applicationContext, accumuloClient, dataStore, dataStoreCache, sslContext, authenticationService, curatorFramework,
                         metaCache, timelyProperties, securityProperties, serverProperties, httpProperties, corsProperties, websocketProperties,
                         sslServerProperties);
+        server.startLeaderLatch();
         server.start();
         return server;
     }
