@@ -12,10 +12,19 @@ BIN_DIR=${BASE_DIR}/bin
 
 . ${BIN_DIR}/timely-balancer-env.sh
 
+shutdown_pid() {
+    PID=$1
+    if [ "$PID" != "" ]; then
+        kill -15 $PID > /dev/null 2>&1
+        timeout $2 pidwait $PID
+        kill -9 $PID > /dev/null 2>&1
+    fi
+}
+
 for i in $(seq 1 $NUM_INSTANCES); do
     PID=`jps -m | grep -E 'timely-balancer-.*-exec.jar' | grep "instance=${i}" | awk '{print $1}'`
     if [ "$PID" != "" ]; then
         echo "stopping timely-balancer instance ${i} [${PID}]"
-        kill -9 $PID
+        shutdown_pid ${PID} 60
     fi
 done
