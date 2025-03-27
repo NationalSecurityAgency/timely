@@ -25,6 +25,8 @@ public class TimelyProperties {
     private int portIncrement = 100;
     private String defaultVisibility = null;
     private int tagFilterCacheSize = 10000;
+    private String filteredMetricsFile = null;
+    private String filteredTagsFile = null;
 
     public boolean isTest() {
         return test;
@@ -99,5 +101,21 @@ public class TimelyProperties {
 
     public int getTagFilterCacheSize() {
         return tagFilterCacheSize;
+    }
+
+    public void setFilteredMetricsFile(String filteredMetricsFile) {
+        this.filteredMetricsFile = filteredMetricsFile;
+    }
+
+    public String getFilteredMetricsFile() {
+        return filteredMetricsFile;
+    }
+
+    public void setFilteredTagsFile(String filteredTagsFile) {
+        this.filteredTagsFile = filteredTagsFile;
+    }
+
+    public String getFilteredTagsFile() {
+        return filteredTagsFile;
     }
 }

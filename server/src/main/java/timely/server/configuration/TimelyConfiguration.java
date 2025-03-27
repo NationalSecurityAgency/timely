@@ -27,6 +27,7 @@ import timely.server.store.DataStore;
 import timely.server.store.InternalMetrics;
 import timely.server.store.MetaCache;
 import timely.server.store.cache.DataStoreCache;
+import timely.util.Exclusions;
 
 @Configuration
 @EnableConfigurationProperties({TimelyProperties.class, ZookeeperProperties.class, AccumuloProperties.class, MetaCacheProperties.class})
@@ -62,9 +63,9 @@ public class TimelyConfiguration {
     public DataStore dataStore(ApplicationContext applicationContext, AccumuloClient accumuloClient, DataStoreCache dataStoreCache,
                     AuthenticationService authenticationService, InternalMetrics internalMetrics, MetaCache metaCache, TimelyProperties timelyProperties,
                     ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties, SecurityProperties securityProperties,
-                    CacheProperties cacheProperties) throws Exception {
+                    CacheProperties cacheProperties, Exclusions exclusions) throws Exception {
         DataStore dataStore = new DataStore(applicationContext, accumuloClient, dataStoreCache, authenticationService, internalMetrics, metaCache,
-                        timelyProperties, zookeeperProperties, accumuloProperties, securityProperties, cacheProperties);
+                        timelyProperties, zookeeperProperties, accumuloProperties, securityProperties, cacheProperties, exclusions);
         dataStore.start();
         return dataStore;
     }

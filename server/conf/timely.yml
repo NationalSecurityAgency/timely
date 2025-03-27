@@ -9,6 +9,8 @@ timely:
     metric-age-off-hours:
       default: 26
   metrics-report-ignored-tags:
+  filtered-metrics-file: ${FILTERED_METRICS_FILE}
+  filtered-tags-file: ${FILTERED_TAGS_FILE}
   default-visibility:
   zookeeper:
     servers: ${ACCUMULO_ZOOKEEPERS}

@@ -1,0 +1,3 @@
+sys.interface.if_packets sampleType,instance
+sys.interface.if_octets sampleType,instance
+sys.ethstat.rx_queue_bytes sampleType,instance

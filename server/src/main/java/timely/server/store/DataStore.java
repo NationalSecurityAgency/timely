@@ -88,7 +88,6 @@ import timely.common.configuration.ZookeeperProperties;
 import timely.model.Meta;
 import timely.model.Metric;
 import timely.model.Tag;
-import timely.model.parse.TagListParser;
 import timely.server.auth.util.ScannerHelper;
 import timely.server.sample.Aggregation;
 import timely.server.sample.Aggregator;
@@ -98,6 +97,7 @@ import timely.server.sample.iterators.DownsampleIterator;
 import timely.server.sample.iterators.RateIterator;
 import timely.server.store.cache.DataStoreCache;
 import timely.server.util.MetaKeySet;
+import timely.util.Exclusions;
 
 public class DataStore {
 
@@ -105,7 +105,7 @@ public class DataStore {
 
     private static final long METRICS_PERIOD = 30000;
     private static final Pattern REGEX_TEST = Pattern.compile("^\\w+$");
-    private TagListParser tagListParser = new TagListParser();
+    private final Exclusions exclusions;
 
     /*
      * Pair doesn't implement Comparable
@@ -158,7 +158,7 @@ public class DataStore {
     public DataStore(ApplicationContext applicationContext, AccumuloClient accumuloClient, DataStoreCache dataStoreCache,
                     AuthenticationService authenticationService, InternalMetrics internalMetrics, MetaCache metaCache, TimelyProperties timelyProperties,
                     ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties, SecurityProperties securityProperties,
-                    CacheProperties cacheProperties) {
+                    CacheProperties cacheProperties, Exclusions exclusions) {
 
         int numWriteThreads;
         if (timelyProperties.isTest()) {
@@ -178,6 +178,7 @@ public class DataStore {
         this.securityProperties = securityProperties;
         this.cacheProperties = cacheProperties;
         this.accumuloClient = accumuloClient;
+        this.exclusions = exclusions;
 
         bwConfig = new BatchWriterConfig();
         bwConfig.setMaxLatency(getTimeInMillis(accumuloProperties.getWrite().getLatency()), TimeUnit.MILLISECONDS);
@@ -383,6 +384,12 @@ public class DataStore {
     }
 
     public void store(Metric metric, boolean cacheEnabled) {
+        boolean filterMetric = exclusions.filterMetric(metric);
+        if (filterMetric) {
+            log.trace("Ignoring filtered metric: {}", metric);
+            return;
+        }
+        exclusions.filterExcludedTags(metric);
         log.trace("Received Store Request for: {}", metric);
 
         // if default visibility is configured and current metric does not contain a

@@ -20,6 +20,7 @@ import timely.server.store.DataStore;
 import timely.server.store.InternalMetrics;
 import timely.server.store.MetaCache;
 import timely.server.store.cache.DataStoreCache;
+import timely.util.Exclusions;
 
 public class TestDataStore extends DataStore {
 
@@ -30,9 +31,9 @@ public class TestDataStore extends DataStore {
     public TestDataStore(ApplicationContext applicationContext, AccumuloClient accumuloClient, DataStoreCache dataStoreCache,
                     AuthenticationService authenticationService, InternalMetrics internalMetrics, MetaCache metaCache, TimelyProperties timelyProperties,
                     ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties, SecurityProperties securityProperties,
-                    CacheProperties cacheProperties) {
+                    CacheProperties cacheProperties, Exclusions exclusions) {
         super(applicationContext, accumuloClient, dataStoreCache, authenticationService, internalMetrics, metaCache, timelyProperties, zookeeperProperties,
-                        accumuloProperties, securityProperties, cacheProperties);
+                        accumuloProperties, securityProperties, cacheProperties, exclusions);
         this.metaCache = metaCache;
     }
 

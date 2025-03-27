@@ -31,6 +31,7 @@ import timely.server.test.TestDataStore;
 import timely.server.test.TestDataStoreCache;
 import timely.server.test.TestServer;
 import timely.test.configuration.MiniAccumuloProperties;
+import timely.util.Exclusions;
 
 @Configuration
 @EnableConfigurationProperties({MiniAccumuloProperties.class, TabletMetadataProperties.class})
@@ -75,9 +76,9 @@ public class TestTimelyConfiguration {
     public TestDataStore dataStore(ApplicationContext applicationContext, AccumuloClient accumuloClient, DataStoreCache dataStoreCache,
                     AuthenticationService authenticationService, InternalMetrics internalMetrics, MetaCache metaCache, TimelyProperties timelyProperties,
                     ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties, SecurityProperties securityProperties,
-                    CacheProperties cacheProperties) throws Exception {
+                    CacheProperties cacheProperties, Exclusions exclusions) throws Exception {
         TestDataStore dataStore = new TestDataStore(applicationContext, accumuloClient, dataStoreCache, authenticationService, internalMetrics, metaCache,
-                        timelyProperties, zookeeperProperties, accumuloProperties, securityProperties, cacheProperties);
+                        timelyProperties, zookeeperProperties, accumuloProperties, securityProperties, cacheProperties, exclusions);
         dataStore.start();
         return dataStore;
     }

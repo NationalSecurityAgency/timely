@@ -3,6 +3,7 @@ package timely.collectd.plugin;
 import static org.junit.Assert.*;
 
 import java.io.OutputStream;
+import java.net.URL;
 import java.util.Collections;
 
 import org.collectd.api.Collectd;
@@ -13,10 +14,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 @RunWith(PowerMockRunner.class)
+@PowerMockIgnore("jdk.internal.reflect.*")
 @PrepareForTest({Collectd.class})
 public class PluginParentTest {
 
@@ -38,12 +41,13 @@ public class PluginParentTest {
     public String result = null;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
+        result = null;
         PowerMock.suppress(PowerMock.everythingDeclaredIn(Collectd.class));
     }
 
     @Test
-    public void testStatsDHadoopFormat() throws Exception {
+    public void testStatsDHadoopFormat() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("statsd");
@@ -57,11 +61,11 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put statsd.dfs.BlocksRead 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo instance=DataNode sample=value sampleType=GAUGE\n", result);
+        assertEquals("put statsd.dfs.BlocksRead 1456156976840 1.0 addl1=foo host=r01n01 instance=DataNode rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
-    public void testStatsDUnknownFormat() throws Exception {
+    public void testStatsDUnknownFormat() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("statsd");
@@ -75,11 +79,11 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put statsd.baz 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo sample=value sampleType=GAUGE\n", result);
+        assertEquals("put statsd.baz 1456156976840 1.0 addl1=foo host=r01n01 rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
-    public void testStatsDUnknownFormat2() throws Exception {
+    public void testStatsDUnknownFormat2() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("statsd");
@@ -93,11 +97,11 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put statsd.baz 1456156976840 1.0 host=r01n01 rack=r01 addl1=foo instance=bar sample=value sampleType=GAUGE\n", result);
+        assertEquals("put statsd.baz 1456156976840 1.0 addl1=foo host=r01n01 instance=bar rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
-    public void testHddTemp() throws Exception {
+    public void testHddTemp() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("hddtemp");
@@ -111,11 +115,11 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.hddtemp.temperature 1456156976840 35.0 host=r01n01 rack=r01 addl1=foo instance=sda sample=value sampleType=GAUGE\n", result);
+        assertEquals("put sys.hddtemp.temperature 1456156976840 35.0 addl1=foo host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
-    public void testSmart1() throws Exception {
+    public void testSmart1() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("smart");
@@ -129,11 +133,11 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.smart.smart_badsectors 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo instance=sda sample=value sampleType=GAUGE\n", result);
+        assertEquals("put sys.smart.smart_badsectors 1456156976840 0.0 addl1=foo host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
-    public void testSmart2() throws Exception {
+    public void testSmart2() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("smart");
@@ -148,11 +152,11 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.smart.raw-read-error-rate 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo instance=sda sample=value sampleType=GAUGE\n", result);
+        assertEquals("put sys.smart.raw-read-error-rate 1456156976840 0.0 addl1=foo host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
-    public void testSmartCode() throws Exception {
+    public void testSmartCode() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("smart");
@@ -167,12 +171,11 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.smart.Total_LBAs_Read 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo code=242 instance=sda sample=value sampleType=GAUGE\n",
-                        result);
+        assertEquals("put sys.smart.Total_LBAs_Read 1456156976840 0.0 addl1=foo code=242 host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
-    public void testSnmp() throws Exception {
+    public void testSnmp() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("snmp");
@@ -187,7 +190,7 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.snmp.if_octets 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo instance=Ethernet1 sample=value sampleType=GAUGE\n", result);
+        assertEquals("put sys.snmp.if_octets 1456156976840 0.0 addl1=foo host=r01n01 instance=Ethernet1 rack=r01 sampleType=GAUGE\n", result);
 
     }
 
@@ -207,8 +210,7 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.sensors.temperature.coretemp-isa-0000 1456156976840 35.0 host=r01n01 rack=r01 addl1=foo instance=1 sample=value sampleType=GAUGE\n",
-                        result);
+        assertEquals("put sys.sensors.temperature.coretemp-isa-0000 1456156976840 35.0 addl1=foo host=r01n01 instance=1 rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
@@ -226,7 +228,7 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.haproxy.run_queue 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo sample=value sampleType=GAUGE\n", result);
+        assertEquals("put sys.haproxy.run_queue 1456156976840 0.0 addl1=foo host=r01n01 rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
@@ -245,7 +247,7 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.haproxy.queue_current 1456156976840 0.0 host=r01n01 rack=r01 addl1=foo proxy_name=proxy1 service_name=server1 sample=value sampleType=GAUGE\n",
+        assertEquals("put sys.haproxy.queue_current 1456156976840 0.0 addl1=foo host=r01n01 proxy_name=proxy1 rack=r01 sampleType=GAUGE service_name=server1\n",
                         result);
     }
 
@@ -265,20 +267,19 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.ethstat.tx_comp_queue_full 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo instance=eth0 sample=value sampleType=GAUGE\n",
-                        result);
+        assertEquals("put sys.ethstat.tx_comp_queue_full 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 rack=r01 sampleType=GAUGE\n", result);
 
     }
 
     @Test
-    public void testEthStatWithQueue() {
+    public void testEthstatWithQueueStyle1() {
         ValueList vl = new ValueList();
         vl.setHost(HOST);
         vl.setPlugin("ethstat");
         vl.setPluginInstance("eth0");
         vl.setTime(TIME);
         vl.setType("derive");
-        vl.setTypeInstance("rx_queue_1_bytes");
+        vl.setTypeInstance("rx_queue_15_bytes");
         vl.setValues(Collections.singletonList((Number) 6.0D));
         DataSet ds = new DataSet("DERIVE");
         ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
@@ -286,8 +287,83 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.ethstat.rx_bytes 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo queue=1 instance=eth0 sample=value sampleType=GAUGE\n", result);
+        assertEquals("put sys.ethstat.rx_queue_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=15 rack=r01 sampleType=GAUGE\n", result);
 
+        result = null;
+        vl.setTypeInstance("queue_7_tx_bytes");
+        test.process(vl, null);
+        assertEquals("put sys.ethstat.queue_tx_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=7 rack=r01 sampleType=GAUGE\n", result);
+
+        result = null;
+        vl.setTypeInstance("queue_7_rx_xdp_drop");
+        test.process(vl, null);
+        assertEquals("put sys.ethstat.queue_rx_xdp_drop 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=7 rack=r01 sampleType=GAUGE\n", result);
+    }
+
+    @Test
+    public void testEthstatWithQueueStyle2() {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("ethstat");
+        vl.setPluginInstance("eth0");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("rx-15.bytes");
+        vl.setValues(Collections.singletonList((Number) 6.0D));
+        DataSet ds = new DataSet("DERIVE");
+        ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+
+        test.process(vl, null);
+        assertEquals("put sys.ethstat.rx_queue_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=15 rack=r01 sampleType=GAUGE\n", result);
+
+        result = null;
+        vl.setTypeInstance("tx15_xdp_err");
+        test.process(vl, null);
+        assertEquals("put sys.ethstat.tx_queue_xdp_err 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=15 rack=r01 sampleType=GAUGE\n", result);
+    }
+
+    @Test
+    public void testEthstatWithTrafficClass() {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("ethstat");
+        vl.setPluginInstance("eth0");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("veb.tc_15_tx_bytes");
+        vl.setValues(Collections.singletonList((Number) 6.0D));
+        DataSet ds = new DataSet("DERIVE");
+        ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+
+        test.process(vl, null);
+        assertEquals("put sys.ethstat.veb.tc_tx_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 rack=r01 sampleType=GAUGE trafficClass=15\n",
+                        result);
+    }
+
+    @Test
+    public void testEthstatWithChannel() {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("ethstat");
+        vl.setPluginInstance("eth0");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("ch44_events");
+        vl.setValues(Collections.singletonList((Number) 6.0D));
+        DataSet ds = new DataSet("DERIVE");
+        ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+
+        test.process(vl, null);
+        assertEquals("put sys.ethstat.ch_events 1456156976840 6.0 addl1=foo channel=44 host=r01n01 instance=eth0 rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
@@ -305,9 +381,37 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
         test.process(vl, null);
-        assertEquals("put sys.ipmi.temperature 1456156976840 6.0 host=r01n01 rack=r01 addl1=foo instance=LAN_NIC_Temp_system_board_(3.2) sample=value sampleType=GAUGE\n",
+        assertEquals("put sys.ipmi.temperature 1456156976840 6.0 addl1=foo host=r01n01 instance=LAN_NIC_Temp_system_board_(3.2) rack=r01 sampleType=GAUGE\n",
                         result);
 
     }
 
+    @Test
+    public void testExclusions() {
+        ValueList vl = new ValueList();
+        vl.setHost(HOST);
+        vl.setPlugin("ethstat");
+        vl.setPluginInstance("eth0");
+        vl.setTime(TIME);
+        vl.setType("derive");
+        vl.setTypeInstance("rx_queue_1_bytes");
+        vl.setValues(Collections.singletonList((Number) 6.0D));
+        DataSet ds = new DataSet("DERIVE");
+        ds.addDataSource(new DataSource("value", 1, 6.0D, 100.0D));
+        vl.setDataSet(ds);
+
+        TestPlugin test = new TestPlugin();
+        URL filteredMetricsFile = getClass().getClassLoader().getResource("filteredMetrics.txt");
+        test.setFilteredMetricsFile(filteredMetricsFile.getPath());
+        URL filteredTagsFile = getClass().getClassLoader().getResource("filteredTags.txt");
+        test.setFilteredTagsFile(filteredTagsFile.getPath());
+
+        test.process(vl, null);
+        assertEquals("put sys.ethstat.rx_queue_bytes 1456156976840 6.0 addl1=foo host=r01n01 queue=1 rack=r01\n", result);
+
+        result = null;
+        vl.setPlugin("interface");
+        vl.setTypeInstance("if_octets");
+        assertNull(result);
+    }
 }

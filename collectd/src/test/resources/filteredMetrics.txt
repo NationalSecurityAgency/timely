@@ -1,0 +1,3 @@
+sys.ethstat.*_to_.*
+sys.interface.if_packets
+sys.interface.if_octets

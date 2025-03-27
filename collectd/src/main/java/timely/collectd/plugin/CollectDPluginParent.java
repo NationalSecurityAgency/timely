@@ -10,9 +10,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.collectd.api.Collectd;
 import org.collectd.api.OConfigItem;
 import org.collectd.api.ValueList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import timely.util.Exclusions;
 
 public abstract class CollectDPluginParent {
 
@@ -32,19 +37,23 @@ public abstract class CollectDPluginParent {
     private static final Pattern STATSD_PATTERN_3_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final Pattern STATSD_PATTERN_4_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final Pattern STATSD_PATTERN_6_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_#]+)\\.([\\w-_]+)");
-    private static final Pattern ETHSTAT_PATTERN = Pattern.compile("([\\w-_]+)_queue_([\\w-_]+)_([\\w-_]+)");
+    private static final Pattern ETHSTAT_QUEUE_PATTERN1 = Pattern.compile("([\\w-_]*)queue_([0-9]+)_([\\w-_]+)");
+    private static final Pattern ETHSTAT_QUEUE_PATTERN2 = Pattern.compile("([\\w-_\\.]*)(tx|rx)([-_]?)([0-9]+)([._])([\\w-_]+)");
+    private static final Pattern ETHSTAT_TRAFFIC_CLASS_PATTERN = Pattern.compile("([\\w-_\\.]*)(tc)([-_]?)([0-9]+)([._])([\\w-_]+)");
+    private static final Pattern ETHSTAT_CHANNEL_PATTERN = Pattern.compile("(ch)([0-9]+)([._])([\\w-_]+)");
     private static final String STATSD_PREFIX = "statsd";
     private static final String NSQ_PREFIX = STATSD_PREFIX + ".nsq.";
     private static final Pattern HAPROXY_PATTERN = Pattern.compile("\\[([\\w-_=]+),([\\w-_=]+)\\]");
+    private static final Logger log = LoggerFactory.getLogger(CollectDPluginParent.class);
 
     private final SMARTCodeMapping smart = new SMARTCodeMapping();
     protected Map<String,String> addlTags = new TreeMap<>();
     private boolean debug = false;
+    private Exclusions exclusions = new Exclusions();
 
     public int config(OConfigItem config) {
         for (OConfigItem child : config.getChildren()) {
-            switch (child.getKey()) {
-                case "Tags":
+            switch (child.getKey().toLowerCase()) {
                 case "tags":
                     String tagValue = child.getValues().get(0).getString();
                     Arrays.stream(tagValue.split(",")).map(String::trim).forEach(p -> {
@@ -54,7 +63,12 @@ public abstract class CollectDPluginParent {
                         }
                     });
                     break;
-                case "Debug":
+                case "filteredmetricsfile":
+                    setFilteredMetricsFile(child.getValues().get(0).getString());
+                    break;
+                case "filteredtagsfile":
+                    setFilteredTagsFile(child.getValues().get(0).getString());
+                    break;
                 case "debug":
                     debug = child.getValues().get(0).getBoolean();
                     break;
@@ -62,6 +76,18 @@ public abstract class CollectDPluginParent {
             }
         }
         return 0;
+    }
+
+    public void setFilteredMetricsFile(String filteredMetricsFile) {
+        if (StringUtils.isNotBlank(filteredMetricsFile)) {
+            exclusions.setFilteredMetricsFile(filteredMetricsFile);
+        }
+    }
+
+    public void setFilteredTagsFile(String filteredTagsFile) {
+        if (StringUtils.isNotBlank(filteredTagsFile)) {
+            exclusions.setFilteredTagsFile(filteredTagsFile);
+        }
     }
 
     public abstract void write(String metric, OutputStream out);
@@ -124,6 +150,7 @@ public abstract class CollectDPluginParent {
                 Matcher statsd_4_groups = STATSD_PATTERN_4_GROUPS.matcher(typeInstance);
                 Matcher statsd_6_groups = STATSD_PATTERN_6_GROUPS.matcher(typeInstance);
                 String instance = null;
+                boolean defaultCase = false;
                 if (!typeInstance.startsWith("nsq")) {
                     String[] parts = typeInstance.split("\\.");
                     if (parts.length >= 4 && (HADOOP_CONTEXTS.contains(parts[0]) || hadoop_4_groups.matches())) {
@@ -172,16 +199,23 @@ public abstract class CollectDPluginParent {
                         // and is dropped here. The serviceName is used as the instance.
                         metric.append(STATSD_PREFIX).append(PERIOD).append(statsd_4_groups.group(2)).append(PERIOD).append(statsd_4_groups.group(4));
                         instance = statsd_4_groups.group(1);
+                    } else {
+                        defaultCase = true;
                     }
-                } else if (statsd_3_groups.matches()) {
-                    metric.append(NSQ_PREFIX).append(statsd_3_groups.group(2)).append(PERIOD).append(statsd_3_groups.group(3));
-                } else if (statsd_4_groups.matches()) {
-                    metric.append(NSQ_PREFIX).append(statsd_4_groups.group(2)).append(PERIOD).append(statsd_4_groups.group(4));
-                    instance = statsd_4_groups.group(3);
-                } else if (statsd_6_groups.matches()) {
-                    metric.append(NSQ_PREFIX).append(statsd_6_groups.group(4)).append(PERIOD).append(statsd_6_groups.group(6));
-                    instance = statsd_6_groups.group(5);
                 } else {
+                    if (statsd_3_groups.matches()) {
+                        metric.append(NSQ_PREFIX).append(statsd_3_groups.group(2)).append(PERIOD).append(statsd_3_groups.group(3));
+                    } else if (statsd_4_groups.matches()) {
+                        metric.append(NSQ_PREFIX).append(statsd_4_groups.group(2)).append(PERIOD).append(statsd_4_groups.group(4));
+                        instance = statsd_4_groups.group(3);
+                    } else if (statsd_6_groups.matches()) {
+                        metric.append(NSQ_PREFIX).append(statsd_6_groups.group(4)).append(PERIOD).append(statsd_6_groups.group(6));
+                        instance = statsd_6_groups.group(5);
+                    } else {
+                        defaultCase = true;
+                    }
+                }
+                if (defaultCase) {
                     // Handle StatsD metrics of unknown formats. If there is a
                     // period in the metric name, use everything up to that as
                     // the instance.
@@ -199,13 +233,39 @@ public abstract class CollectDPluginParent {
                 break;
             case "ethstat":
                 metric.append("sys.ethstat.");
-                if (typeInstance.contains("queue")) {
-                    Matcher ethstat_m = ETHSTAT_PATTERN.matcher(typeInstance);
+                if (typeInstance.matches(ETHSTAT_QUEUE_PATTERN1.pattern())) {
+                    Matcher ethstat_m = ETHSTAT_QUEUE_PATTERN1.matcher(typeInstance);
                     if (ethstat_m.matches()) {
-                        metric.append(ethstat_m.group(1)).append("_").append(ethstat_m.group(3));
+                        metric.append(ethstat_m.group(1));
+                        metric.append("queue_");
+                        metric.append(ethstat_m.group(3));
                         addTag(tagMap, "queue", ethstat_m.group(2));
-                    } else {
-                        metric.append(typeInstance);
+                    }
+                } else if (typeInstance.matches(ETHSTAT_QUEUE_PATTERN2.pattern())) {
+                    Matcher ethstat_m = ETHSTAT_QUEUE_PATTERN2.matcher(typeInstance);
+                    if (ethstat_m.matches()) {
+                        metric.append(ethstat_m.group(1));
+                        metric.append(ethstat_m.group(2));
+                        metric.append("_queue_");
+                        metric.append(ethstat_m.group(6));
+                        addTag(tagMap, "queue", ethstat_m.group(4));
+                    }
+                } else if (typeInstance.matches(ETHSTAT_TRAFFIC_CLASS_PATTERN.pattern())) {
+                    Matcher ethstat_m = ETHSTAT_TRAFFIC_CLASS_PATTERN.matcher(typeInstance);
+                    if (ethstat_m.matches()) {
+                        metric.append(ethstat_m.group(1));
+                        metric.append(ethstat_m.group(2));
+                        metric.append(ethstat_m.group(5));
+                        metric.append(ethstat_m.group(6));
+                        addTag(tagMap, "trafficClass", ethstat_m.group(4));
+                    }
+                } else if (typeInstance.matches(ETHSTAT_CHANNEL_PATTERN.pattern())) {
+                    Matcher ethstat_m = ETHSTAT_CHANNEL_PATTERN.matcher(typeInstance);
+                    if (ethstat_m.matches()) {
+                        metric.append(ethstat_m.group(1));
+                        metric.append("_");
+                        metric.append(ethstat_m.group(4));
+                        addTag(tagMap, "channel", ethstat_m.group(2));
                     }
                 } else {
                     metric.append(typeInstance);
@@ -303,8 +363,13 @@ public abstract class CollectDPluginParent {
                                 typeInstance));
             } else {
                 String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(), tagString);
-                logDebug(String.format("Writing: %s", datapoint));
-                write(datapoint + "\n", out);
+                if (exclusions.filterMetric(datapoint)) {
+                    logDebug(String.format("Not writing excluded metric: %s", datapoint));
+                } else {
+                    datapoint = exclusions.filterExcludedTags(datapoint);
+                    logDebug(String.format("Writing: %s", datapoint));
+                    write(datapoint + "\n", out);
+                }
             }
         }
     }
