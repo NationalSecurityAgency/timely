@@ -168,29 +168,29 @@ public class MetricAgeOffIteratorTest {
     public void testKeysInOrder() throws Exception {
         SortedMap<Key,Value> table = new TreeMap<>();
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME - (3 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME - (3 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME - (3 * ONE_DAY)), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME - (2 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME - (2 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME - (2 * ONE_DAY)), EMPTY_VALUE);
         // creating a key that previously would cause the age off iterator to seek backwards
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME + (1000 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME - (1 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME - (1 * ONE_DAY)), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME), new byte[0], new byte[0], new byte[0], TEST_TIME), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME + ONE_DAY), new byte[0], new byte[0], new byte[0], TEST_TIME + ONE_DAY),
-                EMPTY_VALUE);
+                        EMPTY_VALUE);
         // creating a key that previously would cause the age off iterator to seek backwards
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME + (2000 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME + (2 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME + (2 * ONE_DAY)), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME - (3 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME - (3 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME - (3 * ONE_DAY)), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME - (2 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME - (2 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME - (2 * ONE_DAY)), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME - (1 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME - (1 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME - (1 * ONE_DAY)), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME), new byte[0], new byte[0], new byte[0], TEST_TIME), EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME + ONE_DAY), new byte[0], new byte[0], new byte[0], TEST_TIME + ONE_DAY),
-                EMPTY_VALUE);
+                        EMPTY_VALUE);
         table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME + (2 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
-                TEST_TIME + (2 * ONE_DAY)), EMPTY_VALUE);
+                        TEST_TIME + (2 * ONE_DAY)), EMPTY_VALUE);
 
         SortedKeyValueIterator<Key,Value> source = new SortedMapIterator(table);
         MetricAgeOffIterator iter = new MetricAgeOffIterator();

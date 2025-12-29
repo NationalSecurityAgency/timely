@@ -129,8 +129,9 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
     }
 
     /**
-     * Ensure that we have a row that is following that of the current top row.  If the newStart is
-     * not after the topRow, then return a row that is just after topRow.
+     * Ensure that we have a row that is following that of the current top row. If the newStart is not after the topRow, then return a row that is just after
+     * topRow.
+     *
      * @param topRow
      * @param newStart
      * @return the new start
