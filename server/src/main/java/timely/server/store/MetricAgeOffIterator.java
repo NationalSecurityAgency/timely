@@ -16,6 +16,7 @@ import org.apache.accumulo.core.util.Pair;
 import org.apache.commons.collections4.trie.PatriciaTrie;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +84,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                 log.trace("Current key is older than max age off, seeking to start of valid data");
                 String metricName = MetricAdapter.decodeRowKey(top).getFirst();
                 handleNewMetricName(metricName);
-                seekPastAgedOffMetricData(metricName, this.maxAgeOff);
+                seekPastAgedOffMetricData(top.getRow().getBytes(), metricName, this.maxAgeOff);
                 return;
             }
             if (isNextMetricTheSame(top.getRow())) {
@@ -93,7 +94,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                     // process
                     String metricName = new String(prevMetricBytes.copyBytes(), UTF_8);
                     log.trace("Current metric is older than age off for metric {}, seeking to start of valid data", metricName);
-                    seekPastAgedOffMetricData(metricName, prevAgeOff);
+                    seekPastAgedOffMetricData(top.getRow().getBytes(), metricName, prevAgeOff);
                 }
             } else {
                 // Metric name is different or prev information is not set
@@ -101,7 +102,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                 handleNewMetricName(metricName);
                 if (currentTime - top.getTimestamp() > prevAgeOff) {
                     log.trace("New metric found, but older than age off for metric {}, seeking to start of valid data", metricName);
-                    seekPastAgedOffMetricData(metricName, prevAgeOff);
+                    seekPastAgedOffMetricData(top.getRow().getBytes(), metricName, prevAgeOff);
                 }
             }
         }
@@ -127,16 +128,33 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
         }
     }
 
-    private void seekPastAgedOffMetricData(String metricName, long ageOffTime) {
+    /**
+     * Ensure that we have a row that is following that of the current top row.  If the newStart is
+     * not after the topRow, then return a row that is just after topRow.
+     * @param topRow
+     * @param newStart
+     * @return the new start
+     */
+    private byte[] ensureFollowing(byte[] topRow, byte[] newStart) {
+        if (WritableComparator.compareBytes(topRow, 0, topRow.length, newStart, 0, newStart.length) >= 0) {
+            byte[] followingRow = new byte[topRow.length + 1];
+            System.arraycopy(topRow, 0, followingRow, 0, topRow.length);
+            followingRow[topRow.length] = (byte) 0x00;
+            return followingRow;
+        }
+        return newStart;
+    }
+
+    private void seekPastAgedOffMetricData(byte[] topRow, String metricName, long ageOffTime) {
         long timeTarget = currentTime - ageOffTime;
         Range newRange = null;
         if (null == this.range) {
-            byte[] newStartRow = MetricAdapter.encodeRowKey(metricName, timeTarget);
+            byte[] newStartRow = ensureFollowing(topRow, MetricAdapter.encodeRowKey(metricName, timeTarget));
             newRange = new Range(new Key(new Text(newStartRow), timeTarget), null);
         } else {
             Key startKey = new Key(new Text(MetricAdapter.encodeRowKey(metricName, timeTarget)), timeTarget);
             Pair<String,Long> start = MetricAdapter.decodeRowKey(startKey);
-            byte[] newStartRow = MetricAdapter.encodeRowKey(start.getFirst(), timeTarget);
+            byte[] newStartRow = ensureFollowing(topRow, MetricAdapter.encodeRowKey(start.getFirst(), timeTarget));
             // @formatter:off
             Key newStartKey = new Key(newStartRow,
                     null != startKey.getColumnFamily() ? startKey.getColumnFamilyData().getBackingArray() : null,
