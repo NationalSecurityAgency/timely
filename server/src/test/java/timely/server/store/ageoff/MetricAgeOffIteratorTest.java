@@ -1,12 +1,10 @@
 package timely.server.store.ageoff;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
@@ -23,7 +21,6 @@ public class MetricAgeOffIteratorTest {
     private static final Long TEST_TIME = System.currentTimeMillis() - 1000;
     private static final Integer ONE_DAY = 86400000;
     private static final Value EMPTY_VALUE = new Value(new byte[0]);
-    private static final Collection<ByteSequence> columnFamilies = new ArrayList<>();
 
     @Test(expected = IllegalArgumentException.class)
     public void testDefaultMissing() throws Exception {
@@ -49,7 +46,7 @@ public class MetricAgeOffIteratorTest {
         HashMap<String,String> options = new HashMap<>();
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         iter.init(source, options, null);
-        iter.seek(new Range(), columnFamilies, true);
+        iter.seek(new Range(), Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -81,7 +78,7 @@ public class MetricAgeOffIteratorTest {
         HashMap<String,String> options = new HashMap<>();
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         iter.init(source, options, null);
-        iter.seek(new Range(), columnFamilies, true);
+        iter.seek(new Range(), Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -124,7 +121,7 @@ public class MetricAgeOffIteratorTest {
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "sys.cpu.user", Integer.toString(2 * ONE_DAY));
         iter.init(source, options, null);
-        iter.seek(new Range(), columnFamilies, true);
+        iter.seek(new Range(), Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -153,7 +150,7 @@ public class MetricAgeOffIteratorTest {
         iter.init(source, options, null);
         iter.seek(new Range(new Key("sys.cpu.user"), true,
                         new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME + 3), new byte[0], new byte[0], new byte[0], TEST_TIME + 3), true),
-                        columnFamilies, true);
+                        Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -162,6 +159,56 @@ public class MetricAgeOffIteratorTest {
             iter.next();
         }
         Assert.assertEquals(0, seen);
+    }
+
+    @Test
+    public void testKeysInOrder() throws Exception {
+        SortedMap<Key,Value> table = new TreeMap<>();
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME - (3 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME - (3 * ONE_DAY)), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME - (2 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME - (2 * ONE_DAY)), EMPTY_VALUE);
+        // creating a key that previously would cause the age off iterator to seek backwards
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME + (1000 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME - (1 * ONE_DAY)), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME), new byte[0], new byte[0], new byte[0], TEST_TIME), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME + ONE_DAY), new byte[0], new byte[0], new byte[0], TEST_TIME + ONE_DAY),
+                        EMPTY_VALUE);
+        // creating a key that previously would cause the age off iterator to seek backwards
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.idle", TEST_TIME + (2000 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME + (2 * ONE_DAY)), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME - (3 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME - (3 * ONE_DAY)), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME - (2 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME - (2 * ONE_DAY)), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME - (1 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME - (1 * ONE_DAY)), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME), new byte[0], new byte[0], new byte[0], TEST_TIME), EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME + ONE_DAY), new byte[0], new byte[0], new byte[0], TEST_TIME + ONE_DAY),
+                        EMPTY_VALUE);
+        table.put(new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME + (2 * ONE_DAY)), new byte[0], new byte[0], new byte[0],
+                        TEST_TIME + (2 * ONE_DAY)), EMPTY_VALUE);
+
+        SortedKeyValueIterator<Key,Value> source = new SortedMapIterator(table);
+        MetricAgeOffIterator iter = new MetricAgeOffIterator();
+        HashMap<String,String> options = new HashMap<>();
+        options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
+        options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "sys.cpu.user", Integer.toString(2 * ONE_DAY));
+        iter.init(source, options, null);
+        iter.seek(new Range(), Collections.emptySet(), false);
+        int seen = 0;
+        Key last = null;
+        while (iter.hasTop()) {
+            Key k = iter.getTopKey();
+            Assert.assertTrue(k.getTimestamp() >= (TEST_TIME - (2 * ONE_DAY)) && k.getTimestamp() <= TEST_TIME + (2 * ONE_DAY));
+            if (last != null) {
+                Assert.assertTrue(k.compareTo(last) > 0);
+            }
+            last = k;
+            seen++;
+            iter.next();
+        }
+        Assert.assertEquals(7, seen);
     }
 
 }
