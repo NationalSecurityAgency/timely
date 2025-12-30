@@ -138,6 +138,11 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
      */
     private byte[] ensureFollowing(byte[] topRow, byte[] newStart) {
         if (WritableComparator.compareBytes(topRow, 0, topRow.length, newStart, 0, newStart.length) >= 0) {
+            // log a message so that we can determine how ofter this happens.
+            StringBuilder builder = new StringBuilder().append("Found a row in which the timestamp significantly differs from the encoded time: ");
+            Key.appendPrintableString(topRow, 0, topRow.length, topRow.length, builder);
+            log.warn(builder.toString());
+
             byte[] followingRow = new byte[topRow.length + 1];
             System.arraycopy(topRow, 0, followingRow, 0, topRow.length);
             followingRow[topRow.length] = (byte) 0x00;
