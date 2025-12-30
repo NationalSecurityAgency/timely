@@ -2,6 +2,7 @@ package timely.server.store.ageoff;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -23,7 +24,6 @@ public class MetricAgeOffIteratorTest {
     private static final Long TEST_TIME = System.currentTimeMillis() - 1000;
     private static final Integer ONE_DAY = 86400000;
     private static final Value EMPTY_VALUE = new Value(new byte[0]);
-    private static final Collection<ByteSequence> columnFamilies = new ArrayList<>();
 
     @Test(expected = IllegalArgumentException.class)
     public void testDefaultMissing() throws Exception {
@@ -49,7 +49,7 @@ public class MetricAgeOffIteratorTest {
         HashMap<String,String> options = new HashMap<>();
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         iter.init(source, options, null);
-        iter.seek(new Range(), columnFamilies, false);
+        iter.seek(new Range(), Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -81,7 +81,7 @@ public class MetricAgeOffIteratorTest {
         HashMap<String,String> options = new HashMap<>();
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         iter.init(source, options, null);
-        iter.seek(new Range(), columnFamilies, false);
+        iter.seek(new Range(), Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -124,7 +124,7 @@ public class MetricAgeOffIteratorTest {
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "sys.cpu.user", Integer.toString(2 * ONE_DAY));
         iter.init(source, options, null);
-        iter.seek(new Range(), columnFamilies, false);
+        iter.seek(new Range(), Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -153,7 +153,7 @@ public class MetricAgeOffIteratorTest {
         iter.init(source, options, null);
         iter.seek(new Range(new Key("sys.cpu.user"), true,
                         new Key(MetricAdapter.encodeRowKey("sys.cpu.user", TEST_TIME + 3), new byte[0], new byte[0], new byte[0], TEST_TIME + 3), true),
-                        columnFamilies, false);
+                        Collections.emptySet(), false);
         int seen = 0;
         while (iter.hasTop()) {
             Key k = iter.getTopKey();
@@ -198,7 +198,7 @@ public class MetricAgeOffIteratorTest {
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "default", Integer.toString(1 * ONE_DAY));
         options.put(MetricAgeOffIterator.AGE_OFF_PREFIX + "sys.cpu.user", Integer.toString(2 * ONE_DAY));
         iter.init(source, options, null);
-        iter.seek(new Range(), columnFamilies, false);
+        iter.seek(new Range(), Collections.emptySet(), false);
         int seen = 0;
         Key last = null;
         while (iter.hasTop()) {
