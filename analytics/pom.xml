@@ -71,6 +71,8 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
             <compilerId>jdt</compilerId>
+            <source>11</source>
+            <target>11</target>
           </configuration>
           <dependencies>
             <dependency>

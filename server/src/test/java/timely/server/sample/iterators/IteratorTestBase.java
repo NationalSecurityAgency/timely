@@ -3,10 +3,12 @@ package timely.server.sample.iterators;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.apache.accumulo.core.client.PluginEnvironment;
 import org.apache.accumulo.core.client.sample.SamplerConfiguration;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.data.ByteSequence;
+import org.apache.accumulo.core.data.TableId;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
 import org.apache.accumulo.core.security.Authorizations;
@@ -52,6 +54,26 @@ public class IteratorTestBase {
 
         @Override
         public boolean isSamplingEnabled() {
+            return false;
+        }
+
+        @Override
+        public boolean isUserCompaction() {
+            return false;
+        }
+
+        @Override
+        public PluginEnvironment getPluginEnv() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TableId getTableId() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isRunningLowOnMemory() {
             return false;
         }
     }
