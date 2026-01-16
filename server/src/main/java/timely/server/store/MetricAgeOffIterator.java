@@ -72,7 +72,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
     }
 
     private void seekIfNecessary() {
-        if (super.hasTop()) {
+        while (super.hasTop()) {
             Key top = super.getTopKey();
             // If less than any configured ageoff, then we want to return this
             // K,V
@@ -85,7 +85,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                 String metricName = MetricAdapter.decodeRowKey(top).getFirst();
                 handleNewMetricName(metricName);
                 seekPastAgedOffMetricData(top.getRow().getBytes(), metricName, this.maxAgeOff);
-                return;
+                continue;
             }
             if (isNextMetricTheSame(top.getRow())) {
                 // this metric name is the same as previous
@@ -95,6 +95,7 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                     String metricName = new String(prevMetricBytes.copyBytes(), UTF_8);
                     log.trace("Current metric is older than age off for metric {}, seeking to start of valid data", metricName);
                     seekPastAgedOffMetricData(top.getRow().getBytes(), metricName, prevAgeOff);
+                    continue;
                 }
             } else {
                 // Metric name is different or prev information is not set
@@ -103,8 +104,10 @@ public class MetricAgeOffIterator extends WrappingIterator implements OptionDesc
                 if (currentTime - top.getTimestamp() > prevAgeOff) {
                     log.trace("New metric found, but older than age off for metric {}, seeking to start of valid data", metricName);
                     seekPastAgedOffMetricData(top.getRow().getBytes(), metricName, prevAgeOff);
+                    continue;
                 }
             }
+            return;
         }
     }
 
