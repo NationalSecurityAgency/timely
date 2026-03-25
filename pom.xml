@@ -33,8 +33,7 @@
   </issueManagement>
   <properties>
     <assembly.tarLongFileMode>posix</assembly.tarLongFileMode>
-    <!--collectd-api-jar>/usr/share/collectd/java/collectd-api.jar</collectd-api-jar-->
-    <collectd-api-jar>/home/inbella/Downloads/temp/collectd-5.7.1/bindings/java/.libs/collectd-api.jar</collectd-api-jar>
+    <collectd-api-jar>${project.basedir}lib/collectd-api-5.7.1.jar</collectd-api-jar>
     <docker.image.prefix>timely/</docker.image.prefix>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
