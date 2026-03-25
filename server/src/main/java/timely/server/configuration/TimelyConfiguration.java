@@ -39,9 +39,8 @@ public class TimelyConfiguration {
     }
 
     @Bean(destroyMethod = "close")
-    public MetaCache metaCache(TimelyProperties timelyProperties, ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties,
-                    MetaCacheProperties metaCacheProperties) {
-        return new MetaCache(timelyProperties, zookeeperProperties, accumuloProperties, metaCacheProperties);
+    public MetaCache metaCache(AccumuloClient accumuloClient, TimelyProperties timelyProperties, MetaCacheProperties metaCacheProperties) {
+        return new MetaCache(accumuloClient, timelyProperties, metaCacheProperties);
     }
 
     @Bean(destroyMethod = "shutdown")

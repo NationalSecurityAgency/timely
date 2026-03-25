@@ -1,38 +1,31 @@
 package timely.server.store;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
-import org.apache.accumulo.core.client.Scanner;
+import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.security.Authorizations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import timely.common.configuration.AccumuloProperties;
 import timely.common.configuration.MetaCacheProperties;
 import timely.common.configuration.TimelyProperties;
-import timely.common.configuration.ZookeeperProperties;
 import timely.model.Meta;
 
 public final class MetaCache implements Iterable<Meta> {
@@ -40,17 +33,14 @@ public final class MetaCache implements Iterable<Meta> {
     private static final Logger log = LoggerFactory.getLogger(MetaCache.class);
     private static final Object DUMMY = new Object();
     private Cache<Meta,Object> cache;
+    private AccumuloClient accumuloClient;
     private TimelyProperties timelyProperties;
-    private ZookeeperProperties zookeeperProperties;
-    private AccumuloProperties accumuloProperties;
     private MetaCacheProperties metaCacheProperties;
     private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
-    public MetaCache(TimelyProperties timelyProperties, ZookeeperProperties zookeeperProperties, AccumuloProperties accumuloProperties,
-                    MetaCacheProperties metaCacheProperties) {
+    public MetaCache(AccumuloClient accumuloClient, TimelyProperties timelyProperties, MetaCacheProperties metaCacheProperties) {
+        this.accumuloClient = accumuloClient;
         this.timelyProperties = timelyProperties;
-        this.zookeeperProperties = zookeeperProperties;
-        this.accumuloProperties = accumuloProperties;
         this.metaCacheProperties = metaCacheProperties;
         cache = Caffeine.newBuilder().initialCapacity(1000).build();
         long cacheRefreshMinutes = metaCacheProperties.getCacheRefreshMinutes();
@@ -61,55 +51,29 @@ public final class MetaCache implements Iterable<Meta> {
 
     private void refreshCache(long expirationMinutes) {
         long oldestTimestamp = System.currentTimeMillis() - (expirationMinutes * 60 * 1000);
-        Map<String,String> properties = new HashMap<>();
-        properties.put("instance.name", accumuloProperties.getInstanceName());
-        properties.put("instance.zookeeper.host", zookeeperProperties.getServers());
-        final ClientConfiguration aConf = ClientConfiguration.fromMap(properties);
         String metaTable = timelyProperties.getMetaTable();
         Map<String,Map<String,Long>> metricMap = new HashMap<>();
-        Scanner scanner = null;
-        try {
+        try (BatchScanner batchScanner = accumuloClient.createBatchScanner(metaTable)) {
             Map<Meta,Object> newCache = new HashMap<>();
-            final Instance instance = new ZooKeeperInstance(aConf);
-            Connector connector = instance.getConnector(accumuloProperties.getUsername(), new PasswordToken(accumuloProperties.getPassword()));
-            scanner = connector.createScanner(metaTable, Authorizations.EMPTY);
             log.debug("Begin scanning " + metaTable);
-            Key metricPrefixBeginKey = new Key(Meta.METRIC_PREFIX);
-            int firstChar = Meta.METRIC_PREFIX.charAt(0);
-            Key metricPrefixEndKey = new Key(String.valueOf((char) (firstChar + 1)) + ':');
-            Range metricRange = new Range(metricPrefixBeginKey, true, metricPrefixEndKey, false);
-            scanner.setRange(metricRange);
-            Set<String> allMetrics = new TreeSet<>();
-            for (Map.Entry<Key,Value> entry : scanner) {
-                Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.METRIC_PREFIX);
-                allMetrics.add(meta.getMetric());
-            }
-            for (String currMetric : allMetrics) {
-                Key begin = new Key(Meta.VALUE_PREFIX + currMetric);
-                Key end = new Key(Meta.VALUE_PREFIX + currMetric + '\0');
-                Range range = new Range(begin, true, end, false);
-                scanner.setRange(range);
-                Iterator<Map.Entry<Key,Value>> itr = scanner.iterator();
-                boolean maxedOutValues = false;
-                while (itr.hasNext() && !maxedOutValues) {
-                    Map.Entry<Key,Value> entry = itr.next();
-                    Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.VALUE_PREFIX);
-                    String metric = meta.getMetric();
-                    String tagKey = meta.getTagKey();
-                    Map<String,Long> tagMap = metricMap.get(metric);
-                    if (tagMap == null) {
-                        tagMap = new HashMap<>();
-                        metricMap.put(metric, tagMap);
-                    }
-                    long numTagValues = tagMap.getOrDefault(tagKey, 0l);
-                    if (entry.getKey().getTimestamp() > oldestTimestamp) {
-                        tagMap.put(tagKey, ++numTagValues);
-                        if (numTagValues <= metaCacheProperties.getMaxTagValues()) {
-                            newCache.put(meta, DUMMY);
-                        } else {
-                            // found maxTagValues on this refresh
-                            maxedOutValues = true;
-                        }
+            Key begin = new Key(Meta.VALUE_PREFIX);
+            Key end = new Key(Meta.VALUE_PREFIX + '\0');
+            Range tagValueRange = new Range(begin, true, end, false);
+            batchScanner.setRanges(Collections.singletonList(tagValueRange));
+            for (Map.Entry<Key,Value> entry : batchScanner) {
+                Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.VALUE_PREFIX);
+                String metric = meta.getMetric();
+                String tagKey = meta.getTagKey();
+                Map<String,Long> tagMap = metricMap.get(metric);
+                if (tagMap == null) {
+                    tagMap = new HashMap<>();
+                    metricMap.put(metric, tagMap);
+                }
+                long numTagValues = tagMap.getOrDefault(tagKey, 0l);
+                if (entry.getKey().getTimestamp() > oldestTimestamp) {
+                    tagMap.put(tagKey, ++numTagValues);
+                    if (numTagValues <= metaCacheProperties.getMaxTagValues()) {
+                        newCache.put(meta, DUMMY);
                     }
                 }
             }
@@ -120,10 +84,6 @@ public final class MetaCache implements Iterable<Meta> {
             log.debug("Finished scanning " + metaTable);
         } catch (AccumuloException | AccumuloSecurityException | TableNotFoundException e) {
             log.error(e.getMessage(), e);
-        } finally {
-            if (scanner != null) {
-                scanner.close();
-            }
         }
     }
 
