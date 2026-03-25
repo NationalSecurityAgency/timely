@@ -1,5 +1,7 @@
 package timely.common.configuration;
 
+import static org.apache.accumulo.core.conf.ConfigurationTypeHelper.getTimeInMillis;
+
 import org.apache.accumulo.core.client.Accumulo;
 import org.apache.accumulo.core.client.AccumuloClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -16,7 +18,13 @@ public class AccumuloConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public AccumuloClient accumuloClient(AccumuloProperties accumuloProperties, ZookeeperProperties zookeeperProperties) {
-        return Accumulo.newClient().to(accumuloProperties.getInstanceName(), zookeeperProperties.getServers())
-                        .as(accumuloProperties.getUsername(), accumuloProperties.getPassword()).build();
+        // @formatter:off
+        return Accumulo.newClient()
+                        .to(accumuloProperties.getInstanceName(), zookeeperProperties.getServers())
+                        .as(accumuloProperties.getUsername(), accumuloProperties.getPassword())
+                        .batchScannerQueryThreads(accumuloProperties.getScan().getThreads())
+                        .zkTimeout(Long.valueOf(getTimeInMillis(zookeeperProperties.getTimeout())).intValue())
+                        .build();
+        // @formatter:on
     }
 }
