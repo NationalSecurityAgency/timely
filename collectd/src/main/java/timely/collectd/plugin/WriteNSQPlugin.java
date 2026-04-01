@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.pool2.impl.GenericObjectPool;
@@ -19,7 +21,9 @@ import org.collectd.api.CollectdConfigInterface;
 import org.collectd.api.CollectdShutdownInterface;
 import org.collectd.api.CollectdWriteInterface;
 import org.collectd.api.OConfigItem;
+import org.collectd.api.OConfigValue;
 import org.collectd.api.ValueList;
+import org.slf4j.event.Level;
 
 /**
  *
@@ -47,13 +51,27 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
     }
 
     @Override
+    public void write(MetricData metricData) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(baos)) {
+            super.process(metricData, baos);
+            out.flush();
+            send(baos);
+        } catch (Exception e) {
+            Collectd.logError("Error sending metrics to NSQ: " + e.getMessage());
+        }
+    }
+
+    @Override
     public int write(ValueList vl) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(baos);
-        super.process(vl, out);
+        MetricData metricData = new MetricData(vl);
+        write(metricData);
+        return 0;
+    }
+
+    private int send(ByteArrayOutputStream baos) {
+
         CloseableHttpClient client = null;
         try {
-            out.flush();
             HttpPost post = new HttpPost(endpoint);
             EntityBuilder request = EntityBuilder.create();
             request.setBinary(baos.toByteArray());
@@ -86,9 +104,6 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
             if (client != null) {
                 clientPool.returnObject(client);
             }
-            try {
-                out.close();
-            } catch (IOException e) {}
         }
         return 0;
     }
@@ -114,23 +129,22 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
 
     @Override
     public int config(OConfigItem config) {
-        super.config(config);
-        GenericObjectPoolConfig<CloseableHttpClient> poolConfig = new GenericObjectPoolConfig<>();
-        // use max size for maxTotal and maxIdle
-        // no need to activate or passivate
-        poolConfig.setMaxTotal(POOL_MAX_SIZE);
-        poolConfig.setMaxIdle(POOL_MAX_SIZE);
-        poolConfig.setTestOnReturn(true);
-        PooledCloseableHttpClientFactory pooledCloseableHttpClientFactory = new PooledCloseableHttpClientFactory();
-        pooledCloseableHttpClientFactory.config(config);
-
-        for (OConfigItem child : config.getChildren()) {
-            switch (child.getKey()) {
+        Map<String,Object> configMap = new HashMap<>();
+        for (OConfigItem c : config.getChildren()) {
+            String key = c.getKey();
+            OConfigValue value = c.getValues().get(0);
+            int type = value.getType();
+            if (type == 0) {
+                configMap.put(key, value.getString());
+            } else if (type == 1) {
+                configMap.put(key, value.getNumber());
+            } else if (type == 2) {
+                configMap.put(key, value.getBoolean());
+            }
+            switch (key.toLowerCase()) {
                 case "host":
                 case "hostname":
-                case "Host":
-                case "HostName":
-                    String hostString = child.getValues().get(0).getString();
+                    String hostString = value.getString();
                     String[] hosts = hostString.split(",");
                     if (hosts.length == 1) {
                         host = hosts[0];
@@ -138,17 +152,25 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
                         host = hosts[random.nextInt(hosts.length)];
                     }
                     break;
-                case "Port":
                 case "port":
-                    port = Integer.parseInt(child.getValues().get(0).getString());
+                    port = Integer.parseInt(value.getString());
                     break;
                 case "topic":
-                case "Topic":
-                    topic = child.getValues().get(0).getString();
+                    topic = value.getString();
                     break;
                 default:
             }
         }
+
+        GenericObjectPoolConfig<CloseableHttpClient> poolConfig = new GenericObjectPoolConfig<>();
+        // use max size for maxTotal and maxIdle
+        // no need to activate or passivate
+        poolConfig.setMaxTotal(POOL_MAX_SIZE);
+        poolConfig.setMaxIdle(POOL_MAX_SIZE);
+        poolConfig.setTestOnReturn(true);
+        PooledCloseableHttpClientFactory pooledCloseableHttpClientFactory = new PooledCloseableHttpClientFactory();
+        pooledCloseableHttpClientFactory.config(configMap);
+
         if (host == null || port == 0 || topic == null) {
             Collectd.logError("NSQ host, port, and topic must be configured");
             return -1;
@@ -158,4 +180,20 @@ public class WriteNSQPlugin extends CollectDPluginParent implements CollectdConf
         return 0;
     }
 
+    public void log(Level level, String s) {
+        // collectd must be compiled with debug enabled in order for log level debug to work
+        if (isDebug()) {
+            Collectd.logInfo(s);
+        } else {
+            if (level.equals(Level.DEBUG)) {
+                Collectd.logDebug(s);
+            } else if (level.equals(Level.INFO)) {
+                Collectd.logInfo(s);
+            } else if (level.equals(Level.WARN)) {
+                Collectd.logWarning(s);
+            } else if (level.equals(Level.ERROR)) {
+                Collectd.logError(s);
+            }
+        }
+    }
 }

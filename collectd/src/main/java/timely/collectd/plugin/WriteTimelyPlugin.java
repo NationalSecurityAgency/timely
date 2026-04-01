@@ -6,6 +6,8 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -14,7 +16,9 @@ import org.collectd.api.CollectdConfigInterface;
 import org.collectd.api.CollectdShutdownInterface;
 import org.collectd.api.CollectdWriteInterface;
 import org.collectd.api.OConfigItem;
+import org.collectd.api.OConfigValue;
 import org.collectd.api.ValueList;
+import org.slf4j.event.Level;
 
 /**
  *
@@ -35,15 +39,15 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
         Collectd.registerWrite(WriteTimelyPlugin.class.getName(), this);
     }
 
-    public int write(ValueList vl) {
-
+    @Override
+    public void write(MetricData metricData) {
         Socket socket = null;
         try {
             socket = socketPool.borrowObject();
             if (socket == null) {
-                return -1;
+                return;
             }
-            super.process(vl, socket.getOutputStream());
+            super.process(metricData, socket.getOutputStream());
         } catch (Exception e) {
             Collectd.logWarning(e.getMessage());
             try {
@@ -55,12 +59,16 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
             } catch (IOException e1) {
                 Collectd.logError(e1.getMessage());
             }
-            return -1;
         } finally {
             if (socket != null) {
                 socketPool.returnObject(socket);
             }
         }
+    }
+
+    public int write(ValueList vl) {
+        MetricData metricData = new MetricData(vl);
+        write(metricData);
         return 0;
     }
 
@@ -80,10 +88,23 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
     }
 
     public int config(OConfigItem config) {
-        super.config(config);
-        int retval = 0;
+        Map<String,Object> configMap = new HashMap<>();
+        for (OConfigItem c : config.getChildren()) {
+            String key = c.getKey();
+            OConfigValue value = c.getValues().get(0);
+            int type = value.getType();
+            if (type == 0) {
+                configMap.put(key, value.getString());
+            } else if (type == 1) {
+                configMap.put(key, value.getNumber());
+            } else if (type == 2) {
+                configMap.put(key, value.getBoolean());
+            }
+        }
+
+        int retval;
         PooledSocketFactory socketFactory = new PooledSocketFactory();
-        retval = socketFactory.config(config);
+        retval = socketFactory.config(configMap);
         if (retval == 0) {
             GenericObjectPoolConfig<Socket> poolConfig = new GenericObjectPoolConfig<>();
             // use max size for maxTotal and maxIdle
@@ -93,7 +114,24 @@ public class WriteTimelyPlugin extends CollectDPluginParent implements CollectdC
             poolConfig.setTestOnReturn(true);
             socketPool = new GenericObjectPool<>(socketFactory, poolConfig);
         }
+        super.config(configMap);
         return retval;
     }
 
+    public void log(Level level, String s) {
+        // collectd must be compiled with debug enabled in order for log level debug to work
+        if (isDebug()) {
+            Collectd.logInfo(s);
+        } else {
+            if (level.equals(Level.DEBUG)) {
+                Collectd.logDebug(s);
+            } else if (level.equals(Level.INFO)) {
+                Collectd.logInfo(s);
+            } else if (level.equals(Level.WARN)) {
+                Collectd.logWarning(s);
+            } else if (level.equals(Level.ERROR)) {
+                Collectd.logError(s);
+            }
+        }
+    }
 }

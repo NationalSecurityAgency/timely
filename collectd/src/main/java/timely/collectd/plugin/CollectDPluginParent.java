@@ -1,9 +1,13 @@
 package timely.collectd.plugin;
 
+import static org.slf4j.event.Level.DEBUG;
+import static org.slf4j.event.Level.WARN;
+
 import java.io.OutputStream;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -11,15 +15,11 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
-import org.collectd.api.Collectd;
-import org.collectd.api.OConfigItem;
-import org.collectd.api.ValueList;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.tuple.Pair;
 
 import timely.util.Exclusions;
 
-public abstract class CollectDPluginParent {
+public abstract class CollectDPluginParent implements WritesMetrics, PluginLogger {
 
     private static final String PUT = "put {0} {1} {2} {3}";
     private static final String INSTANCE = "instance";
@@ -27,13 +27,8 @@ public abstract class CollectDPluginParent {
     private static final String SAMPLE_TYPE = "sampleType";
     private static final String CODE = "code";
     private static final String PERIOD = ".";
-    private static final String COUNTER = "COUNTER";
-    private static final String GAUGE = "GAUGE";
-    private static final String DERIVE = "DERIVE";
-    private static final String ABSOLUTE = "ABSOLUTE";
     private static final Collection<String> HADOOP_CONTEXTS = Arrays.asList("NameNode", "DataNode", "JobManager", "NodeManager", "JobHistoryServer",
                     "ResourceManager", "MRAppMaster");
-    private static final Pattern HADOOP_PATTERN_4_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final Pattern STATSD_PATTERN_3_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final Pattern STATSD_PATTERN_4_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)");
     private static final Pattern STATSD_PATTERN_6_GROUPS = Pattern.compile("([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_]+)\\.([\\w-_#]+)\\.([\\w-_]+)");
@@ -44,38 +39,41 @@ public abstract class CollectDPluginParent {
     private static final String STATSD_PREFIX = "statsd";
     private static final String NSQ_PREFIX = STATSD_PREFIX + ".nsq.";
     private static final Pattern HAPROXY_PATTERN = Pattern.compile("\\[([\\w-_=]+),([\\w-_=]+)\\]");
-    private static final Logger log = LoggerFactory.getLogger(CollectDPluginParent.class);
 
     private final SMARTCodeMapping smart = new SMARTCodeMapping();
-    protected Map<String,String> addlTags = new TreeMap<>();
+    protected Map<String,String> additionalTags = new TreeMap<>();
     private boolean debug = false;
     private Exclusions exclusions = new Exclusions();
 
-    public int config(OConfigItem config) {
-        for (OConfigItem child : config.getChildren()) {
-            switch (child.getKey().toLowerCase()) {
+    public int config(Map<String,Object> configMap) {
+        for (Map.Entry<String,Object> entry : configMap.entrySet()) {
+            switch (entry.getKey().toLowerCase()) {
                 case "tags":
-                    String tagValue = child.getValues().get(0).getString();
+                    String tagValue = (String) entry.getValue();
                     Arrays.stream(tagValue.split(",")).map(String::trim).forEach(p -> {
                         String[] pair = p.split("=");
                         if (pair.length == 2) {
-                            addTag(addlTags, pair[0], pair[1]);
+                            addTag(additionalTags, pair[0], pair[1]);
                         }
                     });
                     break;
                 case "filteredmetricsfile":
-                    setFilteredMetricsFile(child.getValues().get(0).getString());
+                    setFilteredMetricsFile((String) entry.getValue());
                     break;
                 case "filteredtagsfile":
-                    setFilteredTagsFile(child.getValues().get(0).getString());
+                    setFilteredTagsFile((String) entry.getValue());
                     break;
                 case "debug":
-                    debug = child.getValues().get(0).getBoolean();
+                    debug = (Boolean) entry.getValue();
                     break;
                 default:
             }
         }
         return 0;
+    }
+
+    public void setAdditionalTags(Map<String,String> additionalTags) {
+        this.additionalTags = additionalTags;
     }
 
     public void setFilteredMetricsFile(String filteredMetricsFile) {
@@ -109,22 +107,12 @@ public abstract class CollectDPluginParent {
         }
     }
 
-    public void process(ValueList vl, OutputStream out) {
-        try {
-            processInternal(vl, out);
-        } catch (Exception e) {
-            Collectd.logError(e.getMessage());
-            e.printStackTrace(System.err);
-        }
-    }
-
-    private void processInternal(ValueList vl, OutputStream out) {
-        debugValueList(vl);
-
+    public void process(MetricData metricData, OutputStream out) {
+        debugMetricData(metricData);
         StringBuilder metric = new StringBuilder();
-        Long timestamp = vl.getTime();
         Map<String,String> tagMap = new TreeMap<>();
-        String host = vl.getHost();
+
+        String host = metricData.getHost();
         int idx = host.indexOf(PERIOD);
         if (-1 != idx) {
             addTag(tagMap, "host", host.substring(0, idx));
@@ -136,16 +124,16 @@ public abstract class CollectDPluginParent {
         if (-1 != nIdx) {
             addTag(tagMap, "rack", hostSplit[0].substring(0, nIdx));
         }
-        tagMap.putAll(addlTags);
+        tagMap.putAll(additionalTags);
 
-        String plugin = vl.getPlugin();
-        String pluginInstance = vl.getPluginInstance();
-        String type = vl.getType();
-        String typeInstance = vl.getTypeInstance();
+        String plugin = metricData.getPlugin();
+        String pluginInstance = metricData.getPluginInstance();
+        String type = metricData.getType();
+        String typeInstance = metricData.getTypeInstance();
+        List<Pair<Double,String>> values = metricData.getValuePairs();
 
         switch (plugin) {
             case STATSD_PREFIX:
-                Matcher hadoop_4_groups = HADOOP_PATTERN_4_GROUPS.matcher(typeInstance);
                 Matcher statsd_3_groups = STATSD_PATTERN_3_GROUPS.matcher(typeInstance);
                 Matcher statsd_4_groups = STATSD_PATTERN_4_GROUPS.matcher(typeInstance);
                 Matcher statsd_6_groups = STATSD_PATTERN_6_GROUPS.matcher(typeInstance);
@@ -153,7 +141,7 @@ public abstract class CollectDPluginParent {
                 boolean defaultCase = false;
                 if (!typeInstance.startsWith("nsq")) {
                     String[] parts = typeInstance.split("\\.");
-                    if (parts.length >= 4 && (HADOOP_CONTEXTS.contains(parts[0]) || hadoop_4_groups.matches())) {
+                    if (parts.length >= 4 && HADOOP_CONTEXTS.contains(parts[0])) {
                         // Here we are processing the statsd metrics coming from the Hadoop Metrics2 StatsDSink without the host name.
                         // The format of metric is: serviceName.contextName.recordName.metricName
                         // The serviceName is used as the instance.
@@ -187,18 +175,16 @@ public abstract class CollectDPluginParent {
                         int x = typeInstance.indexOf(".");
                         metric.append(STATSD_PREFIX).append(PERIOD).append(typeInstance.substring(x + 1));
                         addTag(tagMap, "queryId", parts[0]);
-                    } else if (parts.length % 2 == 1) {
+                    } else if (parts.length >= 1) {
                         // EtsyStatsD format -- metric.(tagName.tagValue)*
+                        // Will handle all key.value pairs and truncate at the end if line was malformed or truncated
                         metric.append(STATSD_PREFIX).append(PERIOD).append(parts[0]);
-                        for (int x = 1; x < parts.length; x += 2) {
+                        for (int x = 1; x + 1 < parts.length; x += 2) {
                             addTag(tagMap, parts[x], parts[x + 1]);
                         }
-                    } else if (statsd_4_groups.matches()) {
-                        // Here we are processing the statsd metrics coming from the Hadoop Metrics2 StatsDSink without the host name.
-                        // The format of metric is: serviceName.contextName.recordName.metricName. The recordName is typically duplicative
-                        // and is dropped here. The serviceName is used as the instance.
-                        metric.append(STATSD_PREFIX).append(PERIOD).append(statsd_4_groups.group(2)).append(PERIOD).append(statsd_4_groups.group(4));
-                        instance = statsd_4_groups.group(1);
+                        if (parts.length % 2 == 0) {
+                            log(DEBUG, String.format("Using available tags from malformed/truncated line %s", typeInstance));
+                        }
                     } else {
                         defaultCase = true;
                     }
@@ -304,10 +290,10 @@ public abstract class CollectDPluginParent {
                 break;
             case "haproxy":
                 metric.append("sys.haproxy.").append(typeInstance);
-                Matcher hadoop_m2 = HAPROXY_PATTERN.matcher(pluginInstance);
-                if (hadoop_m2.matches()) {
-                    addTag(tagMap, hadoop_m2.group(1));
-                    addTag(tagMap, hadoop_m2.group(2));
+                Matcher haproxy_m = HAPROXY_PATTERN.matcher(pluginInstance);
+                if (haproxy_m.matches()) {
+                    addTag(tagMap, haproxy_m.group(1));
+                    addTag(tagMap, haproxy_m.group(2));
                 }
                 break;
             case "ipmi":
@@ -319,7 +305,9 @@ public abstract class CollectDPluginParent {
                 metric.append("sys.load.").append(plugin).append(PERIOD).append(type);
                 // plugin returns 1 min, 5 min, 15 min averages, but Timely can
                 // downsample on its own so we only use the first (1 min) value
-                vl.setValues(Arrays.asList(vl.getValues().get(0)));
+                Pair<Double,String> first = values.get(0);
+                values.clear();
+                values.add(first);
                 break;
             case "GenericJMX":
                 metric.append("sys.").append(plugin).append(PERIOD).append(type).append(PERIOD).append(typeInstance);
@@ -343,82 +331,59 @@ public abstract class CollectDPluginParent {
                 } else if (notEmpty(type) && notEmpty(plugin)) {
                     metric.append("sys.").append(plugin).append(PERIOD).append(type);
                 } else {
-                    Collectd.logWarning("Unhandled metric: " + vl);
+                    log(WARN, "Unhandled metric: " + metricData);
                     return;
                 }
                 break;
         }
         final String metricName = metric.toString().replaceAll(" ", "_");
-        for (int i = 0; i < vl.getValues().size(); i++) {
-            int dataSourceSampleType = vl.getDataSet().getDataSources().get(i).getType();
-            String sampleType = convertType(dataSourceSampleType);
-            if (null != sampleType) {
-                addTag(tagMap, SAMPLE_TYPE, sampleType);
-            }
-            Double value = vl.getValues().get(i).doubleValue();
+        for (Pair<Double,String> pair : values) {
+            addTag(tagMap, SAMPLE_TYPE, pair.getRight());
+            Double value = pair.getLeft();
+            Long timestamp = metricData.getTimestamp();
             String tagString = tagMap.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining(" "));
 
             if (metricName.isBlank() || timestamp == null || value == null) {
-                logDebug(String.format("Not writing unhandled metric: plugin:%s pluginInstance:%s type:%s typeInstance:%s", plugin, pluginInstance, type,
+                log(DEBUG, String.format("Not writing unhandled metric: plugin:%s pluginInstance:%s type:%s typeInstance:%s", plugin, pluginInstance, type,
                                 typeInstance));
             } else {
                 String datapoint = MessageFormat.format(PUT, metricName, timestamp.toString(), value.toString(), tagString);
                 if (exclusions.filterMetric(datapoint)) {
-                    logDebug(String.format("Not writing excluded metric: %s", datapoint));
+                    log(DEBUG, String.format("Not writing excluded metric: %s", datapoint));
                 } else {
                     datapoint = exclusions.filterExcludedTags(datapoint);
-                    logDebug(String.format("Writing: %s", datapoint));
+                    log(DEBUG, String.format("Writing: %s", datapoint));
                     write(datapoint + "\n", out);
                 }
             }
         }
     }
 
-    private void logDebug(String s) {
-        // collectd must be compiled with debug enabled in order for log level debug to work
-        if (debug) {
-            Collectd.logInfo(s);
-        } else {
-            Collectd.logDebug(s);
-        }
-    }
-
-    private void debugValueList(ValueList vl) {
+    private void debugMetricData(MetricData metricData) {
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("Plugin:%s", vl.getPlugin()));
-            if (vl.getPluginInstance() != null && !vl.getPluginInstance().isBlank()) {
-                sb.append(String.format(" PluginInstance:%s", vl.getPluginInstance()));
+            sb.append(String.format("Plugin:%s", metricData.getPlugin()));
+            if (metricData.getPluginInstance() != null && !metricData.getPluginInstance().isBlank()) {
+                sb.append(String.format(" PluginInstance:%s", metricData.getPluginInstance()));
             }
-            sb.append(String.format(" Type:%s", vl.getType()));
-            sb.append(String.format(" TypeInstance:%s", vl.getTypeInstance()));
-            for (int i = 0; i < vl.getValues().size(); i++) {
-                Number value = vl.getValues().get(i);
-                sb.append(String.format(" Value:%s", value.toString()));
+            sb.append(String.format(" Type:%s", metricData.getType()));
+            sb.append(String.format(" TypeInstance:%s", metricData.getTypeInstance()));
+            for (int i = 0; i < metricData.getValuePairs().size(); i++) {
+                Pair<Double,String> value = metricData.getValuePairs().get(i);
+                sb.append(String.format(" Value:%s", value.getLeft().toString()));
             }
-            logDebug(sb.toString());
+            log(DEBUG, sb.toString());
         } catch (Exception e) {
             e.printStackTrace();
-            logDebug(e.getMessage());
-        }
-    }
-
-    private String convertType(int type) {
-        switch (type) {
-            case 0:
-                return COUNTER;
-            case 1:
-                return GAUGE;
-            case 2:
-                return DERIVE;
-            case 3:
-                return ABSOLUTE;
-            default:
-                return GAUGE;
+            log(DEBUG, e.getMessage());
         }
     }
 
     private boolean notEmpty(String arg) {
         return (null != arg) && !(arg.equals(""));
+    }
+
+    public boolean isDebug() {
+        return debug;
     }
 }

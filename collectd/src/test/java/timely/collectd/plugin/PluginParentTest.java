@@ -17,6 +17,9 @@ import org.powermock.api.easymock.PowerMock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 @RunWith(PowerMockRunner.class)
 @PowerMockIgnore("jdk.internal.reflect.*")
@@ -24,9 +27,10 @@ import org.powermock.modules.junit4.PowerMockRunner;
 public class PluginParentTest {
 
     public class TestPlugin extends CollectDPluginParent {
+        private Logger log = LoggerFactory.getLogger(this.getClass().getName());
 
         public TestPlugin() {
-            super.addlTags.put("addl1", "foo");
+            super.additionalTags.put("addl1", "foo");
         }
 
         @Override
@@ -34,6 +38,19 @@ public class PluginParentTest {
             result = metric;
         }
 
+        @Override
+        public void log(Level level, String s) {
+            log.debug(s);
+        }
+
+        @Override
+        public void write(MetricData metricData) {
+            try {
+                process(metricData, null);
+            } catch (Exception e) {
+                log(Level.ERROR, e.getMessage());
+            }
+        }
     }
 
     private static final String HOST = "r01n01.test";
@@ -60,7 +77,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put statsd.dfs.BlocksRead 1456156976840 1.0 addl1=foo host=r01n01 instance=DataNode rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -78,7 +95,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put statsd.baz 1456156976840 1.0 addl1=foo host=r01n01 rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -96,8 +113,8 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
-        assertEquals("put statsd.baz 1456156976840 1.0 addl1=foo host=r01n01 instance=bar rack=r01 sampleType=GAUGE\n", result);
+        test.write(new MetricData(vl));
+        assertEquals("put statsd.bar 1456156976840 1.0 addl1=foo host=r01n01 rack=r01 sampleType=GAUGE\n", result);
     }
 
     @Test
@@ -114,7 +131,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.hddtemp.temperature 1456156976840 35.0 addl1=foo host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -132,7 +149,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.smart.smart_badsectors 1456156976840 0.0 addl1=foo host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -151,7 +168,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.smart.raw-read-error-rate 1456156976840 0.0 addl1=foo host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -170,7 +187,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.smart.Total_LBAs_Read 1456156976840 0.0 addl1=foo code=242 host=r01n01 instance=sda rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -189,7 +206,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.snmp.if_octets 1456156976840 0.0 addl1=foo host=r01n01 instance=Ethernet1 rack=r01 sampleType=GAUGE\n", result);
 
     }
@@ -209,7 +226,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.sensors.temperature.coretemp-isa-0000 1456156976840 35.0 addl1=foo host=r01n01 instance=1 rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -227,7 +244,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.haproxy.run_queue 1456156976840 0.0 addl1=foo host=r01n01 rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -246,7 +263,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.haproxy.queue_current 1456156976840 0.0 addl1=foo host=r01n01 proxy_name=proxy1 rack=r01 sampleType=GAUGE service_name=server1\n",
                         result);
     }
@@ -266,7 +283,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.tx_comp_queue_full 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 rack=r01 sampleType=GAUGE\n", result);
 
     }
@@ -286,17 +303,17 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.rx_queue_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=15 rack=r01 sampleType=GAUGE\n", result);
 
         result = null;
         vl.setTypeInstance("queue_7_tx_bytes");
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.queue_tx_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=7 rack=r01 sampleType=GAUGE\n", result);
 
         result = null;
         vl.setTypeInstance("queue_7_rx_xdp_drop");
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.queue_rx_xdp_drop 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=7 rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -316,12 +333,12 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
 
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.rx_queue_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=15 rack=r01 sampleType=GAUGE\n", result);
 
         result = null;
         vl.setTypeInstance("tx15_xdp_err");
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.tx_queue_xdp_err 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 queue=15 rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -341,7 +358,7 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
 
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.veb.tc_tx_bytes 1456156976840 6.0 addl1=foo host=r01n01 instance=eth0 rack=r01 sampleType=GAUGE trafficClass=15\n",
                         result);
     }
@@ -362,7 +379,7 @@ public class PluginParentTest {
 
         TestPlugin test = new TestPlugin();
 
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.ch_events 1456156976840 6.0 addl1=foo channel=44 host=r01n01 instance=eth0 rack=r01 sampleType=GAUGE\n", result);
     }
 
@@ -380,7 +397,7 @@ public class PluginParentTest {
         vl.setDataSet(ds);
 
         TestPlugin test = new TestPlugin();
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ipmi.temperature 1456156976840 6.0 addl1=foo host=r01n01 instance=LAN_NIC_Temp_system_board_(3.2) rack=r01 sampleType=GAUGE\n",
                         result);
 
@@ -406,7 +423,7 @@ public class PluginParentTest {
         URL filteredTagsFile = getClass().getClassLoader().getResource("filteredTags.txt");
         test.setFilteredTagsFile(filteredTagsFile.getPath());
 
-        test.process(vl, null);
+        test.write(new MetricData(vl));
         assertEquals("put sys.ethstat.rx_queue_bytes 1456156976840 6.0 addl1=foo host=r01n01 queue=1 rack=r01\n", result);
 
         result = null;

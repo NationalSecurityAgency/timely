@@ -1,5 +1,6 @@
 package timely.collectd.plugin;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.pool2.PooledObject;
@@ -8,7 +9,6 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.collectd.api.OConfigItem;
 
 public class PooledCloseableHttpClientFactory implements PooledObjectFactory<CloseableHttpClient> {
 
@@ -17,24 +17,25 @@ public class PooledCloseableHttpClientFactory implements PooledObjectFactory<Clo
     private int socketTimeout = 60000; // 60 seconds in milliseconds
     private long connectionTimeToLive = 300000; // 300 seconds in milliseconds
 
-    public int config(OConfigItem config) {
-        for (OConfigItem child : config.getChildren()) {
-            switch (child.getKey()) {
+    public int config(Map<String,Object> configMap) {
+        for (Map.Entry<String,Object> entry : configMap.entrySet()) {
+            Object value = entry.getValue();
+            switch (entry.getKey()) {
                 case "connectionRequestTimeout":
                 case "ConnectionRequestTimeout":
-                    connectionRequestTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    connectionRequestTimeout = Integer.parseInt((String) value);
                     break;
                 case "connectTimeout":
                 case "ConnectTimeout":
-                    connectTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    connectTimeout = Integer.parseInt((String) value);
                     break;
                 case "socketTimeout":
                 case "SocketTimeout":
-                    socketTimeout = Integer.parseInt(child.getValues().get(0).getString());
+                    socketTimeout = Integer.parseInt((String) value);
                     break;
                 case "connectionTimeToLive":
                 case "ConnectionTimeToLive":
-                    connectionTimeToLive = Long.parseLong(child.getValues().get(0).getString());
+                    connectionTimeToLive = Long.parseLong((String) value);
                     break;
                 default:
             }
