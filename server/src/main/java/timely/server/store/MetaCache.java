@@ -1,10 +1,10 @@
 package timely.server.store;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
-import org.apache.accumulo.core.client.BatchScanner;
+import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
@@ -32,11 +32,11 @@ public final class MetaCache implements Iterable<Meta> {
 
     private static final Logger log = LoggerFactory.getLogger(MetaCache.class);
     private static final Object DUMMY = new Object();
-    private Cache<Meta,Object> cache;
-    private AccumuloClient accumuloClient;
-    private TimelyProperties timelyProperties;
-    private MetaCacheProperties metaCacheProperties;
-    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    private final Cache<Meta,Object> cache;
+    private final AccumuloClient accumuloClient;
+    private final TimelyProperties timelyProperties;
+    private final MetaCacheProperties metaCacheProperties;
+    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     public MetaCache(AccumuloClient accumuloClient, TimelyProperties timelyProperties, MetaCacheProperties metaCacheProperties) {
         this.accumuloClient = accumuloClient;
@@ -53,27 +53,42 @@ public final class MetaCache implements Iterable<Meta> {
         long oldestTimestamp = System.currentTimeMillis() - (expirationMinutes * 60 * 1000);
         String metaTable = timelyProperties.getMetaTable();
         Map<String,Map<String,Long>> metricMap = new HashMap<>();
-        try (BatchScanner batchScanner = accumuloClient.createBatchScanner(metaTable)) {
+        try (Scanner scanner = accumuloClient.createScanner(metaTable)) {
             Map<Meta,Object> newCache = new HashMap<>();
             log.debug("Begin scanning " + metaTable);
-            Key begin = new Key(Meta.VALUE_PREFIX);
-            Key end = new Key(Meta.VALUE_PREFIX + '\0');
-            Range tagValueRange = new Range(begin, true, end, false);
-            batchScanner.setRanges(Collections.singletonList(tagValueRange));
-            for (Map.Entry<Key,Value> entry : batchScanner) {
-                Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.VALUE_PREFIX);
-                String metric = meta.getMetric();
-                String tagKey = meta.getTagKey();
-                Map<String,Long> tagMap = metricMap.get(metric);
-                if (tagMap == null) {
-                    tagMap = new HashMap<>();
-                    metricMap.put(metric, tagMap);
-                }
-                long numTagValues = tagMap.getOrDefault(tagKey, 0l);
-                if (entry.getKey().getTimestamp() > oldestTimestamp) {
-                    tagMap.put(tagKey, ++numTagValues);
-                    if (numTagValues <= metaCacheProperties.getMaxTagValues()) {
-                        newCache.put(meta, DUMMY);
+            Key metricPrefixBeginKey = new Key(Meta.METRIC_PREFIX);
+            int firstChar = Meta.METRIC_PREFIX.charAt(0);
+            Key metricPrefixEndKey = new Key((char) firstChar + 1 + ":");
+            Range metricRange = new Range(metricPrefixBeginKey, true, metricPrefixEndKey, false);
+            scanner.setRange(metricRange);
+            Set<String> allMetrics = new TreeSet<>();
+            for (Map.Entry<Key,Value> entry : scanner) {
+                Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.METRIC_PREFIX);
+                allMetrics.add(meta.getMetric());
+            }
+            for (String currMetric : allMetrics) {
+                Key begin = new Key(Meta.VALUE_PREFIX, currMetric);
+                Key end = new Key(Meta.VALUE_PREFIX, currMetric + '\0');
+                Range range = new Range(begin, true, end, false);
+                scanner.setRange(range);
+                scanner.setBatchSize(Long.valueOf(metaCacheProperties.getMaxTagValues()).intValue());
+                Iterator<Map.Entry<Key,Value>> iter = scanner.iterator();
+                boolean maxedOutValues = false;
+                while (iter.hasNext() && !maxedOutValues) {
+                    Map.Entry<Key,Value> entry = iter.next();
+                    Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.VALUE_PREFIX);
+                    String metric = meta.getMetric();
+                    String tagKey = meta.getTagKey();
+                    Map<String,Long> tagMap = metricMap.computeIfAbsent(metric, k -> new HashMap<>());
+                    long numTagValues = tagMap.getOrDefault(tagKey, 0L);
+                    if (entry.getKey().getTimestamp() > oldestTimestamp) {
+                        tagMap.put(tagKey, ++numTagValues);
+                        if (numTagValues <= metaCacheProperties.getMaxTagValues()) {
+                            newCache.put(meta, DUMMY);
+                        } else {
+                            // found maxTagValues on this refresh
+                            maxedOutValues = true;
+                        }
                     }
                 }
             }
