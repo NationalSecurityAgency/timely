@@ -2,7 +2,6 @@ package timely.balancer.configuration;
 
 import javax.validation.Valid;
 
-import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -16,9 +15,9 @@ public class BalancerWebsocketProperties extends WebsocketProperties {
 
     @Valid
     @NestedConfigurationProperty
-    private GenericKeyedObjectPoolConfig<WebSocketSubscriptionClient> wsClientPool = new GenericKeyedObjectPoolConfig<>();
+    private GenericKeyedObjectPoolConfiguration<WebSocketSubscriptionClient> wsClientPool = new GenericKeyedObjectPoolConfiguration<>();
 
-    public GenericKeyedObjectPoolConfig<WebSocketSubscriptionClient> getWsClientPool() {
+    public GenericKeyedObjectPoolConfiguration<WebSocketSubscriptionClient> getWsClientPool() {
         return wsClientPool;
     }
 

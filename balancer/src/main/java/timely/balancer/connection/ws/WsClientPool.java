@@ -12,9 +12,9 @@ import timely.common.configuration.SslClientProperties;
 
 public class WsClientPool extends GenericKeyedObjectPool<TimelyBalancedHost,WebSocketSubscriptionClient> {
 
-    public WsClientPool(BalancerProperties balancerProperties, BalancerWebsocketProperties balancerWebsocketProperties, SslClientProperties sslClientProperties,
+    public WsClientPool(BalancerProperties balancerProperties, BalancerWebsocketProperties config, SslClientProperties sslClientProperties,
                     SSLContext sslContext) {
-        super(new WsClientFactory(balancerProperties, balancerWebsocketProperties, sslClientProperties, sslContext),
-                        balancerWebsocketProperties.getWsClientPool());
+        super(new WsClientFactory(balancerProperties, config, sslClientProperties, sslContext), config.getWsClientPool(),
+                        config.getWsClientPool().getAbandonedConfig());
     }
 }

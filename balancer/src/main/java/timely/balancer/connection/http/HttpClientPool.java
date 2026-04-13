@@ -11,7 +11,7 @@ import timely.common.configuration.SslClientProperties;
 
 public class HttpClientPool extends GenericKeyedObjectPool<TimelyBalancedHost,CloseableHttpClient> {
 
-    public HttpClientPool(BalancerHttpProperties http, SSLContext sslContext, SslClientProperties sslClientProperties) {
-        super(new HttpClientFactory(sslContext, sslClientProperties), http.getHttpClientPool());
+    public HttpClientPool(BalancerHttpProperties config, SSLContext sslContext, SslClientProperties sslClientProperties) {
+        super(new HttpClientFactory(sslContext, sslClientProperties), config.getHttpClientPool(), config.getHttpClientPool().getAbandonedConfig());
     }
 }

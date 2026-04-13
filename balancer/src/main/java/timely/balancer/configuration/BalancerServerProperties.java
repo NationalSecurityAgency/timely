@@ -2,7 +2,6 @@ package timely.balancer.configuration;
 
 import javax.validation.Valid;
 
-import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -17,21 +16,21 @@ public class BalancerServerProperties extends ServerProperties {
 
     @Valid
     @NestedConfigurationProperty
-    private GenericKeyedObjectPoolConfig<UdpClient> udpClientPool = new GenericKeyedObjectPoolConfig<>();
+    private GenericKeyedObjectPoolConfiguration<UdpClient> udpClientPool = new GenericKeyedObjectPoolConfiguration<>();
 
     @Valid
     @NestedConfigurationProperty
-    private GenericKeyedObjectPoolConfig<TcpClient> tcpClientPool = new GenericKeyedObjectPoolConfig<>();
+    private GenericKeyedObjectPoolConfiguration<TcpClient> tcpClientPool = new GenericKeyedObjectPoolConfiguration<>();
 
     private int numTcpPools = 1;
 
     private int tcpBufferSize = -1;
 
-    public GenericKeyedObjectPoolConfig<UdpClient> getUdpClientPool() {
+    public GenericKeyedObjectPoolConfiguration<UdpClient> getUdpClientPool() {
         return udpClientPool;
     }
 
-    public GenericKeyedObjectPoolConfig<TcpClient> getTcpClientPool() {
+    public GenericKeyedObjectPoolConfiguration<TcpClient> getTcpClientPool() {
         return tcpClientPool;
     }
 

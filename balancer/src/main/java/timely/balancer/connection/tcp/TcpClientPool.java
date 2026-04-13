@@ -8,7 +8,7 @@ import timely.client.tcp.TcpClient;
 
 public class TcpClientPool extends GenericKeyedObjectPool<TimelyBalancedHost,TcpClient> {
 
-    public TcpClientPool(BalancerServerProperties balancerServerProperties) {
-        super(new TcpClientFactory(balancerServerProperties.getTcpBufferSize()), balancerServerProperties.getTcpClientPool());
+    public TcpClientPool(BalancerServerProperties config) {
+        super(new TcpClientFactory(config.getTcpBufferSize()), config.getTcpClientPool(), config.getTcpClientPool().getAbandonedConfig());
     }
 }

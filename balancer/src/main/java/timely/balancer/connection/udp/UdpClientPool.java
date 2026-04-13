@@ -8,7 +8,7 @@ import timely.client.udp.UdpClient;
 
 public class UdpClientPool extends GenericKeyedObjectPool<TimelyBalancedHost,UdpClient> {
 
-    public UdpClientPool(BalancerServerProperties serverProperties) {
-        super(new UdpClientFactory(), serverProperties.getUdpClientPool());
+    public UdpClientPool(BalancerServerProperties config) {
+        super(new UdpClientFactory(), config.getUdpClientPool(), config.getUdpClientPool().getAbandonedConfig());
     }
 }
