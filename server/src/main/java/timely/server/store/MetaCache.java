@@ -58,7 +58,7 @@ public final class MetaCache implements Iterable<Meta> {
             log.debug("Begin scanning " + metaTable);
             Key metricPrefixBeginKey = new Key(Meta.METRIC_PREFIX);
             int firstChar = Meta.METRIC_PREFIX.charAt(0);
-            Key metricPrefixEndKey = new Key((char) firstChar + 1 + ":");
+            Key metricPrefixEndKey = new Key(((char) firstChar + 1) + ":");
             Range metricRange = new Range(metricPrefixBeginKey, true, metricPrefixEndKey, false);
             scanner.setRange(metricRange);
             Set<String> allMetrics = new TreeSet<>();
@@ -67,15 +67,15 @@ public final class MetaCache implements Iterable<Meta> {
                 allMetrics.add(meta.getMetric());
             }
             for (String currMetric : allMetrics) {
-                Key begin = new Key(Meta.VALUE_PREFIX, currMetric);
-                Key end = new Key(Meta.VALUE_PREFIX, currMetric + '\0');
+                Key begin = new Key(Meta.VALUE_PREFIX + currMetric);
+                Key end = new Key(Meta.VALUE_PREFIX + currMetric + '\0');
                 Range range = new Range(begin, true, end, false);
                 scanner.setRange(range);
                 scanner.setBatchSize(Long.valueOf(metaCacheProperties.getMaxTagValues()).intValue());
-                Iterator<Map.Entry<Key,Value>> iter = scanner.iterator();
+                Iterator<Map.Entry<Key,Value>> itr = scanner.iterator();
                 boolean maxedOutValues = false;
-                while (iter.hasNext() && !maxedOutValues) {
-                    Map.Entry<Key,Value> entry = iter.next();
+                while (itr.hasNext() && !maxedOutValues) {
+                    Map.Entry<Key,Value> entry = itr.next();
                     Meta meta = Meta.parse(entry.getKey(), entry.getValue(), Meta.VALUE_PREFIX);
                     String metric = meta.getMetric();
                     String tagKey = meta.getTagKey();
