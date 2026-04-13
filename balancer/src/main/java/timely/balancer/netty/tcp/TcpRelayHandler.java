@@ -1,6 +1,5 @@
 package timely.balancer.netty.tcp;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -62,7 +61,7 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
                 }
             }
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error(LOG_ERR_MSG, msg, e);
             ChannelFuture cf = ctx.writeAndFlush(Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
             if (!cf.isSuccess()) {
