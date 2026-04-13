@@ -34,7 +34,6 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.ReferenceCountUtil;
 import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpRequest;
 import timely.api.request.MetricRequest;
@@ -142,12 +141,8 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 }
                 this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), e.getMessage(), e.getLocalizedMessage(), e));
                 return;
-            } finally {
-                if (request != null) {
-                    ReferenceCountUtil.release(request);
-                }
             }
-            FullHttpResponse response = null;
+            FullHttpResponse response;
             if (relayedResponse == null) {
                 this.sendHttpError(ctx, new TimelyException(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), "Method not allowed", "Method not allowed"));
             } else {
@@ -162,6 +157,8 @@ public class HttpRelayHandler extends SimpleChannelInboundHandler<HttpRequest> i
                 response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
                 sendResponse(ctx, response);
             }
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         } finally {
             if (relayedResponse != null) {
                 relayedResponse.close();

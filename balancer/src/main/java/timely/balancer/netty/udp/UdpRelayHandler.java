@@ -53,7 +53,9 @@ public class UdpRelayHandler extends SimpleChannelInboundHandler<UdpRequest> {
             log.error(LOG_ERR_MSG, msg, e);
             ChannelFuture cf = ctx.writeAndFlush(Unpooled.copiedBuffer((ERR_MSG + e.getMessage() + "\n").getBytes(StandardCharsets.UTF_8)));
             if (!cf.isSuccess()) {
-                log.error(Constants.ERR_WRITING_RESPONSE, cf.cause());
+                Throwable t = cf.cause();
+                String message = (t == null) ? "" : t.getMessage();
+                log.error(String.format(Constants.ERR_WRITING_RESPONSE, message), cf.cause());
             }
         }
     }

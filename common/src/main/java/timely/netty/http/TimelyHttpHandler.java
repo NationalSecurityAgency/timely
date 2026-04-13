@@ -23,21 +23,27 @@ public interface TimelyHttpHandler {
     Logger log = LoggerFactory.getLogger(TimelyHttpHandler.class);
 
     default void sendHttpError(ChannelHandlerContext ctx, TimelyException e) throws JsonProcessingException {
-        log.error("Error in pipeline, response code: {}, message: {}", e.getCode(), e.getMessage());
-        byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(new TimelyExceptionResponse(e));
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(e.getCode()), Unpooled.copiedBuffer(buf));
-        response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
-        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
-        e.getResponseHeaders().entrySet().forEach(entry -> response.headers().set(entry.getKey(), entry.getValue()));
-        // Send the error response
-        sendResponse(ctx, response);
+        try {
+            log.error("Error in pipeline, response code: {}, message: {}", e.getCode(), e.getMessage());
+            byte[] buf = JsonUtil.getObjectMapper().writeValueAsBytes(new TimelyExceptionResponse(e));
+            FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(e.getCode()), Unpooled.copiedBuffer(buf));
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, Constants.JSON_TYPE);
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
+            e.getResponseHeaders().entrySet().forEach(entry -> response.headers().set(entry.getKey(), entry.getValue()));
+            // Send the error response
+            sendResponse(ctx, response);
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+        }
     }
 
     default void sendResponse(ChannelHandlerContext ctx, Object msg) {
-        ChannelFuture f = ctx.writeAndFlush(msg);
+        ChannelFuture cf = ctx.writeAndFlush(msg);
         log.trace(Constants.LOG_RETURNING_RESPONSE, msg);
-        if (!f.isSuccess()) {
-            log.error(Constants.ERR_WRITING_RESPONSE, f.cause());
+        if (!cf.isSuccess()) {
+            Throwable t = cf.cause();
+            String message = (t == null) ? "" : t.getMessage();
+            log.error(String.format(Constants.ERR_WRITING_RESPONSE, message), cf.cause());
         }
     }
 
