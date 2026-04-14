@@ -58,7 +58,7 @@ public final class MetaCache implements Iterable<Meta> {
             log.debug("Begin scanning " + metaTable);
             Key metricPrefixBeginKey = new Key(Meta.METRIC_PREFIX);
             int firstChar = Meta.METRIC_PREFIX.charAt(0);
-            Key metricPrefixEndKey = new Key(((char) firstChar + 1) + ":");
+            Key metricPrefixEndKey = new Key(String.valueOf((char) (firstChar + 1)) + ':');
             Range metricRange = new Range(metricPrefixBeginKey, true, metricPrefixEndKey, false);
             scanner.setRange(metricRange);
             Set<String> allMetrics = new TreeSet<>();
