@@ -48,40 +48,47 @@ timely:
     server:
       ip: ${HOST_IP}
       tcp-base-port: ${TCP_BASE_PORT}
-      num-tcp-pools: 1
       tcp-buffer-size: 100
       tcp-client-pool:
-        min-idle-per-key: 0
-        max-idle-per-key: 40
-        max-total-per-key: 40
+        min-idle-per-key: 5
+        max-idle-per-key: 5
+        max-total-per-key: 5
         max-total: -1
-        lifo: true
-        fairness: false
-        max-wait-millis: -1
-        min-evictable-idle-time-millis: 1800000
+        lifo: false
+        fairness: true
+        max-wait-millis: 60000
+        min-evictable-idle-time-millis: -1
         evictor-shutdown-timeout-millis: 10000
-        soft-min-evictable-idle-time-millis: -1
+        soft-min-evictable-idle-time-millis: 300000
         num-tests-per-eviction-run: 3
-        time-between-eviction-runs-millis: -1
+        time-between-eviction-runs-millis: 30000
         block-when-exhausted: true
+        remove-abandoned-on-borrow: false
+        remove-abandoned-on-maintenance: true
+        remove-abandoned-timeout-millis: 600000
+        remove-abandoned-logging: true
         jmx-enabled: true
         test-on-borrow: false
         test-on-return: false
       udp-base-port: ${UDP_BASE_PORT}
       udp-client-pool:
-        min-idle-per-key: 0
-        max-idle-per-key: 40
-        max-total-per-key: 40
+        min-idle-per-key: 5
+        max-idle-per-key: 5
+        max-total-per-key: 5
         max-total: -1
-        lifo: true
-        fairness: false
-        max-wait-millis: -1
-        min-evictable-idle-time-millis: 1800000
+        lifo: false
+        fairness: true
+        max-wait-millis: 60000
+        min-evictable-idle-time-millis: -1
         evictor-shutdown-timeout-millis: 10000
-        soft-min-evictable-idle-time-millis: -1
+        soft-min-evictable-idle-time-millis: 300000
         num-tests-per-eviction-run: 3
-        time-between-eviction-runs-millis: -1
+        time-between-eviction-runs-millis: 30000
         block-when-exhausted: true
+        remove-abandoned-on-borrow: false
+        remove-abandoned-on-maintenance: true
+        remove-abandoned-timeout-millis: 600000
+        remove-abandoned-logging: true
         jmx-enabled: true
         test-on-borrow: false
         test-on-return: false
@@ -99,19 +106,23 @@ timely:
         allowed-methods: DELETE,GET,HEAD,OPTIONS,PUT,POST
         allowed-headers: content-type
       httpClientPool:
-        min-idle-per-key: 0
+        min-idle-per-key: 10
         max-idle-per-key: 40
         max-total-per-key: 40
         max-total: -1
-        lifo: true
-        fairness: false
-        max-wait-millis: -1
-        min-evictable-idle-time-millis: 1800000
+        lifo: false
+        fairness: true
+        max-wait-millis: 60000
+        min-evictable-idle-time-millis: -1
         evictor-shutdown-timeout-millis: 10000
-        soft-min-evictable-idle-time-millis: -1
+        soft-min-evictable-idle-time-millis: 300000
         num-tests-per-eviction-run: 3
-        time-between-eviction-runs-millis: -1
+        time-between-eviction-runs-millis: 30000
         block-when-exhausted: true
+        remove-abandoned-on-borrow: false
+        remove-abandoned-on-maintenance: true
+        remove-abandoned-timeout-millis: 600000
+        remove-abandoned-logging: true
         jmx-enabled: true
         test-on-borrow: false
         test-on-return: false
@@ -130,15 +141,19 @@ timely:
         max-idle-per-key: 40
         max-total-per-key: 40
         max-total: -1
-        lifo: true
-        fairness: false
-        max-wait-millis: -1
-        min-evictable-idle-time-millis: 1800000
+        lifo: false
+        fairness: true
+        max-wait-millis: 60000
+        min-evictable-idle-time-millis: -1
         evictor-shutdown-timeout-millis: 10000
-        soft-min-evictable-idle-time-millis: -1
+        soft-min-evictable-idle-time-millis: 300000
         num-tests-per-eviction-run: 3
-        time-between-eviction-runs-millis: -1
+        time-between-eviction-runs-millis: 30000
         block-when-exhausted: true
+        remove-abandoned-on-borrow: false
+        remove-abandoned-on-maintenance: true
+        remove-abandoned-timeout-millis: 600000
+        remove-abandoned-logging: true
         jmx-enabled: true
         test-on-borrow: false
         test-on-return: false

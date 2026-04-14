@@ -63,7 +63,6 @@ timely:
     server:
       ip: 127.0.0.1
       tcp-base-port: 9242
-      num-tcp-pools: 1
       tcp-buffer-size: 100
       tcp-client-pool:
         min-idle-per-key: 5
