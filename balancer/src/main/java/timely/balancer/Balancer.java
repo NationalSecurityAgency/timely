@@ -217,16 +217,12 @@ public class Balancer {
             }
             log.info("Using channel class {}", channelClass.getSimpleName());
 
-            List<TcpClientPool> tcpClientPools = new ArrayList<>();
-            for (int x = 0; x < balancerServerProperties.getNumTcpPools(); x++) {
-                tcpClientPools.add(new TcpClientPool(balancerServerProperties));
-            }
-
             final ServerBootstrap tcpServer = new ServerBootstrap();
             tcpServer.group(tcpBossGroup, tcpWorkerGroup);
             tcpServer.channel(channelClass);
             tcpServer.handler(new LoggingHandler());
-            tcpServer.childHandler(setupTcpChannel(metricResolver, tcpClientPools));
+            TcpClientPool tcpClientPool = new TcpClientPool(balancerServerProperties);
+            tcpServer.childHandler(setupTcpChannel(metricResolver, tcpClientPool));
             tcpServer.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
             tcpServer.option(ChannelOption.SO_BACKLOG, 128);
             tcpServer.childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -454,7 +450,7 @@ public class Balancer {
         };
     }
 
-    protected ChannelHandler setupTcpChannel(MetricResolver metricResolver, List<TcpClientPool> tcpClientPools) {
+    protected ChannelHandler setupTcpChannel(MetricResolver metricResolver, TcpClientPool tcpClientPool) {
         return new ChannelInitializer<SocketChannel>() {
 
             @Override
@@ -462,7 +458,7 @@ public class Balancer {
                 ch.pipeline().addLast("buffer", new MetricsBufferDecoder());
                 ch.pipeline().addLast("frame", new DelimiterBasedFrameDecoder(65536, true, Delimiters.lineDelimiter()));
                 ch.pipeline().addLast("putDecoder", new TcpDecoder());
-                ch.pipeline().addLast("tcpRelayHandler", new TcpRelayHandler(metricResolver, tcpClientPools));
+                ch.pipeline().addLast("tcpRelayHandler", new TcpRelayHandler(metricResolver, tcpClientPool));
                 ch.pipeline().addLast("versionHandler", new TcpVersionHandler());
             }
         };

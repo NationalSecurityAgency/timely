@@ -1,7 +1,6 @@
 package timely.balancer.netty.tcp;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -26,16 +25,11 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
     private static final String ERR_MSG = "Error storing put metric: ";
 
     private MetricResolver metricResolver;
-    private List<TcpClientPool> tcpClientPools;
+    private TcpClientPool tcpClientPool;
 
-    public TcpRelayHandler(MetricResolver metricResolver, List<TcpClientPool> tcpClientPools) {
+    public TcpRelayHandler(MetricResolver metricResolver, TcpClientPool tcpClientPool) {
         this.metricResolver = metricResolver;
-        this.tcpClientPools = tcpClientPools;
-    }
-
-    private TcpClientPool tcpClientPool() {
-        int x = Math.toIntExact(Thread.currentThread().getId() % tcpClientPools.size());
-        return tcpClientPools.get(x);
+        this.tcpClientPool = tcpClientPool;
     }
 
     @Override
@@ -57,7 +51,7 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
                 keyClientPair.getRight().write(line + "\n");
             } finally {
                 if (keyClientPair != null && keyClientPair.getLeft() != null && keyClientPair.getRight() != null) {
-                    tcpClientPool().returnObject(keyClientPair.getLeft(), keyClientPair.getRight());
+                    tcpClientPool.returnObject(keyClientPair.getLeft(), keyClientPair.getRight());
                 }
             }
 
@@ -79,7 +73,7 @@ public class TcpRelayHandler extends SimpleChannelInboundHandler<TcpRequest> {
         while (client == null) {
             try {
                 k = (metricRequest == true) ? metricResolver.getHostPortKeyIngest(metric) : metricResolver.getHostPortKey(metric);
-                client = tcpClientPool().borrowObject(k);
+                client = tcpClientPool.borrowObject(k);
             } catch (Exception e1) {
                 failures++;
                 client = null;

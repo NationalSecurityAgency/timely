@@ -22,8 +22,6 @@ public class BalancerServerProperties extends ServerProperties {
     @NestedConfigurationProperty
     private GenericKeyedObjectPoolConfiguration<TcpClient> tcpClientPool = new GenericKeyedObjectPoolConfiguration<>();
 
-    private int numTcpPools = 1;
-
     private int tcpBufferSize = -1;
 
     public GenericKeyedObjectPoolConfiguration<UdpClient> getUdpClientPool() {
@@ -32,14 +30,6 @@ public class BalancerServerProperties extends ServerProperties {
 
     public GenericKeyedObjectPoolConfiguration<TcpClient> getTcpClientPool() {
         return tcpClientPool;
-    }
-
-    public int getNumTcpPools() {
-        return numTcpPools;
-    }
-
-    public void setNumTcpPools(int numTcpPools) {
-        this.numTcpPools = numTcpPools;
     }
 
     public int getTcpBufferSize() {
