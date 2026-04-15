@@ -429,7 +429,7 @@ public class Balancer {
                 ch.pipeline().addLast("fileServer",
                                 new HttpStaticFileServerHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(authenticationService, securityProperties, balancerHttpProperties));
-                ch.pipeline().addLast("httpRelay", new HttpRelayHandler(metricResolver, httpClientPool));
+                ch.pipeline().addLast("httpRelay", new HttpRelayHandler(balancerHttpProperties, metricResolver, httpClientPool));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
             }
         };
