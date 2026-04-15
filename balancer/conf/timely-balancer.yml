@@ -98,6 +98,10 @@ timely:
       base-port: ${HTTP_BASE_PORT}
       redirect-path: /secure-me
       strict-transport-max-age: 604800
+      connection-request-timeout: 5000
+      connect-timeout: 5000
+      socketTimeout: 300000
+      request-timeout: 300000
       cors:
         allow-any-origin: false
         allow-null-origin: false
