@@ -27,7 +27,6 @@ import timely.api.request.AuthenticatedRequest;
 import timely.api.request.HttpGetRequest;
 import timely.api.request.HttpPostRequest;
 import timely.api.request.HttpRequest;
-import timely.api.response.StrictTransportResponse;
 import timely.api.response.TimelyException;
 import timely.auth.SubjectIssuerDNPair;
 import timely.auth.TimelyAuthenticationToken;
@@ -45,13 +44,11 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
     private static final String LOG_PARSED_REQUEST = "Parsed request {}";
 
     protected SecurityProperties securityProperties;
-    private final String nonSecureRedirectAddress;
     private AuthenticationService authenticationService;
 
     public HttpRequestDecoder(AuthenticationService authenticationService, SecurityProperties securityProperties, HttpProperties httpProperties) {
 
         this.securityProperties = securityProperties;
-        this.nonSecureRedirectAddress = httpProperties.getRedirectPath();
         this.authenticationService = authenticationService;
     }
 
@@ -82,11 +79,6 @@ public class HttpRequestDecoder extends MessageToMessageDecoder<FullHttpRequest>
 
         final String uri = msg.uri();
         final QueryStringDecoder decoder = new QueryStringDecoder(uri);
-        if (decoder.path().equals(nonSecureRedirectAddress)) {
-            out.add(new StrictTransportResponse());
-            return;
-        }
-
         final String sessionId = getSessionId(msg);
         log.trace("SessionID: " + sessionId);
 

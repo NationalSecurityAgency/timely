@@ -1,6 +1,7 @@
 package timely.server.integration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -18,9 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import timely.common.configuration.HttpProperties;
-import timely.server.netty.http.StrictTransportHandler;
+import timely.netty.http.HttpStrictTransportSecurityHandler;
 import timely.test.IntegrationTest;
 import timely.test.TimelyTestRule;
 
@@ -39,12 +39,14 @@ public class HTTPStrictTransportSecurityIT extends OneWaySSLBase {
 
     private String baseHttpUrl;
     private String baseHttpsUrl;
+    private String HSTS_HEADER_VALUE;
 
     @Before
     public void setup() {
         super.setup();
         baseHttpUrl = "http://" + httpProperties.getHost() + ":" + httpProperties.getPort();
         baseHttpsUrl = "https://" + httpProperties.getHost() + ":" + httpProperties.getPort();
+        HSTS_HEADER_VALUE = String.format("max-age=%d; includeSubDomains; preload", httpProperties.getStrictTransportMaxAge());
     }
 
     @After
@@ -53,24 +55,34 @@ public class HTTPStrictTransportSecurityIT extends OneWaySSLBase {
     }
 
     @Test
-    public void testHttpRequestGet() throws Exception {
-        HttpURLConnection.setFollowRedirects(false);
+    public void testHttpRequest() throws Exception {
         URL url = new URL(baseHttpUrl + "/api/metrics");
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod("GET");
         int responseCode = con.getResponseCode();
-        assertEquals(301, responseCode);
-        assertEquals(baseHttpsUrl + "/secure-me", con.getHeaderField(HttpHeaderNames.LOCATION.toString()));
+        assertEquals(403, responseCode);
+        // should not have HSTS header on HTTP response
+        assertNull(con.getHeaderField(HttpStrictTransportSecurityHandler.HSTS_HEADER_NAME));
         con.disconnect();
     }
 
     @Test
-    public void testHSTSRequestGet() throws Exception {
-        String secureMe = baseHttpsUrl + "/secure-me";
-        URL url = new URL(secureMe);
+    public void testHttpsRequestHSTS() throws Exception {
+        URL url = new URL(baseHttpsUrl + "/version");
+        HttpsURLConnection con = getUrlConnection(url);
+        int responseCode = con.getResponseCode();
+        assertEquals(200, responseCode);
+        assertEquals(HSTS_HEADER_VALUE, con.getHeaderField(HttpStrictTransportSecurityHandler.HSTS_HEADER_NAME));
+        con.disconnect();
+    }
+
+    @Test
+    public void testHttpsRequestNotFound() throws Exception {
+        URL url = new URL(baseHttpsUrl);
         HttpsURLConnection con = getUrlConnection(url);
         int responseCode = con.getResponseCode();
         assertEquals(404, responseCode);
-        assertEquals("max-age=" + httpProperties.getStrictTransportMaxAge(), con.getHeaderField(StrictTransportHandler.HSTS_HEADER_NAME));
+        assertEquals(HSTS_HEADER_VALUE, con.getHeaderField(HttpStrictTransportSecurityHandler.HSTS_HEADER_NAME));
+        con.disconnect();
     }
 }

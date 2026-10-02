@@ -83,8 +83,10 @@ import timely.common.configuration.SecurityProperties;
 import timely.common.configuration.SslClientProperties;
 import timely.common.configuration.SslServerProperties;
 import timely.common.configuration.ZookeeperProperties;
-import timely.netty.http.HttpStaticFileServerHandler;
-import timely.netty.http.NonSslRedirectHandler;
+import timely.netty.http.HttpStrictTransportSecurityHandler;
+import timely.netty.http.HttpVersionRequestHandler;
+import timely.netty.http.NonSslForbiddenHandler;
+import timely.netty.http.NotFoundHandler;
 import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.http.auth.X509LoginRequestHandler;
 import timely.netty.tcp.MetricsBufferDecoder;
@@ -417,8 +419,9 @@ public class Balancer {
             @Override
             protected void initChannel(SocketChannel ch) {
 
-                ch.pipeline().addLast("ssl", new NonSslRedirectHandler(balancerHttpProperties, sslCtx));
+                ch.pipeline().addLast("nonsslforbidden", new NonSslForbiddenHandler(balancerHttpProperties, sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
+                ch.pipeline().addLast("strict", new HttpStrictTransportSecurityHandler(balancerHttpProperties));
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder(4096, 32768, 8192, true, 128));
                 ch.pipeline().addLast("compressor", new HttpContentCompressor());
                 ch.pipeline().addLast("decompressor", new HttpContentDecompressor());
@@ -426,9 +429,9 @@ public class Balancer {
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 ch.pipeline().addLast("queryDecoder",
                                 new timely.netty.http.HttpRequestDecoder(authenticationService, securityProperties, balancerHttpProperties));
-                ch.pipeline().addLast("fileServer",
-                                new HttpStaticFileServerHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
+                ch.pipeline().addLast("notfound", new NotFoundHandler());
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(authenticationService, securityProperties, balancerHttpProperties));
+                ch.pipeline().addLast("version", new HttpVersionRequestHandler());
                 ch.pipeline().addLast("httpRelay", new HttpRelayHandler(balancerHttpProperties, metricResolver, httpClientPool));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
             }

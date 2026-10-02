@@ -20,7 +20,6 @@ public class HttpProperties {
     private Integer basePort;
     @NotNull
     private String host;
-    private String redirectPath = "/secure-me";
     private long strictTransportMaxAge = 604800;
     @Valid
     @NestedConfigurationProperty
@@ -56,14 +55,6 @@ public class HttpProperties {
 
     public void setHost(String host) {
         this.host = host;
-    }
-
-    public String getRedirectPath() {
-        return redirectPath;
-    }
-
-    public void setRedirectPath(String redirectPath) {
-        this.redirectPath = redirectPath;
     }
 
     public long getStrictTransportMaxAge() {

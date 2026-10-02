@@ -1,4 +1,4 @@
-package timely.server.netty.http;
+package timely.netty.http;
 
 import java.nio.charset.StandardCharsets;
 
@@ -12,7 +12,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import timely.api.request.VersionRequest;
 import timely.netty.Constants;
-import timely.netty.http.TimelyHttpHandler;
 
 public class HttpVersionRequestHandler extends SimpleChannelInboundHandler<VersionRequest> implements TimelyHttpHandler {
 
