@@ -84,7 +84,9 @@ import timely.common.configuration.SslClientProperties;
 import timely.common.configuration.SslServerProperties;
 import timely.common.configuration.ZookeeperProperties;
 import timely.netty.http.HttpStaticFileServerHandler;
+import timely.netty.http.HttpVersionRequestHandler;
 import timely.netty.http.NonSslRedirectHandler;
+import timely.netty.http.StrictTransportHandler;
 import timely.netty.http.TimelyExceptionHandler;
 import timely.netty.http.auth.X509LoginRequestHandler;
 import timely.netty.tcp.MetricsBufferDecoder;
@@ -426,9 +428,11 @@ public class Balancer {
                 ch.pipeline().addLast("chunker", new ChunkedWriteHandler());
                 ch.pipeline().addLast("queryDecoder",
                                 new timely.netty.http.HttpRequestDecoder(authenticationService, securityProperties, balancerHttpProperties));
+                ch.pipeline().addLast("strict", new StrictTransportHandler(balancerHttpProperties));
                 ch.pipeline().addLast("fileServer",
                                 new HttpStaticFileServerHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
                 ch.pipeline().addLast("login", new X509LoginRequestHandler(authenticationService, securityProperties, balancerHttpProperties));
+                ch.pipeline().addLast("version", new HttpVersionRequestHandler());
                 ch.pipeline().addLast("httpRelay", new HttpRelayHandler(balancerHttpProperties, metricResolver, httpClientPool));
                 ch.pipeline().addLast("error", new TimelyExceptionHandler().setIgnoreSslHandshakeErrors(sslServerProperties.isIgnoreSslHandshakeErrors()));
             }

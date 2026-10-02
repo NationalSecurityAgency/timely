@@ -34,8 +34,9 @@
   <properties>
     <assembly.tarLongFileMode>posix</assembly.tarLongFileMode>
     <docker.image.prefix>timely/</docker.image.prefix>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
+    <java.version>11</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
     <!-- Configure the os-maven-plugin extension to expand the classifier on -->
     <!-- Fedora-"like" systems. -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
@@ -43,7 +44,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <spotbugs.excludes.file>${project.basedir}/src/main/spotbugs/excludes.xml</spotbugs.excludes.file>
     <surefire.forkCount>1C</surefire.forkCount>
-    <version.accumulo>2.1.4</version.accumulo>
+    <version.accumulo>2.1.5</version.accumulo>
     <version.caffeine>3.1.8</version.caffeine>
     <version.classgraph>4.8.184</version.classgraph>
     <version.collectd>5.7.1</version.collectd>
@@ -55,7 +56,7 @@
     <version.commons-text>1.15.0</version.commons-text>
     <version.compression.gorilla>2.1.1</version.compression.gorilla>
     <version.curator>5.9.0</version.curator>
-    <version.datawave-in-memory-accumulo>3.0.1</version.datawave-in-memory-accumulo>
+    <version.datawave-in-memory-accumulo>4.0.6</version.datawave-in-memory-accumulo>
     <version.disruptor>3.4.4</version.disruptor>
     <version.easymock>5.6.0</version.easymock>
     <version.eclipse-lifecycle>1.0.0</version.eclipse-lifecycle>
