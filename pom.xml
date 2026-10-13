@@ -927,7 +927,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${version.maven-failsafe-plugin}</version>
           <configuration>
-            <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -XX:+TieredCompilation -XX:TieredStopAtLevel=1  -Dfile.encoding=UTF8 -Duser.timezone=GMT -Xmx1024m -Dapple.awt.UIElement=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc= -Dzookeeper.sasl.client=false</argLine>
+            <argLine>${failsafeArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF8 -Duser.timezone=GMT -Xmx1024m -Dapple.awt.UIElement=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc= -Dzookeeper.sasl.client=false</argLine>
             <includes>
               <include>**/*IT.java</include>
             </includes>
@@ -985,7 +985,7 @@
             <threadCountClasses>1</threadCountClasses>
             <threadCountMethods>0</threadCountMethods>
             <threadCountSuites>0</threadCountSuites>
-            <argLine>${sureFireArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -XX:+TieredCompilation -XX:TieredStopAtLevel=1  -Dfile.encoding=UTF8 -Duser.timezone=GMT -Xmx1024m -Dapple.awt.UIElement=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc= -Dzookeeper.sasl.client=false</argLine>
+            <argLine>${sureFireArgLine} -Djava.library.path=${project.build.directory}/native/META-INF/native/libnetty_tcnative_linux_x86_64.so -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF8 -Duser.timezone=GMT -Xmx1024m -Dapple.awt.UIElement=true -Djava.security.krb5.realm= -Djava.security.krb5.kdc= -Dzookeeper.sasl.client=false</argLine>
             <runOrder>random</runOrder>
             <excludedGroups>timely.test.IntegrationTest</excludedGroups>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
