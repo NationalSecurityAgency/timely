@@ -74,7 +74,7 @@
     <version.jjwt>0.12.7</version.jjwt>
     <version.jsoup>1.22.2</version.jsoup>
     <version.junit>4.13.2</version.junit>
-    <version.log4j2>2.25.4</version.log4j2>
+    <version.log4j2>2.26.1</version.log4j2>
     <version.maven-assembly-plugin>3.6.0</version.maven-assembly-plugin>
     <version.maven-build-helper-plugin>3.5.0</version.maven-build-helper-plugin>
     <version.maven-buildnumber-plugin>1.4</version.maven-buildnumber-plugin>
