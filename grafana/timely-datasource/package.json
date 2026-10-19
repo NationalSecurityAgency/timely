@@ -1,6 +1,6 @@
 {
   "name": "timely",
-  "version": "2.2.3",
+  "version": "2.2.4-SNAPSHOT",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
     "dev": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
