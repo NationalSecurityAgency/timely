@@ -4,24 +4,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.OptionalSslHandler;
 import io.netty.handler.ssl.SslContext;
-import timely.common.configuration.HttpProperties;
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import timely.netty.Constants;
 
-public class NonSslForbiddenHandler extends OptionalSslHandler implements TimelyHttpHandler {
+public class NonSslForbiddenHandler extends OptionalSslHandler {
 
     private static final Logger log = LoggerFactory.getLogger(NonSslForbiddenHandler.class);
 
-    public NonSslForbiddenHandler(HttpProperties httpProperties, SslContext sslContext) {
+    public NonSslForbiddenHandler(SslContext sslContext) {
         super(sslContext);
     }
 
@@ -32,24 +29,24 @@ public class NonSslForbiddenHandler extends OptionalSslHandler implements Timely
 
     @Override
     protected String newNonSslHandlerName() {
-        return "ssl";
+        return "nonSslForbidden";
     }
 
     @Override
     protected ChannelHandler newNonSslHandler(ChannelHandlerContext context) {
         return new ChannelInboundHandlerAdapter() {
 
-            private HttpResponseEncoder encoder = new HttpResponseEncoder();
-
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                log.trace("Received non-SSL request, returning redirect");
-                FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN, Unpooled.EMPTY_BUFFER);
-                log.trace(Constants.LOG_RETURNING_RESPONSE, response);
-                encoder.write(ctx, response, ctx.voidPromise());
-                ctx.flush();
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                try {
+                    log.trace("Received non-SSL request, returning forbidden");
+                    String response = "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n";
+                    log.trace(Constants.LOG_RETURNING_RESPONSE, response);
+                    ctx.writeAndFlush(Unpooled.copiedBuffer(response, CharsetUtil.UTF_8)).addListener(ChannelFutureListener.CLOSE);
+                } finally {
+                    ReferenceCountUtil.release(msg);
+                }
             }
         };
     }
-
 }

@@ -488,7 +488,7 @@ public class Server {
 
     protected void setupHttpSocketChannel(SocketChannel ch, MetaCache metaCache, TimelyProperties timelyProperties, HttpProperties httpProperties,
                     SslContext sslCtx) {
-        ch.pipeline().addLast("nonsslforbidden", new NonSslForbiddenHandler(httpProperties, sslCtx));
+        ch.pipeline().addLast("nonsslforbidden", new NonSslForbiddenHandler(sslCtx));
         ch.pipeline().addLast("encoder", new HttpResponseEncoder());
         ch.pipeline().addLast("strict", new HttpStrictTransportSecurityHandler(httpProperties));
         ch.pipeline().addLast("decoder", new HttpRequestDecoder(4096, 32768, 8192, true, 128));

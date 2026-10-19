@@ -15,10 +15,6 @@
  */
 package timely.netty.http;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +25,10 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.CharsetUtil;
+import io.netty.handler.codec.http.HttpVersion;
 import timely.netty.Constants;
 
 public class NotFoundHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements TimelyHttpHandler {
@@ -40,15 +38,9 @@ public class NotFoundHandler extends SimpleChannelInboundHandler<FullHttpRequest
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         // if the request reaches this handler, it means that no other handler has processed it, so we return a 404 Not Found response
-        sendError(ctx, NOT_FOUND);
-    }
-
-    private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
-        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
-
-        // Close the connection as soon as the error message is sent.
-        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND, Unpooled.EMPTY_BUFFER);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
         log.trace(Constants.LOG_RETURNING_RESPONSE, response);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 }

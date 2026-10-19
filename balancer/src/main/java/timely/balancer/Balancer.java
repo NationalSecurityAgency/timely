@@ -419,7 +419,7 @@ public class Balancer {
             @Override
             protected void initChannel(SocketChannel ch) {
 
-                ch.pipeline().addLast("nonsslforbidden", new NonSslForbiddenHandler(balancerHttpProperties, sslCtx));
+                ch.pipeline().addLast("nonsslforbidden", new NonSslForbiddenHandler(sslCtx));
                 ch.pipeline().addLast("encoder", new HttpResponseEncoder());
                 ch.pipeline().addLast("strict", new HttpStrictTransportSecurityHandler(balancerHttpProperties));
                 ch.pipeline().addLast("decoder", new HttpRequestDecoder(4096, 32768, 8192, true, 128));
