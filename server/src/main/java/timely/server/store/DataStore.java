@@ -91,7 +91,6 @@ import timely.model.Tag;
 import timely.server.auth.util.ScannerHelper;
 import timely.server.sample.Aggregation;
 import timely.server.sample.Aggregator;
-import timely.server.sample.Sample;
 import timely.server.sample.iterators.AggregationIterator;
 import timely.server.sample.iterators.DownsampleIterator;
 import timely.server.sample.iterators.RateIterator;
@@ -643,6 +642,7 @@ public class DataStore {
             long numResults = 0;
             long now = System.currentTimeMillis();
             for (SubQuery query : msg.getQueries()) {
+                query.validate();
                 Map<Set<Tag>,List<Aggregation>> allSeries = new HashMap<>();
                 String metric = query.getMetric();
                 if (metricList.length() > 0) {
@@ -773,8 +773,10 @@ public class DataStore {
                 // TODO groupby here?
                 long tsDivisor = msg.isMsResolution() ? 1 : 1000;
                 for (Entry<Set<Tag>,List<Aggregation>> entry : allSeries.entrySet()) {
-                    numResults += entry.getValue().size();
-                    result.add(convertToQueryResponse(query, entry.getKey(), entry.getValue(), tsDivisor));
+                    QueryResponse response = QueryResponseBuilder.build(query, entry.getKey(), entry.getValue(), tsDivisor);
+                    numResults += response.getDps().size();
+                    log.trace("Created query response {}", response);
+                    result.add(response);
                 }
             }
             log.debug("Query for [{}] time:{} duration:{} metrics:{} results:{}", msg.getUserName(), (System.currentTimeMillis() - now),
@@ -839,22 +841,6 @@ public class DataStore {
         result.sort(Comparator.comparingInt(priority::get));
         log.trace("Tag priority {}", result);
         return result;
-    }
-
-    private QueryResponse convertToQueryResponse(SubQuery query, Set<Tag> tags, Collection<Aggregation> values, long tsDivisor) {
-        QueryResponse response = new QueryResponse();
-        response.setMetric(query.getMetric());
-        for (Tag tag : tags) {
-            response.putTag(tag.getKey(), tag.getValue());
-        }
-        RateOption rateOptions = query.getRateOptions();
-        Aggregation combined = Aggregation.combineAggregation(values, rateOptions);
-        for (Sample entry : combined) {
-            long ts = entry.getTimestamp() / tsDivisor;
-            response.putDps(Long.toString(ts), entry.getValue());
-        }
-        log.trace("Created query response {}", response);
-        return response;
     }
 
     private boolean isTagValueRegex(String value) {
