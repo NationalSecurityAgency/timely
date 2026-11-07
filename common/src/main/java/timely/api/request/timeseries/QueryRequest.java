@@ -11,6 +11,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -218,6 +219,10 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
 
     public static class SubQuery {
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private Double minValue;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private Double maxValue;
         private String aggregator;
         private String metric;
         private boolean rate = false;
@@ -226,6 +231,38 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
         private Map<String,String> tags = new LinkedHashMap<>();
         private Collection<Filter> filters = new ArrayList<>();
         private Collection<String> tsuids = new ArrayList<>();
+
+        public Double getMinValue() {
+            return minValue;
+        }
+
+        public void setMinValue(Double minValue) {
+            this.minValue = minValue;
+        }
+
+        public Double getMaxValue() {
+            return maxValue;
+        }
+
+        public void setMaxValue(Double maxValue) {
+            this.maxValue = maxValue;
+        }
+
+        public void validate() {
+            if (minValue != null && !Double.isFinite(minValue)) {
+                throw new IllegalArgumentException("minValue must be finite");
+            }
+            if (maxValue != null && !Double.isFinite(maxValue)) {
+                throw new IllegalArgumentException("maxValue must be finite");
+            }
+            if (minValue != null && maxValue != null && minValue > maxValue) {
+                throw new IllegalArgumentException("minValue must not exceed maxValue");
+            }
+        }
+
+        public boolean acceptsValue(double value) {
+            return (minValue == null || value >= minValue) && (maxValue == null || value <= maxValue);
+        }
 
         public String getAggregator() {
             return aggregator;
@@ -316,6 +353,8 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
         @Override
         public String toString() {
             ToStringBuilder tsb = new ToStringBuilder(this);
+            tsb.append("minValue", minValue);
+            tsb.append("maxValue", maxValue);
             tsb.append("aggregator", aggregator);
             tsb.append("metric", metric);
             tsb.append("rate", rate);
@@ -330,6 +369,8 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
         @Override
         public int hashCode() {
             HashCodeBuilder hcb = new HashCodeBuilder();
+            hcb.append(minValue);
+            hcb.append(maxValue);
             hcb.append(aggregator);
             hcb.append(downsample);
             hcb.append(filters);
@@ -352,6 +393,8 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
             if (obj instanceof SubQuery) {
                 SubQuery other = (SubQuery) obj;
                 EqualsBuilder eq = new EqualsBuilder();
+                eq.append(this.minValue, other.minValue);
+                eq.append(this.maxValue, other.maxValue);
                 eq.append(this.aggregator, other.aggregator);
                 eq.append(this.downsample, other.downsample);
                 eq.append(this.filters, other.filters);
@@ -437,6 +480,7 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
         if (queries.size() == 0) {
             throw new IllegalArgumentException("No query specified.");
         }
+        queries.forEach(SubQuery::validate);
     }
 
     @Override
@@ -622,6 +666,14 @@ public class QueryRequest extends AuthenticatedRequest implements HttpGetRequest
                 }
                 query.addQuery(sub);
             });
+        }
+        for (SubQuery sub : query.getQueries()) {
+            if (decoder.parameters().containsKey("minValue")) {
+                sub.setMinValue(Double.valueOf(decoder.parameters().get("minValue").get(0)));
+            }
+            if (decoder.parameters().containsKey("maxValue")) {
+                sub.setMaxValue(Double.valueOf(decoder.parameters().get("maxValue").get(0)));
+            }
         }
         return query;
     }
